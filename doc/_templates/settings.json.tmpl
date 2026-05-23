@@ -6,45 +6,54 @@
     "Это hard enforcement: Claude НЕ может обойти через 'забыл'.",
     "Soft enforcement через CLAUDE.md briefing — Layer 1."
   ],
+  "_notes_for_paths": [
+    "Скрипты живут в product репозитории (scripts/ или эквивалент), НЕ в submodule .ai-pm/tooling/.",
+    "Bootstrap-agent на Stage E читает .tmpl из submodule, адаптирует и создаёт реальные scripts/*.sh."
+  ],
   "hooks": {
     "PreToolUse": [
       {
-        "_comment": "Блокирует Write/Edit в code paths, если нет соответствующего spec'а в текущей ветке.",
+        "_comment": "Блокирует Write/Edit в code paths, если нет соответствующего spec'а в текущей feature/<topic> ветке (AP-4).",
         "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": ".ai-pm/tooling/scripts/check-spec-precondition.sh"
+            "command": "scripts/check-spec-precondition.sh"
           }
         ]
       },
       {
-        "_comment": "Блокирует прямые коммиты в main и --no-verify.",
+        "_comment": "Блокирует опасные git операции: direct push в main, --no-verify, force push, изменение git identity. Плюс блокирует gh pr create / gh pr merge без локального review-trail (AP-16, offline-first).",
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": ".ai-pm/tooling/scripts/check-git-safety.sh"
+            "command": "scripts/check-git-safety.sh"
+          },
+          {
+            "type": "command",
+            "command": "scripts/check-pr-has-review.sh"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "_comment": "После Write в .ai-pm/doc/features/ обновляет .ai-pm/.bootstrap-state.md timestamp.",
+        "_comment": "После Write в doc/features/ обновляет last_update в .ai-pm/.bootstrap-state.md.",
         "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": ".ai-pm/tooling/scripts/update-bootstrap-state.sh"
+            "command": "scripts/update-bootstrap-state.sh"
           }
         ]
       }
     ]
   },
   "_notes_for_pm": [
-    "Если какой-то hook fail'ит на чём-то, что должно быть legit — НЕ отключай hook. Исправь spec, либо обсуди adjustment c PM.",
-    "Hook'и читают .ai-pm/.bootstrap-state.md для контекста (какой Mode, какой stage актуален).",
-    "Для disable конкретного hook временно — используй `--no-hook <name>` (CLI flag Claude Code), но это должно быть редким исключением с записью причины в `.ai-pm/doc/features/<topic>_review.md`."
+    "Если какой-то hook fail'ит на чём-то, что должно быть legit — НЕ отключай hook. Исправь причину, либо обсуди adjustment с PM.",
+    "Hook'и парсят tool_input.file_path / tool_input.command из stdin JSON (Claude Code hook API).",
+    "exit 0 = allow, exit 2 = block с передачей stderr обратно AI.",
+    "check-pr-has-review.sh: блокирует gh pr create и gh pr merge без локального review-trail (см. AP-16). Offline-first design. Поддерживаемые формы trail: committed doc/features/<topic>_review.md (Stage F), .ai-pm/.reviews/<branch>.json (chore/docs/template-extension). Skip-marker [skip-review] на отдельной строке в HEAD commit body — explicit override для trivial chore'ов."
   ]
 }

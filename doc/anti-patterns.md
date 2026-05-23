@@ -143,6 +143,107 @@
 
 ---
 
+## AP-17. Утечка product-specific имён в template
+
+**Что нельзя:**
+
+- В `ai-pm-protocol` (template repo, **публичный** AGPL v3) — упоминать конкретные prod-run продукты по имени.
+- В template'ах (`_templates/*.tmpl`), AP документации, README, project-bootstrap, reviewer / planner / coder agent prompt'ах — использовать examples из конкретного prod-run'а без abstraction'а.
+- В описаниях PR / commit message'ах / PR review comment'ах template repo — упоминать prod-run продукт по имени.
+- Использовать prod-run-specific терминологию в шаблонных примерах (имена domain объектов / actions конкретного продукта) — обобщать через placeholder'ы.
+
+**Почему:** template **публичный** и предназначен для **любого** проекта. Утечка конкретного prod-run product name'а:
+
+1. **Раскрывает confidential info** про prod-run product (если он stealth / private).
+2. **Привязывает шаблон к одному use case** в восприятии новых пользователей — «это для VPN», «это для encrypted vault», и т.д.
+3. **Создаёт prejudice** — другие потенциальные пользователи думают «у меня не такой продукт, шаблон не подходит».
+
+**Как поступать вместо:**
+
+- Заменять конкретные имена на абстракции: «один из ранних prod-run'ов», «product team», «application», «one of our products».
+- Заменять product-specific термины на generic equivalents — generic actions, abstract objects, placeholder'ы.
+- При описании AP «Почему» из prod-run incident'а — описывать **класс ошибки**, не **конкретный кейс**: «AI зафиксировал в spec одну архитектуру auth flow, а threat-model описывал другую» вместо raw quote с product name'ом.
+- В commit message'ах template — упоминать PR номера / issue links вместо product name'ов.
+- В PR description — то же самое.
+
+**Reviewer-agent для template PR'ов** в Step 7 обязан выполнить leak check. Список запрещённых имён хранится в `.ai-pm/.product-names-blocklist` (gitignored, локальный per developer) — список конкретных названий, которые reviewer ищет через grep:
+
+```bash
+# .ai-pm/.product-names-blocklist — формат: одно имя на строке (case-insensitive)
+# AI / developer не commit'ит этот файл; он locally per machine
+
+while read -r NAME; do
+  grep -ri "$NAME" doc/ .claude/ README.md
+  git log --pretty=format:"%B" main..HEAD | grep -i "$NAME"
+  gh pr view <N> --json body,comments --jq '.. | strings' | grep -i "$NAME"
+done < .ai-pm/.product-names-blocklist
+```
+
+Любой match — `blocking finding`. Reviewer вернёт `request-changes` с указанием конкретного файла / location'а.
+
+**Memory rule для AI:** при работе с template repo — никогда не упоминать имена prod-run продуктов. Это applies к session memory и persistent memory across sessions. Если PM просит описать prod-run incident — описать класс, не конкретный кейс. Список конкретных имён к избеганию — в user-level memory `feedback_no_product_name_in_template.md`.
+
+**Обнаружение:** AP добавлен после live incident'а — leak в template примерах и PR description'ах. После cleanup — этот AP как mandatory check.
+
+---
+
+## AP-16. PR создан / merged без зелёного review-trail
+
+**Что нельзя:**
+
+- Создавать (`gh pr create`) или merge'ить (`gh pr merge`) PR если:
+  - **(a)** нет зафиксированного **локального** review-trail в одной из 3 форм:
+    - **Committed `_review.md`** для Stage F feature/<topic> branch (`doc/features/<topic>_review.md`) — default routine reviewer-agent'а, с обязательной строкой `**Verdict:** approve | approve-with-comments | request-changes` в первых 50 строках
+    - **Локальный trace file** `.ai-pm/.reviews/<branch>.json` с полем `verdict` — для chore / docs / template-extension branch'ей
+    - **Explicit skip-marker** `[skip-review]` **на отдельной строке** в HEAD commit body (line-anchored — упоминания в prose не считаются) — для trivial chore'ов (typo-fix, dep bump)
+  - **или (b)** verdict в найденном trail = `request-changes`. Hook парсит verdict и блокирует, пока review не станет зелёным (`approve` или `approve-with-comments`).
+- Полагаться на «я провёл review в head'е» без persisting trail — это **soft reminder**, который AI игнорирует.
+- Использовать `gh pr review` как trail-форму. GitHub PR review **не используется вообще** — review живёт локально (в репе или `.ai-pm/.reviews/`), дублирование в GitHub UI не имеет смысла для PM+AI workflow: PM читает committed файлы и AI summary в чате, не GitHub web UI.
+
+**Почему:** на одном из ранних prod-run'ов AI забыл запустить reviewer-agent перед `gh pr merge`. PM поймал. Анализ показал: reviewer.md описывал routine, но не было **hard enforcement** — soft reminders в CLAUDE.md и memory rules игнорировались под нагрузкой длинных сессий с множеством PR'ов. Reviewer-agent — Layer 3 enforcement (subagent routine), без Layer 2 (settings.json hook) он зависит от AI-дисциплины, которая не bullet-proof. Дополнительно: попытка делать review через `gh pr review` после открытия PR создаёт антипаттерн «открыть PR → дождаться comments → гонять fix'ы», который сводит review к bureaucratic theatre — fix'ы должны быть применены **до** PR.
+
+**Решение — offline-first design + verdict-gate.** Layer 2 hook `scripts/check-pr-has-review.sh` блокирует `gh pr create` **и** `gh pr merge` если: нет trail ИЛИ verdict не green. Hook читает HEAD commit body (skip-marker), committed `_review.md` с парсингом `**Verdict:**`, и local trace file с парсингом `.verdict` — **без** обращения к GitHub API. Работает одинаково online и offline, на любой git-платформе (GitHub / GitLab / Gitea / self-hosted). AI **не может** обойти через --no-verify (это запрещено § 14.7).
+
+**Применение** — для всех проектов с PR-flow. Mode-agnostic (одинаково для Mode 1 / 2 / 3 / lite).
+
+**Как поступать вместо:**
+
+- В `_templates/scripts/check-pr-has-review.sh.tmpl` — hook script с 3 проверками (skip-marker → committed `_review.md` + verdict-parse → local trace + verdict-parse).
+- В `_templates/settings.json.tmpl` — hook entry на Bash matcher (триггерится для `gh pr create` и `gh pr merge`).
+- В `.claude/agents/reviewer.md` — обязательная routine «Persist review» с 2 формами trail (committed для Stage F / local trace для прочего) и обязательная строка `**Verdict:**` в первых 50 строках `_review.md`.
+- В `.gitignore` (через bootstrap-agent) — `.ai-pm/.reviews/` (local trace, не commit'ится).
+
+**Skip-marker `[skip-review]`** — explicit visible в `git log`, не abuse'ится потому что:
+- Видим всем кто читает history
+- Должен быть на **отдельной строке** (line-anchored regex `^\[skip-review\][[:space:]]*$`) — упоминание в prose body commit'а не триггерит
+- Используется sparingly (typo / dep bump / README only) — каждый use требует осознанного решения PM
+
+**Human-override `[review-override: <reason>]`** — ручка **человека** (PM при Trust profile A, developer при Trust profile B/C — далее «оператор»; **не AI**) для принятия PR с `request-changes` verdict'ом.
+
+**Discipline:** AI **не принимает никаких решений** по результатам review. Получив verdict `request-changes`, AI:
+
+1. Показывает оператору в чате полный review summary (verdict, findings по severity, architectural context).
+2. Через **AskUserQuestion** спрашивает, что делать с findings — варианты:
+   - Зафиксить все finding'и (AI применяет fix → перезапускает reviewer → новый verdict, идеально approve)
+   - Зафиксить часть, остальное deferred с override (оператор указывает какие именно finding'и deferred + reason / task IDs для backlog'а)
+   - Override всё (оператор принимает PR as-is с обоснованием)
+3. Выполняет решение оператора. **Никакого `[review-override]` без явного instruction от оператора.**
+
+Use case override: оператор видит, что critical / high finding'и важны для исправления сейчас, а minor / nit / low — мелочи, которые лучше вынести в backlog (создать tasks #N) и не блокировать прогресс. Решение — **оператора**, не AI's.
+
+**Следы в репе обязательны.** Override **не отменяет** review — он только разрешает hook'у пропустить `gh pr create` / `gh pr merge`. Сам review-trail (с verdict `request-changes` и findings) должен **остаться в репе** как honest audit record:
+
+- **Stage F branch (`feature/<topic>`)** — committed `doc/features/<topic>_review.md` уже в репе. Override marker в commit body + committed `_review.md` = двойной след.
+- **Non-Stage-F branch (chore / docs / template-extension)** — local trace `.ai-pm/.reviews/<branch>.json` **gitignored**, в репу не попадает. Поэтому при использовании override AI **обязан** вписать сами findings (полный список deferred items с severity и task IDs) в HEAD commit body **после** `[review-override: ...]` marker'а — это попадает в `git log` навсегда. Без этого override превращается в hidden bypass, нарушает audit-trail требование.
+
+Format: `[review-override: <reason>]` на отдельной строке HEAD commit body. Reason **обязателен**, формулирует **оператор** (не AI):
+
+- `[review-override: minor findings → task #42, #43 в backlog]`
+- `[review-override: blocking finding ложно-positive, объяснение ниже]`
+- `[review-override: defer naming concerns до следующего refactor PR]`
+
+---
+
 ## AP-15. UI-фичи без Stage A `ui-style-guide.md`
 
 **Что нельзя:**
