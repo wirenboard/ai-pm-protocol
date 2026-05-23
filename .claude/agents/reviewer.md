@@ -71,6 +71,50 @@ Trigger: фича трогает crypto / auth / billing / PII / sessions / publ
 - Security scanning catalogue (§ 10) findings разрешены.
 - Никаких новых attack surface'ов без обоснования в plan'е.
 
+### 4.1. UI / API foundation consistency (AP-15)
+
+Trigger: фича touches UI / API (frontend code / endpoints / CLI commands / etc).
+
+Читаешь `ui_kind` capability из `.ai-pm/.bootstrap-state.md`. Для каждого ui_kind value (web / native-mobile / native-desktop / tui / cli / embedded / backend) — соответствующий `ui-style-guide-<kind>.md` обязателен в репе.
+
+Проверяешь:
+- UI-touching код cross-ref'ит relevant `ui-style-guide-<kind>.md` в spec / plan (если не cross-ref'ит — **blocking finding** «AP-15: UI feature без foundation reference»).
+- Tokens используются (palette / typography / spacing) — никаких hardcoded HEX / px / colors.
+- Per-kind checklist applied (web — WCAG AA + theme switching; native-mobile — HIG / Material 3 + touch targets; cli — exit codes + NO_COLOR + pipe-friendly; etc).
+- Backend rules для full-stack апплицируются (latency SLO в spec, idempotency для POST creates, RFC 7807 errors, cursor pagination для lists, observability metrics).
+- 8 фундаментальных принципов из `ui-style-guide-base.md` не нарушены (clarity / responsiveness / reactivity / modern UX / adaptivity / accessibility / brand voice / efficiency of path).
+
+### 4.2. Deploy / migration safety (AP-18)
+
+Trigger: фича включает schema change / API breaking change / config format change / data migration.
+
+Проверяешь:
+- **Expand-contract pattern** применён для breaking changes (multi-step plan, не one-shot ALTER). Каждый step independently deployable и rollback'able.
+- **Backup verified restorable** до destructive migration — explicit reference в plan'е / runbook.
+- **Forward-only schema rollback** на production (down migrations только для dev). Если plan содержит down migration для production — blocking.
+- **Feature flag** для risky features — quick rollback без redeploy.
+- **CI runs migrations** на fresh БД каждый PR (verify migration ordering / idempotency).
+- **Pre-flight verification на staging** для production migrations (time estimate, lock impact).
+- **Immutable applied migrations** (никаких edits applied migration files).
+- **Data preservation invariants** — schema change + backfill + DROP — три separate migrations, не одна.
+- ORM `auto-migrate` / `db.sync()` на production — blocking.
+- Для DB cross-ref: `database-design-base.md` § 7 expand-contract canonical example, per-kind § migrations.
+- Если override через `[review-override: <reason>]` — finding noted as deferred, не blocking (см. § Persist review human-override discipline).
+
+### 4.3. Product-name leak check (AP-17)
+
+Применяется при review template-level фич (PR в `ai-pm-protocol` repo, не в product).
+
+Grep на known product names (см. user-level memory blocklist + `.ai-pm/.product-names-blocklist` если существует):
+
+```bash
+grep -ri "<product-names>" doc/ .claude/ README.md
+git log --pretty=format:"%B" main..HEAD | grep -i "<product-names>"
+gh pr view <N> --json body,comments --jq '.. | strings' | grep -i "<product-names>"
+```
+
+Любой match — **blocking finding** «AP-17: product-name leak в template». Не для review product-level фич (в product repo упоминания нормальны).
+
 ### 5. Code hygiene
 
 - Catalogue § 7 (AI-specific code linting) — все правила проходят? Suppression'ы (eslint-disable, # noqa) имеют `// reason:` комментарий?
