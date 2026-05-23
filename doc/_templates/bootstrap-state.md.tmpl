@@ -31,7 +31,13 @@ project_capabilities:
   - uses-i18n: yes | no
   - multi-tenant: yes | no
   - public-web: yes | no
-  - ui_kind: tbd | <comma-separated list> # web, native-mobile, native-desktop, tui, cli, embedded, backend. Multi-value для composite stacks (e.g. "web, backend"; "native-mobile, backend"; "backend"). Определяет какие ui-style-guide-*.md файлы пишет bootstrap-agent. Default `tbd` на Init — заполняется на Stage A после vision artifact'а, когда product shape clear. Может evolve (additive): добавление новой формы UI позже — update этого поля + write новый файл.
+  # ui_kind: формы UI продукта. Допустимые значения:
+  # web, native-mobile, native-desktop, tui, cli, embedded, backend.
+  # Multi-value для composite stacks ("web, backend"; "native-mobile, backend").
+  # Default `tbd` на Init; заполняется на Stage A после vision artifact'а,
+  # когда product shape clear. Additive evolution: добавление нового kind
+  # позже — update поля + write новый ui-style-guide-<kind>.md.
+  - ui_kind: tbd | <comma-separated list>
 ---
 
 # Bootstrap state

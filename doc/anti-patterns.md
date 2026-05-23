@@ -261,7 +261,7 @@ Format: `[review-override: <reason>]` на отдельной строке HEAD 
 
 Поддерживаемые kinds: `web` / `native-mobile` / `native-desktop` / `tui` / `cli` / `embedded` / `backend`.
 
-**Composition examples:**
+**Composition examples** (canonical source: `_templates/ui-style-guide-base.md.tmpl` § intro composition matrix; копия здесь для удобства AI при чтении AP — при изменениях обновлять оба места):
 
 | Тип продукта | `ui_kind` | Какие файлы пишутся |
 |---|---|---|
