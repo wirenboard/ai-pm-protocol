@@ -41,7 +41,7 @@ PR соответствует design pass discussion: bundled approach (выбр
 N/A — template repo не имеет automated tests для subagent prompts. Verification — manual через subsequent PR'ы которые will trigger новой architecture.
 
 Subsequent verification опции:
-- Apply в HeartVault submodule bump → see new reviewer route в action
+- Apply в downstream product submodule bump → see new reviewer route в action
 - Synthetic test PR в template repo чтобы trigger primary-router
 
 ## Security / architecture
@@ -100,7 +100,7 @@ Subagent prompts:
 
 После merge:
 - **#44 PM + Developer coverage balance review** — теперь можно делать с awareness new architecture
-- **Apply в HeartVault** — submodule bump + observe new reviewer flow in action на real PR
+- **Apply в downstream product** — submodule bump + observe new reviewer flow in action на real PR
 - **Synthetic test PR** в template repo — trigger primary-router на small change to verify routing logic works
 
 ## Что НЕ покрыто (deferred backlog)

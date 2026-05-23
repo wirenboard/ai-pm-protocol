@@ -1,0 +1,320 @@
+---
+status: draft
+stage: D
+artifact: dev-environment
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD
+---
+
+# <Project> — Developer Environment
+
+**Stage D artifact.** Foundational dev ergonomics — local setup, IDE configuration, debug entry points, hot reload, dependency management. Закрывает «from `git clone` до working state» — single document.
+
+Применяется к **любому** продукту независимо от Trust profile. Trust profile A (PM не читает код) тоже needed: AI читает этот документ при работе в проекте и use cases когда PM нужно local action (e.g., setup новой развертки, debugging).
+
+---
+
+## 1. Prerequisites
+
+Список tools которые **должны** быть установлены до начала работы:
+
+```
+<stack>-specific:
+  - <language toolchain> >= <version>  (например, node >= 20 LTS, python >= 3.12, go >= 1.22, rust >= 1.80)
+  - package manager (npm / pnpm / yarn / pip / poetry / cargo / go mod)
+  - <database CLI> (если applicable — psql / sqlite3 / etc)
+  - docker / podman (если есть containers)
+
+cross-stack:
+  - git >= 2.40
+  - gh CLI (для PR workflow)
+  - <editor> (см. § 5 IDE recommendations)
+```
+
+**Version pinning:** через `.tool-versions` (asdf), `.nvmrc`, `.python-version`, `rust-toolchain.toml`, `go.mod` — exact versions, не «latest».
+
+---
+
+## 2. Initial setup
+
+Команды от clone до working state. **Цель:** `git clone && make setup` → running tests success в < 5 минут.
+
+```sh
+git clone <repo-url>
+cd <repo>
+
+# Stack-specific bootstrap
+make setup    # или: ./scripts/setup-dev.sh
+# Equivalent:
+#   pnpm install
+#   pre-commit install
+#   docker compose up -d db  # если нужна локальная БД
+#   pnpm run db:migrate
+#   pnpm run db:seed         # если есть seed data
+
+# Verify
+make test     # все тесты pass
+make lint     # все linters pass
+```
+
+**Setup script** (`scripts/setup-dev.sh`) automates:
+- Tool version check (`asdf install` или fail с instruction)
+- Dependency install
+- Git hooks install (husky / pre-commit framework)
+- Local БД bootstrap (docker compose / native install)
+- Migrations run
+- Seed data (если applicable)
+- Environment file from template (`.env.example` → `.env` с placeholder warning)
+
+---
+
+## 3. Day-to-day commands (Makefile / justfile / npm scripts)
+
+Single source of truth для common operations. Каждая команда должна работать standalone:
+
+```makefile
+# Makefile example (адаптируется под stack)
+
+setup:       ## One-time dev setup
+	scripts/setup-dev.sh
+
+dev:         ## Start dev server with hot reload
+	<stack-specific dev command>
+
+test:        ## Run all tests
+	<stack-specific test runner>
+
+test-watch:  ## Run tests in watch mode
+	<watch flag>
+
+lint:        ## Run all linters
+	<linters>
+
+fmt:         ## Format code (in place)
+	<formatters>
+
+typecheck:   ## Run type checker
+	<type checker>
+
+db-migrate:  ## Apply DB migrations
+	<migration command>
+
+db-seed:     ## Seed dev DB
+	<seed command>
+
+db-reset:    ## Reset dev DB (DESTRUCTIVE)
+	<reset>
+
+clean:       ## Remove generated files
+	<clean>
+```
+
+**Discoverability:** `make help` (или `just --list` / `npm run`) показывает все targets с descriptions.
+
+**Никаких** «do X via this 5-step procedure» в README — всё через `make <target>`.
+
+---
+
+## 4. Hot reload + fast iteration
+
+Каждый stack имеет hot reload mechanism — настройте по best practice для stack'а:
+
+- **Web frontend** — Vite / Webpack dev server / Next.js / Astro dev mode
+- **Node.js backend** — `tsx watch` / `nodemon` / `node --watch`
+- **Python** — `uvicorn --reload` / `flask --reload` / `pytest-watch`
+- **Go** — `air` / `gow` / `reflex`
+- **Rust** — `cargo watch -x run`
+- **Native mobile** — Xcode / Android Studio incremental build
+- **Native desktop** — framework-specific (Tauri dev mode, etc)
+
+**Acceptance criteria:** code change → visible effect в < 2 секунды для normal change, < 10 секунд для type-system change.
+
+Document specific stack setup ниже:
+
+```
+<Stack-specific hot reload config>
+```
+
+---
+
+## 5. IDE / Editor recommendations
+
+**`.editorconfig`** в repo root — universal baseline:
+
+```ini
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{py,go,rs}]
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+```
+
+### 5.1. VS Code (popular default)
+
+`.vscode/settings.json` (committed) — shared baseline:
+
+```json
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.eol": "\n"
+}
+```
+
+`.vscode/extensions.json` — recommended extensions per stack:
+
+```json
+{
+  "recommendations": [
+    "<stack-specific extension IDs>"
+  ]
+}
+```
+
+### 5.2. JetBrains IDEs
+
+`.idea/codeStyles/` committed (project-level style settings). NOT committing user-local `.idea/workspace.xml`.
+
+### 5.3. Vim / Neovim / Emacs
+
+Document optional `.editorconfig` integration, `lsp-config` recommendations для stack's language server.
+
+---
+
+## 6. Debug entry points
+
+Где set breakpoint / start debugger / inspect runtime state:
+
+| Use case | Entry point | Command |
+|---|---|---|
+| Backend endpoint debug | `<file:line>` (main handler) | `make debug-backend` (starts с inspect / pdb / dlv) |
+| Frontend component debug | Browser DevTools / React DevTools | `make dev` (sourcemaps enabled) |
+| Test debug (single test) | `<test file>` | `make debug-test TEST=<name>` |
+| Migration debug | `<migration dir>` | `make db-migrate-step DRY_RUN=1` |
+| Production-like local | docker-compose.dev.yml | `make dev-prod-like` |
+
+**VS Code launch configs** в `.vscode/launch.json` (committed):
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "<stack-specific debug configs>": "..." }
+  ]
+}
+```
+
+---
+
+## 7. Dependency management
+
+### 7.1. Update routine
+
+См. `dependency-policy.md` (отдельный artefact). Краткие правила:
+
+- **Security patches (CVE) — automerge** если CI green (Dependabot / Renovate config)
+- **Patch versions (no CVE) — weekly review + merge** if no breakage
+- **Minor versions — biweekly review** + manual merge after smoke test
+- **Major versions — quarterly evaluation** + dedicated PR с migration plan
+
+### 7.2. Local update workflow
+
+```sh
+make deps-outdated   # show outdated deps
+make deps-update     # interactive update (asks per package)
+make deps-audit      # security audit (npm audit / pip-audit / cargo audit / etc)
+```
+
+### 7.3. Lockfile discipline
+
+- `package-lock.json` / `pnpm-lock.yaml` / `poetry.lock` / `Cargo.lock` / `go.sum` — **always committed**
+- CI verifies lockfile consistency (`pnpm install --frozen-lockfile`)
+- Merge conflicts in lockfile — regenerate from scratch (delete + reinstall), не manual edit
+
+---
+
+## 8. Profiling + performance debugging
+
+### 8.1. Frontend (web)
+
+- **Lighthouse CI** в GitHub Actions — performance budget per PR
+- **WebPageTest / Calibre** для periodic deep dives
+- React DevTools Profiler / Vue DevTools для component-level
+- Chrome DevTools Performance tab для render bottlenecks
+
+### 8.2. Backend
+
+- **k6 / Vegeta / Apache Bench** для load testing
+- **pprof** (Go) / **cProfile** (Python) / **flamegraph** (Rust) для CPU profiling
+- **pg_stat_statements** + slow query log для DB-level
+- Distributed tracing (OpenTelemetry / Jaeger / Datadog APM)
+
+### 8.3. Performance budget
+
+Documented в `<topic>_spec.md` NFR (latency / memory / bundle size budgets per AP-13). Continuous performance gate в CI (см. `dependency-policy.md` cadence).
+
+---
+
+## 9. Troubleshooting common issues
+
+Document **проблемы, которые AI / dev могут встретить часто** + how to fix:
+
+```markdown
+### Issue: <description>
+
+**Symptom:** <observable>
+
+**Cause:** <root cause>
+
+**Fix:** <steps>
+
+### Example: Database connection refused
+
+**Symptom:** `make test` fails с `ECONNREFUSED 127.0.0.1:5432`
+
+**Cause:** Local Postgres не started
+
+**Fix:**
+```sh
+docker compose up -d db
+make db-migrate
+```
+```
+
+Update это section по мере накопления opyta. Living document.
+
+---
+
+## 10. Trust profile differentiation
+
+Этот документ нужен **обоим** profiles:
+
+- **Trust profile A** (PM не читает код): AI читает dev-environment.md при работе. PM использует для setup'а локальной среды (rare, но happens — например, demo для investor / personal experimentation).
+- **Trust profile B/C** (developer): primary user. Document covers всё для daily work. CONTRIBUTING.md equivalent.
+
+Если **CONTRIBUTING.md** существует в repo (для open-source) — он references этот документ для setup details, добавляет open-source-specific guidance (issue templates, PR conventions for external contributors, CLA / DCO если applicable).
+
+---
+
+## 11. Связанные документы
+
+- `topology.md` — где компоненты в архитектуре (что dev'у нужно understand для setup)
+- `development-protocol.md` overlay — workflow rules (branch strategy, commit conventions)
+- `dependency-policy.md` — dependency update cadence + automerge rules
+- `refactor-playbook.md` — positive guidance для safe refactor PRs
+- `tech-debt-registry.md` (или TODO(#N) convention) — где tracked tech debt

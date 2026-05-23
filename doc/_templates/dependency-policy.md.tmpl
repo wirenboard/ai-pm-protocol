@@ -1,0 +1,235 @@
+---
+status: draft
+stage: D
+artifact: dependency-policy
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD
+---
+
+# <Project> — Dependency Update Policy
+
+**Stage D artifact, опциональный.** Cadence + automerge rules для dependency bumps. Применяется ко всем `package.json` / `pyproject.toml` / `Cargo.toml` / `go.mod` / etc. Использует Dependabot / Renovate / эквивалент.
+
+---
+
+## 1. Categories + cadence
+
+| Update type | Cadence | Auto-merge | Review depth |
+|---|---|---|---|
+| **Security patches (known CVE)** | ASAP — as soon as advisory published | ✅ Yes (если CI green) | Minimal — CVE patch trusted |
+| **Patch versions** (semver `X.Y.Z+1`, no CVE) | Weekly batch | ✅ Yes (если CI green) | Minimal — semver promises no breakage |
+| **Minor versions** (`X.Y+1.0`) | Biweekly review | ⚠ Manual merge after smoke test | Read changelog, smoke test critical paths |
+| **Major versions** (`X+1.0.0`) | Quarterly evaluation | ❌ Manual, dedicated PR | Read migration guide, plan expand-contract если breaking |
+
+**Rationale:** balance между **security velocity** (patches быстро) и **risk minimization** (major versions deliberate).
+
+---
+
+## 2. Tooling
+
+### 2.1. Dependabot (GitHub native)
+
+`.github/dependabot.yml`:
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: "<npm|pip|cargo|gomod>"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      # Group patch updates for automerge
+      patch-updates:
+        update-types: ["patch"]
+      # Minor/major separate PRs
+      minor-updates:
+        update-types: ["minor"]
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 10
+```
+
+### 2.2. Renovate (alt, more configurable)
+
+`renovate.json`:
+
+```json
+{
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "automerge": false
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["major-update"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "automerge": true,
+    "schedule": ["at any time"]
+  }
+}
+```
+
+### 2.3. Native tools (для local manual updates)
+
+```sh
+# Node
+pnpm outdated
+pnpm update --interactive
+
+# Python (Poetry)
+poetry show --outdated
+poetry update
+
+# Rust
+cargo outdated
+cargo update
+
+# Go
+go list -m -u all
+go get -u ./...
+```
+
+См. `dev-environment.md` § 7 для project-specific Makefile targets.
+
+---
+
+## 3. Automerge criteria — strict
+
+Для automerge eligibility:
+
+- [ ] **CI green** — все checks pass (lint / test / typecheck / security)
+- [ ] **Patch or CVE update** только (никогда major automerge)
+- [ ] **No breaking changes** в changelog (если Renovate detected breaking — auto-disable automerge)
+- [ ] **Repository не critical-production** — для critical (financial / health / regulatory) manual review обязателен даже для patches
+
+Automerge NOT applicable для:
+- Major version bumps
+- Pre-1.0 packages (0.x semver не promises stability)
+- Locked-to-version packages (manual reason для locking — manual update)
+- Packages в `bundledDependencies` или с pinned lockfile
+
+---
+
+## 4. Minor version process
+
+Weekly или biweekly cadence (depends на volume):
+
+1. **Triage PRs** — список open Dependabot/Renovate PRs за период
+2. **Read changelogs** для каждого — особенно «Breaking changes» / «Deprecations» sections
+3. **Run extended smoke test locally** — `make test && make dev` + manual verify critical paths
+4. **Merge in batch** — squash batched minor updates в один commit «chore(deps): bump minor versions weekly batch»
+5. **Watch for regressions** в следующих 24h (production monitoring / staging dashboard)
+
+---
+
+## 5. Major version process
+
+Quarterly evaluation:
+
+1. **Inventory major updates available** — `pnpm outdated --long` / equivalent
+2. **Prioritize:**
+   - Security-relevant (e.g. Node.js LTS upgrade) — higher priority
+   - Performance / DX improvements — medium
+   - Cosmetic (just because new version exists) — defer
+3. **For each prioritized:**
+   - Read migration guide
+   - Estimate effort
+   - Plan expand-contract (AP-18) если breaking — multi-step PR sequence
+4. **Dedicated PR** — focused on single major bump, не batch
+5. **Test extensively** на staging
+
+---
+
+## 6. Lockfile discipline
+
+- **Always committed:** `package-lock.json` / `pnpm-lock.yaml` / `poetry.lock` / `Cargo.lock` / `go.sum`
+- **CI verifies** consistency (`pnpm install --frozen-lockfile` или equivalent)
+- **Merge conflicts** in lockfile → regenerate from scratch:
+  ```sh
+  rm package-lock.json && npm install
+  # or
+  rm pnpm-lock.yaml && pnpm install
+  ```
+  **Не** manual edit lockfile.
+- **Lockfile-only changes** valid commits (`chore(deps): regenerate lockfile after manual resolution`)
+
+---
+
+## 7. Security scanning
+
+### 7.1. Continuous
+
+- **Dependabot security alerts** (GitHub) — automatic CVE detection + PR creation
+- **`pnpm audit` / `pip-audit` / `cargo audit` / `nancy` (Go)** в CI (см. development-protocol.md § 10 security catalogue)
+- **Trivy / Snyk** (если applicable) для container / SBOM scanning
+
+### 7.2. Response time SLA
+
+| CVE severity | Response time |
+|---|---|
+| Critical (CVSS ≥ 9.0) | < 24h — patch + deploy |
+| High (CVSS 7.0-8.9) | < 72h |
+| Medium (CVSS 4.0-6.9) | < 1 week |
+| Low (CVSS < 4.0) | Next dependency update cycle |
+
+Если patch не available — workaround documented в `incident-runbook-draft.md` (mitigation + monitoring).
+
+---
+
+## 8. Special cases
+
+### 8.1. Transitive dependencies
+
+CVE в transitive dep'е:
+
+- Если direct dep имеет patch — `npm audit fix` / similar обычно достаточно
+- Если direct dep не patched — `overrides` (npm) / `resolutions` (yarn) / poetry direct pin — explicit constraint
+- Document в commit message reason для override
+
+### 8.2. Abandoned packages
+
+Если dependency не maintained:
+
+1. **Audit alternatives** — find supported replacement
+2. **Migration plan** — assess effort vs continued usage с known risk
+3. **Fork** в last resort (если no alternative + critical)
+4. Document decision в `architecture-decisions/` ADR
+
+### 8.3. Pre-1.0 packages
+
+Pre-1.0 (`0.x.y`) semver не promises stability. Treat **all** updates как potentially-breaking:
+
+- No automerge даже для patches
+- Read changelog обязательно
+- Smoke test после каждого update
+
+---
+
+## 9. Connect к AP-18
+
+Major version bumps часто = breaking changes downstream. AP-18 applies:
+
+- Если library API changes — наш код должен expand-contract против new API
+- Если library DB-related — migration considerations apply
+- Feature flag для risky dependency upgrade (toggle via config, easy rollback)
+
+---
+
+## 10. Связанные документы
+
+- `dev-environment.md` — Makefile targets для dependency operations
+- `refactor-playbook.md` — major bump может trigger refactor
+- `incident-runbook-draft.md` — CVE response procedures
+- `development-protocol.md` § 10 — security scanning catalogue
