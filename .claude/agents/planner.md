@@ -31,6 +31,14 @@ PM (или координирующий agent) запустил тебя в Step
 6. `.ai-pm/doc/architecture-decisions/` — существующие ADR.
 7. `.ai-pm/doc/mvp-scope.md` — где фича в scope.
 8. `.ai-pm/doc/development-protocol.md` (project overlay) + generic protocol — правила, которым нужно следовать.
+9. `.ai-pm/.bootstrap-state.md` — capabilities `ui_kind` и `db_kind` (multi-value) определяют какие foundational guides читать дальше.
+10. **UI / API foundations** — обязательно если фича touches UI / API. По `ui_kind` из state:
+    - `.ai-pm/doc/ui-style-guide-base.md` — 8 принципов, brand voice, i18n, accessibility общая
+    - `.ai-pm/doc/ui-style-guide-<kind>.md` для каждого `ui_kind` value (web / native-mobile / native-desktop / tui / cli / embedded / backend). См. AP-15.
+    - Backend rules (`ui-style-guide-backend.md`) применяются для **любого** продукта с backend частью — full-stack web включает (latency SLO, idempotency + Idempotency-Key, RFC 7807 errors, bulk ops, cursor pagination, live delivery, schema evolution с deprecation/sunset, observability).
+11. **DB foundations** — обязательно если фича touches schema / data. По `db_kind` из state:
+    - `.ai-pm/doc/database-design-base.md` — pragmatism / scaling triggers, identifier strategy (UUID v7 modern default), expand-contract migrations, backups + restore drills
+    - `.ai-pm/doc/database-design-<kind>.md` для каждого `db_kind` (embedded / external). См. AP-18.
 
 Для Mode 3 rework — дополнительно:
 - Предыдущие `<topic>_spec.md`, `<topic>_plan.md`, `<topic>_review.md` (если есть).
@@ -43,7 +51,25 @@ PM (или координирующий agent) запустил тебя в Step
 - **Соответствие spec'у** — каждый scenario из spec'а → его реализация.
 - **Архитектурный подход** — **substantive**, не one-liner. Должен объяснить: какие модули затронуты, **почему именно эта декомпозиция, какие альтернативы рассматривались и были отвергнуты, и какие trade-offs принятого подхода**. Это для PM (Persona A), который не читает код, но хочет **(а) разобраться в текущем решении и (b) наращивать general knowledge** через использование template'а. Reference на personas/journeys/threat-model где уместно. Когда упоминаешь нетривиальный архитектурный принцип впервые в проекте — **briefly explain general principle**, не только специфику этого случая. Это **learning layer**.
 - **Tests plan** — property-based / BDD / unit / integration.
-- **Migration / Schema changes** — если применимо.
+- **Migration / Schema changes / Deploy safety (AP-18)** — если применимо. Для **любого** breaking change (schema / API contract / config format) обязательно multi-step expand-contract sequence:
+  1. **Expand** этап — add new structure (column / endpoint / field), keep old работающим
+  2. **Dual-write / dual-read** — code пишет/читает оба, без breaking consumers
+  3. **Backfill** — отдельная step (не вместе со schema change)
+  4. **Switch** — clients переходят на new
+  5. **Contract** — после verified production usage удаляем old
+
+  Каждый этап **независимо deployable и rollback'able**. Backup verified restorable до destructive migration. Forward-only schema rollback на production (не down migrations). Feature flag для risky кода. Документировать в plan'е concrete sequence + rollback runbook reference. См. AP-18.
+
+  Для DB schema changes — cross-ref database-design-base.md § 7 (expand-contract canonical example) + database-design-<kind>.md (lock-aware patterns: CREATE INDEX CONCURRENTLY, ADD CONSTRAINT NOT VALID + VALIDATE).
+- **Backend operational invariants** — если фича touches API / endpoints. Должны явно фигурировать в plan'е:
+  - **Latency budget** (p50 / p99 для interactive endpoints — см. backend guide § 1.1)
+  - **Idempotency** для mutations (HTTP semantics + `Idempotency-Key` для POST creates — backend guide § 2)
+  - **Structured errors** RFC 7807 (`application/problem+json`, machine code + локализованный title/detail — backend guide § 3)
+  - **Cursor pagination** для lists (stable sort + tiebreaker — backend guide § 6)
+  - **Bulk operations** если frontend иначе делает N round-trips (backend guide § 4)
+  - **Live delivery mechanism** — WebSocket / SSE / webhooks / polling, если applicable (backend guide § 5)
+  - **Observability** — что в metrics / structured logs (backend guide § 11)
+- **Identifier strategy** для new schema entities — **UUID v7** modern default для public-facing IDs (sequential B-tree insertion vs v4 random — ~5-10x throughput); `bigserial` для internal. См. database-design-base.md § 3.
 - **Новые fitness functions** — semgrep / lint / arch rules, которые нужно добавить.
 - **Новые ADR** — если есть архитектурный fork → создаёшь ADR в той же ветке.
 - **Open questions** — нерешённые технические вопросы.
