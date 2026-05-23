@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/check-pr-has-review.sh
-# Layer 2 enforcement: блокирует `gh pr merge` без предварительного review.
+# Layer 2 enforcement: блокирует `gh pr create` и `gh pr merge` без review.
 # Используется как PreToolUse hook в .claude/settings.json для Bash tool.
 #
 # Hook input: JSON через stdin от Claude Code:
@@ -9,13 +9,17 @@
 #   exit 0 = allow
 #   exit 2 = block; stderr передаётся AI
 #
+# Поддерживает offline workflow: review происходит **до** создания PR (local trace
+# или committed _review.md). Когда онлайн и PR создан — reviewer добавляет
+# gh pr review для visibility в GitHub UI.
+#
 # Логика (hybrid review_flow), порядок проверок:
-#   1. Если команда не `gh pr merge` — pass
-#   2. Skip-marker: если HEAD commit body содержит `[skip-review]` — pass (trivial chores)
-#   3. GitHub PR review: `gh api repos/<owner>/<repo>/pulls/<N>/reviews --jq 'length' >= 1` — pass
-#   4. Committed doc fallback: если branch = `feature/<topic>` и `doc/features/<topic>_review.md` существует — pass (Stage F фичи)
-#   5. Local trace fallback: если `.ai-pm/.reviews/<branch>.json` существует — pass (для не-Stage-F PR'ов без gh доступа)
-#   6. Иначе — exit 2
+#   1. Если команда не `gh pr create` и не `gh pr merge` — pass
+#   2. Skip-marker: если HEAD commit body на отдельной строке содержит `[skip-review]` — pass
+#   3. Committed doc: если branch = `feature/<topic>` и `doc/features/<topic>_review.md` существует — pass
+#   4. Local trace: если `.ai-pm/.reviews/<branch>.json` существует — pass
+#   5. (Только для `gh pr merge`) GitHub PR review: `gh api .../pulls/<N>/reviews --jq 'length' >= 1` — pass
+#   6. Иначе — exit 2 с указанием 4 форм trail
 
 set -e
 
