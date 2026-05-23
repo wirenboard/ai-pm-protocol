@@ -97,9 +97,9 @@ Scenario: <название>
 
 ---
 
-## Impact assessment (mode-aware, для AP-13 + AP-14)
+## Impact assessment (mode-aware, для AP-13 + AP-14 + AP-19)
 
-Frontmatter spec'а должен включать **7 полей**: 3 операционных (AP-13) + 4 структурных (AP-14).
+Frontmatter spec'а должен включать **7 импакт-полей**: 3 операционных (AP-13) + 4 структурных (AP-14). Опционально — `pr_ordering` для multi-domain features (AP-19).
 
 ```yaml
 # AP-13 — операционные / юридические / валидационные документы
@@ -112,6 +112,11 @@ journey_impact: yes|no       # фича меняет существующий jo
 threat_impact: yes|no        # фича вводит новые векторы атак / меры защиты / меняет существующие T-/M-IDs
 scope_impact: yes|no         # фича переносит артефакты между фазами v0 / Этап 1 / Этап 1.5+ или меняет границы фаз
 topology_impact: yes|no      # фича вводит новый компонент / поток данных / зависимость / интеграцию
+
+# AP-19 — per-PR atomicity (для multi-domain features, опционально)
+pr_ordering: null            # null для single-domain features
+                             # [schema, backend, frontend, cleanup] для fullstack — каждый element = atomic PR в declared order
+                             # naturally aligns с AP-18 expand-contract
 ```
 
 ### Что делать при `yes` (matrix следствий)

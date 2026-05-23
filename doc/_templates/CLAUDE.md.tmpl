@@ -68,7 +68,12 @@
 - **`project-bootstrap`** — Stage A-E setup + resume + lifecycle routing. Mode + integration + trust profile aware.
 - **`planner`** — Step 2 plan writer. Read-only по коду. Trust-profile-aware.
 - **`coder`** — Step 4 implementation. Tests-first. No silent deviation.
-- **`reviewer`** — Step 7 review. Mandatory all modes. Architectural-context + learning-oriented findings.
+- **`reviewer`** — Step 7 review primary (orchestrator / router). Detect domain PR'а → spawn **always** `protocol-compliance-reviewer` + **ONE** domain-specific (`backend-reviewer` / `frontend-reviewer` / `design-reviewer` / `database-reviewer`). Consolidates findings → single verdict. Mandatory all modes. См. AP-19 + AP-20.
+- **`protocol-compliance-reviewer`** — always spawned. Spec↔plan↔code consistency, frontmatter, AP discipline.
+- **`backend-reviewer`** — spawned для `feat(backend)`/`feat(api)`/`feat(server)`. API contracts, idempotency, RFC 7807, latency SLO, security серверной стороны.
+- **`frontend-reviewer`** — spawned для `feat(frontend)`/`feat(ui)`/`feat(web)`/`feat(mobile)`/etc. Tokens, accessibility per-kind, frameworks-first, i18n, responsive.
+- **`design-reviewer`** — spawned для `feat(design)`/`feat(ux)`/`feat(copy)` или significant UX flows. 8 принципов, brand voice, эффективность пути, confirm vs undo.
+- **`database-reviewer`** — spawned для `feat(db)`/`feat(schema)`/`feat(migration)`. Schema design, expand-contract migrations, indexing, identifier strategy.
 - **`release-helper`** — release PR при накоплении merged feature-PR'ов. SemVer bump + CHANGELOG.
 
 Запуск: `claude --agent <name>`. Или ты в main session приглашаешь PM: «invoke <agent>?», ждёшь approval, и сам передаёшь управление (через Agent tool с appropriate subagent_type).

@@ -13,7 +13,7 @@ fixes_applied: 2026-05-24
 
 ## 1. Leak audit (BLOCKING gate)
 
-Grep over `doc/`, `.claude/`, `README.md` for `heartvault|сейф|письм|HV-|wrap_key|обёртка #|content_key` — **0 matches**. AP-17 clean.
+Grep over `doc/`, `.claude/`, `README.md` for known product names (см. `.ai-pm/.product-names-blocklist` если существует) — **0 matches**. AP-17 clean.
 
 ## 2. Internal consistency
 

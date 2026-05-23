@@ -75,9 +75,9 @@ Async reviewer-agent audit'нул 5 subagents (project-bootstrap / planner / cod
 - reviewer.md verdict format + persist trail + human-override discipline — already coherent
 - release-helper.md SemVer + CHANGELOG + Conventional Commits — already coherent
 
-## HeartVault leak grep
+## Product-name leak grep (AP-17)
 
-`grep -rniE "heartvault|сейф|письм|HV-|wrap_key|обёртка #|content_key" .claude/agents/` — **0 matches**. AP-17 clean.
+Grep over `.claude/agents/` for known product names (см. `.ai-pm/.product-names-blocklist` если существует) — **0 matches**. AP-17 clean.
 
 ## Cross-cutting impact assessment
 

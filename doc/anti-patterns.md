@@ -143,6 +143,96 @@
 
 ---
 
+## AP-20. Specialized reviewer routing — единый orchestrator, ограниченный spawn
+
+**Что нельзя:**
+
+- Spawn'ить **все** specialized reviewer'ы (backend / frontend / design / database / protocol-compliance) для каждого PR независимо от scope — overhead (cost / время / шум).
+- Использовать domain-specific reviewer (backend-reviewer, frontend-reviewer, etc.) **напрямую**, минуя primary reviewer — теряется consolidation logic + cross-cutting checks.
+- Полагаться на naive «один agent читает всё» для multi-domain PRs — prompt разрастается, focus теряется.
+- Запускать reviewer на mixed-domain PR без recommendation split per AP-19.
+
+**Почему:** PM на одном из ранних prod-run'ов template'а expressed concern «зачем гонять 5 reviewer'ов на каждый коммит». Naive «all-specialized always» multiplies cost × N (worst case 5 agent spawns per PR). Smart routing reduces это к ровно 2 spawns per typical atomic PR (protocol-compliance always + 1 domain), что соответствует AP-19 per-PR atomicity.
+
+**Решение:**
+
+`reviewer.md` — **primary reviewer (orchestrator)**, единый entry point для всех PR'ов. Detection logic:
+
+1. **Detect PR scope** через Conventional Commits scope + diff paths + diff content
+2. **Always spawn** `protocol-compliance-reviewer` (cross-cutting baseline: spec↔plan↔code, frontmatter, AP discipline)
+3. **Spawn ONE** domain-specific reviewer based on detected scope:
+   - `backend-reviewer` — `feat(backend)` / `feat(api)` / `feat(server)` + paths
+   - `frontend-reviewer` — `feat(frontend)` / `feat(ui)` / `feat(web)` / `feat(mobile)` / etc + paths
+   - `design-reviewer` — `feat(design)` / `feat(ux)` / `feat(copy)` + design assets paths
+   - `database-reviewer` — `feat(db)` / `feat(schema)` / `feat(migration)` + migrations paths
+4. **Cross-cutting checks** primary делает сам: structural consistency (AP-14), spec coverage, plan adherence, test discipline, generic security/architecture, code hygiene
+5. **Consolidate** sub-reports + primary findings → single verdict + architectural summary
+
+**Worst case spawn count per PR**: 2 (protocol-compliance + 1 domain) для atomic PR. Edge cases (PR touches multiple domains в exception scenarios) → 3 spawns. Никогда не 5 при atomic discipline (AP-19).
+
+**Применение** — все Stage F PRs + template-extension PRs. Mode-agnostic.
+
+**Как поступать вместо:**
+
+- `reviewer.md` — primary entry point (router role)
+- `protocol-compliance-reviewer.md` — always spawned, focused process check
+- `backend-reviewer.md` / `frontend-reviewer.md` / `design-reviewer.md` / `database-reviewer.md` — domain-specific, focused
+- Primary consolidates findings; specialized agents не общаются между собой и не персистят свои reports сами
+- AP-19 (per-PR atomicity) enforced concurrently — если PR mixes domains, reviewer returns request-changes recommendation «split per AP-19»
+
+---
+
+## AP-19. Per-PR atomicity — один PR = один domain
+
+**Что нельзя:**
+
+- Помещать в один PR изменения нескольких domains (backend + frontend + db) — review становится multi-domain, finding'и разбросаны, rollback в случае проблемы трудный.
+- Делать big-bang fullstack PR (feature touches schema + backend + frontend + UI design в одном merge) — нарушает AP-18 expand-contract by design (один merge = много moving parts).
+- Combine schema change + backfill + code update в одном PR — невозможно rollback'нуть отдельно.
+
+**Почему:** один из ранних prod-run'ов template'а имел PRs которые touched schema (DB migration) + backend code (API change) + frontend code (UI update) + tests одновременно. Review такого PR требует expertise во всех 4 domains одновременно, finding'и cross-cutting и hard to prioritize, rollback в случае проблемы требует разнести изменения post-hoc. Plus violates AP-18 expand-contract pattern (один merge = breaking change, нет multi-step safety).
+
+**Решение — split fullstack feature на ordered PRs:**
+
+| Order | PR | Domain |
+|---|---|---|
+| 1 | `feat(db): add column for X` (additive only) | database |
+| 2 | `feat(backend): new endpoint reading X` (dual-write если применимо) | backend |
+| 3 | `feat(frontend): UI consuming X endpoint` | frontend |
+| 4 | (опционально) `chore(db): drop legacy column after Y days` | database (cleanup phase Contract) |
+
+Каждый PR — atomic, focused, independently deployable + rollback'able. Natural alignment с AP-18 expand-contract.
+
+**Spec frontmatter** для multi-domain features:
+
+```yaml
+pr_ordering: [schema, backend, frontend, cleanup]  # optional, для multi-PR features
+```
+
+planner.md предлагает PR ordering в plan'е для multi-domain features. Каждый PR имеет свой `<topic>-<order>_spec.md` (или single spec с multiple PR references).
+
+**Допустимые исключения** (документированы):
+
+1. **`chore(release):`** — release PR может touch version files в multiple paths (это admin operation, не feature)
+2. **`docs:`** — pure documentation updates (часто touch multiple doc files)
+3. **Hotfix для critical incident** — documented exception в commit body с обоснованием (например, «hotfix: cannot split because security incident require atomic deploy»). Visible в git log forever.
+4. **Template-extension** в `ai-pm-protocol` repo — может touch multiple template files (это template development, не product feature)
+
+**Как поступать вместо:**
+
+- В Conventional Commits scope использовать **один** domain: `feat(backend):`, `feat(frontend):`, `feat(db):`, `feat(design):`
+- planner.md в plan'е предлагает PR ordering для multi-domain features (см. `pr_ordering` frontmatter)
+- coder.md implements один scope at a time, не mix
+- reviewer.md detect'ит mixed-domain PR и returns request-changes finding «split per AP-19»
+
+**Cross-references:**
+
+- AP-18 expand-contract pattern — naturally aligns с per-PR atomicity (каждый этап expand-contract обычно — отдельный PR)
+- AP-20 specialized reviewer routing — atomicity делает routing simple (detect single domain → spawn one specialized reviewer)
+- AP-6 no silent deviation — split на PRs делает каждое отклонение visible
+
+---
+
 ## AP-18. Unsafe deploys / migrations без rollback guarantee
 
 **Что нельзя:**

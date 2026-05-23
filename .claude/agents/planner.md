@@ -72,6 +72,14 @@ PM (или координирующий agent) запустил тебя в Step
 - **Identifier strategy** для new schema entities — **UUID v7** modern default для public-facing IDs (sequential B-tree insertion vs v4 random — ~5-10x throughput); `bigserial` для internal. См. database-design-base.md § 3.
 - **Новые fitness functions** — semgrep / lint / arch rules, которые нужно добавить.
 - **Новые ADR** — если есть архитектурный fork → создаёшь ADR в той же ветке.
+- **PR ordering (AP-19, для multi-domain features)** — если фича touches несколько domains (schema + backend + frontend), предложи ordered split на atomic PRs. Записывается в spec frontmatter `pr_ordering: [schema, backend, frontend]`. Naturally aligns с AP-18 expand-contract (каждый этап = отдельный PR).
+  ```
+  Order 1 — feat(db): additive schema change
+  Order 2 — feat(backend): new endpoint reading schema (dual-write если applicable)
+  Order 3 — feat(frontend): UI consuming endpoint
+  Order 4 (optional) — chore(db): cleanup phase Contract
+  ```
+  Каждый PR independently deployable + rollback'able. См. AP-19 для exception cases (release / docs / hotfix).
 - **Open questions** — нерешённые технические вопросы.
 - **Risks** — что может пойти не так. **Substantive risk analysis**: для каждого риска — likelihood, impact, mitigation (или почему mitigation deferred).
 
