@@ -143,6 +143,41 @@
 
 ---
 
+## AP-16. PR merged без review-trail
+
+**Что нельзя:**
+
+- Merge'ить PR (`gh pr merge` / эквивалент) без зафиксированного review-trail в одной из 4 форм:
+  - **GitHub PR review** через `gh pr review <NUM> --comment|--approve|--request-changes` (primary flow для GitHub-based projects)
+  - **Committed `_review.md`** для Stage F feature/<topic> branch (`doc/features/<topic>_review.md`) — default routine reviewer-agent'а
+  - **Локальный trace file** `.ai-pm/.reviews/<branch>.json` — fallback когда gh недоступен / не Stage F
+  - **Explicit skip-marker** `[skip-review]` в HEAD commit body — для trivial chore'ов (typo-fix, dep bump)
+- Полагаться на «я провёл review в head'е» без persisting trail — это **soft reminder**, который AI игнорирует.
+
+**Почему:** на одном из ранних prod-run'ов AI забыл запустить reviewer-agent перед `gh pr merge`. PM поймал. Анализ показал: reviewer.md описывал routine, но не было **hard enforcement** — soft reminders в CLAUDE.md и memory rules игнорировались под нагрузкой длинных сессий с множеством PR'ов. Reviewer-agent — Layer 3 enforcement (subagent routine), без Layer 2 (settings.json hook) он зависит от AI-дисциплины, которая не bullet-proof.
+
+**Решение:** Layer 2 hook `scripts/check-pr-has-review.sh` блокирует `gh pr merge` если ни одна из 4 форм trail не найдена. Hook читает `gh api repos/.../pulls/<N>/reviews`, committed `_review.md`, local trace file, и HEAD commit body для skip-marker. AI **не может** обойти через --no-verify (это запрещено § 14.7).
+
+**Применение** — для всех проектов с PR-flow. Mode-agnostic (одинаково для Mode 1 / 2 / 3 / lite).
+
+**`review_flow` capability** в `.bootstrap-state.md` определяет **primary** trail (GitHub PR review / committed-doc only / local-only). По умолчанию для GitHub проектов — `hybrid: gh-pr primary + committed _review.md для Stage F + local fallback`.
+
+**Как поступать вместо:**
+
+- В `_templates/scripts/check-pr-has-review.sh.tmpl` — hook script.
+- В `_templates/settings.json.tmpl` — hook entry на Bash matcher.
+- В `.claude/agents/reviewer.md` — обязательная routine «Persist review» в конце work'а с 3 попытками (gh pr review → committed `_review.md` → local trace file).
+- В `_templates/bootstrap-state.md.tmpl` — `review_flow` capability в frontmatter.
+- В `.claude/agents/project-bootstrap.md` Stage E — на init спрашивать PM про предпочитаемый `review_flow`.
+- В `.gitignore` (через bootstrap-agent) — `.ai-pm/.reviews/` (local trace, не commit'ится).
+
+**Skip-marker `[skip-review]`** — explicit visible in `git log`, не abuse'ится потому что:
+- Видим всем кто читает history
+- Не маскируется (нельзя написать в hidden comment)
+- Используется sparingly (typo / dep bump / README only) — каждый use требует осознанного решения PM
+
+---
+
 ## AP-15. UI-фичи без Stage A `ui-style-guide.md`
 
 **Что нельзя:**

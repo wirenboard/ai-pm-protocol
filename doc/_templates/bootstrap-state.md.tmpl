@@ -31,6 +31,7 @@ project_capabilities:
   - uses-i18n: yes | no
   - multi-tenant: yes | no
   - public-web: yes | no
+  - review_flow: gh-pr | committed-doc | local-trace | hybrid | disabled  # как фиксируется review-trail перед gh pr merge. hybrid (default для GitHub) — gh pr review primary + committed _review.md для Stage F + local fallback. См. AP-16
 ---
 
 # Bootstrap state

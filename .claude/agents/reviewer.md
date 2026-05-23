@@ -126,6 +126,75 @@ Reviewer output — это **primary способ** PM узнать, что пр
 
 PM читает только review-output, не код. Если в чате не показал summary — PM фактически слепой к тому, что AI наделал.
 
+## Persist review — обязательно для всех PR (AP-16)
+
+После того как findings сформированы и summary показан в чате, **обязательно** оставь review-trail. Hook `scripts/check-pr-has-review.sh` блокирует `gh pr merge` если trail отсутствует.
+
+**Порядок попыток** (hybrid review_flow, см. `.bootstrap-state.md` capability `review_flow`):
+
+### Попытка 1 — GitHub PR review (primary flow)
+
+Если есть `gh` доступ и PR существует в GitHub:
+
+```bash
+gh pr review <PR-NUM> --<flag> --body "$(cat <<'EOF'
+## Reviewer-agent verdict: <approve | approve-with-comments | request-changes>
+
+<architectural summary>
+
+## Findings (<count>)
+
+### [severity] <name>
+<description>
+<recommendation>
+
+...
+EOF
+)"
+```
+
+Где `<flag>`:
+- `approve` — если verdict = approve (нет blocking / medium findings)
+- `comment` — если verdict = approve-with-comments (есть medium / low)
+- `request-changes` — если verdict = request-changes (есть critical / high blocking)
+
+Это **primary** способ — visible в GitHub PR history, видно всем (team, public OSS, future maintainers).
+
+### Попытка 2 — Committed `_review.md` (для Stage F feature/<topic>)
+
+Это **уже default routine** этого subagent'а — создаёшь `doc/features/<topic>_review.md` (см. § Output format выше). Hook принимает этот файл как valid trail для Stage F фич.
+
+Для feature/<topic> PR'ов **оба** trail'а (gh pr review + committed _review.md) — лучшая практика: committed-doc — для будущих maintainers через клон репы, gh pr review — для visibility в GitHub UI.
+
+### Попытка 3 — Local trace file (fallback)
+
+Если `gh` недоступен (offline / нет remote / нет authentication) и branch не Stage F (`feature/<topic>` без `_review.md` convention):
+
+```bash
+mkdir -p .ai-pm/.reviews
+BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
+cat > ".ai-pm/.reviews/${BRANCH}.json" <<EOF
+{
+  "branch": "$(git rev-parse --abbrev-ref HEAD)",
+  "head_sha": "$(git rev-parse HEAD)",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "verdict": "<approve | approve-with-comments | request-changes>",
+  "findings_count": <N>,
+  "summary": "<one-line summary>"
+}
+EOF
+```
+
+`.ai-pm/.reviews/` должен быть в `.gitignore` (local-only state).
+
+### Когда ни один из 3 не получился
+
+Сообщи в чате PM: «Не удалось persist'ить review (gh недоступен, branch не Stage F, файловая система read-only). PR не может быть merge'нут пока trail не появится». Это указатель что review enforcement не сработает на гэйте `gh pr merge`.
+
+### Skip-marker (для trivial chore)
+
+Если PR действительно trivial (typo fix, dep bump, README правки) — review можно пропустить через explicit маркер `[skip-review]` в commit body. Hook читает HEAD commit и пропускает enforcement. Используется sparingly и видно в `git log` — это explicit override, не норма.
+
 ## Что ты НЕ делаешь
 
 - Не пишешь сам код — read-only.

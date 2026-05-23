@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# scripts/check-pr-has-review.sh
+# Layer 2 enforcement: блокирует `gh pr merge` без предварительного review.
+# Используется как PreToolUse hook в .claude/settings.json для Bash tool.
+#
+# Hook input: JSON через stdin от Claude Code:
+#   { "tool_name": "Bash", "tool_input": { "command": "...", ... } }
+# Output:
+#   exit 0 = allow
+#   exit 2 = block; stderr передаётся AI
+#
+# Логика (hybrid review_flow), порядок проверок:
+#   1. Если команда не `gh pr merge` — pass
+#   2. Skip-marker: если HEAD commit body содержит `[skip-review]` — pass (trivial chores)
+#   3. GitHub PR review: `gh api repos/<owner>/<repo>/pulls/<N>/reviews --jq 'length' >= 1` — pass
+#   4. Committed doc fallback: если branch = `feature/<topic>` и `doc/features/<topic>_review.md` существует — pass (Stage F фичи)
+#   5. Local trace fallback: если `.ai-pm/.reviews/<branch>.json` существует — pass (для не-Stage-F PR'ов без gh доступа)
+#   6. Иначе — exit 2
+
+set -e
+
+INPUT=$(cat)
+
+if command -v jq >/dev/null 2>&1; then
+  TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty')
+  CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+else
+  TOOL=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]+"' | sed -E 's/.*:\s*"([^"]+)"/\1/' | head -1)
+  CMD=$(echo "$INPUT" | grep -oE '"command"\s*:\s*"[^"]+"' | sed -E 's/.*:\s*"([^"]+)"/\1/' | head -1)
+fi
+
+[ "$TOOL" != "Bash" ] && exit 0
+[ -z "$CMD" ] && exit 0
+
+# Проверяем только `gh pr merge`. Другие gh операции пропускаем.
+if ! echo "$CMD" | grep -qE '^[[:space:]]*gh[[:space:]]+pr[[:space:]]+merge[[:space:]]'; then
+  exit 0
+fi
+
+# Извлекаем номер PR из команды (первый цифровой аргумент после `gh pr merge`)
+PR_NUM=$(echo "$CMD" | grep -oE 'gh[[:space:]]+pr[[:space:]]+merge[[:space:]]+[0-9]+' | grep -oE '[0-9]+$' | head -1)
+if [ -z "$PR_NUM" ]; then
+  # Без номера — gh берёт PR для текущей ветки. Получаем из gh.
+  PR_NUM=$(gh pr view --json number --jq '.number' 2>/dev/null || echo "")
+fi
+
+if [ -z "$PR_NUM" ]; then
+  echo "BLOCKED: не удалось определить номер PR для merge." >&2
+  echo "Укажи явно: gh pr merge <NUM> --squash" >&2
+  exit 2
+fi
+
+# === Check 1: Skip-marker в HEAD commit body ===
+if gh pr view "$PR_NUM" --json commits --jq '.commits[-1].messageBody' 2>/dev/null | grep -q '\[skip-review\]'; then
+  echo "INFO: PR #$PR_NUM имеет [skip-review] маркер в последнем commit — review enforcement пропущен." >&2
+  echo "Используется для trivial chore'ов (typo-fix, dep bump). См. CLAUDE.md правило review_flow." >&2
+  exit 0
+fi
+
+# === Check 2: GitHub PR review existence ===
+REVIEW_COUNT=$(gh pr view "$PR_NUM" --json reviews --jq '.reviews | length' 2>/dev/null || echo "0")
+if [ "$REVIEW_COUNT" -ge 1 ]; then
+  exit 0
+fi
+
+# === Check 3: Committed _review.md для Stage F фичи ===
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+HEAD_BRANCH=$(gh pr view "$PR_NUM" --json headRefName --jq '.headRefName' 2>/dev/null || echo "")
+
+if [ -n "$REPO_ROOT" ] && [ -n "$HEAD_BRANCH" ]; then
+  case "$HEAD_BRANCH" in
+    feature/*)
+      TOPIC="${HEAD_BRANCH#feature/}"
+      # Проверяем оба возможных пути (doc_root: doc или .ai-pm/doc)
+      if [ -f "$REPO_ROOT/doc/features/${TOPIC}_review.md" ] || \
+         [ -f "$REPO_ROOT/.ai-pm/doc/features/${TOPIC}_review.md" ]; then
+        echo "INFO: PR #$PR_NUM имеет committed _review.md для topic '${TOPIC}'." >&2
+        echo "Дополнительно рекомендуется добавить 'gh pr review' для visibility в GitHub PR history." >&2
+        exit 0
+      fi
+      ;;
+  esac
+fi
+
+# === Check 4: Local trace file (fallback для не-Stage-F PR'ов без gh доступа) ===
+if [ -n "$REPO_ROOT" ]; then
+  CURRENT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  # Имя файла — branch с заменой / на --, чтобы избежать nested directories
+  if [ -n "$CURRENT_BRANCH" ]; then
+    TRACE_NAME=$(echo "$CURRENT_BRANCH" | tr '/' '-')
+    TRACE_FILE="$REPO_ROOT/.ai-pm/.reviews/${TRACE_NAME}.json"
+    if [ -f "$TRACE_FILE" ]; then
+      echo "INFO: PR #$PR_NUM имеет локальный trace review ($TRACE_FILE)." >&2
+      echo "Используется fallback flow (без GitHub PR review). См. development-protocol.md § review_flow." >&2
+      exit 0
+    fi
+  fi
+fi
+
+# === Иначе — block ===
+echo "" >&2
+echo "BLOCKED: PR #$PR_NUM не имеет review'ов." >&2
+echo "" >&2
+echo "Перед merge нужно одно из:" >&2
+echo "  (а) Запустить reviewer-agent (см. .claude/agents/reviewer.md), который" >&2
+echo "      опубликует findings через 'gh pr review $PR_NUM --comment/--approve/--request-changes'" >&2
+echo "      (primary flow — visible в PR history)" >&2
+echo "  (б) Для Stage F feature/<topic> ветки — создать committed" >&2
+echo "      'doc/features/<topic>_review.md' (committed-doc flow)" >&2
+echo "  (в) Если нет gh доступа (offline / private repo без CLI) — создать" >&2
+echo "      локальный trace file '.ai-pm/.reviews/<branch>.json' с verdict + findings" >&2
+echo "      (local-fallback flow)" >&2
+echo "  (г) Для trivial chore (typo-fix, dep bump, README правки) — добавить" >&2
+echo "      '[skip-review]' маркер в commit body (explicit override)" >&2
+echo "" >&2
+echo "См. development-protocol.md § Reviewer enforcement (AP-16)." >&2
+echo "" >&2
+exit 2
