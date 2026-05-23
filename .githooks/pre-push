@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+# ai-pm-protocol — pre-push hook
+#
+# Запрещает прямой push в main (development-protocol.md § 14). Защита
+# дублирует серверную branch protection как defense-in-depth и работает,
+# даже если серверная protection временно снята (например, на этапе
+# bootstrap-а нового зеркала / fork-а).
+#
+# Активация:
+#   git config core.hooksPath .githooks
+#
+# AP-6 запрещает обход через --no-verify.
+
+protected='main'
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/"$protected")
+      echo "" >&2
+      echo "BLOCKED: прямой push в '$protected' запрещён." >&2
+      echo "" >&2
+      echo "Создай ветку, открой PR через 'gh pr create', merge через PR UI." >&2
+      echo "См. development-protocol.md § 14." >&2
+      echo "" >&2
+      exit 1
+      ;;
+  esac
+done
+
+exit 0
