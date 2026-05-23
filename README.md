@@ -189,6 +189,18 @@ Template enforce'ит протокол через 5 защитных слоёв 
 - Документы без PM-gate между стадиями
 - AI отклоняется от plan'а без объявления и без обсуждения
 
+## Contributing
+
+Если ты contribute'ишь изменения **в сам шаблон** (а не используешь его в своём продукте) — после клона активируй внутренние git hooks:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Это включит pre-push hard-block на прямой push в `main` (development-protocol.md § 14.6). Без этого `.githooks/pre-push` лежит в репке, но git его не видит. Активация идемпотентна и нужна один раз на клон.
+
+Все изменения в шаблоне идут через PR в feature/<topic>, docs/<topic> или chore/<topic> ветки. Direct-push в `main` запрещён § 14.
+
 ## Лицензия
 
 **AGPL v3** — см. `LICENSE`. Коммерческое использование разрешено; модификации (включая SaaS-deployment) должны возвращаться в open source под той же лицензией.

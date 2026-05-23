@@ -88,20 +88,31 @@ exit 0
 HOOK
 chmod +x "$HOOK_DIR/commit-msg"
 
-# === pre-push hook (optional, gentler) ===
+# === pre-push hook (hard block на main / master) ===
+# На GitHub free private plan серверная branch protection недоступна (требует
+# GitHub Pro / Team / Enterprise). Этот hook — клиентский эквивалент защиты
+# main: блокирует прямой push, § 14.7 development-protocol запрещает
+# --no-verify-обход. Для public репозиториев и платных планов hook остаётся
+# как defense-in-depth поверх серверной branch protection (см. § 14.6).
 cat > "$HOOK_DIR/pre-push" <<'HOOK'
 #!/usr/bin/env bash
-# Pre-push: final sanity check.
+# Pre-push: блокирует прямой push в main / master.
 
-REMOTE_BRANCH=$(git rev-parse --abbrev-ref @{u} 2>/dev/null || echo "")
-if echo "$REMOTE_BRANCH" | grep -qE "(main|master)$"; then
-  echo "WARN: push в main/master. Это разрешено только release-please или после squash & merge через PR." >&2
-  read -p "Продолжить? (y/N) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+protected_pattern='refs/heads/(main|master)'
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if echo "$remote_ref" | grep -qE "^$protected_pattern$"; then
+    echo "" >&2
+    echo "BLOCKED: прямой push в $remote_ref запрещён." >&2
+    echo "" >&2
+    echo "Согласно development-protocol.md § 14 — только feature/<topic> ветки + PR + squash & merge." >&2
+    echo "Создай ветку, открой PR через 'gh pr create', merge через PR UI после reviewer-agent approval." >&2
+    echo "" >&2
+    echo "§ 14.7 development-protocol запрещает обход через --no-verify." >&2
+    echo "" >&2
     exit 1
   fi
-fi
+done
 
 exit 0
 HOOK
@@ -110,4 +121,4 @@ chmod +x "$HOOK_DIR/pre-push"
 echo "Git hooks installed:"
 echo "  - pre-commit: lint, format, secret-scan, spec-discipline"
 echo "  - commit-msg: Conventional Commits 1.0 enforcement"
-echo "  - pre-push: warns на main/master push"
+echo "  - pre-push: hard block на main / master push (клиентский эквивалент branch protection для free private repo)"
