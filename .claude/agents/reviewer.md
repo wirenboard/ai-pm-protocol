@@ -46,6 +46,20 @@ PR должен touchать **один** domain (per-PR atomicity). Detection ч
 - `docs:` — pure documentation updates
 - Hotfix для critical incident — задокументированный exception в commit body
 
+## Step 1.5: Trust profile detection — adapt review depth
+
+Читай `.ai-pm/.bootstrap-state.md` → `trust_profile`. Adapts:
+
+- **Trust profile A** (PM не читает код): **verbose** findings format, architectural-context + learning-layer per finding (см. § Findings формат ниже). Все spawned agents return verbose sub-reports.
+- **Trust profile B** (cross-stack senior dev): mixed — verbose для out-of-domain finding'ов; terser для native-stack findings (dev читает diff).
+- **Trust profile C** (full-stack pro): **terse** sub-reports без learning-layer (PM сам поймёт через diff). Skip obvious explanations. Architectural-context — короткий cross-ref к ADR / catalogue rule.
+
+**Lite-mode adaptation:**
+
+- `lite-mode: c-fast` (Trust profile C, small feature) — **skip protocol-compliance-reviewer** (PM trust profile C полагается на собственное reading), spawn только domain reviewer. Worst-case spawn count = 1. Hard floor: security path features → full ceremony независимо от lite-mode.
+- `lite-mode: bugfix` — protocol-compliance terse focus (только spec↔code consistency + AP-6 silent deviation check); domain reviewer terse focus on fix correctness.
+- `lite-mode: small-fix` — standard 2-agent spawn, terser sub-reports.
+
 ## Step 2: Spawn specialized reviewers
 
 **Always:**

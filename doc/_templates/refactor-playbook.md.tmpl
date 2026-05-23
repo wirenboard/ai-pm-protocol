@@ -1,0 +1,233 @@
+---
+status: draft
+stage: D
+artifact: refactor-playbook
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD
+---
+
+# <Project> — Refactor Playbook
+
+**Stage D artifact, опциональный.** Positive guidance для safe refactor PRs — complements AP-6 (no silent deviation) и AP-19 (per-PR atomicity). AP-6 описывает что **нельзя** (silent scope expansion); этот playbook описывает что **можно делать правильно**.
+
+Применяется когда AI/dev делает refactor (поведение **не меняется**, только структура / читаемость / performance / coupling).
+
+---
+
+## 1. Definition — что такое «refactor»
+
+**Refactor:** изменение **внутренней структуры** кода **без изменения внешнего поведения**.
+
+- ✅ Rename variable / function
+- ✅ Extract method / inline method
+- ✅ Move file / module
+- ✅ Replace inheritance с composition (если behavior preserved)
+- ✅ Improve naming для clarity
+- ✅ Reduce duplication через extract common
+- ✅ Improve type signatures (без changing runtime behavior)
+- ✅ Performance optimization (если outputs identical)
+
+**НЕ refactor (это feature / fix / breaking change):**
+
+- ❌ Adding new functionality → `feat:`
+- ❌ Fixing bug → `fix:`
+- ❌ Changing API contracts → `feat:` + AP-18 expand-contract
+- ❌ Changing observable behavior → `feat:` или `fix:`
+- ❌ Removing functionality (without deprecation cycle) → `feat:` + AP-18
+
+Если **поведение меняется** — это **не refactor**. Commit message `refactor:` enforce'ит discipline.
+
+---
+
+## 2. Pre-refactor checklist
+
+Перед началом refactor PR:
+
+- [ ] **Baseline tests pass** — current implementation полностью покрыта tests (или сделать coverage first as separate PR)
+- [ ] **Scope clear** — что именно refactoring, why, что НЕ меняется
+- [ ] **Atomic** — PR соответствует AP-19 (один domain). Если refactor cross-cuts domains — split на ordered PRs
+- [ ] **No mixed concerns** — refactor PR содержит **только** refactor changes, не bundles с feature work
+- [ ] **Performance baseline** (если performance refactor) — measured before, target documented
+
+---
+
+## 3. Refactor execution discipline
+
+### 3.1. Tests первыми (Tests First принцип сохраняется)
+
+**Baseline tests должны pass до начала refactor.** Если existing tests inadequate для covering refactored code:
+
+1. PR 1: extend test coverage to baseline (`test:` commit)
+2. PR 2: refactor (`refactor:` commit) — tests должны continue pass
+
+Сначала test coverage, потом refactor. Это classic Working Effectively with Legacy Code pattern.
+
+### 3.2. Small steps
+
+Каждый refactor — small step:
+- Extract method (one at a time)
+- Rename (одна symbol per commit)
+- Move file (one file per commit)
+
+Большой refactor → много small commits в feature branch → squash при merge (если хочется one commit в main) или keep separate (если history valuable).
+
+### 3.3. Tests pass после каждого step
+
+После каждого small step — run tests. Если падают → step has subtle behavior change → revert + reconsider.
+
+**Если tests падают в refactor PR — это `request-changes` finding** от reviewer'а: «refactor changed behavior; либо это feature (rename commit), либо bug fix (rename), либо нужно адресовать tests».
+
+### 3.4. Before/after test snapshot
+
+Documented в PR description:
+
+```markdown
+## Refactor scope
+- What: <конкретное изменение>
+- Why: <reason — clarity / coupling / performance / etc>
+- What's NOT changing: <observable behavior list>
+
+## Test snapshot
+- Tests before: <count> passing
+- Tests after: <count> passing
+- New tests added (если applicable): <list>
+- Coverage before: X%
+- Coverage after: X% (should be ≥ before)
+```
+
+---
+
+## 4. Common refactor patterns + safety rails
+
+### 4.1. Rename (variable / function / module)
+
+**Safe approach:**
+1. IDE-driven rename (поддерживается VS Code / IntelliJ / etc) — refactors всё transitively + verifies references
+2. Run tests
+3. Commit с `refactor: rename X to Y`
+
+**Anti-patterns:**
+- Manual find-replace без verifying scope (может ломать unrelated code)
+- Rename + remove deprecation alias в одном PR (breaking change; use AP-18 expand-contract если public API)
+
+### 4.2. Extract method / extract module
+
+**Safe approach:**
+1. Identify duplication / overly-long function
+2. Extract в new function/module с same behavior (identical inputs/outputs)
+3. Replace original code с calls к extracted
+4. Run tests
+5. Commit с `refactor: extract <name>`
+
+### 4.3. Inline method (opposite of extract)
+
+**Safe approach:**
+1. Method used в 1-2 places only + thin wrapper
+2. Replace calls с inlined body
+3. Remove unused method
+4. Run tests
+
+### 4.4. Move file / module
+
+**Safe approach:**
+1. Use IDE move refactor (updates imports automatically)
+2. Verify imports updated across codebase
+3. Run tests
+4. Commit с `refactor: move X to Y`
+
+### 4.5. Replace inheritance с composition
+
+Complex refactor. Approach:
+1. Add composition (new instance member containing previously-inherited dependency)
+2. Delegate methods к composition (replace `super.method()` calls с `composed.method()`)
+3. Tests should continue pass
+4. Remove inheritance relationship
+5. Run tests
+6. Commit (или несколько коммитов per step)
+
+**Behavioral preservation critical** — если sub-behavior changes (например, super-class behavior had side effect), может ломать.
+
+### 4.6. Performance refactor
+
+**Safe approach:**
+1. Baseline measurement (latency / memory / throughput) — documented в PR
+2. Implement optimization
+3. Verify identical outputs (property-based tests preferable)
+4. Re-measure — improvement documented
+5. Run всё existing tests
+
+**Anti-patterns:**
+- Optimization без measurement (premature optimization)
+- Optimization that changes outputs (это feature, не refactor)
+
+---
+
+## 5. Reviewer expectations (cross-ref AP-20)
+
+Refactor PR triggers same review chain как любой PR:
+
+- **protocol-compliance-reviewer** verifies:
+  - Commit message `refactor:` (Conventional Commits)
+  - No behavior changes documented
+  - Tests continue passing (per-diff coverage не decrease)
+  - Scope атомарный per AP-19
+
+- **Domain-specific reviewer** (backend / frontend / database / etc) verifies:
+  - Refactor доменно-appropriate (e.g. backend refactor проходит backend-reviewer checks)
+  - No subtle behavior changes
+  - Performance не deteriorated
+
+- **design-reviewer NOT spawned** для pure refactor (нет UX semantics changes)
+
+**Verdict expectations:**
+- `approve` если everything clean
+- `approve-with-comments` для minor nits (naming preference / etc)
+- `request-changes` если behavior actually changed (refactor mislabeled — should be `feat:` / `fix:`)
+
+---
+
+## 6. Frequency / cadence
+
+Refactor PRs — **continuous improvement**, не «спецоперация» когда tech debt overwhelms. Practice:
+
+- **Boy Scout Rule:** when touching code для feature/fix, leave it better than found (small refactors in same PR if scope-аtomic)
+- **Dedicated refactor PR** для bigger refactors (e.g. module restructure) — separate PR, focused review
+- **Quarterly refactor pass** для accumulated debt (см. `tech-debt-registry.md` если applicable)
+
+---
+
+## 7. Tech debt — when to refactor vs accept
+
+Не каждое imperfection заслуживает refactor PR. Decision matrix:
+
+| Symptom | Refactor когда |
+|---|---|
+| Code duplication | > 3 places identical logic, и planning to extend |
+| Long function | > 50 lines + planning to modify |
+| God class | > 500 lines + planning to add member |
+| Poor naming | When confusion blocks new work |
+| Slow code | Measured performance regression |
+| Tight coupling | When trying to test in isolation fails |
+
+**Не refactor когда:**
+- Code works, никто не trying to extend, no actual pain
+- Refactor PR would block urgent work
+- Refactor scope extends > 1 sprint without clear benefit
+- It's «code I would write differently» — taste, не tech debt
+
+---
+
+## 8. Connect to AP-6 + AP-19
+
+- **AP-6 (no silent deviation):** AI **никогда** не refactors silently as part of feature PR. Если AI замечает refactor opportunity during feature work — flag PM/operator, separate PR.
+- **AP-19 (per-PR atomicity):** refactor PR = single scope. Не mix refactor + feature в одном PR.
+- **AP-18 (deploy safety):** behavior-preserving refactors usually rollback-safe (по definition behavior same). Но если refactor включает internal API changes used by other modules — может всё равно требоваться expand-contract если эти modules are deployed separately.
+
+---
+
+## 9. Связанные документы
+
+- `development-protocol.md` overlay — AP-6 + AP-19 + AP-18 rules
+- `dev-environment.md` — где run tests / debug
+- `dependency-policy.md` — refactor может включать dependency bump (separate PR)
+- `tech-debt-registry.md` (если есть) — где deferred refactors tracked

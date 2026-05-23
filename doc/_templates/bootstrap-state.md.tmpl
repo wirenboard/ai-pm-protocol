@@ -81,6 +81,9 @@ project_capabilities:
 
 - [ ] stack chosen (YYYY-MM-DD)
 - [ ] db_kind chosen + database-design-base.md + database-design-<kind>.md per каждому db_kind (YYYY-MM-DD) — **Mode 1 с persistent data:** обязательно (вместе со stack). Multi-value (например `embedded, external` для mobile с local cache + central API). `none` для stateless services. **Mode 2/3:** опираемся на existing schema/migrations practices; extract в отдельный `docs/database-design-extract` PR если formal guide отсутствует. См. AP-18.
+- [ ] dev-environment.md (YYYY-MM-DD) — foundational dev ergonomics: prerequisites, setup script, day-to-day commands (Makefile / justfile), hot reload, IDE configs, debug entry points, dependency management, profiling. Закрывает «from git clone до working state» < 5 min. **Mode 1:** обязательно. **Mode 2/3:** опираемся на existing CONTRIBUTING / README — если formal guide отсутствует, extract в отдельный `docs/dev-environment-extract` PR.
+- [ ] dependency-policy.md (YYYY-MM-DD, опционально) — cadence + automerge rules для dependency bumps (security patches automerge / patch weekly / minor biweekly / major quarterly)
+- [ ] refactor-playbook.md (YYYY-MM-DD, опционально) — positive guidance для safe refactor PRs (scope: refactor-only, before/after test snapshot, no behavior changes)
 - [ ] development-protocol overlay (YYYY-MM-DD)
 - [ ] ai-linting-rules.md (YYYY-MM-DD)
 - [ ] subagent configs verified (YYYY-MM-DD)
@@ -95,7 +98,9 @@ project_capabilities:
 - [ ] .gitignore: `.ai-pm/.reviews/` добавлено (YYYY-MM-DD) — local review-trace для не-Stage-F PR'ов (AP-16), не должен попадать в репу
 - [ ] git hooks installed (YYYY-MM-DD) — включая pre-push hard-block на push в main / master
 - [ ] branch protection enabled (YYYY-MM-DD) — серверная (public / paid plan) **или** клиентская через pre-push hook (private free plan, см. development-protocol.md § 14.6)
+- [ ] **Developer ergonomics scaffold** generated (YYYY-MM-DD): `Makefile` (или `justfile` / npm scripts) с `setup` / `dev` / `test` / `lint` / `fmt` targets; `.editorconfig`; `.vscode/settings.json` shared baseline; `.vscode/extensions.json` recommendations per stack. Cross-ref dev-environment.md.
 - [ ] initial CI run passed (YYYY-MM-DD)
+- [ ] **`make setup && make test` runs green** (YYYY-MM-DD) — verifies dev-environment.md accurate, dev ergonomics work
 
 ## Stage F — Production
 

@@ -85,13 +85,48 @@ PM (или координирующий agent) запустил тебя в Step
 
 Для Mode 3 — добавь обязательную секцию **Migration** (backward compatibility / data migration / deprecation timeline / rollback).
 
-## Trust profile awareness
+## Trust profile awareness — concrete dual templates
 
-Читай `.ai-pm/doc/development-protocol.md` → `trust_profile` setting (A/B/C, default A).
+Читай `.ai-pm/.bootstrap-state.md` → `trust_profile` setting (A/B/C, default A). Это определяет **plan output template**, не просто verbosity tuning:
 
-- **trust_profile: A** (PM-manager, не читает код) — **substantive** Архитектурный подход и Risks секции. Объясни decisions на уровне «почему», не «что». Architectural-level exposition.
-- **trust_profile: B** (cross-stack) — substantive если фича в out-of-domain стеке (PM-cross-stack ревьюит код superficially); terser если в native стеке.
-- **trust_profile: C** (full-stack pro, читает всё) — terser plan'ы OK, PM сам поймёт через code-review. Skip obvious explanations. Lite-mode для small changes possible.
+### Trust profile A (PM-manager, не читает код)
+
+**Verbose template:**
+
+- **Архитектурный подход** — full prose: какие модули затронуты, **почему именно эта декомпозиция**, какие alternatives рассматривались + отвергнуты + причины, какие trade-offs accepted, какие foundational documents (personas / threat-model / journey) поддерживают decision. Cross-refs к ADRs / catalogue rules. **Learning layer:** когда упоминается нетривиальный архитектурный принцип впервые — briefly explain general principle (e.g. «AEAD-режимы предотвращают tampering; CBC без MAC недостаточно»).
+- **Tests plan** — substantive: что тестируется, тип, edge cases out of spec'а, property-based invariants documented, mock strategy
+- **Migration / Schema changes** — full AP-18 expand-contract sequence documented per step + rollback safety
+- **Risks** — substantive analysis: likelihood, impact, mitigation (или explicit «mitigation deferred because Y»)
+- **PR ordering** (если multi-domain) — explicit reasoning почему такой order, dependencies
+
+### Trust profile B (cross-stack senior dev)
+
+**Mixed template per scope:**
+
+- **Архитектурный подход** — substantive **если** фича в **out-of-domain** стеке (например, dev знает Go, фича — Python). Terser **если** в native стеке (dev читает diff, не нужны obvious explanations).
+- **Tests plan** — pointers («property-based для invariant X, BDD из spec scenarios, integration для DB layer») — без detailed exposition
+- **Migration / Schema changes** — full sequence (AP-18 critical), не сокращается
+- **Risks** — top 3 с mitigation, без learning-layer
+- **PR ordering** — brief if obvious
+
+### Trust profile C (full-stack pro, читает весь diff)
+
+**Terse template:**
+
+- **Архитектурный подход** — high-level only: 2-3 предложения main approach + cross-ref к alternatives ADR (если has fork). Skip explanations что dev узнает через diff (декомпозиция модулей, file structure).
+- **Tests plan** — references («tests follow Tests First § 21 generic», custom additions listed)
+- **Migration / Schema changes** — full sequence (AP-18 critical, никогда не skipped)
+- **Risks** — top 3 short bullets
+- **PR ordering** — explicit list только
+
+**Lite-mode для С:** если frontmatter `lite-mode: small-fix` + Trust profile C + (< 200 lines diff estimated + single domain + no security path) — minimal plan acceptable (3-5 bullets total).
+
+### Hard discipline — все profiles
+
+Независимо от profile:
+- **AP-18 expand-contract** для breaking changes — full sequence (никогда не terser)
+- **Security invariants** — explicit (Trust profile C не excuses security shortcuts)
+- **PR ordering** для multi-domain — explicit (atomicity discipline AP-19)
 
 ## Когда писать новый ADR
 

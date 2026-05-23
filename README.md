@@ -184,10 +184,47 @@ Template enforce'ит протокол через 5 защитных слоёв 
 
 См. `doc/anti-patterns.md`. Краткий список:
 
-- ADR upfront (без plan'а фичи, который этого требует)
-- Premature Stage E: создание repo skeleton (`apps/`, `packages/`) до того, как написан первый `<topic>_spec.md`
-- Документы без PM-gate между стадиями
-- AI отклоняется от plan'а без объявления и без обсуждения
+- **AP-1:** ADR upfront (без plan'а фичи, который этого требует)
+- **AP-2:** Premature Stage E (`apps/`, `packages/` до первого `<topic>_spec.md`)
+- **AP-3:** Документы без PM-gate между стадиями
+- **AP-6:** AI отклоняется от plan'а без объявления и без обсуждения
+- **AP-13:** Пропуск operational / legal / validation артефактов
+- **AP-14:** Пропуск структурного read-pass'а перед feature spec
+- **AP-15:** UI-фичи без Stage A `ui-style-guide-base.md` + per-kind foundation
+- **AP-16:** PR создан / merged без зелёного review-trail
+- **AP-17:** Утечка product-specific имён в template
+- **AP-18:** Unsafe deploys / migrations без rollback guarantee (cross-cutting)
+- **AP-19:** Mixed-domain PR (нарушает per-PR atomicity)
+- **AP-20:** Naive «all-specialized-always» reviewer spawn (overhead)
+
+## Subagents
+
+В `.claude/agents/`:
+
+- **`project-bootstrap`** — Stage A-E setup + resume + lifecycle routing
+- **`planner`** — Step 2 plan writer. Read-only по коду. Trust-profile-aware с concrete dual templates (A/B/C)
+- **`coder`** — Step 4 implementation. Tests-first. Lite-mode hierarchy (bugfix / small-fix / c-fast)
+- **`reviewer`** — Step 7 primary router. Detect PR domain → spawn `protocol-compliance-reviewer` (always) + ONE domain reviewer
+- **`protocol-compliance-reviewer`** — always spawned. Spec↔plan↔code, frontmatter, AP discipline
+- **`backend-reviewer`** — API contracts, idempotency, RFC 7807, latency SLO
+- **`frontend-reviewer`** — tokens, accessibility per-kind, frameworks-first, i18n
+- **`design-reviewer`** — 8 принципов, brand voice, эффективность пути
+- **`database-reviewer`** — schema, expand-contract migrations, indexing, identifier strategy
+- **`release-helper`** — release PR при накоплении merged feature-PRs. SemVer + CHANGELOG
+
+Worst-case 2 spawns per atomic PR (protocol-compliance + 1 domain). См. AP-19 + AP-20.
+
+## Foundational artefacts (Stage A-D)
+
+**Stage A — Discovery:** vision / personas / user-journeys / competitive-analysis / positioning / brand-voice / `ui-style-guide-base.md` + per-kind `ui-style-guide-<kind>.md` (web / native-mobile / native-desktop / tui / cli / embedded / backend) per `ui_kind`.
+
+**Stage B — Constraints:** strategic-frame (SLO + validation method) / threat-model / legal-frame / legal-brief / customer-interview-script / incident-runbook-draft / mvp-scope.
+
+**Stage C — Solution shape:** topology / foundational ADRs (если есть).
+
+**Stage D — Process:** stack chosen / `db_kind` chosen + `database-design-base.md` + per-kind `database-design-<kind>.md` (embedded / external) / `dev-environment.md` / optional `dependency-policy.md` + `refactor-playbook.md` / development-protocol overlay / ai-linting-rules / subagent configs verified.
+
+Composition matrices: `ui_kind` multi-value для composite UIs (например `web, backend` для full-stack web; `cli, backend` для CLI с server-side). `db_kind` multi-value (`embedded, external` для mobile с local cache + central API).
 
 ## Contributing
 
