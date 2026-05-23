@@ -205,6 +205,34 @@ Greenfield. WRITE всего. Идёшь по Stage A-E последовател
 
 6. Если позже добавится новый ui_kind (например, через год добавили mobile к web-only product) — update `.bootstrap-state.md` + write новый `ui-style-guide-<kind>.md` через follow-up Stage A revisit. Additive change, не re-bootstrap.
 
+### Stage D: определение `db_kind` вместе со stack choice
+
+`db_kind` (форма БД продукта — `embedded` / `external` / `none`; multi-value поддерживается) **спрашивается на Stage D вместе со stack choice** — это техническое решение наравне с языком/фреймворком, должно идти в одном узле обсуждения.
+
+1. После approved stack:
+   - «Какие БД у продукта? (embedded — SQLite/DuckDB / external — PostgreSQL/MySQL; multi-value возможен — например `embedded, external` для mobile с local cache + central API; `none` для stateless services)»
+
+2. Sample defaults для подсказки:
+   - Full-stack web product с central БД → `external`
+   - Mobile app с local-only storage → `embedded`
+   - Mobile с central API + local cache → `embedded, external`
+   - Pure local CLI/desktop tool → `embedded`
+   - API product с central БД → `external`
+   - Stateless microservice → `none`
+
+3. Записываешь в `project_capabilities.db_kind` в `.ai-pm/.bootstrap-state.md`.
+
+4. Для **каждого** значения (кроме `none`) — копируешь соответствующий `doc/_templates/database-design-<kind>.md.tmpl` → `doc/database-design-<kind>.md`, драфтишь с PM (slots для product-specific values). Плюс **обязательно** `database-design-base.md` (универсальная база).
+
+5. Если `db_kind: none` — не пишем database files. Документируем в `.bootstrap-state.md` reason («stateless API gateway» / «pure compute service» / etc).
+
+6. Cross-ref'ы:
+   - `ui-style-guide-backend.md` (если есть) — API contracts зависят от БД design (idempotency требует identifier strategy, cursor pagination требует stable sort)
+   - `threat-model.md` (Stage B) — encryption / access control / audit log в БД решают конкретные threats
+   - `topology.md` (Stage C) — где физически живёт БД, replication setup
+
+7. AP-18 — discipline для миграций / deploys / rollback. Cross-cutting (не только БД-specific) — applies к каждой DB-feature.
+
 В конце Stage E: «Bootstrap завершён. Можешь писать первую `.ai-pm/doc/features/<topic>_spec.md`. Дальше — обычный feature workflow.»
 
 ## Branch: Mode `new-feature`
@@ -241,7 +269,13 @@ Stage A-D **уже пройдены**. Stage E (repo skeleton) тоже суще
 
 ### Stage D, E
 
-SKIP. Сообщаешь: «Stage D/E уже существуют, перехожу к Stage F.»
+SKIP по большей части. Сообщаешь: «Stage D/E уже существуют, перехожу к Stage F.»
+
+**Exception для Stage D:** если фича touches DB schema (новые tables / columns / indexes / migrations) — READ existing `database-design-*.md`:
+
+1. Summary: какие kinds БД продукт использует (embedded / external / both)
+2. «Эта фича укладывается в existing design system? Migration strategy ясна?»
+3. Если `database-design-*.md` **отсутствует** — extract неформальный по existing schema / migrations через отдельный `docs/database-design-extract` PR (см. AP-18). Без foundation Stage F DB-фичи рискованны.
 
 ### Stage F handoff
 
