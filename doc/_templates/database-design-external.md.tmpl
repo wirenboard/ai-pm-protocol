@@ -1,0 +1,675 @@
+---
+status: draft
+stage: D
+artifact: database-design-external
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD
+---
+
+# <Project> — Database Design: external
+
+**Per-kind дополнение к `database-design-base.md`.** Правила для external (client-server) реляционных БД. **Primary: PostgreSQL** (default современный выбор для new projects). MySQL / MariaDB — notes где отличается. Применяется для multi-user web apps, API services, shared state systems, OLTP workloads.
+
+NoSQL (MongoDB, Cassandra, DynamoDB) и cache (Redis) — separate concerns, отложены в backlog для отдельных guides.
+
+---
+
+## 1. PostgreSQL как modern default
+
+### 1.1. Почему PostgreSQL primary
+
+- **Mature** — 30+ лет development, battle-tested
+- **Feature-rich:** JSONB, full-text search, GIS (PostGIS), RLS, partitioning, native UUID v7 (17+)
+- **Extensions ecosystem** — `pg_stat_statements`, `pg_trgm`, `pgcrypto`, `pg_partman`, `timescaledb`, etc
+- **ACID compliance** — serializable transactions, MVCC, no read locking
+- **Permissive license** (PostgreSQL License — BSD-style)
+- **Strong community + commercial support** (EDB, Crunchy, Supabase, Neon, Cloud SQL, RDS)
+- **Active development** — modern features lead (JSONB before MySQL, RLS before MySQL, etc)
+
+### 1.2. Когда не PostgreSQL
+
+- **Existing MySQL ecosystem** — если стек привязан к MySQL (legacy / team expertise), MySQL/MariaDB acceptable. Modern MySQL 8+ vs PostgreSQL — gap сократился, choice часто driven by ecosystem
+- **Distributed SQL** требования — CockroachDB / Spanner / TiDB (отложено — отдельный guide если scale require)
+- **Time-series specifically** — TimescaleDB (PostgreSQL extension) или ClickHouse если pure analytics
+
+---
+
+## 2. Version + deployment
+
+### 2.1. PostgreSQL versions
+
+Use **latest stable major** version (16, 17 как 2026). Each major — new features + perf improvements; obsolete versions reach EOL после 5 лет.
+
+Major version updates **require careful planning** — extension compatibility, possible breaking changes. Plan annual major upgrade в release cycle.
+
+### 2.2. Deployment options
+
+| Option | Когда |
+|---|---|
+| **Managed service** (RDS / Cloud SQL / Azure DB / Supabase / Neon / Crunchy) | Default для production. Backups / monitoring / failover handled. Cost premium vs self-hosted |
+| **Self-hosted on VM** | Cost-sensitive, full control. Operational overhead substantial — DBA expertise needed |
+| **Self-hosted on Kubernetes** (CloudNativePG / Crunchy Postgres Operator / Zalando Patroni) | K8s shop с DBA expertise. Operator handles failover/backups |
+| **Embedded для tests** (postgres testcontainers / pg_tmp) | Test environments — каждый test получает fresh PG instance |
+
+**Recommend:** managed service unless cost / compliance / control reasons. Cloud-managed снимает operational toil.
+
+### 2.3. Setup checklist для new instance
+
+- [ ] PostgreSQL major version chosen (latest stable)
+- [ ] Encryption at rest enabled (managed: usually default, verify)
+- [ ] TLS enforced для connections (`sslmode=require` minimum, `verify-full` ideal)
+- [ ] Backup configured (automated daily + WAL archive для PITR)
+- [ ] Monitoring connected (Datadog / Cloud-native / Prometheus + postgres_exporter)
+- [ ] `pg_stat_statements` extension installed (track query stats)
+- [ ] Connection pool sized (см. § 8)
+- [ ] Maintenance window scheduled (autovacuum tuning)
+
+---
+
+## 3. Connection pooling
+
+### 3.1. Driver-level vs external pooler
+
+**Driver pool** (psycopg / pgx / node-postgres / etc) — стандарт для most apps:
+- Connection cached в app process
+- Per-app-instance pool
+- 10-50 connections per app instance typical
+
+**External pooler** (PgBouncer / Odyssey / pgcat) — когда:
+- App instances × pool size > PostgreSQL max_connections (typically 100-200)
+- Many short-lived connections (PHP / Lambda / serverless)
+- Transaction-mode pooling extracts more throughput
+- Multi-tenant routing
+
+### 3.2. PgBouncer modes
+
+| Mode | Behavior | Когда |
+|---|---|---|
+| **Session** | Connection assigned to client for session duration | Default; supports all PG features |
+| **Transaction** | Connection released after each transaction | High throughput; **disables** session-bound features (LISTEN/NOTIFY, prepared statements, advisory locks) |
+| **Statement** | Connection released after each statement | Extreme cases; many limitations |
+
+**Most apps:** transaction mode + driver-level workarounds для prepared statements (либо disable, либо use unique statement names per pool worker).
+
+### 3.3. Pool sizing rule
+
+```
+pool_size_per_app = ((cpu_cores * 2) + effective_spindle_count)
+total_connections = pool_size_per_app * num_app_instances
+```
+
+Should NOT exceed `max_connections - reserved` (usually 100-200 - 20 reserved for admin / replication).
+
+Если total > max — нужен PgBouncer.
+
+---
+
+## 4. PostgreSQL data types — modern picks
+
+### 4.1. Recommended types
+
+| Use case | Type |
+|---|---|
+| Internal IDs | `bigserial` / `GENERATED ALWAYS AS IDENTITY` (PG 10+) |
+| Public IDs | `uuid` с default `uuidv7()` (native в PG 17+) или extension `pg_uuidv7` для PG ≤ 16 (см. § 13); `gen_random_uuid()` для v4 |
+| Money | `numeric(18,4)` |
+| Text | `text` (no length penalty vs varchar) |
+| Enum-like | `text` + CHECK constraint (avoid native ENUM type — миграции painful) |
+| Timestamps | `timestamptz` (см. base.md § 5) |
+| JSON | `jsonb` (binary, indexable; не `json`) |
+| Booleans | `boolean` |
+| IP addresses | `inet` (validates format) |
+| URLs | `text` + CHECK |
+| Geographic | PostGIS `geometry` / `geography` |
+
+### 4.2. JSONB usage
+
+См. base.md § 4.5 — JSONB для truly variable schema. PostgreSQL-specific:
+
+```sql
+-- GIN index для query paths
+CREATE INDEX idx_events_payload_gin ON events USING GIN(payload jsonb_path_ops);
+
+-- Query specific path
+SELECT * FROM events WHERE payload @> '{"user": {"id": 123}}';
+SELECT * FROM events WHERE payload->'user'->>'email' = 'x@y.com';
+```
+
+`jsonb_path_ops` index — для `@>` / `<@` containment queries (most common). `jsonb_ops` (default) — для broader query types.
+
+### 4.3. Arrays
+
+PostgreSQL supports arrays natively:
+
+```sql
+tags text[] NOT NULL DEFAULT '{}'
+```
+
+GIN index на `text[]` columns. Caveat — arrays violate 1NF, use sparingly (для simple tag lists OK, для structured data use separate table).
+
+---
+
+## 5. Indexing strategy — PostgreSQL specifics
+
+### 5.1. Index types
+
+| Type | When |
+|---|---|
+| **B-tree** (default) | Equality + range queries |
+| **Hash** | Equality only (PG 10+, mostly B-tree wins) |
+| **GIN** | JSONB containment, array containment, full-text search |
+| **GiST** | Geometric data (PostGIS), full-text (older), exclusion constraints |
+| **BRIN** (block range) | Very large tables со natural data ordering (time-series). Compact, fast for range scans |
+| **SP-GiST** | Specialized (phone numbers, IP ranges) |
+
+### 5.2. Partial indexes
+
+```sql
+-- Index only active users
+CREATE INDEX idx_users_email_active ON users(email) WHERE deleted_at IS NULL;
+
+-- Index only specific status
+CREATE INDEX idx_orders_pending ON orders(created_at) WHERE status = 'pending';
+```
+
+Smaller indexes, faster queries для targeted use cases.
+
+### 5.3. Expression indexes
+
+```sql
+-- Lowercase email lookup
+CREATE INDEX idx_users_email_lower ON users(lower(email));
+
+-- Then query uses index
+SELECT * FROM users WHERE lower(email) = lower('Foo@Bar.com');
+```
+
+### 5.4. Multi-column index ordering
+
+Column order matters: index `(a, b)` works для filters on `a` alone or `a AND b`, but NOT `b` alone.
+
+Rule: **most selective column first**, OR **column that's always filtered first**.
+
+### 5.5. Index maintenance
+
+- `REINDEX CONCURRENTLY` (PG 12+) periodically для bloated indexes
+- Monitor `pg_stat_user_indexes.idx_scan` — unused indexes wasted resources
+- `pg_stat_user_tables` — find missing indexes (high `seq_scan` on large tables)
+
+### 5.6. CONCURRENTLY для production
+
+```sql
+-- Не блокирует writes; longer но safe
+CREATE INDEX CONCURRENTLY idx_users_created_at ON users(created_at);
+DROP INDEX CONCURRENTLY idx_old;
+REINDEX INDEX CONCURRENTLY idx_users_email;
+```
+
+Без `CONCURRENTLY` — locks table. Production rule: **всегда `CONCURRENTLY`** для index DDL.
+
+---
+
+## 6. Migrations — PostgreSQL specifics
+
+### 6.1. Best practices
+
+- `ALTER TABLE ADD COLUMN ... NULL` (no default) — instant metadata-only (PG 11+)
+- `ALTER TABLE ADD COLUMN ... NULL DEFAULT 'x'` — instant if default literal-constant (PG 11+); otherwise backfill
+- `ALTER TABLE ADD COLUMN ... NOT NULL` без default — fail на existing rows. Use ADD COLUMN nullable → backfill → ADD CONSTRAINT NOT NULL
+- `ALTER COLUMN ... TYPE ...` — table rewrite (long lock). Use expand-contract вместо
+- `ALTER TABLE ADD CONSTRAINT ... NOT VALID` + later `VALIDATE CONSTRAINT` — не blocks writes during initial add
+
+### 6.2. Lock-aware patterns
+
+```sql
+-- Bad: blocks all reads/writes
+ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email);
+
+-- Good: builds index concurrently first
+CREATE UNIQUE INDEX CONCURRENTLY idx_users_email_unique ON users(email);
+ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE USING INDEX idx_users_email_unique;
+```
+
+### 6.3. Lock timeout protection
+
+```sql
+SET lock_timeout = '5s';
+SET statement_timeout = '60s';
+-- Run migration; fails fast if blocked
+```
+
+### 6.4. Migration testing — staging
+
+Test migration on production-tier data clone:
+- Backup → restore to staging
+- Run migration, measure time
+- Verify schema + data integrity
+- Estimate production downtime
+- If unacceptable — redesign (expand-contract см. base.md § 7)
+
+### 6.5. Online schema-change tools — для очень больших таблиц
+
+Когда даже `CREATE INDEX CONCURRENTLY` / `ALTER TABLE ADD CONSTRAINT NOT VALID` requires слишком много времени или blocks дольше acceptable downtime — используются специализированные online schema-change tools, которые работают через shadow table + trigger-based replication + atomic swap:
+
+| Tool | Подходит для | Comment |
+|---|---|---|
+| **`pg_repack`** | Online table reorganization (alternative `VACUUM FULL` / cluster) | Установлен как extension (см. § 13); shadow table + apply log + swap |
+| **`pgroll`** | Schema migrations с zero-downtime | Multi-version schema с auto rollback support; modern (2023+) |
+| **Reshape** (`fabianlindfors/reshape`) | Schema migrations через views layer | Old + new schema visible одновременно через views |
+| **`gh-ost`** (MySQL) | Online schema change for MySQL | GitHub original — для MySQL, не PostgreSQL; упоминаем для MySQL section § 14 |
+
+**Когда использовать:** обычно `CREATE INDEX CONCURRENTLY` достаточно. Online tools — для очень больших таблиц (> 100M rows) с continuous write load, где даже concurrent index build вызывает unacceptable replication lag / connection saturation. Это **escalation path**, не default.
+
+Cross-ref: AP-18 («Unsafe deploys / migrations») — online tools усиливают rollback safety; используются вместе с expand-contract, не вместо.
+
+---
+
+## 7. Multi-tenancy patterns
+
+### 7.1. App-level tenant_id (default)
+
+```sql
+CREATE TABLE invoices (
+  id bigserial PRIMARY KEY,
+  tenant_id bigint NOT NULL REFERENCES tenants(id),
+  ...
+);
+
+-- All queries filter
+SELECT * FROM invoices WHERE tenant_id = $1 AND ...;
+```
+
+**Critical:** every query MUST include `tenant_id` WHERE clause. Bug → cross-tenant leak. Defense in depth: RLS (§ 7.2).
+
+Index на `(tenant_id, ...)` для query efficiency.
+
+### 7.2. Row-level security (RLS)
+
+```sql
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON invoices
+  USING (tenant_id = current_setting('app.current_tenant_id')::bigint);
+
+-- App sets per-request
+SET LOCAL app.current_tenant_id = '42';
+```
+
+RLS — defense against app bugs. Если query forgets `WHERE tenant_id = $1`, DB enforces isolation anyway.
+
+**Tradeoffs:**
+- Debug complexity (RLS hides rows; «WHERE EXISTS» queries can confuse)
+- Performance overhead (negligible для simple policies)
+- BYPASSRLS role для admin / cross-tenant operations
+
+### 7.3. Schema-per-tenant
+
+```sql
+CREATE SCHEMA tenant_acme;
+CREATE TABLE tenant_acme.invoices (...);
+
+-- Per-request schema switching
+SET search_path = tenant_acme, public;
+```
+
+Use cases: strict compliance (data physically separated), per-tenant custom schema migrations.
+
+**Tradeoffs:**
+- Migrations × N tenants (script applies to each schema)
+- Connection pool — per-tenant or schema switching overhead
+- Backup / restore — schema-aware operations
+
+Не scale за пределы ~thousand tenants практически (operational overhead).
+
+### 7.4. Database-per-tenant
+
+Maximum isolation. Use cases: enterprise tier с per-customer customization, strict compliance.
+
+**Tradeoffs:**
+- Operational cost per tenant
+- Cross-tenant queries impossible without federation
+- Bulk operations / analytics complex
+
+---
+
+## 8. Partitioning
+
+См. base.md § 2 — **когда** partition. PostgreSQL specifics:
+
+### 8.1. Declarative partitioning (PG 10+)
+
+```sql
+CREATE TABLE events (
+  id bigserial,
+  occurred_at timestamptz NOT NULL,
+  ...
+) PARTITION BY RANGE (occurred_at);
+
+CREATE TABLE events_2026_05 PARTITION OF events
+  FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+```
+
+### 8.2. Automatic partition management — pg_partman
+
+```sql
+-- Create monthly partitions
+SELECT partman.create_parent(
+  p_parent_table => 'public.events',
+  p_control => 'occurred_at',
+  p_type => 'native',
+  p_interval => 'monthly',
+  p_premake => 4  -- 4 future partitions
+);
+```
+
+`pg_partman` schedules maintenance (drop old partitions per retention, create future ones).
+
+### 8.3. Partition pruning verification
+
+```sql
+EXPLAIN SELECT * FROM events WHERE occurred_at > '2026-05-01';
+-- Want to see: «Partitions: events_2026_05» in plan
+-- Not seeing → query не uses partition key → no pruning
+```
+
+### 8.4. Indexes на partitioned tables
+
+`CREATE INDEX ON parent_table(...)` automatically propagates to all partitions (PG 11+). Per-partition indexes too (один global или per-partition stats).
+
+---
+
+## 9. Replication + HA
+
+### 9.1. Streaming replication
+
+PostgreSQL native:
+- **Primary** — accepts writes
+- **Standby replicas** — read-only, async replication (typical) or sync (more durable)
+
+```
+postgresql.conf на primary:
+  wal_level = replica
+  max_wal_senders = 10
+
+postgresql.conf на standby:
+  hot_standby = on
+```
+
+### 9.2. Failover mechanics
+
+- **Manual failover** — operator promotes standby (`pg_ctl promote`)
+- **Automated** — Patroni / repmgr / managed service automation
+- **DNS / load balancer** routing — primary endpoint updates
+
+Failover time depends on detection (heartbeat) + promotion + DNS propagation. Managed services — usually < 60s.
+
+### 9.3. Logical replication
+
+```sql
+CREATE PUBLICATION my_pub FOR ALL TABLES;
+-- On standby
+CREATE SUBSCRIPTION my_sub CONNECTION '...' PUBLICATION my_pub;
+```
+
+Use cases: cross-version migrations, table-level replication, multi-master patterns, ETL to analytics warehouse.
+
+### 9.4. Connection routing
+
+Apps need to know:
+- **Writes** → primary (always one)
+- **Reads** → can use any replica (eventually consistent — careful с read-your-writes consistency)
+
+Patterns:
+- Two connection strings (primary + replica pool)
+- Smart driver (libpq `target_session_attrs=read-write` / `read-only`)
+- Application-level routing (read traffic to replica)
+
+---
+
+## 10. Point-in-time recovery (PITR)
+
+См. base.md § 14 — RTO/RPO. PostgreSQL specifics:
+
+### 10.1. Setup
+
+```
+archive_mode = on
+archive_command = 'aws s3 cp %p s3://my-backups/wal/%f'
+```
+
++ regular `pg_basebackup` (full backups).
+
+### 10.2. Restore to point-in-time
+
+```bash
+# Restore base backup
+tar xf base.tar -C /var/lib/postgresql/data
+
+# Configure recovery
+echo "restore_command = 'aws s3 cp s3://my-backups/wal/%f %p'" >> postgresql.conf
+echo "recovery_target_time = '2026-05-24 14:30:00 UTC'" >> postgresql.conf
+touch /var/lib/postgresql/data/recovery.signal
+
+# Start postgres — replays WAL up to target time
+pg_ctl start
+```
+
+Managed services (RDS / Cloud SQL) — UI for PITR within retention period.
+
+### 10.3. Backup verification
+
+- `pg_verify_backup` (PG 13+)
+- Restore drill — restore to staging, run integrity checks
+- Quarterly: full disaster recovery drill в alternate region
+
+---
+
+## 11. Performance tuning
+
+### 11.1. Critical settings (per server)
+
+```
+shared_buffers = 25% RAM        # OS page cache stays for rest
+effective_cache_size = 75% RAM  # planner hint (not allocation)
+work_mem = (RAM - shared_buffers) / max_connections / 4  # per-operation
+maintenance_work_mem = 1 GB     # для VACUUM / CREATE INDEX
+random_page_cost = 1.1          # SSD (default 4.0 for HDD)
+```
+
+### 11.2. Slow query log
+
+```
+log_min_duration_statement = 100ms
+```
+
++ regular review через `pg_stat_statements`:
+
+```sql
+SELECT query, calls, total_exec_time, mean_exec_time, rows
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC LIMIT 20;
+```
+
+### 11.3. EXPLAIN ANALYZE workflow
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON)
+SELECT ...;
+```
+
+Key signals:
+- `Seq Scan` on large table → missing index
+- `Sort` writing to disk → increase work_mem
+- `Nested Loop` с large outer + non-indexed inner → algorithm choice issue
+- `Hash Join` with «Batches: N» (N > 1) → spilling to disk
+
+Tooling: PEV ([Postgres Explain Visualizer](https://explain.dalibo.com)), pganalyze, Datadog DBM.
+
+### 11.4. Autovacuum tuning
+
+Per-table tuning для high-update tables:
+
+```sql
+ALTER TABLE high_churn_table SET (
+  autovacuum_vacuum_scale_factor = 0.01,   -- vacuum после 1% changes vs 20% default
+  autovacuum_analyze_scale_factor = 0.005
+);
+```
+
+Bloated tables (table size >> data) — autovacuum не keeping up. `pg_repack` для online table rebuild.
+
+---
+
+## 12. Security baseline — PostgreSQL specifics
+
+### 12.1. Authentication
+
+- **Password** (`scram-sha-256` since PG 10) — minimum для new setups
+- **Certificate** (client cert) — для service-to-service
+- **IAM authentication** (AWS RDS / Cloud SQL) — integrates с cloud IAM
+- **SSO** через third-party (Active Directory / OIDC)
+
+`pg_hba.conf`:
+```
+hostssl all all 0.0.0.0/0 scram-sha-256
+```
+
+### 12.2. Role hierarchy
+
+```sql
+-- Service roles
+CREATE ROLE app_reader;
+CREATE ROLE app_writer INHERIT app_reader;
+CREATE ROLE app_migrator;
+
+-- Users belong to roles
+CREATE USER my_app_user WITH PASSWORD '...';
+GRANT app_writer TO my_app_user;
+```
+
+### 12.3. Audit logging — pgaudit
+
+Extension `pgaudit` logs DDL / DML / role changes:
+
+```
+shared_preload_libraries = 'pgaudit'
+pgaudit.log = 'ddl, role, write'
+```
+
+Logs to PostgreSQL log file (or syslog / journald). Forward to centralized logging.
+
+### 12.4. Encryption — pgcrypto for app-level
+
+```sql
+CREATE EXTENSION pgcrypto;
+
+-- Encrypt
+INSERT INTO secrets (encrypted_value)
+VALUES (pgp_sym_encrypt('plaintext', current_setting('app.encryption_key')));
+
+-- Decrypt
+SELECT pgp_sym_decrypt(encrypted_value::bytea, current_setting('app.encryption_key'))
+FROM secrets;
+```
+
+`pgcrypto` — для column-level encryption когда selective fields require encryption. Не replacement для disk encryption (это at-rest layer).
+
+### 12.5. SSL / TLS configuration
+
+```
+ssl = on
+ssl_min_protocol_version = 'TLSv1.3'  -- modern; falls back если client supports only 1.2
+ssl_cert_file = 'server.crt'
+ssl_key_file = 'server.key'
+```
+
+Client (`psycopg`, `pgx`, etc):
+```
+sslmode=verify-full
+sslrootcert=/path/to/ca.crt
+```
+
+`verify-full` validates server cert против CA — protects от MITM.
+
+---
+
+## 13. Useful extensions
+
+| Extension | What |
+|---|---|
+| `pg_stat_statements` | Query stats (must-have, # 1 troubleshooting tool) |
+| `pgaudit` | Audit logging |
+| `pgcrypto` | Cryptography functions (encrypt / hash) |
+| `pg_trgm` | Trigram matching (fuzzy search, GIN-indexed LIKE patterns) |
+| `pg_partman` | Partition management automation |
+| `pg_repack` | Online table reorganization (vs `VACUUM FULL`) |
+| `pg_uuidv7` | UUID v7 (built-in in PG 17+) |
+| `PostGIS` | Geographic data |
+| `TimescaleDB` | Time-series-optimized partitioning + compression |
+| `vector` (pgvector) | Vector similarity search (AI/ML embeddings) |
+| `hstore` | Key-value pairs (mostly superseded by JSONB) |
+
+---
+
+## 14. MySQL / MariaDB notes
+
+Где отличается от PostgreSQL:
+
+### 14.1. Types
+
+- No `text[]` arrays — workaround с JSON
+- No native UUID type — store as `BINARY(16)` или `CHAR(36)`
+- `JSON` type (since 5.7) — analogous to JSONB но different query syntax
+- No `inet` — store as `VARCHAR(45)` (IPv6 max length)
+
+### 14.2. Replication
+
+- Master-slave (binlog-based) — replication different model from PG streaming
+- GTID для consistent failover (replaces server log position)
+- MariaDB MaxScale / ProxySQL — connection routing
+
+### 14.3. Storage engines
+
+- **InnoDB** (default since 5.5) — ACID, foreign keys
+- MyISAM — **never use** for production (no transactions, no FK)
+
+### 14.4. Encryption
+
+- TDE (Transparent Data Encryption) — MySQL Enterprise / Percona
+- MariaDB — built-in encryption at rest
+
+### 14.5. When MySQL/MariaDB make sense
+
+- Existing ecosystem / team expertise
+- Simpler setup для very small projects
+- WordPress / Magento / legacy systems
+
+**For new modern projects:** PostgreSQL рекомендуется unless specific reason otherwise.
+
+---
+
+## 15. External-specific checklist
+
+В дополнение к `database-design-base.md` § 17:
+
+- [ ] Latest stable PostgreSQL major version chosen
+- [ ] Managed service выбран (или self-hosted с justified reason + DBA on team)
+- [ ] TLS enforced (`sslmode=verify-full` clients)
+- [ ] Encryption at rest enabled
+- [ ] Backup configured (daily + WAL archive для PITR)
+- [ ] PITR target RTO/RPO документированы (см. base.md § 14)
+- [ ] Restore drill scheduled (quarterly minimum)
+- [ ] `pg_stat_statements` extension installed
+- [ ] Connection pooling sized; PgBouncer если total > max_connections
+- [ ] Replication / HA setup (если product-tier requires)
+- [ ] Indexes используют `CONCURRENTLY` (производственные)
+- [ ] Multi-tenancy strategy выбрана (app-level + tenant_id default; RLS для hardening если applicable)
+- [ ] UUID v7 для public-facing IDs
+- [ ] `text` + CHECK constraints вместо native ENUM (миграции easier)
+- [ ] JSONB только для truly schema-less data; GIN index если queried
+- [ ] Partitioning только если § 2 base triggers met (table > 100M rows etc)
+- [ ] Slow query log enabled (`log_min_duration_statement = 100ms` или project threshold)
+- [ ] Autovacuum tuning per-table для high-churn tables
+- [ ] Role hierarchy (app_reader / app_writer / app_migrator separated)
+- [ ] `pg_hba.conf` ограничивает access (no `trust` auth, no `0.0.0.0/0` без SSL)
+- [ ] Maintenance windows scheduled (major upgrades planned annually)

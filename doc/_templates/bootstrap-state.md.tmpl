@@ -38,6 +38,13 @@ project_capabilities:
   # когда product shape clear. Additive evolution: добавление нового kind
   # позже — update поля + write новый ui-style-guide-<kind>.md.
   - ui_kind: tbd | <comma-separated list>
+  # db_kind: формы БД продукта. Допустимые значения:
+  # embedded, external, none.
+  # Multi-value для composite stacks (e.g. "embedded, external" для mobile с
+  # local cache + central API). `none` для stateless services / pure compute.
+  # Определяет какие database-design-*.md файлы пишет bootstrap-agent.
+  # Заполняется на Stage D вместе со stack choice. См. AP-18.
+  - db_kind: tbd | none | <comma-separated list>
 ---
 
 # Bootstrap state
@@ -73,6 +80,7 @@ project_capabilities:
 ## Stage D — Process
 
 - [ ] stack chosen (YYYY-MM-DD)
+- [ ] db_kind chosen + database-design-base.md + database-design-<kind>.md per каждому db_kind (YYYY-MM-DD) — **Mode 1 с persistent data:** обязательно (вместе со stack). Multi-value (например `embedded, external` для mobile с local cache + central API). `none` для stateless services. **Mode 2/3:** опираемся на existing schema/migrations practices; extract в отдельный `docs/database-design-extract` PR если formal guide отсутствует. См. AP-18.
 - [ ] development-protocol overlay (YYYY-MM-DD)
 - [ ] ai-linting-rules.md (YYYY-MM-DD)
 - [ ] subagent configs verified (YYYY-MM-DD)

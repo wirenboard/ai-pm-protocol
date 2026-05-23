@@ -1,0 +1,951 @@
+---
+status: draft
+stage: D
+artifact: database-design-base
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD
+---
+
+# <Project> — Database Design: общая база
+
+**Stage D artifact, обязательный для продуктов с persistent data.** Универсальная база — принципы schema design, миграций, identifier strategy, encryption, partitioning, security, backup discipline. Применяется ко **всем** типам БД (embedded SQLite/DuckDB / external PostgreSQL/MySQL).
+
+Дополняется одним или несколькими per-kind файлами в зависимости от `db_kind` в `.bootstrap-state.md`:
+
+- `database-design-embedded.md` — для embedded БД (SQLite primary, DuckDB notes)
+- `database-design-external.md` — для external БД (PostgreSQL primary, MySQL/MariaDB notes)
+
+**Composition examples** (multi-value `db_kind` поддерживается):
+
+| Тип продукта | `db_kind` | Файлы |
+|---|---|---|
+| Web product с central БД | `external` | base + external |
+| Mobile app с local-only storage | `embedded` | base + embedded |
+| Mobile с central API + local cache | `embedded, external` | base + embedded + external |
+| Pure local CLI / desktop tool | `embedded` | base + embedded |
+| API product с central БД | `external` | base + external |
+| Stateless service / pure compute | `none` | none |
+
+**Связь с другими guides:**
+
+- `ui-style-guide-backend.md` — API contracts; БД design определяет какие endpoints возможны (idempotent updates требуют primary key strategy, cursor pagination требует stable sort с tiebreaker).
+- `threat-model.md` — БД encryption / access control / audit log решают конкретные threat scenarios.
+- `topology.md` — где физически живёт БД (на app server / managed service / replica setup).
+
+---
+
+## 1. Vision — роль БД в продукте
+
+> <PM citation: какую роль БД играет в продукте. Examples: «single source of truth для user data» / «caching layer» / «analytics warehouse» / «event store с replay capability» / «hybrid local-first + cloud sync».>
+
+### 1.1. Принципы выбора
+
+- **Простота > мощность.** Если SQLite справится — не берём PostgreSQL «just in case».
+- **Match с архитектурой.** Embedded для local-first / offline; external для multi-user / shared state.
+- **Frameworks-first.** Используем PostgreSQL / SQLite — mature, well-understood; не экспериментируем с экзотикой без критической нужды.
+- **Operational cost учитывается.** Backup / monitoring / failover / patching — не free; считаем в TCO.
+
+### 1.2. Что мы НЕ делаем
+
+<Product-specific: anti-patterns которые отвергаем. Examples:>
+
+- **NoSQL для transactional data «потому что modern».** Если данные имеют связи и нужны transactions — SQL.
+- **Sharding до того как single instance maxed out** (см. § 2 scaling discipline).
+- **ORM как primary source of schema truth** — schema живёт в migration files, ORM генерируется из неё.
+- **Хранение secrets в БД** (passwords / API keys в plain text / weak hashing) — см. § 9.
+- **Сырые SQL strings из user input** (SQL injection vector) — всегда parameterized queries (§ 12).
+
+---
+
+## 2. Pragmatism — scaling discipline
+
+**Принцип:** добавляем сложность **когда** есть реальный pain, не **на всякий случай**. Engineering theater опаснее под-engineering: простая система легче дебажить, миграция к сложности проще чем upfront over-engineering.
+
+### 2.1. Triggers — когда что добавлять
+
+| Сложность | Trigger (когда НАДО) | Что НЕ делать |
+|---|---|---|
+| **Read replica** | Read traffic упирается в single-instance CPU / IOPS | Не добавлять «для надёжности» если primary holds |
+| **Connection pooling (PgBouncer)** | Connection count > 200-500 (зависит от RAM) | Не на старте — встроенный pool достаточен |
+| **Partitioning (table > X rows)** | Single table > 100M rows ИЛИ query plans требуют partition pruning | Не для таблиц < 10M rows — overhead больше benefit |
+| **Sharding (multi-instance)** | Single instance maxed (CPU / storage / write throughput) | Не для < 1B rows / < 100k QPS, не для multi-tenancy alone (RLS / schema-per-tenant дешевле) |
+| **Caching layer (Redis)** | Hot read paths > 80% и БД не справляется | Не cache всё — только measured hot paths с invalidation logic |
+| **Multi-region replication** | Compliance / disaster recovery / latency требуют | Не для «надёжности» если single-region SLA достаточна |
+| **CQRS / event sourcing** | Domain действительно событийный + audit / replay требуется | Не «потому что microservices» — overkill для CRUD apps |
+| **Schema-per-tenant** | True data isolation требуется (compliance) + tenants количество разумное (< thousands) | Не для multi-user collaboration внутри organization |
+| **Row-level security (RLS)** | Multi-tenant с shared schema + защита от app-level bug | Не для single-tenant app, не для public data |
+
+### 2.2. Сначала simple, потом complex
+
+Default architecture для нового продукта:
+
+1. **Single PostgreSQL instance** (или SQLite для local-first / single-user)
+2. **Application-level multi-tenancy** (tenant_id column + WHERE filter в queries)
+3. **Daily full backup + WAL archive** (или file copy для SQLite)
+4. **Built-in connection pool** (driver-level)
+5. **Indexes на FK + commonly-queried columns** — больше не add'ить proactively
+6. **Standard EXPLAIN review** при slow query report'ах
+
+Это покрывает 80%+ продуктов до scale у которого их не достигнет 80%+ команд. Когда упрёшься — добавь конкретную complexity, не all-of-the-above.
+
+### 2.3. Когда оптимизировать
+
+**Не оптимизируем до измерения.** Премature optimization rule (Knuth):
+
+1. Endpoint работает → ship.
+2. Slow query report ИЛИ user complaint → profile (`EXPLAIN ANALYZE`).
+3. Найден bottleneck → focused fix (index / query rewrite / cache).
+4. Verify через A/B или re-measure.
+
+Не add'им «just in case» indexes (они slow down writes + RAM cost). Не cache'им «just in case» (invalidation hell). Не denormalize'им до того как join'ы становятся реально slow.
+
+---
+
+## 3. Identifier strategy
+
+### 3.1. Internal ID type — выбор
+
+| Тип | Когда | Tradeoffs |
+|---|---|---|
+| **`bigserial` / `bigint identity`** (autoincrement) | Default для internal IDs; single-DB | + Compact (8 bytes), быстрый indexing.<br>− Не distributable (требует central counter), guessable (information leak: «вы 1000-й пользователь»). |
+| **`UUID v4` (random)** | Когда нужно client-generate IDs ИЛИ distributed insertion | + Distributable, не guessable.<br>− 16 bytes, fragmentation в B-tree index (random insertion order — hot spots / split'ы), 8x slower than bigint. |
+| **`UUID v7`** (time-ordered) | Modern default где нужно UUID — **рекомендация** | + Distributable, не guessable, **time-ordered** (sequential insertion, no fragmentation), sortable.<br>− Reveals creation timestamp (acceptable для большинства cases). |
+| **`ULID`** (similar to v7) | Alt к UUID v7, лучше human-readable (Base32) | + Same benefits как v7 + readable.<br>− Чуть менее adopted чем v7. |
+| **Composite key** (multiple columns) | Natural domain keys (например, `(organization_id, slug)`) | + Semantic, defensive (нельзя insert duplicate).<br>− Сложнее FK references, JOIN'ы. |
+
+**Default для нового проекта:** `bigserial` для internal IDs, **`UUID v7`** для public-facing IDs (см. § 3.3).
+
+### 3.2. Why UUID v7 не v4
+
+UUID v4 randomly distributed — каждый INSERT попадает в random place в B-tree → page splits → write amplification. UUID v7 включает timestamp в high bits → sequential insertion → пачка соседних writes идёт в одну page → ~5-10x throughput improvement vs v4.
+
+Library support (как 2026):
+- PostgreSQL 17+ native `uuidv7()`; для earlier — extension `pg_uuidv7`
+- Python: `uuid6` package
+- Go: `github.com/google/uuid` (v7 supported)
+- Rust: `uuid` crate с `v7` feature
+- JavaScript: `uuidv7` npm package
+
+### 3.3. Public-facing IDs
+
+**Никогда не expose'аем internal autoincrement ID в URL / API response:**
+
+❌ Bad: `GET /users/12345` — leak'ает rate growth, user count, scraping target.
+
+✅ Good: `GET /users/01HN8K2X3F1V7B5R9MQEC6PYDZ` (ULID / UUID v7) — opaque.
+
+**Подход:**
+- Internal table: `id bigserial PRIMARY KEY`
+- Public column: `public_id uuid NOT NULL UNIQUE DEFAULT uuidv7()` (или ULID)
+- API всегда работает с `public_id`, internal joins — через `id`
+
+### 3.4. Client-generated IDs (для idempotency)
+
+Для idempotent creates: client генерирует UUID v7, шлёт в `Idempotency-Key` header (см. backend guide § 2). Server use'ает как deduplication key. Также упрощает offline-first sync (client может create локально, потом sync без conflict с server-generated ID).
+
+---
+
+## 4. Schema design — user mental model
+
+### 4.1. Tables = entities в head пользователя, не нормализованная теория
+
+Schema reflects **how users think about data**, не пятая нормальная форма. User думает «order has line items» — table `orders` + `order_items` с FK к orders. Не выделяем `addresses` в отдельную табличку «потому что normalization» если address — value of order (snapshot at order time).
+
+### 4.2. Normalization tradeoffs
+
+| Уровень | Когда |
+|---|---|
+| **3NF** (стандарт) | Default для OLTP systems. Updates атомарные, integrity built-in. |
+| **Denormalize selectively** | Read-heavy hot paths где JOIN'ы измеримо slow. Документируем denormalization в comments + reconciliation logic. |
+| **Star schema / OLAP** | Reporting / analytics workloads (отдельная replica / DWH). |
+
+**Не denormalize'ить proactively** — JOIN'ы в modern БД быстрые при правильных indexes.
+
+### 4.3. Naming conventions
+
+- **snake_case** для tables / columns
+- **Plural tables, singular columns**: `users`, `user_id`
+- **Avoid reserved words** (`order`, `user`, `group`)
+- **FK columns**: `<table_singular>_id` (`organization_id`, `parent_comment_id`)
+- **Boolean prefix `is_` / `has_`** (`is_active`, `has_paid_subscription`)
+- **Timestamp columns**: `created_at`, `updated_at`, `deleted_at`
+- **Avoid** generic `data` / `info` / `metadata` без specificity
+
+### 4.4. Column types — choose carefully
+
+| Тип | Когда |
+|---|---|
+| `text` / `varchar` без limit | Default для strings (PostgreSQL `text` perf ≈ `varchar`). Constraint length через CHECK если нужен domain limit. |
+| `varchar(N)` | Только если N — domain constraint (например, ISO country code = 2). |
+| `text` со CHECK constraint | Для enum-like values (lifecycle states, status). |
+| Native enum type | PostgreSQL: можно использовать `CREATE TYPE` enum, но миграции (add/remove value) с гочками. Альтернатива — `text` + CHECK. |
+| `bigint` для IDs / counters | Default. `int` (4 bytes) для small lookup tables только. |
+| `numeric` для money | **Никогда** `float` / `double` для денег — точность. `numeric(18, 4)` для money. |
+| `timestamptz` | См. § 5 time semantics. |
+| `jsonb` (PostgreSQL) | Для truly schema-less data (user metadata, integration-specific configs) — см. § 4.5. |
+| `bytea` / `blob` | Только для small binary (≤ 1 MB). Файлы — в object storage, в БД храним reference (S3 URL / file_id). |
+
+### 4.5. JSONB usage — sparingly
+
+PostgreSQL `jsonb` (или SQLite `json`) — для **truly variable** schema:
+- User-defined custom fields
+- Integration payloads
+- Audit log captured state
+
+**Не использовать** для:
+- Stable structured data (это и есть назначение колонок)
+- Часто-обновляемых fields (jsonb update'ы перезаписывают всё value)
+- Foreign-key-relevant data (нельзя FK на jsonb path)
+
+**Если используем:** GIN index на `jsonb_path_ops` для query paths.
+
+---
+
+## 5. Time semantics
+
+### 5.1. Always store UTC, format в locale
+
+- **Storage:** `timestamptz` (PostgreSQL — stores as UTC, returns в client TZ) или `timestamp` UTC (SQLite — текстовая `ISO8601` UTC).
+- **NEVER** `timestamp` без timezone (`timestamp without time zone`) для real-world events — теряется TZ context, bugs around DST changes.
+- **Display:** в UI locale-aware formatting через `Intl.DateTimeFormat` / `date-fns-tz` / native libraries.
+
+### 5.2. Business time vs system time
+
+Различаем:
+
+- **System time** — когда event записан в БД (`created_at`, `updated_at`). Server clock.
+- **Business time** — когда event случился в reality (`occurred_at`, `effective_date`). User input или derived.
+
+В audit / analytics часто нужны оба:
+
+```sql
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),  -- system
+occurred_at TIMESTAMPTZ NOT NULL,                -- business
+```
+
+### 5.3. Время + дата vs только дата
+
+- **`date`** (без time) — для real calendar dates (birthday, billing cycle start)
+- **`timestamptz`** — для moments в времени
+- **`interval`** (PostgreSQL) — для duration
+
+Не storing date как `timestamptz` начало дня — DST / TZ bugs.
+
+### 5.4. Дискретизация для аналитики
+
+Для time-series / metrics:
+- Aggregate by **UTC bucket** (hour / day) — consistent across regions
+- Display aggregate в user TZ только в UI layer
+
+---
+
+## 6. Data integrity — FK, constraints, checks
+
+### 6.1. FK constraints — обязательно
+
+Любая reference к другой таблице — `FOREIGN KEY` со `ON DELETE` action:
+
+- `ON DELETE CASCADE` — child автоматически удаляется (sub-resources owned by parent)
+- `ON DELETE RESTRICT` — нельзя удалить parent если есть children (default safety)
+- `ON DELETE SET NULL` — child orphan'ит, FK становится NULL (если nullable)
+
+**Никогда не disable'аем FK на production** «для performance» — это database integrity catastrophe waiting to happen.
+
+### 6.2. NOT NULL по default
+
+Каждая колонка — `NOT NULL` если нет real-world reason для NULL. Nullable — explicit opt-in. Это **prevents** «forgot to fill the field» bugs.
+
+### 6.3. CHECK constraints для domain rules
+
+```sql
+CHECK (age >= 0)
+CHECK (status IN ('pending', 'active', 'cancelled'))
+CHECK (start_date <= end_date)
+CHECK (length(slug) BETWEEN 3 AND 50)
+```
+
+Application-level validation тоже нужна (для UX), но database — last line of defense.
+
+### 6.4. UNIQUE constraints
+
+Domain uniqueness rules — на database level:
+
+```sql
+UNIQUE (organization_id, slug)  -- composite unique
+UNIQUE (email) WHERE deleted_at IS NULL  -- partial unique
+```
+
+### 6.5. Generated columns (PostgreSQL 12+)
+
+Computed columns хранятся / индексируются автоматически:
+
+```sql
+full_name text GENERATED ALWAYS AS (first_name || ' ' || last_name) STORED
+```
+
+Используем для search / sort indexes без duplicating data в app.
+
+---
+
+## 7. Migrations discipline — безболезненное обновление и откат с гарантией данных
+
+**Принцип:** каждая миграция должна быть deployable, rollback'able, **без потери committed data**. См. AP-18 (cross-cutting release discipline).
+
+### 7.1. Additive default — expand-contract pattern
+
+Каждая миграция **дополняет**, не изменяет existing schema irreversibly. Это даёт rollback safety: если новая версия кода падает в production, можем откатить код **без откатывания миграции** — старый код продолжает работать с расширенной схемой.
+
+**Безопасные migrations (single step):**
+
+- `ADD COLUMN ... NULL` (без default или с safe default) — fast metadata-only
+- `ADD TABLE` / `ADD VIEW`
+- `ADD INDEX CONCURRENTLY` (PostgreSQL — не blocks writes)
+- `ADD CONSTRAINT NOT VALID` + later `VALIDATE` (PostgreSQL — validate без блокировки writes)
+- `ADD CHECK / ADD FOREIGN KEY` as `NOT VALID` initially
+
+**Опасные migrations (требуют expand-contract multi-step):**
+
+- DROP COLUMN / RENAME COLUMN
+- Изменение type column (TEXT → INT)
+- ADD COLUMN NOT NULL без safe default
+- DROP TABLE / RENAME TABLE
+- Splitting table (one table → two tables)
+- Merging tables
+
+### 7.2. Expand-contract pattern (canonical example: rename column)
+
+Цель: переименовать `email_address` → `email` без downtime, с rollback safety на каждом шаге.
+
+**Этап 1: Expand** (add new, keep old). Migration:
+
+```sql
+ALTER TABLE users ADD COLUMN email TEXT;  -- new column nullable; old preserved
+```
+
+Deploy migration. Old код продолжает работать. New код **ещё не deployed**. Rollback: trivial — DROP COLUMN (no data lost).
+
+**Этап 2: Dual-write code**. Deploy code that writes к обоим колонкам, читает из old:
+
+```python
+def update_email(user_id, new_email):
+    db.execute(
+        "UPDATE users SET email_address = %s, email = %s WHERE id = %s",
+        (new_email, new_email, user_id)
+    )
+```
+
+Rollback: revert code. New column данные просто перестают update'аться (acceptable).
+
+**Этап 3: Backfill**. Data migration (separate from schema migration):
+
+```sql
+UPDATE users SET email = email_address WHERE email IS NULL;
+-- Для больших таблиц — batched:
+-- UPDATE users SET email = email_address WHERE id BETWEEN X AND Y AND email IS NULL;
+```
+
+Verify count: `SELECT COUNT(*) FROM users WHERE email IS NULL AND email_address IS NOT NULL` = 0.
+
+**Этап 4: Switch read source**. Deploy code that reads from `email`, продолжает writing в оба:
+
+```python
+def get_email(user_id):
+    return db.fetchone("SELECT email FROM users WHERE id = %s", (user_id,))
+```
+
+Rollback: revert code → reads from `email_address` again. Data в обоих колонках consistent.
+
+**Этап 5: Stop writing to old**. Deploy code that writes only к new:
+
+```python
+def update_email(user_id, new_email):
+    db.execute("UPDATE users SET email = %s WHERE id = %s", (new_email, user_id))
+```
+
+Wait 1+ deployment cycles чтобы убедиться что нет regression к dual-write.
+
+**Этап 6: Contract** (drop old). Migration:
+
+```sql
+ALTER TABLE users DROP COLUMN email_address;
+```
+
+**Каждый этап независимо deployable и rollback'able.** Никаких big-bang switches.
+
+### 7.3. Data preservation invariants
+
+При rollback **нельзя терять committed data**. Правила:
+
+- **Никаких destructive migrations без backup before.** «Destructive» = DROP / ALTER COLUMN TYPE / UPDATE на больших объёмах данных. Backup **before** migration runs, restore policy документирован.
+- **Backfill в отдельной миграции от schema change.** Schema change — fast, rollback'able. Backfill — может быть long; если падает в середине, schema остаётся valid (NULL для новой column — OK).
+- **Не DELETE'им в той же миграции что и ADD.** Сначала ADD + write to both + verify, потом отдельная migration DELETE'ит.
+- **Если миграция изменяет данные, тест что result invariants держатся.** Add CHECK constraint **после** migration, который validates new state — если что-то поломалось, constraint fail'ит на повторном run.
+
+### 7.4. Никогда не редактируем applied migrations
+
+Migration file получил version → immutable. Если ошибка — пишем new migration с fix.
+
+Editing applied migration ломает:
+- Других developers (их БД already applied — но contents разные)
+- Production replica (если migration был запущен с одной schema)
+- CI который checks pristine migrations state
+
+### 7.5. Migration ordering + idempotency
+
+- Migrations runs в определённом порядке (timestamp prefix `20260524120000_create_users.sql`)
+- Idempotent через `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`
+- Migrations table в БД хранит applied versions (most frameworks делают это автоматически)
+- **CI runs migrations** на fresh БД каждый PR — catches ordering / dependency issues
+
+### 7.6. Rollback strategy на разных уровнях
+
+| Уровень | Что rollback'ается |
+|---|---|
+| **Code (app)** | Deploy previous version. Schema остаётся forward (expand-contract guarantees compatibility) |
+| **Config / feature flag** | Disable feature flag → код перестаёт использовать new path. Без redeploy |
+| **Schema migration** | **Forward-only** для production: rollback = new migration that reverses (с backup verified before). Down migrations допустимы только в development |
+| **Data** | Restore from backup (PITR — point-in-time recovery). Документирован RTO/RPO (§ 14) |
+
+**Forward-only schema rollback discipline** означает: если deployed migration ломается, fix — это **new migration** с reverse change, не «откатить applied migration». Это:
+- Audit trail сохранён в migrations log
+- Safer: down migrations часто непротестированы, могут терять data
+- Replicas / dev машины other developers могут уже applied — running down migration везде = bug-prone
+
+### 7.7. Long-running migrations
+
+Locks могут заблокировать app:
+
+- `CREATE INDEX CONCURRENTLY` (PostgreSQL) — не blocks writes
+- `ADD COLUMN` без default — fast metadata-only (PostgreSQL 11+); с default — backfill (может быть long)
+- `ADD CONSTRAINT NOT VALID` + later `VALIDATE` — не blocks writes
+- Batched DML для large data backfills (chunks of 10k-100k rows)
+- `pg_partman` для table maintenance / partition rotation
+
+**Lock timeout protection** для production:
+
+```sql
+SET lock_timeout = '5s';  -- если cannot acquire lock в 5s — fail migration, retry later
+ALTER TABLE ... ;
+```
+
+### 7.8. Pre-flight verification
+
+Перед production migration:
+
+1. **Tested on production-like staging** — same data volume, same indexes, same load patterns
+2. **Backup verified restorable** (см. § 14.5)
+3. **Estimated migration time** measured на staging — если > acceptable downtime, redesign (expand-contract)
+4. **Rollback runbook** написан — exact commands если что-то пойдёт не так
+5. **Communication ready** — status page / users notified для maintenance windows
+
+### 7.9. Frameworks для migrations
+
+| Language | Framework |
+|---|---|
+| **Go** | `golang-migrate` (popular, language-agnostic), `goose`, `atlas` |
+| **Rust** | `sqlx migrate`, `refinery`, `diesel migration` |
+| **Python** | `Alembic` (SQLAlchemy), `Django migrations` |
+| **Node.js** | `prisma migrate`, `Knex migrations`, `Sequelize migrations` |
+| **Ruby** | `Rails migrations` (Active Record) |
+| **Cross-language** | `Liquibase`, `Flyway`, `Atlas` (declarative) |
+
+---
+
+## 8. Audit columns + soft-delete
+
+### 8.1. Standard audit columns на каждой mutable table
+
+```sql
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+created_by_id BIGINT REFERENCES users(id),  -- если applicable
+updated_by_id BIGINT REFERENCES users(id),
+```
+
+`updated_at` auto-update через trigger:
+
+```sql
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON <table>
+  FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+```
+
+### 8.2. Soft-delete — когда
+
+**Soft-delete** (`deleted_at TIMESTAMPTZ NULL`) — добавляем когда:
+
+- Юридическое требование retention (audit / compliance) — данные нельзя hard-delete
+- User experience — «trash bin» / «undo within N days»
+- Защита от accidental destruction (см. AP-15-equivalent in UI rules — confirm + soft-delete)
+
+**Не используем soft-delete для всего** — нагрузка на queries (всегда `WHERE deleted_at IS NULL`), space cost.
+
+### 8.3. Soft-delete patterns
+
+- **Partial index** для performance: `CREATE INDEX ON <table> (...) WHERE deleted_at IS NULL`
+- **Views** для clean queries: `CREATE VIEW active_users AS SELECT * FROM users WHERE deleted_at IS NULL`
+- **Periodic hard-delete** для retention policy: scheduled job hard-deletes records older than X days after soft-delete
+
+### 8.4. Audit log
+
+Для critical entities — отдельная audit table:
+
+```sql
+CREATE TABLE user_audit_log (
+  id bigserial PRIMARY KEY,
+  user_id bigint NOT NULL REFERENCES users(id),
+  action text NOT NULL,  -- 'created' / 'updated' / 'deleted' / 'login'
+  changed_fields jsonb,  -- before/after for changed columns
+  changed_by_id bigint REFERENCES users(id),
+  ip_address inet,
+  user_agent text,
+  occurred_at timestamptz NOT NULL DEFAULT NOW()
+);
+```
+
+Insert через trigger или application logic. Audit log immutable (только INSERT, no UPDATE/DELETE).
+
+---
+
+## 9. Encryption strategy
+
+### 9.1. Уровни шифрования
+
+| Уровень | Что защищает | Когда |
+|---|---|---|
+| **Encryption in transit** (TLS) | Network sniffing | **Всегда** — TLS 1.3 между app ↔ БД |
+| **Encryption at rest** (TDE / disk) | Stolen disk / backups | **Всегда** для production — managed services включены by default; self-hosted — LUKS / dm-crypt / SQLCipher |
+| **Application-level / field-level** | DB admin / DB compromise | Когда threat model требует (PII / financial / health) |
+| **Per-tenant keys** | Cross-tenant leak via DB bug | Multi-tenant SaaS с strict isolation |
+
+### 9.2. Encryption in transit
+
+- `sslmode=require` (PostgreSQL) — минимум; `sslmode=verify-full` для production
+- TLS 1.3 если managed service supports
+- Certificate pinning в высоко-trust contexts
+
+### 9.3. Encryption at rest
+
+**Managed services** (RDS / Cloud SQL / etc) — TDE по default включён, проверяем option.
+
+**Self-hosted PostgreSQL:**
+- File-system encryption (LUKS на Linux) — стандарт
+- PostgreSQL `pg_tde` extension (если требуется DB-level)
+
+**SQLite:**
+- **SQLCipher** — расширение SQLite с full-database encryption (AES-256). Drop-in replacement, transparent to app.
+- Key management critical (см. § 9.6).
+
+### 9.4. Application-level encryption
+
+Для чувствительных PII / financial / health data:
+
+```
+Plaintext data → KDF/AEAD encrypt в app → ciphertext в БД
+```
+
+**Library примеры:** `libsodium` / `pgcrypto` + `pyca/cryptography` / `tink`.
+
+**Что зашифровывать:**
+- PII fields (email, phone, name) — если threat model требует encryption even from DB admin
+- Free-form text с potentially sensitive content
+- Stored credentials для third-party integrations
+
+**Tradeoffs:**
+- Encrypted columns не searchable (требуется deterministic encryption + AES-SIV для equality search; или separate searchable hash column)
+- Range queries impossible (если encrypted)
+- Backups encrypted at app layer — не нужно DB-level encryption duplication
+
+### 9.5. Hashing для passwords / tokens
+
+**Никогда** не store passwords в plain / weak hash:
+
+- **Passwords:** Argon2id (modern OWASP recommendation) с salt + pepper
+- **API tokens / session IDs:** SHA-256 hash storage; raw token только в response к user
+- **OTP / recovery codes:** hash, не store plain
+
+### 9.6. Key management
+
+Ключи **никогда** не committed в репу, не в `.env` файлы committed, не в БД с данными.
+
+**Production:**
+- KMS (AWS KMS / GCP KMS / HashiCorp Vault / SOPS)
+- Application reads keys at startup via service identity (IAM role / Vault token)
+- Key rotation policy (annual / on incident)
+
+**Development / single-machine:**
+- `.env` файл локально, gitignored
+- Docker secrets для local Compose
+
+### 9.7. Что делать при key compromise
+
+- Документировано в `incident-runbook-draft.md` (Stage B artifact, см. AP-13)
+- Rotation procedure + re-encryption strategy
+- Notification обязательств (GDPR breach notification 72h, etc)
+
+---
+
+## 10. Data partitioning
+
+См. § 2 для **когда** добавлять. Здесь — **как**.
+
+### 10.1. Стратегии partitioning
+
+| Стратегия | Когда |
+|---|---|
+| **Range partitioning** (по дате) | Time-series data, logs, events. Partition pruning при дате-range queries. |
+| **List partitioning** (по value) | Discrete values (region, tenant_id). Если values известны upfront. |
+| **Hash partitioning** | Even distribution когда нет natural range / list. |
+
+### 10.2. PostgreSQL declarative partitioning
+
+```sql
+CREATE TABLE events (
+  id bigserial,
+  occurred_at timestamptz NOT NULL,
+  ...
+) PARTITION BY RANGE (occurred_at);
+
+CREATE TABLE events_2026_05 PARTITION OF events
+  FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+```
+
+Автоматическое creation new partitions: `pg_partman` extension.
+
+### 10.3. Partition pruning
+
+Queries должны filter по partition key чтобы planner мог skip irrelevant partitions:
+
+```sql
+-- ✅ Pruning works (filter on partition key)
+SELECT * FROM events WHERE occurred_at > '2026-05-01';
+
+-- ❌ No pruning (no filter on partition key)
+SELECT * FROM events WHERE user_id = 123;
+```
+
+Indexes per partition, не cross-partition.
+
+### 10.4. Drop old partitions
+
+Часто benefit partitioning — `ALTER TABLE DROP PARTITION` instead of `DELETE FROM`. Instant cleanup без VACUUM cost.
+
+---
+
+## 11. Multi-tenancy isolation
+
+См. § 2 для **когда** добавлять. Здесь — **как**.
+
+### 11.1. Стратегии
+
+| Стратегия | Когда | Tradeoffs |
+|---|---|---|
+| **App-level + tenant_id column** | Default для большинства SaaS | + Simple, single schema migration. − Bugs в WHERE могут cross-tenant leak. |
+| **Row-level security (RLS)** | Hardening против app bugs | + DB enforces isolation. − Complexity, debug headache. |
+| **Schema-per-tenant** | Strict isolation + tenants < thousands | + True isolation. − Migrations × N tenants, connection pool per schema. |
+| **Database-per-tenant** | Compliance / per-customer custom | + Strongest isolation. − Operational overhead, cost. |
+
+### 11.2. PostgreSQL RLS
+
+```sql
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON invoices
+  USING (tenant_id = current_setting('app.current_tenant_id')::bigint);
+```
+
+App sets `SET LOCAL app.current_tenant_id = '<tenant>'` per request. RLS auto-filters.
+
+### 11.3. Cross-tenant operations
+
+Admin endpoints / cross-tenant analytics — explicit bypass:
+
+```sql
+-- Admin role bypasses RLS
+GRANT BYPASSRLS ON SCHEMA public TO admin_role;
+```
+
+Документируем где bypass используется + audit log every cross-tenant query.
+
+---
+
+## 12. Security baseline
+
+### 12.1. Parameterized queries — всегда
+
+**Никогда** не concatenate'им user input в SQL string. Используем параметры через driver:
+
+```python
+# ❌ SQL injection
+cursor.execute(f"SELECT * FROM users WHERE email = '{user_email}'")
+
+# ✅ Parameterized
+cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
+```
+
+Все language drivers поддерживают параметры. ORMs делают это by default.
+
+### 12.2. Least privilege roles
+
+```sql
+-- App user — только то что нужно
+CREATE USER app_user WITH PASSWORD '<from-secret-manager>';
+GRANT CONNECT ON DATABASE myapp TO app_user;
+GRANT USAGE ON SCHEMA public TO app_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+-- Не: SUPERUSER, CREATEDB, DROP TABLE permissions
+
+-- Migration user — separate, with DDL rights
+CREATE USER migration_user WITH PASSWORD '...';
+GRANT ALL PRIVILEGES ON DATABASE myapp TO migration_user;
+```
+
+### 12.3. Network isolation
+
+- БД не expose'ится на public internet (private subnet + VPC peering)
+- App ↔ БД через private network
+- Если managed service — IP allowlist + IAM authentication
+
+### 12.4. Audit logging
+
+- **Connection events** (login / logout / failed auth) — мониторим, alert на anomaly
+- **DDL operations** (CREATE / DROP / ALTER) — audit log
+- **Sensitive data access** (PII reads) — application-level audit log (см. § 8.4)
+
+### 12.5. Backup security
+
+- Backups encrypted at rest (см. § 9.3)
+- Backup access — restricted IAM роль
+- Backups copies off-site (geographic separation для DR)
+
+### 12.6. Secrets management
+
+- DB credentials в vault / KMS (см. § 9.6)
+- **Никогда** committed (gitignored .env, sealed secrets в k8s)
+- Rotation на security incident / employee offboarding
+
+---
+
+## 13. Observability
+
+### 13.1. Slow query log
+
+- PostgreSQL: `log_min_duration_statement = 100ms` (или threshold по project)
+- MySQL: `slow_query_log = ON` + `long_query_time = 0.1`
+- SQLite: app-level timing (нет native slow query log)
+
+Periodic review slow queries → index / rewrite / cache.
+
+### 13.2. EXPLAIN ANALYZE workflow
+
+Для каждого slow query:
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT ...;
+```
+
+Читаем plan: sequential scans на big tables, missing indexes, sort spilling to disk, nested loops с large outer.
+
+Tooling: PEV (PostgreSQL Explain Visualizer), Datadog DBM, pganalyze.
+
+### 13.3. Metrics — must-have
+
+- **Connection count** (vs pool limit)
+- **Active queries** (CPU bound vs IO bound)
+- **Lock contention** (`pg_locks`)
+- **Replication lag** (если есть replica)
+- **Cache hit ratio** (`pg_stat_database.blks_hit / (blks_hit + blks_read)`)
+- **Storage growth rate** (disk fill ETA)
+- **Vacuum / autovacuum activity** (table bloat)
+
+Стандартные решения: Prometheus + postgres_exporter, Datadog DBM, AWS Performance Insights.
+
+### 13.4. Query stats
+
+PostgreSQL: `pg_stat_statements` extension — top queries by time / calls / I/O. Critical для finding hot paths.
+
+MySQL: Performance Schema.
+
+### 13.5. Health checks
+
+- App-level: `/healthz` checks DB connection (см. backend guide § 11.3)
+- DB-level: replication / vacuum / disk space — operational dashboards
+
+---
+
+## 14. Backups + restore drills
+
+**Этот раздел — самый часто игнорируемый и самый дорогой при провале.**
+
+### 14.1. RTO / RPO — определены upfront
+
+- **RTO** (Recovery Time Objective) — за сколько мы должны восстановить работу после failure
+- **RPO** (Recovery Point Objective) — сколько данных можем потерять (час? минута? ноль?)
+
+| Product type | Typical RTO | Typical RPO |
+|---|---|---|
+| Hobby / experimental | 24 hours | 24 hours |
+| Small SaaS | 4 hours | 1 hour |
+| Production SaaS | 1 hour | 15 minutes |
+| Financial / health | 15 min | < 1 minute |
+
+RPO determines backup frequency: RPO 1 hour = WAL archive every hour (или continuous streaming).
+
+### 14.2. Backup стратегии
+
+| Стратегия | Когда |
+|---|---|
+| **Full dump** ежедневно | RPO < 1 day, простой recovery model |
+| **Full weekly + incremental daily** | Storage cost / time tradeoff |
+| **WAL archiving + base backup** (PITR) | RPO минуты, point-in-time recovery |
+| **Streaming replication + delayed replica** | Hot standby + protection от accidental drop |
+| **Continuous backup** (managed services) | Stripe / cloud-provider managed |
+
+### 14.3. Storage discipline
+
+- **3-2-1 rule:** 3 copies, 2 different media, 1 off-site
+- **Encryption at rest** для backups (см. § 9.3)
+- **Retention policy:**
+  - Daily для 7 days
+  - Weekly для 4 weeks
+  - Monthly для 12 months
+  - Yearly для regulatory retention period
+- **Verification** что backup readable (NOT just «backup file exists»)
+
+### 14.4. Off-site copies
+
+- Different region / different cloud provider
+- Не same datacenter / не same blast radius
+- Encrypted in transit + at rest
+
+### 14.5. Restore drills — **обязательны**
+
+«Untested backup = no backup.» Restore drill regularly:
+
+- **Production-tier:** monthly restore to staging from prod backup, verify schema + sample data
+- **Disaster recovery drill:** quarterly — restore entire system in alternate region / cloud, measure RTO
+- **Documentation:** runbook для restore в `incident-runbook-draft.md` (см. AP-13)
+
+Метрика: «когда последний раз делали restore drill» — quarterly maximum gap.
+
+### 14.6. Backup access control
+
+- Restricted IAM роль (не shared с app)
+- MFA для restore operations
+- Audit log restore attempts
+
+### 14.7. Pre-incident readiness
+
+В `incident-runbook-draft.md`:
+
+- Команды для restore (parameterized, ready-to-run)
+- Contact list (whose to wake up)
+- Communication template для users / status page
+- Post-mortem template
+
+---
+
+## 15. Connection management
+
+### 15.1. Connection pooling
+
+**Driver-level pool** для most apps — встроенный (pgx, libpq, etc).
+
+**External pooler** (PgBouncer / Odyssey) — когда:
+- Connection count > 200-500
+- Many short-lived connections (PHP / serverless)
+- Transaction mode для max efficiency
+
+### 15.2. Pool sizing
+
+Rule of thumb: `pool_size = ((core_count * 2) + effective_spindle_count)`. Practical default — 10-20 для most apps.
+
+Не set pool_size = 100 «just in case» — connection overhead (memory, postgres backend processes).
+
+### 15.3. Timeouts
+
+| Timeout | Default | Когда меняем |
+|---|---|---|
+| **Statement timeout** (`statement_timeout`) | 30s | Lower для interactive endpoints, higher для batch jobs |
+| **Idle in transaction timeout** | 60s | Prevents zombie transactions holding locks |
+| **Connect timeout** | 10s | Network reliability |
+| **Lock timeout** | 5s | Prevents long lock waits cascading |
+
+Always set — никаких infinite timeouts на production.
+
+### 15.4. Prepared statements
+
+Драйверы кэшируют parsed query plans → faster repeated execution. Enable by default. Document'ируем edge cases когда disable (например, при PgBouncer transaction mode — некоторые drivers требуют workaround).
+
+### 15.5. Retry strategy
+
+Transient errors:
+- Network blip
+- Failover в HA setup
+- Deadlocks (PostgreSQL `40P01` / `40001`)
+
+**Retry idempotent operations** с exponential backoff. **НЕ retry** mutations без idempotency-key (см. backend guide § 2).
+
+---
+
+## 16. Frameworks-first для БД
+
+### 16.1. Schema management
+
+| Стратегия | Когда |
+|---|---|
+| **Code-first migrations** (Alembic / Knex / Diesel) | Default для большинства apps |
+| **Schema-first** (Atlas / SchemaSpy) | Когда schema — source of truth, ORM генерируется из неё |
+| **ORM auto-migrations** (`db.sync()`) | **Никогда** на production — ORM не понимает constraints, может drop data |
+
+### 16.2. Query builders / ORM
+
+| Подход | Когда |
+|---|---|
+| **Raw SQL** (через driver) | Простые apps, performance-critical paths, complex queries |
+| **Query builder** (`sqlx` / `kysely` / `knex`) | Type-safe SQL composition, no ORM magic |
+| **ORM** (`SQLAlchemy` / `Prisma` / `ActiveRecord` / `Entity Framework`) | Rapid development, model-driven |
+
+ORM ↔ raw SQL не mutually exclusive — большинство production codebases mix. Hot paths — raw SQL, CRUD — ORM. ORM choice — implementation detail, не часть этого guide.
+
+---
+
+## 17. Что обязательно в каждой DB-feature (general checklist)
+
+В дополнение к per-kind checklist:
+
+- [ ] Schema change через migration file (не ad-hoc SQL)
+- [ ] Migration additive по default; breaking changes — expand-contract pattern
+- [ ] FK constraints для всех references
+- [ ] NOT NULL по default, nullable explicit
+- [ ] CHECK constraints для domain rules
+- [ ] Indexes на FK + commonly-queried columns (verified EXPLAIN)
+- [ ] Audit columns (`created_at`, `updated_at`) на mutable tables
+- [ ] Soft-delete только когда юридически / UX требуется (не по умолчанию)
+- [ ] PII / sensitive fields — encryption strategy документирована (§ 9)
+- [ ] Parameterized queries (никаких string concatenation)
+- [ ] Public IDs — UUID v7 / ULID, не autoincrement leak
+- [ ] Backup стратегия включает new table / data (если special handling)
+- [ ] Slow query log capture'ит new queries; review через 1 week
+
+Per-kind checklist — в соответствующем `database-design-<kind>.md` файле.
+
+Reviewer-agent (когда database-reviewer subagent добавлен — task #43) проверяет каждый пункт.
+
+---
+
+## 18. Частота пересмотра
+
+- При каждой DB-feature — возможно расширение (новые tables, новые constraints)
+- Раз в квартал — review всех database-design-*.md
+- При major scale milestone — review pragmatism § 2 triggers (нужно ли добавлять complexity)
+- При security incident — review § 9 encryption / § 12 security baseline
+
+---
+
+## 19. Связанные документы
+
+- `ui-style-guide-backend.md` — API contracts (idempotency, pagination, errors)
+- `threat-model.md` — encryption / access control / audit requirements
+- `topology.md` — где физически живёт БД, replication topology
+- `incident-runbook-draft.md` — restore procedures, key compromise response
+- `database-design-<kind>.md` — per-kind specifics (embedded / external)
