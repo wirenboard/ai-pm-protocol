@@ -210,11 +210,13 @@ Stage E идёт **после** Stage A-D, не до — потому что inf
 
 - `CLAUDE.md` в product root — Layer 1 (briefing для каждой Claude session). Из `_templates/CLAUDE.md.tmpl`.
 - `.claude/settings.json` — Layer 2 (hooks). Из `_templates/settings.json.tmpl`.
-- `.ai-pm/tooling/scripts/check-spec-precondition.sh` — PreToolUse hook (блокирует code edits без spec'а).
-- `.ai-pm/tooling/scripts/check-git-safety.sh` — PreToolUse hook (блокирует опасные git операции).
-- `.ai-pm/tooling/scripts/update-bootstrap-state.sh` — PostToolUse hook (audit trail).
-- `.ai-pm/tooling/scripts/check-spec-discipline.<lang>` — spec/use-case linting (catalogue § 9).
-- Git hooks через `.ai-pm/tooling/scripts/install-git-hooks.sh` — Layer 4 (pre-commit, commit-msg, pre-push).
+- `scripts/check-spec-precondition.sh` — PreToolUse hook (блокирует code edits без spec'а). Реальный скрипт в **product** репозитории, не в submodule (`.ai-pm/tooling/` read-only). Bootstrap-agent на Stage E генерирует из `_templates/scripts/check-spec-precondition.sh.tmpl`.
+- `scripts/check-git-safety.sh` — PreToolUse hook (блокирует опасные git операции). Источник — `_templates/scripts/check-git-safety.sh.tmpl`.
+- `scripts/update-bootstrap-state.sh` — PostToolUse hook (audit trail). Источник — `_templates/scripts/update-bootstrap-state.sh.tmpl`.
+- `scripts/check-spec-discipline.<lang>` — spec/use-case linting (catalogue § 9).
+- Git hooks через `scripts/install-git-hooks.sh` — Layer 4 (pre-commit, commit-msg, pre-push). Источник — `_templates/scripts/install-git-hooks.sh.tmpl`.
+
+**Важно:** все скрипты живут в **product** репозитории (`scripts/` или эквивалент по convention'у продукта), не в submodule `.ai-pm/tooling/`. Submodule — read-only, predназначен для шаблонных файлов. Bootstrap-agent на Stage E читает `.tmpl` из submodule, адаптирует под layout продукта (например, `doc_root` из state) и создаёт реальные скрипты в `scripts/`.
 
 **Foundational artifacts:**
 
@@ -438,7 +440,7 @@ PM не нужно держать в голове CWE-321 или OWASP A02. Init
 
 **Foundational артефакты (deliverables Stage A-E):**
 
-- [ ] `vision.md` / `personas.md` / `user-journeys.md` / `competitive-analysis.md` / `positioning.md` / `brand-voice.md` (Stage A)
+- [ ] `vision.md` / `personas.md` / `user-journeys.md` / `competitive-analysis.md` / `positioning.md` / `brand-voice.md` / `ui-style-guide.md` (Stage A) — последний обязателен для Mode 1 с UI, см. AP-15
 - [ ] `strategic-frame.md` (включая SLO + метод валидации) / `threat-model.md` / `mvp-scope.md` (Stage B)
 - [ ] `legal-brief.md` (Mode 1 — обязательно; Mode 2/3 — условно по AP-13)
 - [ ] `customer-interview-script.md` (Mode 1 — обязательно; Mode 2/3 — условно по AP-13)

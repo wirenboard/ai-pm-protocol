@@ -189,13 +189,15 @@ Stage A-D **уже пройдены**. Stage E (repo skeleton) тоже суще
 
 ### Stage A READ-pass
 
-Для каждого Stage A artifact (personas, user-journeys, positioning, brand-voice, competitive-analysis):
+Для каждого Stage A artifact (personas, user-journeys, positioning, brand-voice, competitive-analysis, ui-style-guide если есть):
 
 1. Читаешь файл.
 2. Даёшь PM summary в 2-3 предложениях.
-3. Спрашиваешь: «Эта фича укладывается? Конкретно — она для существующей persona X? Привязывается к шагу N journey'я Y?»
+3. Спрашиваешь: «Эта фича укладывается? Конкретно — она для существующей persona X? Привязывается к шагу N journey'я Y? Соответствует design system'у?»
 4. Если PM говорит «не укладывается» — спрашиваешь, какая дельта нужна. Локально обновляешь artifact (один абзац, не переписываешь). Маркируешь approval.
 5. Если PM говорит «укладывается» — переходишь к следующему artifact'у.
+
+**Если `ui-style-guide.md` отсутствует** (legacy продукт без формализованного дизайна) — extract'ишь неформальный по существующему UI коду / стилям, предлагаешь PM зафиксировать как `ui-style-guide.md` в отдельном `docs/ui-style-guide-extract` PR'е. Без этого Mode 2 UI-фичи будут конфликтовать с existing практиками (см. AP-15).
 
 ### Stage B READ-pass
 

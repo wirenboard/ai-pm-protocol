@@ -143,6 +143,56 @@
 
 ---
 
+## AP-15. UI-фичи без Stage A `ui-style-guide.md`
+
+**Что нельзя:**
+
+- В Mode 1 (new-product) с UI-составляющей закрывать Stage A без `ui-style-guide.md`. Coder в Stage F будет изобретать визуальный язык на лету — палитру, типографику, spacing, anim'ации, accessibility выбор — без shared reference. Результат: непоследовательный UI, accessibility-долг, повторные переделки.
+- Реализовывать UI-фичу в Stage F без cross-ref'а в feature spec'е на `ui-style-guide.md` или existing design system продукта.
+- В Mode 2/3 фича вводит **новый UI-паттерн** (новый component, новая страница layout), который не описан в existing design system — без обновления design system'а через отдельный PR.
+
+**Почему:** на одном из ранних prod-run'ов template'а Stage A был закрыт без `ui-style-guide.md` (он не был в чек-листе). При начале первой UI-фичи AI попытался сделать визуальный дизайн без shared reference — палитра, шрифты, spacing «как у всех». Получился generic результат, не отражающий PM-vision. Plus accessibility / dark theme / responsive были treated как «доделаем потом» — задержали merge feature PR на сутки cleanup'а.
+
+**Mode-aware применение:**
+
+| Mode | ui-style-guide.md |
+|---|---|
+| **Mode 1 (new-product) с UI** | **Обязательно** в Stage A. Без него Stage F UI-фичи **запрещено** начинать |
+| **Mode 1 (new-product) без UI** (CLI, backend-only, library) | N/A с reason в `.bootstrap-state.md` |
+| **Mode 2 (new-feature) в существующем продукте** | **Не создаём** с нуля. READ existing design system (Figma / Storybook / dedicated guide). Если в продукте нет формализованного guide — extract'им неформальный + предлагаем PM зафиксировать |
+| **Mode 3 (rework) с изменением UI** | READ existing + extend для нового UI-паттерна (отдельный PR в `docs/<doc>-update` ветке) |
+| **Lite-mode / bugfix** | N/A — не вводит новых UI-паттернов |
+
+**Что должно быть в ui-style-guide.md** (см. полный шаблон `_templates/ui-style-guide.md.tmpl`):
+
+1. Vision + 6 фундаментальных принципов (понятность / отзывчивость / современный UX / адаптивность / доступность / brand voice)
+2. **Палитра — две темы** (светлая + тёмная), 7 семантических ролей × 2 = 14 токенов, WCAG AA контраст
+3. Принципы конвертации light → dark
+4. Типографика
+5. Spacing (8pt grid типично)
+6. Shapes (corner radius, borders)
+7. Shadows / elevation
+8. Iconography
+9. Animations (durations / easing / prefers-reduced-motion)
+10. Адаптивный дизайн (breakpoints + функциональная адаптация: таблицы → карточки на mobile)
+11. Отзывчивость UI и feedback (Web Workers для > 200ms операций, instant-apply settings, in-place feedback вместо toast)
+12. Понятность, copy, обработка ошибок (in-place errors, минимум tooltips, confirm только для критичных действий)
+13. Локализация всех UI-strings (i18n с дня 1, даже если v0 один язык)
+14. Accessibility — детальный WCAG AA чек-лист
+15. Theme switching mechanics (CSS variables, prefers-color-scheme + manual override)
+16. Принцип «готовые решения первичны» (frameworks-first, не переизобретать)
+17. Mandatory checklist для UI-фич (cross-ref'ится reviewer'ом в Step 7)
+
+**Как поступать вместо:**
+
+- В `bootstrap-state.md.tmpl` Stage A checklist добавлен `ui-style-guide` (Mode 1 с UI обязательно).
+- В `project-bootstrap.md` Stage A flow для Mode 1 — обязательный шаг создания ui-style-guide; для Mode 2/3 — READ existing.
+- В `feature-spec.md.tmpl` NFR — accessibility / responsive / theme support как mandatory чек-лист.
+- В `reviewer.md` — структурный consistency check (UI-фича без cross-ref на ui-style-guide.md → blocking finding).
+- В `development-protocol.md` § 11.0 (Stage F readiness) — добавлен `ui-style-guide.md` для Mode 1 с UI.
+
+---
+
 ## AP-14. Пропуск структурного read-pass'а перед feature spec
 
 **Что нельзя:**

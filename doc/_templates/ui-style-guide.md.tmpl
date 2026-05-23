@@ -1,0 +1,735 @@
+---
+status: draft
+stage: A
+artifact: ui-style-guide
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD
+---
+
+# <Project> — UI Style Guide
+
+**Stage A artifact, последний.** Визуальный язык продукта — палитра, типографика, формы, движение, доступность. Обязательны **обе темы** (светлая и тёмная) с момента запуска.
+
+Применяется ко всем UI-фичам Stage F. Любая UI-фича в feature-spec ссылается на этот документ.
+
+**Mode-aware применение:**
+
+- **Mode 1 (new-product):** этот артефакт **обязателен** на Stage A. Без него Stage F UI-фичи начинать **запрещено** — coder будет изобретать визуальный язык на лету. См. AP-15 (если будет добавлен).
+- **Mode 2/3 (new-feature / rework в существующем продукте):** **не создаём** с нуля. Опираемся на **existing design system** продукта (Figma / dedicated style guide / Storybook). Если в продукте нет формализованного style guide — extract'им неформальный (через анализ существующего UI кода) и предлагаем PM зафиксировать.
+
+---
+
+## 1. Vision
+
+> <PM-цитата о визуальном vision'е продукта: лаконичность / тон / эмоциональный регистр / что НЕ хотим>
+
+### 1.1. Шесть фундаментальных принципов
+
+Каждое UI-решение проверяется по этим шести осям. Конфликт между принципами — обсуждается на feature-spec уровне; default — в порядке перечисления.
+
+1. **Понятность.** Название элемента / кнопки / поля само объясняет, что он делает. Если требуется подсказка — переписать само название. Подробнее § 11.
+2. **Отзывчивость.** UI никогда не замерзает. Любая операция > 200ms — фоновая с видимым прогрессом. Подробнее § 10.
+3. **Современный UX-паттерн.** Настройки применяются сразу (auto-apply), без явной кнопки «Сохранить» там, где это безопасно. Подробнее § 10.4.1.
+4. **Адаптивность.** Одинаково хорошо на смартфоне / планшете / desktop. Не только стилями — функционально. Подробнее § 9.
+5. **Доступность.** WCAG AA для обеих тем обязательно. Подробнее § 12.
+6. **Соответствие brand voice.** Текст в UI соответствует `doc/brand-voice.md`. Подробнее § 11.3.
+
+### 1.2. Стилистический touchstone
+
+<Production references — продукты с похожей эстетикой. Например: «Calm.com / Headspace / Apple Books / Are.na / Stripe Press» если warm minimal; «Linear / Stripe Dashboard / Notion» если cold tech; «Discord / Twitch» если playful gaming.>
+
+### 1.3. Что мы НЕ делаем
+
+<Список эстетических паттернов, которые отвергаем. Примеры: glassmorphism, neumorphism, heavy shadows, 3D effects, neon, skeuomorphism, stock photos с улыбающимися людьми, и т.д.>
+
+---
+
+## 2. Палитра — две темы
+
+**Принцип:** 7 семантических ролей × 2 темы = 14 токенов. Минимальное число акцентных цветов.
+
+### 2.1. Светлая тема
+
+| Роль | HEX | Назначение |
+|---|---|---|
+| Background (основной) | <HEX> | <описание> |
+| Surface (cards / sections) | <HEX> | <описание> |
+| Surface elevated (modal / dropdown / popup) | <HEX> | <описание> |
+| Text primary | <HEX> | <описание> |
+| Text secondary | <HEX> | <описание> |
+| Border / divider | <HEX> | <описание> |
+| Accent (links / primary action) | <HEX> | <описание> |
+| Успех | <HEX> | <описание> |
+| Предупреждение | <HEX> | <описание> |
+| Ошибка | <HEX> | <описание> |
+
+### 2.2. Тёмная тема
+
+| Роль | HEX | Принцип конвертации |
+|---|---|---|
+| Background (основной) | <HEX> | warm dark или cold black (по vision'у); НЕ чистый #000 |
+| Surface (cards / sections) | <HEX> | светлее фона на 5-8% |
+| Surface elevated (modal / dropdown / popup) | <HEX> | ещё светлее — elevation **через светлоту**, не shadow |
+| Text primary | <HEX> | НЕ чистый белый — мягче для глаз |
+| Text secondary | <HEX> | warm/cold mid grey, увеличенная яркость для контраста |
+| Border / divider | <HEX> | разделители на dark surface |
+| Accent (links / primary action) | <HEX> | акцент **десатурированный на 10-30%** |
+| Успех | <HEX> | с увеличенной светлотой |
+| Предупреждение | <HEX> | с увеличенной светлотой |
+| Ошибка | <HEX> | с увеличенной светлотой |
+
+### 2.3. Контрастность WCAG AA — обе темы
+
+| Пара | Light | Dark |
+|---|---|---|
+| Text primary vs Background | X.X:1 | X.X:1 |
+| Text secondary vs Background | X.X:1 | X.X:1 |
+| Accent vs Background | X.X:1 | X.X:1 |
+| Успех vs Background | X.X:1 | X.X:1 |
+| Предупреждение vs Background | X.X:1 | X.X:1 |
+| Ошибка vs Background | X.X:1 | X.X:1 |
+
+Все text vs background ≥ 4.5:1 (AA). Если 3:1-4.5:1 — только для large text (≥18pt regular или ≥14pt bold).
+
+### 2.4. Принципы конвертации light → dark
+
+1. **Согласовать с visual vision'ом.** Warm light → warm dark; cold light → cold dark.
+2. **Elevation через светлоту**, не shadow (в dark тени почти не видны).
+3. **Десатурировать акценты** на 10-30%.
+4. **Контраст WCAG AA для обеих тем**, не «mostly works in light».
+5. **Token-driven**, не дублирование стилей. CSS variables переключаются по `[data-theme="dark"]` или `prefers-color-scheme`.
+6. **Не использовать чистый чёрный** (`#000`) — «vibrating» effect с белым текстом на OLED.
+7. **Не использовать чистый белый** для text в dark — серость снижает eye strain.
+
+---
+
+## 3. Типографика
+
+**Принцип:** один шрифт на весь продукт (если нет особых причин для дуэта). Variable font'ы предпочтительны (один файл, все веса).
+
+### 3.1. Выбор шрифта
+
+<Product-specific: один шрифт или дуэт. Учесть: кириллица если применимо, лицензия (open-source vs proprietary), variable font support. Популярные open-source кандидаты для UI: Inter (humanist sans, спецификация для UI), IBM Plex Sans (книжный sans), Manrope (rounded humanist), Geist (новый, by Vercel).>
+
+### 3.2. Шкала размеров
+
+<Modular ratio типично 1.2-1.4. Минимальный body 16px на любом устройстве.>
+
+| Роль | Размер | Вес | Letter-spacing | Line-height |
+|---|---|---|---|---|
+| Display | XXpx | <вес> | <em> | X.X |
+| Heading 1 | XXpx | <вес> | <em> | X.X |
+| Heading 2 | XXpx | <вес> | <em> | X.X |
+| Body | XXpx | <вес> | <em> | X.X |
+| Label / Caption | XXpx | <вес> | <em> | X.X |
+| Micro | XXpx | <вес> | <em> | X.X |
+
+### 3.3. Что не использовать
+
+- Italic — почти никогда (только редкие emphasis в long-form content; не в UI chrome)
+- Underline — только для inline links в текстовых блоках
+- All-caps — только для micro labels, не для headings
+- Серифные шрифты в UI chrome — только если это **продуктовое решение** (например, publishing-aesthetic) с обоснованием
+
+---
+
+## 4. Spacing
+
+**Базовая единица: <8px типично>.** Все отступы кратны.
+
+| Token | Размер | Использование |
+|---|---|---|
+| `space-xs` | Xpx | <использование> |
+| `space-s` | Xpx | <использование> |
+| `space-m` | Xpx | <использование> |
+| `space-l` | Xpx | <использование> |
+| `space-xl` | Xpx | <использование> |
+| `space-2xl` | Xpx | <использование> |
+| `space-3xl` | Xpx | <использование> |
+
+---
+
+## 5. Shapes — corner radius, borders
+
+### 5.1. Corner radius
+
+<Product-specific. Стандартные диапазоны:>
+- Buttons / inputs / cards: X-Xpx
+- Modals / large containers: X-Xpx
+- Avatars: <circular / rounded>
+- Pills / badges: <half-height pill / rectangle>
+
+### 5.2. Borders
+
+- **Толщина:** 1px единственная норма; 2px только для focus indicators.
+- **Цвет:** `border / divider` токен.
+- **Когда использовать:** form inputs (state visibility), table dividers.
+- **Когда НЕ использовать:** между однотипными блоками в feed'е (предпочитаем padding + фон).
+
+---
+
+## 6. Shadows / elevation
+
+### 6.1. Светлая тема
+
+<Soft / heavy / без shadow per product vision. Default — один уровень shadow для surface-elevated.>
+
+### 6.2. Тёмная тема
+
+**Elevation через светлоту**, не shadow. Опционально — subtle inset highlight rim.
+
+### 6.3. Где НЕ использовать shadow
+
+- Между inline элементами в одном слое
+- Под каждой card в feed'е (только при overlay)
+- В hover state по умолчанию (только subtle elevation если нужно)
+
+---
+
+## 7. Iconography
+
+**Stroke-based vs filled** — product-specific по vision'у.
+
+<Выбор иконочной библиотеки — Lucide / Phosphor / Heroicons / Tabler / Material Symbols. Кратко обоснование.>
+
+Размеры: 16 / 20 / 24 / 32 px согласно контексту.
+
+**Цвет иконок** наследуется от `currentColor` — соответствует окружающему тексту. Исключение — status icons (success ✓ зелёным).
+
+---
+
+## 8. Animations / motion
+
+### 8.1. Durations
+
+| Тип | Длительность |
+|---|---|
+| Micro (hover, focus) | 100ms |
+| Short (button press, dropdown) | 200ms |
+| Medium (page transition, modal entry) | 300ms |
+| Long (illustrative content) | 400-500ms |
+
+### 8.2. Easing
+
+- `ease-out` для входящего движения (появление modal, expand)
+- `ease-in` для выходящего (закрытие modal, fade out)
+- `ease-in-out` для bidirectional
+- **НЕ использовать** bouncy / elastic если продукт не toy-themed
+
+### 8.3. Что мы НЕ анимируем
+
+<Product-specific исключения. Default запрет:>
+- Hover-bounce на cards
+- Parallax scrolling
+- Auto-rotating carousels (accessibility nightmare)
+- Confetti / celebrations (если продукт не игровой)
+
+### 8.4. Respect `prefers-reduced-motion`
+
+**Обязательно:**
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+---
+
+## 9. Адаптивный дизайн — mobile, tablet, desktop
+
+**Mobile-first подход** — базовые стили для самого узкого экрана, media queries расширяют.
+
+### 9.1. Breakpoints
+
+| Имя | Диапазон | Типичное устройство |
+|---|---|---|
+| `mobile` | 320-767px | смартфоны (320px минимум) |
+| `tablet` | 768-1023px | планшеты |
+| `desktop` | 1024-1439px | ноутбук |
+| `wide` | 1440px+ | широкий monitor |
+
+### 9.2. Container widths
+
+| Контекст | Mobile | Tablet | Desktop | Wide |
+|---|---|---|---|---|
+| Padding по краям | Xpx | Xpx | Xpx | Xpx |
+| Max-width основного содержимого | full | Xpx | Xpx | Xpx |
+| Max-width reading text | full | Xpx | Xpx | Xpx |
+
+### 9.3. Функциональная адаптация — не только стили
+
+**При переходе между breakpoints — переверстать**, не просто масштабировать:
+
+| Паттерн desktop | Mobile эквивалент |
+|---|---|
+| Таблица с N колонками | Карточка-список (один блок на запись) |
+| Многоколоночная сетка | Один столбец (stack vertically) |
+| Sidebar навигация | Hamburger menu / bottom navigation |
+| Tabs (если > 4 шт) | Аккордеон / dropdown |
+| Hover-tooltip | Tap → bottom sheet |
+| Hover-меню | Tap to open |
+| Многошаговая форма по горизонтали | Wizard по вертикали |
+| Modal по центру | Bottom sheet (выезжает снизу) |
+| Drag-and-drop | Alt UI: «Переместить вверх / вниз» кнопки |
+
+В feature spec при описании UI указываются **обе формы** (desktop + mobile reformat), не только desktop.
+
+### 9.4. Hover vs touch
+
+- **Hover** — только усиление, не основной способ запуска. Если функционал доступен **только** через hover, на touch-устройстве он недоступен.
+- **`:focus-visible`** + tap states (`:active`) — primary indicators interactivity.
+- **No hover-bouncing** — состояния hover плавно.
+
+### 9.5. Images and media
+
+- Responsive images через `<picture>` + `srcset`
+- Format: WebP / AVIF с JPEG fallback
+- Lazy loading: `loading="lazy"` для below-the-fold
+- Aspect ratio через CSS (`aspect-ratio: 16/9`) — нет layout shift
+
+### 9.6. Тестирование адаптивности
+
+**Mandatory checklist:**
+
+- [ ] Mobile 320px — нет horizontal overflow
+- [ ] Mobile 375px (iPhone) — типичный mobile
+- [ ] Tablet 768px (iPad portrait)
+- [ ] Desktop 1280px
+- [ ] Wide 1920px — max-width применяется
+- [ ] Portrait vs landscape на mobile
+- [ ] Real device — хотя бы один телефон + один планшет
+
+---
+
+## 10. Отзывчивость UI и обратная связь
+
+**Принцип:** UI **никогда не замерзает**. На любое действие — видимый отклик.
+
+### 10.1. Шкала отзывчивости
+
+| Длительность | Что показывать |
+|---|---|
+| < 100ms | Никакого индикатора — мгновенно |
+| 100-300ms | State change (button «нажата») |
+| 300ms - 1с | Inline spinner / progress на кнопке |
+| 1-10с | Skeleton placeholder + spinner |
+| > 10с | Progress bar с явным процентом + ETA |
+| > 1 мин | Progress bar + cancel button + уведомление по завершении |
+
+### 10.2. Тяжёлые операции — Web Worker
+
+**Любая операция > 200ms** выполняется в Web Worker, не на main thread.
+
+<Product-specific: список операций-кандидатов на Worker. Примеры: тяжёлые KDF, шифрование больших файлов, парсинг больших датасетов, экспорт PDF, локальный поиск по большому объёму.>
+
+### 10.3. Loading состояния
+
+**Skeleton placeholders** для экранов с большим содержимым: размер ≈ финальному содержимому (избегаем layout shift), subtle shimmer animation (respect prefers-reduced-motion → static), задержка 100-300ms до показа (избежать flash для быстрых запросов).
+
+**Spinner** для buttons: disabled state + inline spinner + текст «Сохраняется...».
+
+**Progress bar** для quantifiable operations: процент + текст «Обработано X из Y», ETA для > 30с, cancellable если безопасно.
+
+### 10.4. Optimistic UI
+
+**Принцип:** показываем результат **до** server-confirmation, откатываем при ошибке.
+
+<Product-specific: где applicable. Default:>
+- ✅ Edit, archive, toggle, simple updates
+- ❌ Transactional / financial operations
+- ❌ Creates где нужен server-side ID для дальнейших действий
+
+### 10.4.1. Современный UX — instant-apply settings
+
+**Принцип:** настройки применяются **сразу при изменении**, без отдельной «Сохранить». Notion / Linear / iOS Settings паттерн.
+
+**Применимо:** toggle, radio, sliders с debounce.
+
+**Не применимо:** многошаговые формы (связанные поля), транзакционные операции, удаление аккаунта, partial state некорректен.
+
+**Feedback:** сам элемент анимируется + inline «Сохранено» рядом (НЕ toast).
+
+### 10.5. Async actions feedback
+
+In-place feedback в приоритете, toast — fallback (§ 11.7):
+
+- **Submit формы:** button disabled + spinner; при success — кнопка «Сохранено ✓» зелёным 2с; при error — banner вверху формы.
+- **API request:** loader на месте content (skeleton / spinner).
+- **Network failure:** banner вверху страницы «Нет связи. [Повторить]».
+- **Auto-save:** мини-подпись «Сохранено» рядом с заголовком.
+
+### 10.6. Debouncing / throttling
+
+- **Input search / filter:** debounce 200-300ms
+- **Save draft:** debounce 1с после последнего keystroke
+- **Scroll-triggered:** throttle 100ms
+- **Resize:** throttle 100ms
+
+### 10.7. Cancellable operations
+
+- ✅ Upload file → AbortController
+- ✅ Search request → cancel предыдущий при новом keystroke
+- ❌ Cryptographic ops середине (state inconsistency)
+- ❌ Transactional commits
+
+### 10.8. Connection state
+
+- `navigator.onLine` + `online` / `offline` events
+- **При offline — banner** вверху страницы (не toast), persistent
+- **При reconnect** — toast «Связь восстановлена» (это один из редких oправданных toast'ов — global event)
+
+---
+
+## 11. Понятность, copy и обработка ошибок
+
+**Принципы:**
+
+1. **Clarity > cleverness.** Названия функций / кнопок / полей понятны без подсказки. Tooltip — переписать название.
+2. **Текст соответствует brand voice** (`doc/brand-voice.md`).
+3. **Ошибки in-place**, конкретны, actionable. Не «Что-то пошло не так».
+4. **Tooltips — последнее средство**, не первое.
+5. **Микрокопирайт критичен** — каждое слово design decision.
+
+### 11.1. Названия функций / кнопок / полей
+
+Название элемента сам объясняет что он делает. Если PM / coder тянет к tooltip — переписать название.
+
+❌ Плохо: «Активировать» + tooltip / «Контент» + подсказка
+
+✅ Хорошо: «Запечатать сейф» / «Письмо»
+
+### 11.2. Tooltips — когда оправданы
+
+Только в случаях:
+- **Иконочная кнопка без текста** (`✕` → `aria-label="Закрыть"` + visual tooltip)
+- **Аббревиатура или техтермин** для технической аудитории
+- **Объяснение неочевидного UI-state** (например, disabled-кнопка)
+
+**Не для:** объяснения текстовой кнопки, long help-текстов, описаний.
+
+### 11.3. Copy в UI — соответствие brand voice
+
+Все strings вычитываются по `doc/brand-voice.md`:
+
+- Tone соответствует vision'у продукта
+- Vocabulary из brand-voice (русский для русскоязычных проектов; см. AP-12)
+- Не маркетинг-speak, не корпоративный canned-language
+- Не negative framing если продукт positive (например, не «нельзя» а «доступно при условии X»)
+
+### 11.4. Сообщения об ошибках — конкретные и in-place
+
+**Принцип:** ошибки видны там, где произошли. **Не toast в углу**.
+
+❌ Плохо: «Что-то пошло не так» / «Ошибка»
+
+✅ Хорошо (in-place под полем): «⚠ Неверный пароль. Если забыли — [Восстановить] ниже».
+
+✅ Хорошо (banner для server-side): «⚠ Не удалось сохранить: сервер не отвечает. Проверьте подключение и попробуйте снова».
+
+### 11.5. Структура error-сообщения
+
+Каждое error — три части:
+
+1. **Что произошло** (конкретно)
+2. **Почему** (причина, если известна)
+3. **Что делать** (actionable next step)
+
+### 11.6. Где показывать ошибки
+
+| Тип ошибки | Где |
+|---|---|
+| Валидация поля | **Под полем**, красным + иконка ⚠ |
+| Ошибка формы (server validation) | **Banner вверху формы**, persistent |
+| Server unreachable / network | **Banner вверху страницы**, persistent, с кнопкой «Повторить» |
+| Permission denied | **Inline на странице** или **redirect** + banner |
+| Session expired | **Modal** в центре, блокирующий, с CTA «Войти снова» |
+
+### 11.7. Toast'ы — последнее средство
+
+**Даже успехи показываем in-place**, не toast. Toast — fallback когда in-place невозможен.
+
+**Сначала in-place:**
+
+| Действие | In-place feedback (предпочтительно) |
+|---|---|
+| Auto-save | Подпись «Сохранено» рядом с заголовком (НЕ toast) |
+| Toggle | Сам переключатель анимируется + мгновенное применение |
+| Submit формы | Кнопка «Сохранено ✓» зелёным 2с |
+| Create item | Переход на страницу созданного |
+| Copy в буфер | Inline у кнопки «Копировать»: «Скопировано ✓» |
+| Payment | Полностраничный success screen |
+
+**Toast допустим только когда:**
+
+- In-place физически невозможен (deleted item с undo)
+- Background async завершился после ухода со страницы
+- Global system event (reconnect)
+
+**Если toast:**
+- Длительность ≥ 5с / ≥ 15с для undo
+- `aria-live="polite"` + `role="status"`
+- Снизу на mobile (не блокирует thumb zone)
+- ≤ 1 toast одновременно
+- **Никогда** toast для ошибок
+- **Никогда** toast для критических confirmations
+
+### 11.8. Disabled states — объяснять причину
+
+Если disabled, причина видна: тексто рядом «Доступно после X» или tooltip на hover для иконочной кнопки.
+
+### 11.9. Когда confirm, когда undo
+
+**Критерий confirmation:** действие может повредить **выполнению обязательств** продукта перед пользователем / получателем / иной стороной?
+
+**Confirm обязателен для:**
+
+- Действия, которые ломают / отменяют обязательства (доставка, регулярные триггеры, scheduled actions)
+- Транзакционные операции с деньгами
+- Окончательное удаление после soft-delete period
+- Юридические подтверждения
+- Изменение security credentials (пароль, 2FA)
+
+**Undo достаточно для:**
+
+- Toggle настроек (instant-apply)
+- Edit content (auto-save + version history)
+- Archive / unarchive
+- Идемпотентные actions (copy, share, mark as read)
+
+**Soft-delete safety net** против атак (post-account-takeover scenarios) — это **дополнение** к confirmation, **не замена**. Confirm защищает от случайного нажатия, soft-delete защищает от атакующего.
+
+**Формулировка confirmation** конкретная, с последствиями:
+
+❌ Плохо: «Вы уверены?»
+
+✅ Хорошо: «Удалить X? Y **не получит** Z. Восстановить можно в течение N дней через настройки».
+
+### 11.10. Connection state — banner, не toast
+
+При offline / reconnect — persistent banner вверху страницы. Пользователь должен видеть состояние постоянно.
+
+### 11.11. Локализация всех UI-strings
+
+**Принцип:** **все** текстовые strings UI — labels, кнопки, ошибки, подсказки, placeholder'ы, toast'ы, modal'ы, validation messages — проходят через i18n систему. **Никаких** hardcoded строк в коде.
+
+Даже если v0 — один язык, **архитектурно** i18n-ready с дня 1.
+
+**Что обязательно:**
+
+- i18n библиотека (`i18next` / `vue-i18n` / `svelte-i18n` / эквивалент)
+- Translation files в JSON / YAML, organized по namespaces
+- Ошибки тоже через i18n (`errors.json` per language)
+- Interpolation вместо concatenation (грамматика)
+- ICU MessageFormat для plurals
+- `Intl` API для date / number / currency
+
+**Учитывать архитектурно** (даже если v0 один язык):
+- Длина strings в разных языках различается (русский ~30% длиннее английского)
+- RTL languages — не оптимизируем, но используем `start` / `end` вместо `left` / `right` где применимо
+- Locale-aware sorting (Intl.Collator)
+
+---
+
+## 12. Accessibility — детальный чек-лист
+
+WCAG AA как baseline для обеих тем. Mandatory часть каждой UI-фичи; reviewer-agent в Step 7 проверяет соответствие.
+
+### 12.1. Semantic HTML
+
+- `<button>` для кликов, `<a>` для навигации, `<form>` для форм. **Никогда** `<div onclick>`.
+- Иерархия headings последовательная: `h1` → `h2` → `h3`.
+- Landmarks: `<header>`, `<nav>`, `<main>`, `<aside>`, `<footer>`.
+- Lists для группированной информации (`<ul>`, `<ol>`, `<dl>`).
+
+### 12.2. Клавиатурная навигация
+
+- **Tab order** соответствует визуальному flow.
+- **Focus visible** на всех интерактивных — outline 2px. **Никогда** `outline: none` без замены.
+- **Skip link** «Перейти к основному содержимому» на каждой странице.
+- **Escape** закрывает modals; возвращает focus на trigger.
+- **Enter / Space** активирует buttons; **Enter** submits forms.
+- **Arrow keys** в menus / lists / radio groups / tabs.
+- Не использовать `tabindex > 0`.
+
+### 12.3. Screen reader support
+
+- **Alt text** для всех `<img>` (пустой `alt=""` для декоративных).
+- **aria-label** на иконочных кнопках без видимого текста.
+- **aria-labelledby** / **aria-describedby** для связи labels и hint-текстов.
+- **aria-live** regions для динамических обновлений:
+  - `aria-live="polite"` + `role="status"` для не-критичных
+  - `aria-live="assertive"` + `role="alert"` для критичных
+- **aria-busy** на loading states.
+- **Visually hidden text** (`.sr-only`) для дополнительного контекста.
+
+### 12.4. Forms
+
+- Каждый `<input>` связан с `<label>` (через `for` или wrapping).
+- Required помечены `required` + `aria-required="true"` + визуально (звёздочка + слово «обязательно»).
+- Error messages связаны через `aria-describedby` + `role="alert"`.
+- Group related fields в `<fieldset>` с `<legend>`.
+- Autocomplete атрибуты (`autocomplete="email"`, `autocomplete="new-password"`).
+
+### 12.5. Touch targets
+
+- Минимум **44×44 px** для всех interactive на mobile.
+- На desktop допустимо 32×32 с padding ≥ 4px до соседей.
+- Spacing между targets ≥ 8px (защита от mis-tap'ов).
+
+### 12.6. Цвет и информация
+
+- **Никогда** не передавать значение **только** цветом.
+- Ошибка не только красным — иконка ⚠ + текст
+- Required не только звёздочкой — слово «обязательно»
+- Active tab не только цветом — подчёркивание / bold
+
+**Colorblindness-safe** — проверка для deuteranopia / protanopia (8% мужчин).
+
+### 12.7. Motion / animation
+
+- Respect `prefers-reduced-motion` (см. § 8.4)
+- Никаких flashing > 3 раз в секунду (epilepsy WCAG 2.3.1)
+- Auto-play видео / GIF только с visible control
+
+### 12.8. Динамическое содержимое
+
+- Loading явно объявляется (`aria-busy="true"` + текст «Загружается...»)
+- Toasts с `role="status"` / `role="alert"`
+- Page transitions: focus возвращается на `<h1>` или `<main>`
+- Infinite scroll: `aria-live="polite"` контейнер с announcements
+
+### 12.9. Тестирование
+
+**Mandatory checklist:**
+
+- [ ] Keyboard-only — весь flow без мыши
+- [ ] Screen reader — NVDA (Windows) или VoiceOver (macOS/iOS)
+- [ ] Контраст WCAG AA для обеих тем (DevTools / Axe)
+- [ ] Reduced motion — animations скипнуты
+- [ ] Zoom 200% — нет обрезки / horizontal scroll
+- [ ] Mobile 320px — нет horizontal overflow
+
+---
+
+## 13. Theme switching
+
+### 13.1. Detection
+
+```javascript
+const stored = localStorage.getItem('theme');
+const system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+const theme = stored || system;
+document.documentElement.setAttribute('data-theme', theme);
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+  if (!localStorage.getItem('theme')) {
+    document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+  }
+});
+```
+
+### 13.2. Manual toggle
+
+В настройках — 3 опции: «Светлая / Тёмная / Системная (по умолчанию)».
+
+### 13.3. CSS variables
+
+```css
+:root {
+  --color-bg: <light value>;
+  /* ... все 14 токенов */
+}
+
+[data-theme="dark"] {
+  --color-bg: <dark value>;
+  /* ... */
+}
+```
+
+Все компоненты используют только tokens, не hardcoded HEX. Enforce'ится lint правилом.
+
+### 13.4. Initial paint без flash
+
+Применять theme **до** рендеринга — inline `<script>` в `<head>` перед загрузкой CSS. Иначе FOUC.
+
+---
+
+## 14. Принцип «готовые решения первичны»
+
+**Не переизобретать колесо.** При разработке UI отдаём предпочтение зрелым frameworks, libraries и primitive'ам перед написанием собственного.
+
+**Преимущества:**
+
+- Решения тысяч инженеров уже отлажены
+- Accessibility встроена (особенно headless primitive'ы)
+- Maintenance бесплатный — обновления приходят сами
+- Документация существует
+
+**Когда писать своё допустимо:**
+
+- Готовое решение нарушает security invariants
+- Кастомизация существующего обошлась бы дороже написания с нуля
+- Это **продуктовая дифференциация** — требует явного PM-одобрения
+
+### 14.1. Stack — open question для Step 2
+
+<Product-specific. Кандидаты для современных стеков:>
+- **Tailwind CSS + Radix UI primitives** — utility-first + accessibility-built-in headless. Самый популярный.
+- **UnoCSS + Radix** — то же, UnoCSS быстрее в dev.
+- **Vanilla CSS + custom components** — больше контроля, дороже долгосрочно. Нарушает принцип готовых решений.
+
+### 14.2. Не пишем сами
+
+| Категория | Готовое решение |
+|---|---|
+| Icons | <см. § 7> |
+| Date / time formatting | `date-fns` / `dayjs` (i18n из коробки) |
+| Form validation | `zod` + `react-hook-form` (или эквивалент) |
+| Animations | Framer Motion / Motion One |
+| Toasts | Radix UI Toast / Sonner |
+| Modals / dropdowns | Radix UI Dialog / Dropdown |
+| Date picker | Radix UI / react-day-picker |
+| Markdown rendering | `marked` + DOMPurify (XSS) |
+
+---
+
+## 15. Что обязательно в каждой UI-фиче (cross-ref'ятся reviewer'ом)
+
+Feature spec должна содержать в NFR:
+
+- [ ] Использует только токены `ui-style-guide.md`, не hardcoded цвета / шрифты / spacing
+- [ ] Поддерживает обе темы (светлая + тёмная)
+- [ ] WCAG AA контраст в обеих темах
+- [ ] Клавиатурная навигация полная
+- [ ] Screen reader поддержка
+- [ ] Touch targets ≥ 44×44 px на mobile
+- [ ] Respect `prefers-reduced-motion`
+- [ ] Цвет не единственный носитель информации
+- [ ] Responsive — обе формы (desktop + mobile reformat)
+- [ ] Локализация — все strings через i18n
+- [ ] In-place feedback, не toast (где возможно)
+- [ ] Confirmation только для критических действий (по критерию «вредит ли это обязательствам»)
+- [ ] Instant-apply settings, не batch save (где безопасно)
+
+Reviewer-agent в Step 7 проверяет каждый пункт. Несоответствие — `blocking finding`.
+
+---
+
+## 16. Частота пересмотра
+
+- При каждой UI-фиче — возможно расширение токенов (новые роли цветов, новые spacing).
+- Раз в квартал — review палитры на актуальность.
+- При новом устройстве / OS feature — отдельный review.
+
+---
+
+## 17. Связанные документы
+
+- `doc/brand-voice.md` — tone of voice, copy patterns
+- `doc/positioning.md` — что мы и чем отличаемся
+- `doc/personas.md` — для кого делаем
+- `doc/user-journeys.md` — где появляется UI
