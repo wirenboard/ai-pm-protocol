@@ -29,14 +29,16 @@ description: Stage F Step 7 — независимо ревьюит код в fe
 
 1. Прочитай frontmatter `<topic>_spec.md` и собери 4 структурных флага: `journey_impact`, `threat_impact`, `scope_impact`, `topology_impact`.
 2. Для каждого со значением `yes`:
-   - В § Approval спеки должен быть перечислен соответствующий docs PR (например, `docs/threat-model-<topic>`).
-   - Этот PR должен быть `merged` в main **или** входить в одну PR-серию с feature spec'ом (то есть открыт сейчас).
+   - **Primary source of truth — таблица «Связанные docs PR'ы» в § Approval спеки.** Для соответствующего флага должна быть строка с docs PR (например, `docs/threat-model-<topic>`) и статусом `open` или `merged`.
+   - **Опционально (best-effort)** — если у subagent'а есть доступ к `gh` CLI / GitHub, дополнительно проверь существование PR'а: `gh pr list --search "head:docs/threat-model-<topic>"`. Если есть доступ и PR не найден / статус не совпадает с заявленным — `blocking finding`.
+   - Если `gh` недоступен — доверяй § Approval и фиксируй limitation в output («cross-check via gh не выполнен, проверено только наличие в § Approval»).
 3. Прочитай сами структурные документы (`user-journeys.md`, `threat-model.md`, `mvp-scope.md`, `topology.md`) и проверь, что spec **не противоречит** их текущему состоянию по уже-merged частям. Любой архитектурный конфликт — `blocking` finding с категорией `structural-conflict`.
-4. Если spec вводит концепции / IDs / границы, которых нет в Stage A-C, и соответствующий флаг = `no` — это **подозрение на пропущенный структурный read-pass** (AP-14). Открой finding `request-changes`: «либо обновите Stage A-C документ, либо переформулируйте spec под существующее состояние».
+4. Если spec вводит концепции / идентификаторы угроз и мер / границы, которых нет в Stage A-C, и соответствующий флаг = `no` — это **подозрение на пропущенный структурный read-pass** (AP-14). Открой finding `request-changes`: «либо обновите Stage A-C документ, либо переформулируйте spec под существующее состояние».
+5. **Lite-mode / bugfix exception:** если в frontmatter `lite-mode: bugfix` или `lite-mode: small-fix` и **отсутствует security path** (auth / crypto / key-mgmt / PII / payments / regulatory / public endpoints), то проверка структурных флагов не применима — допустимо их отсутствие. В этом случае reviewer фиксирует «структурный read-pass пропущен по lite-mode правилу AP-14». Если security path есть — full ceremony независимо от lite-mode (см. AP-14 «Критерий security path»).
 
-Output формат: таблица флагов + статус соответствующих docs PR'ов + список структурных конфликтов с цитатами spec ↔ Stage A-C.
+Output формат: таблица флагов + статус соответствующих docs PR'ов + список структурных конфликтов с цитатами spec ↔ Stage A-C. Если `gh` cross-check недоступен — явно отметь limitation.
 
-Эта секция — **необходимое условие** для approve. Без неё `approve` или `approve-with-comments` неприемлемы.
+Эта секция — **необходимое условие** для approve. Без неё `approve` или `approve-with-comments` неприемлемы (исключение: documented lite-mode skip).
 
 ### 1. Spec coverage
 
