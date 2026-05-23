@@ -464,13 +464,16 @@ PM не нужно держать в голове CWE-321 или OWASP A02. Init
 
 | Step | Кто | Артефакт | Условие перехода |
 |---|---|---|---|
-| 1. Specification | PM (или AI draft → PM edit) | `<topic>_spec.md` | PM: «спека ок» |
+| 0. Структурный read-pass | AI (project-bootstrap) | объявление в чате PM-у | PM подтвердил список структурных документов на обновление |
+| 1. Specification | PM (или AI draft → PM edit) | `<topic>_spec.md` + frontmatter с 7 impact flags | PM: «спека ок» + соответствующие docs PR'ы открыты или merged |
 | 2. Plan | AI | `<topic>_plan.md` | — |
 | 3. Plan review | PM | (комменты) | PM: «поехали» |
-| 4. Implementation | AI | код + тесты | tests-first порядок |
+| 4. Implementation | AI | код + тесты | tests-first порядок + операционные docs PR'ы merged (AP-13) |
 | 5. CI verification | автоматика | CI gates | все gate'ы pass |
 | 6. Acceptance | PM | мерч PR | PM прошёл scenarios в live-приложении |
-| 7. Reviewer | AI subagent | `<topic>_review.md` | опц. в Mode 2, обязателен в Mode 3 + security-critical |
+| 7. Reviewer | AI subagent | `<topic>_review.md` | обязателен для всех modes (см. ниже + AP-14 structural check) |
+
+**Step 0 (структурный read-pass) — обязателен для каждой Stage F фичи (AP-14).** Перед Step 1 AI читает 4 структурных Stage A-C документа (`user-journeys.md` / `threat-model.md` / `mvp-scope.md` / `topology.md`), определяет impact фичи, объявляет PM-у списком ожидаемых обновлений и получает подтверждение. Результат фиксируется в frontmatter spec'и через флаги `journey_impact` / `threat_impact` / `scope_impact` / `topology_impact`. Для каждого `yes` — отдельный docs PR до merge feature spec'а. Подробнее: project-bootstrap.md subagent → «Stage F handoff».
 
 **Mode 3 (rework) специфика:** spec — `<topic>_spec.v<N>.md` с секцией Diff; plan — `<topic>_plan.v<N>.md` с секцией Migration. Step 7 обязателен.
 
