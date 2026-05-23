@@ -187,38 +187,60 @@ done < .ai-pm/.product-names-blocklist
 
 ---
 
-## AP-16. PR merged без review-trail
+## AP-16. PR создан / merged без зелёного review-trail
 
 **Что нельзя:**
 
-- Merge'ить PR (`gh pr merge` / эквивалент) без зафиксированного review-trail в одной из 4 форм:
-  - **GitHub PR review** через `gh pr review <NUM> --comment|--approve|--request-changes` (primary flow для GitHub-based projects)
-  - **Committed `_review.md`** для Stage F feature/<topic> branch (`doc/features/<topic>_review.md`) — default routine reviewer-agent'а
-  - **Локальный trace file** `.ai-pm/.reviews/<branch>.json` — fallback когда gh недоступен / не Stage F
-  - **Explicit skip-marker** `[skip-review]` в HEAD commit body — для trivial chore'ов (typo-fix, dep bump)
+- Создавать (`gh pr create`) или merge'ить (`gh pr merge`) PR если:
+  - **(a)** нет зафиксированного **локального** review-trail в одной из 3 форм:
+    - **Committed `_review.md`** для Stage F feature/<topic> branch (`doc/features/<topic>_review.md`) — default routine reviewer-agent'а, с обязательной строкой `**Verdict:** approve | approve-with-comments | request-changes` в первых 50 строках
+    - **Локальный trace file** `.ai-pm/.reviews/<branch>.json` с полем `verdict` — для chore / docs / template-extension branch'ей
+    - **Explicit skip-marker** `[skip-review]` **на отдельной строке** в HEAD commit body (line-anchored — упоминания в prose не считаются) — для trivial chore'ов (typo-fix, dep bump)
+  - **или (b)** verdict в найденном trail = `request-changes`. Hook парсит verdict и блокирует, пока review не станет зелёным (`approve` или `approve-with-comments`).
 - Полагаться на «я провёл review в head'е» без persisting trail — это **soft reminder**, который AI игнорирует.
+- Использовать `gh pr review` как trail-форму. GitHub PR review **не используется вообще** — review живёт локально (в репе или `.ai-pm/.reviews/`), дублирование в GitHub UI не имеет смысла для PM+AI workflow: PM читает committed файлы и AI summary в чате, не GitHub web UI.
 
-**Почему:** на одном из ранних prod-run'ов AI забыл запустить reviewer-agent перед `gh pr merge`. PM поймал. Анализ показал: reviewer.md описывал routine, но не было **hard enforcement** — soft reminders в CLAUDE.md и memory rules игнорировались под нагрузкой длинных сессий с множеством PR'ов. Reviewer-agent — Layer 3 enforcement (subagent routine), без Layer 2 (settings.json hook) он зависит от AI-дисциплины, которая не bullet-proof.
+**Почему:** на одном из ранних prod-run'ов AI забыл запустить reviewer-agent перед `gh pr merge`. PM поймал. Анализ показал: reviewer.md описывал routine, но не было **hard enforcement** — soft reminders в CLAUDE.md и memory rules игнорировались под нагрузкой длинных сессий с множеством PR'ов. Reviewer-agent — Layer 3 enforcement (subagent routine), без Layer 2 (settings.json hook) он зависит от AI-дисциплины, которая не bullet-proof. Дополнительно: попытка делать review через `gh pr review` после открытия PR создаёт антипаттерн «открыть PR → дождаться comments → гонять fix'ы», который сводит review к bureaucratic theatre — fix'ы должны быть применены **до** PR.
 
-**Решение:** Layer 2 hook `scripts/check-pr-has-review.sh` блокирует `gh pr merge` если ни одна из 4 форм trail не найдена. Hook читает `gh api repos/.../pulls/<N>/reviews`, committed `_review.md`, local trace file, и HEAD commit body для skip-marker. AI **не может** обойти через --no-verify (это запрещено § 14.7).
+**Решение — offline-first design + verdict-gate.** Layer 2 hook `scripts/check-pr-has-review.sh` блокирует `gh pr create` **и** `gh pr merge` если: нет trail ИЛИ verdict не green. Hook читает HEAD commit body (skip-marker), committed `_review.md` с парсингом `**Verdict:**`, и local trace file с парсингом `.verdict` — **без** обращения к GitHub API. Работает одинаково online и offline, на любой git-платформе (GitHub / GitLab / Gitea / self-hosted). AI **не может** обойти через --no-verify (это запрещено § 14.7).
 
 **Применение** — для всех проектов с PR-flow. Mode-agnostic (одинаково для Mode 1 / 2 / 3 / lite).
 
-**`review_flow` capability** в `.bootstrap-state.md` определяет **primary** trail (GitHub PR review / committed-doc only / local-only). По умолчанию для GitHub проектов — `hybrid: gh-pr primary + committed _review.md для Stage F + local fallback`.
-
 **Как поступать вместо:**
 
-- В `_templates/scripts/check-pr-has-review.sh.tmpl` — hook script.
-- В `_templates/settings.json.tmpl` — hook entry на Bash matcher.
-- В `.claude/agents/reviewer.md` — обязательная routine «Persist review» в конце work'а с 3 попытками (gh pr review → committed `_review.md` → local trace file).
-- В `_templates/bootstrap-state.md.tmpl` — `review_flow` capability в frontmatter.
-- В `.claude/agents/project-bootstrap.md` Stage E — на init спрашивать PM про предпочитаемый `review_flow`.
+- В `_templates/scripts/check-pr-has-review.sh.tmpl` — hook script с 3 проверками (skip-marker → committed `_review.md` + verdict-parse → local trace + verdict-parse).
+- В `_templates/settings.json.tmpl` — hook entry на Bash matcher (триггерится для `gh pr create` и `gh pr merge`).
+- В `.claude/agents/reviewer.md` — обязательная routine «Persist review» с 2 формами trail (committed для Stage F / local trace для прочего) и обязательная строка `**Verdict:**` в первых 50 строках `_review.md`.
 - В `.gitignore` (через bootstrap-agent) — `.ai-pm/.reviews/` (local trace, не commit'ится).
 
-**Skip-marker `[skip-review]`** — explicit visible in `git log`, не abuse'ится потому что:
+**Skip-marker `[skip-review]`** — explicit visible в `git log`, не abuse'ится потому что:
 - Видим всем кто читает history
-- Не маскируется (нельзя написать в hidden comment)
+- Должен быть на **отдельной строке** (line-anchored regex `^\[skip-review\][[:space:]]*$`) — упоминание в prose body commit'а не триггерит
 - Используется sparingly (typo / dep bump / README only) — каждый use требует осознанного решения PM
+
+**Human-override `[review-override: <reason>]`** — ручка **человека** (PM при Trust profile A, developer при Trust profile B/C — далее «оператор»; **не AI**) для принятия PR с `request-changes` verdict'ом.
+
+**Discipline:** AI **не принимает никаких решений** по результатам review. Получив verdict `request-changes`, AI:
+
+1. Показывает оператору в чате полный review summary (verdict, findings по severity, architectural context).
+2. Через **AskUserQuestion** спрашивает, что делать с findings — варианты:
+   - Зафиксить все finding'и (AI применяет fix → перезапускает reviewer → новый verdict, идеально approve)
+   - Зафиксить часть, остальное deferred с override (оператор указывает какие именно finding'и deferred + reason / task IDs для backlog'а)
+   - Override всё (оператор принимает PR as-is с обоснованием)
+3. Выполняет решение оператора. **Никакого `[review-override]` без явного instruction от оператора.**
+
+Use case override: оператор видит, что critical / high finding'и важны для исправления сейчас, а minor / nit / low — мелочи, которые лучше вынести в backlog (создать tasks #N) и не блокировать прогресс. Решение — **оператора**, не AI's.
+
+**Следы в репе обязательны.** Override **не отменяет** review — он только разрешает hook'у пропустить `gh pr create` / `gh pr merge`. Сам review-trail (с verdict `request-changes` и findings) должен **остаться в репе** как honest audit record:
+
+- **Stage F branch (`feature/<topic>`)** — committed `doc/features/<topic>_review.md` уже в репе. Override marker в commit body + committed `_review.md` = двойной след.
+- **Non-Stage-F branch (chore / docs / template-extension)** — local trace `.ai-pm/.reviews/<branch>.json` **gitignored**, в репу не попадает. Поэтому при использовании override AI **обязан** вписать сами findings (полный список deferred items с severity и task IDs) в HEAD commit body **после** `[review-override: ...]` marker'а — это попадает в `git log` навсегда. Без этого override превращается в hidden bypass, нарушает audit-trail требование.
+
+Format: `[review-override: <reason>]` на отдельной строке HEAD commit body. Reason **обязателен**, формулирует **оператор** (не AI):
+
+- `[review-override: minor findings → task #42, #43 в backlog]`
+- `[review-override: blocking finding ложно-positive, объяснение ниже]`
+- `[review-override: defer naming concerns до следующего refactor PR]`
 
 ---
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # scripts/check-pr-has-review.sh
-# Layer 2 enforcement: блокирует `gh pr create` и `gh pr merge` без review.
+# Layer 2 enforcement: блокирует `gh pr create` и `gh pr merge` если нет review
+# или verdict = request-changes.
 # Используется как PreToolUse hook в .claude/settings.json для Bash tool.
 #
 # Hook input: JSON через stdin от Claude Code:
@@ -9,17 +10,22 @@
 #   exit 0 = allow
 #   exit 2 = block; stderr передаётся AI
 #
-# Поддерживает offline workflow: review происходит **до** создания PR (local trace
-# или committed _review.md). Когда онлайн и PR создан — reviewer добавляет
-# gh pr review для visibility в GitHub UI.
+# Дизайн: **offline-first**. Review всегда происходит локально через reviewer-agent
+# **до** создания PR. Trail хранится в репозитории (committed _review.md для Stage F)
+# или локально (.ai-pm/.reviews/<branch>.json для chore / docs / template-extension).
+# Hook не только проверяет наличие trail'а, но и парсит verdict — `request-changes`
+# блокирует `gh pr create`, чтобы убрать антипаттерн «открыть PR с unresolved
+# findings, гонять fix'ы по comment'ам».
 #
-# Логика (hybrid review_flow), порядок проверок:
+# Логика (порядок проверок):
 #   1. Если команда не `gh pr create` и не `gh pr merge` — pass
-#   2. Skip-marker: если HEAD commit body на отдельной строке содержит `[skip-review]` — pass
-#   3. Committed doc: если branch = `feature/<topic>` и `doc/features/<topic>_review.md` существует — pass
-#   4. Local trace: если `.ai-pm/.reviews/<branch>.json` существует — pass
-#   5. (Только для `gh pr merge`) GitHub PR review: `gh api .../pulls/<N>/reviews --jq 'length' >= 1` — pass
-#   6. Иначе — exit 2 с указанием 4 форм trail
+#   2. Skip-marker: если HEAD commit body содержит строку `[skip-review]` на отдельной
+#      строке (line-anchored regex) — pass
+#   3. Committed doc: если branch = `feature/<topic>` и `doc/features/<topic>_review.md`
+#      существует — парсим verdict, pass только если verdict ∈ {approve, approve-with-comments}
+#   4. Local trace: если `.ai-pm/.reviews/<branch>.json` существует — парсим .verdict,
+#      pass только если verdict ∈ {approve, approve-with-comments}
+#   5. Иначе — exit 2
 
 set -e
 
@@ -36,86 +42,143 @@ fi
 [ "$TOOL" != "Bash" ] && exit 0
 [ -z "$CMD" ] && exit 0
 
-# Проверяем только `gh pr merge`. Другие gh операции пропускаем.
-if ! echo "$CMD" | grep -qE '^[[:space:]]*gh[[:space:]]+pr[[:space:]]+merge[[:space:]]'; then
+# Проверяем `gh pr create` и `gh pr merge`. Другие gh операции пропускаем.
+if ! echo "$CMD" | grep -qE '^[[:space:]]*gh[[:space:]]+pr[[:space:]]+(create|merge)([[:space:]]|$)'; then
   exit 0
 fi
 
-# Извлекаем номер PR из команды (первый цифровой аргумент после `gh pr merge`)
-PR_NUM=$(echo "$CMD" | grep -oE 'gh[[:space:]]+pr[[:space:]]+merge[[:space:]]+[0-9]+' | grep -oE '[0-9]+$' | head -1)
-if [ -z "$PR_NUM" ]; then
-  # Без номера — gh берёт PR для текущей ветки. Получаем из gh.
-  PR_NUM=$(gh pr view --json number --jq '.number' 2>/dev/null || echo "")
-fi
-
-if [ -z "$PR_NUM" ]; then
-  echo "BLOCKED: не удалось определить номер PR для merge." >&2
-  echo "Укажи явно: gh pr merge <NUM> --squash" >&2
-  exit 2
-fi
-
-# === Check 1: Skip-marker в HEAD commit body ===
-if gh pr view "$PR_NUM" --json commits --jq '.commits[-1].messageBody' 2>/dev/null | grep -q '\[skip-review\]'; then
-  echo "INFO: PR #$PR_NUM имеет [skip-review] маркер в последнем commit — review enforcement пропущен." >&2
-  echo "Используется для trivial chore'ов (typo-fix, dep bump). См. CLAUDE.md правило review_flow." >&2
-  exit 0
-fi
-
-# === Check 2: GitHub PR review existence ===
-REVIEW_COUNT=$(gh pr view "$PR_NUM" --json reviews --jq '.reviews | length' 2>/dev/null || echo "0")
-if [ "$REVIEW_COUNT" -ge 1 ]; then
-  exit 0
-fi
-
-# === Check 3: Committed _review.md для Stage F фичи ===
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
-HEAD_BRANCH=$(gh pr view "$PR_NUM" --json headRefName --jq '.headRefName' 2>/dev/null || echo "")
+CURRENT_BRANCH=$(git -C "${REPO_ROOT:-.}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 
-if [ -n "$REPO_ROOT" ] && [ -n "$HEAD_BRANCH" ]; then
-  case "$HEAD_BRANCH" in
-    feature/*)
-      TOPIC="${HEAD_BRANCH#feature/}"
-      # Проверяем оба возможных пути (doc_root: doc или .ai-pm/doc)
-      if [ -f "$REPO_ROOT/doc/features/${TOPIC}_review.md" ] || \
-         [ -f "$REPO_ROOT/.ai-pm/doc/features/${TOPIC}_review.md" ]; then
-        echo "INFO: PR #$PR_NUM имеет committed _review.md для topic '${TOPIC}'." >&2
-        echo "Дополнительно рекомендуется добавить 'gh pr review' для visibility в GitHub PR history." >&2
-        exit 0
+# === Check 1: Skip-marker в HEAD commit body (line-anchored) ===
+# Только строка целиком `[skip-review]` (с возможным trailing whitespace) — explicit override.
+# Упоминания `[skip-review]` в prose внутри commit body не триггерят skip.
+HEAD_BODY=$(git -C "${REPO_ROOT:-.}" log -1 --pretty=%B 2>/dev/null || echo "")
+if echo "$HEAD_BODY" | grep -qE '^\[skip-review\][[:space:]]*$'; then
+  echo "INFO: HEAD commit имеет [skip-review] маркер на отдельной строке — review enforcement пропущен." >&2
+  echo "Используется для trivial chore'ов (typo-fix, dep bump). См. CLAUDE.md правило review-trail." >&2
+  exit 0
+fi
+
+# parse_verdict_md: извлекает verdict из committed _review.md.
+# Ожидаемый формат — строка вида `**Verdict:** approve` или `**Verdict:** approve-with-comments`
+# или `**Verdict:** request-changes` в первых 50 строках файла. Регистронезависимо.
+# Возвращает на stdout: approve | approve-with-comments | request-changes | unknown
+parse_verdict_md() {
+  local file="$1"
+  local line
+  line=$(head -n 50 "$file" | grep -iE '^\*\*Verdict:\*\*[[:space:]]*(approve-with-comments|approve|request-changes|changes-requested)' | head -1 || true)
+  case "$line" in
+    *[Aa]pprove-with-comments*) echo "approve-with-comments" ;;
+    *[Rr]equest-changes*|*[Cc]hanges-requested*) echo "request-changes" ;;
+    *[Aa]pprove*) echo "approve" ;;
+    *) echo "unknown" ;;
+  esac
+}
+
+# parse_verdict_json: извлекает .verdict из local trace JSON.
+parse_verdict_json() {
+  local file="$1"
+  if command -v jq >/dev/null 2>&1; then
+    jq -r '.verdict // "unknown"' "$file" 2>/dev/null || echo "unknown"
+  else
+    grep -oE '"verdict"[[:space:]]*:[[:space:]]*"[^"]+"' "$file" 2>/dev/null \
+      | sed -E 's/.*"([^"]+)"$/\1/' | head -1 || echo "unknown"
+  fi
+}
+
+# block_on_verdict: если verdict не green — exit 2. PM может override через
+# `[review-override: <reason>]` на отдельной строке HEAD commit body.
+block_on_verdict() {
+  local verdict="$1"
+  local source="$2"
+  case "$verdict" in
+    approve|approve-with-comments)
+      return 0
+      ;;
+    request-changes|changes-requested)
+      # PM-override: если в HEAD commit body есть `[review-override: <reason>]`
+      # на отдельной строке — PM явно принимает PR с findings. Reason обязателен,
+      # visible в git log навсегда.
+      if echo "$HEAD_BODY" | grep -qE '^\[review-override:[[:space:]]*[^]]+\][[:space:]]*$'; then
+        REASON=$(echo "$HEAD_BODY" | grep -oE '^\[review-override:[[:space:]]*[^]]+\]' | sed -E 's/^\[review-override:[[:space:]]*//; s/\]$//')
+        echo "INFO: PM-override через [review-override: $REASON]" >&2
+        echo "      Verdict был '$verdict', но PM явно принимает PR. Override visible в git log." >&2
+        return 0
       fi
+      echo "" >&2
+      echo "BLOCKED: review verdict = '$verdict' (источник: $source)." >&2
+      echo "" >&2
+      echo "Создание/merge PR с unresolved findings нарушает offline-first design (AP-16):" >&2
+      echo "review должен быть зелёным ДО публикации PR, а не после." >&2
+      echo "" >&2
+      echo "AI ничего не решает сам — спроси оператора (PM/dev) через AskUserQuestion:" >&2
+      echo "  (а) Зафиксить все findings — AI применяет fix'ы, перезапускает reviewer-agent," >&2
+      echo "      когда verdict станет approve / approve-with-comments — повтори '$CMD'" >&2
+      echo "  (б) Зафиксить часть + override deferred — оператор указывает что fix, что deferred" >&2
+      echo "      (+ reason / task IDs); AI применяет fix'ы и добавляет '[review-override: <reason>]'" >&2
+      echo "      на отдельной строке HEAD commit body. Для не-Stage-F: AI обязан вписать сами" >&2
+      echo "      deferred findings в commit body после marker'а (local trace gitignored)." >&2
+      echo "  (в) Override всё — оператор принимает PR as-is с обоснованием." >&2
+      echo "Override без explicit instruction оператора запрещён (AP-16)." >&2
+      echo "" >&2
+      exit 2
+      ;;
+    unknown|*)
+      echo "" >&2
+      echo "BLOCKED: не удалось распознать verdict в review-trail (источник: $source)." >&2
+      echo "" >&2
+      echo "Ожидаемый формат:" >&2
+      echo "  • Для committed _review.md — строка '**Verdict:** approve' (или -with-comments / request-changes)" >&2
+      echo "    в первых 50 строках" >&2
+      echo "  • Для local trace JSON — поле 'verdict' со значением approve|approve-with-comments|request-changes" >&2
+      echo "" >&2
+      exit 2
+      ;;
+  esac
+}
+
+# === Check 2: Committed _review.md для Stage F фичи ===
+if [ -n "$REPO_ROOT" ] && [ -n "$CURRENT_BRANCH" ]; then
+  case "$CURRENT_BRANCH" in
+    feature/*)
+      TOPIC="${CURRENT_BRANCH#feature/}"
+      for review_path in "$REPO_ROOT/doc/features/${TOPIC}_review.md" \
+                         "$REPO_ROOT/.ai-pm/doc/features/${TOPIC}_review.md"; do
+        if [ -f "$review_path" ]; then
+          VERDICT=$(parse_verdict_md "$review_path")
+          block_on_verdict "$VERDICT" "$review_path"
+          exit 0
+        fi
+      done
       ;;
   esac
 fi
 
-# === Check 4: Local trace file (fallback для не-Stage-F PR'ов без gh доступа) ===
-if [ -n "$REPO_ROOT" ]; then
-  CURRENT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-  # Имя файла — branch с заменой / на --, чтобы избежать nested directories
-  if [ -n "$CURRENT_BRANCH" ]; then
-    TRACE_NAME=$(echo "$CURRENT_BRANCH" | tr '/' '-')
-    TRACE_FILE="$REPO_ROOT/.ai-pm/.reviews/${TRACE_NAME}.json"
-    if [ -f "$TRACE_FILE" ]; then
-      echo "INFO: PR #$PR_NUM имеет локальный trace review ($TRACE_FILE)." >&2
-      echo "Используется fallback flow (без GitHub PR review). См. development-protocol.md § review_flow." >&2
-      exit 0
-    fi
+# === Check 3: Local trace file ===
+if [ -n "$REPO_ROOT" ] && [ -n "$CURRENT_BRANCH" ]; then
+  TRACE_NAME=$(echo "$CURRENT_BRANCH" | tr '/' '-')
+  TRACE_FILE="$REPO_ROOT/.ai-pm/.reviews/${TRACE_NAME}.json"
+  if [ -f "$TRACE_FILE" ]; then
+    VERDICT=$(parse_verdict_json "$TRACE_FILE")
+    block_on_verdict "$VERDICT" "$TRACE_FILE"
+    exit 0
   fi
 fi
 
-# === Иначе — block ===
+# === Иначе — block (нет trail вообще) ===
 echo "" >&2
-echo "BLOCKED: PR #$PR_NUM не имеет review'ов." >&2
+echo "BLOCKED: для ветки '$CURRENT_BRANCH' не найден review-trail." >&2
 echo "" >&2
-echo "Перед merge нужно одно из:" >&2
-echo "  (а) Запустить reviewer-agent (см. .claude/agents/reviewer.md), который" >&2
-echo "      опубликует findings через 'gh pr review $PR_NUM --comment/--approve/--request-changes'" >&2
-echo "      (primary flow — visible в PR history)" >&2
-echo "  (б) Для Stage F feature/<topic> ветки — создать committed" >&2
-echo "      'doc/features/<topic>_review.md' (committed-doc flow)" >&2
-echo "  (в) Если нет gh доступа (offline / private repo без CLI) — создать" >&2
-echo "      локальный trace file '.ai-pm/.reviews/<branch>.json' с verdict + findings" >&2
-echo "      (local-fallback flow)" >&2
-echo "  (г) Для trivial chore (typo-fix, dep bump, README правки) — добавить" >&2
-echo "      '[skip-review]' маркер в commit body (explicit override)" >&2
+echo "Review всегда происходит локально через reviewer-agent ДО создания PR." >&2
+echo "Перед '$CMD' нужно одно из:" >&2
+echo "  (а) Запустить reviewer-agent (см. .claude/agents/reviewer.md), который сохранит:" >&2
+echo "      • Для Stage F (branch feature/<topic>): committed 'doc/features/<topic>_review.md'" >&2
+echo "        с '**Verdict:** approve' или 'approve-with-comments' в первых 50 строках" >&2
+echo "      • Для chore / docs / template-extension: '.ai-pm/.reviews/<branch>.json'" >&2
+echo "        с полем 'verdict' = approve | approve-with-comments" >&2
+echo "  (б) Для trivial chore (typo-fix, dep bump) — добавить '[skip-review]' маркер" >&2
+echo "      на отдельной строке в commit body (explicit override, visible в git log)" >&2
 echo "" >&2
 echo "См. development-protocol.md § Reviewer enforcement (AP-16)." >&2
 echo "" >&2

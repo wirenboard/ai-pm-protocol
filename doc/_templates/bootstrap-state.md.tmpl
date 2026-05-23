@@ -31,7 +31,6 @@ project_capabilities:
   - uses-i18n: yes | no
   - multi-tenant: yes | no
   - public-web: yes | no
-  - review_flow: gh-pr | committed-doc | local-trace | hybrid | disabled  # как фиксируется review-trail перед gh pr merge. hybrid (default для GitHub) — gh pr review primary + committed _review.md для Stage F + local fallback. См. AP-16
 ---
 
 # Bootstrap state
@@ -77,6 +76,7 @@ project_capabilities:
 - [ ] security tools configured (YYYY-MM-DD)
 - [ ] CLAUDE.md в product root (YYYY-MM-DD)
 - [ ] .claude/settings.json + hooks (YYYY-MM-DD)
+- [ ] .gitignore: `.ai-pm/.reviews/` добавлено (YYYY-MM-DD) — local review-trace для не-Stage-F PR'ов (AP-16), не должен попадать в репу
 - [ ] git hooks installed (YYYY-MM-DD) — включая pre-push hard-block на push в main / master
 - [ ] branch protection enabled (YYYY-MM-DD) — серверная (public / paid plan) **или** клиентская через pre-push hook (private free plan, см. development-protocol.md § 14.6)
 - [ ] initial CI run passed (YYYY-MM-DD)
