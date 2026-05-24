@@ -230,7 +230,45 @@ check_spec_impact_fields() {
   log_ok "spec-impact-fields-present"
 }
 
-# === Check 10: security-spec-cites-standard (conditional) ===
+# === Check 10: pr-ordering-for-multi-domain (AP-19 enforcement) ===
+# Если spec scenarios или Контекст касаются ≥ 2 domains (schema/db + API/backend + UI/frontend),
+# frontmatter обязан содержать `pr_ordering: [...]` с явным списком.
+# Это enforce'ит AP-19 per-PR atomicity на Step 2 (plan), не на Step 4 (coder эскалирует поздно).
+check_pr_ordering_for_multi_domain() {
+  for spec in "$DOC_ROOT/features/"*_spec.md; do
+    [ -e "$spec" ] || continue
+    # Skip lite-mode: bugfix / small-fix — обычно single-domain
+    if grep -qE '^lite-mode:[[:space:]]*(bugfix|small-fix)' "$spec"; then
+      continue
+    fi
+    # Extract domain hints из spec body (после frontmatter — два `---`)
+    local body
+    body=$(awk '/^---$/{c++; next} c>=2' "$spec" 2>/dev/null)
+    # Detect domains: regex против обычных indicator'ов
+    local domains=0
+    if echo "$body" | grep -qiE '\b(schema|migration|database|таблиц|колонк|индекс|sql)'; then
+      domains=$((domains + 1))
+    fi
+    if echo "$body" | grep -qiE '\b(API|endpoint|route|REST|GraphQL|webhook|RPC|контракт)'; then
+      domains=$((domains + 1))
+    fi
+    if echo "$body" | grep -qiE '\b(UI|page|view|form|component|компонент|страниц|форм)'; then
+      domains=$((domains + 1))
+    fi
+    # Multi-domain detected → pr_ordering обязателен
+    if [ "$domains" -ge 2 ]; then
+      local frontmatter
+      frontmatter=$(awk '/^---$/{c++; next} c==1' "$spec" 2>/dev/null)
+      # Frontmatter has pr_ordering: [<list>] (не null, не пусто)
+      if ! echo "$frontmatter" | grep -qE '^pr_ordering:[[:space:]]*\['; then
+        log_fail "pr-ordering-for-multi-domain: $spec touches ${domains} domains, но frontmatter не содержит 'pr_ordering: [...]' (AP-19)"
+      fi
+    fi
+  done
+  log_ok "pr-ordering-for-multi-domain"
+}
+
+# === Check 11: security-spec-cites-standard (conditional) ===
 check_security_spec_cites_standard() {
   for spec in "$DOC_ROOT/features/"*_spec.md; do
     [ -e "$spec" ] || continue
@@ -273,6 +311,7 @@ case "${1:-all}" in
     check_rework_sections
     check_spec_references_persona
     check_spec_impact_fields
+    check_pr_ordering_for_multi_domain
     check_security_spec_cites_standard
     ;;
 esac

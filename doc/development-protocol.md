@@ -373,6 +373,7 @@ Custom rule (semgrep custom, eslint plugin, golangci-lint custom analyzer). Со
 | `rework-has-diff-section` | Если spec — `<topic>_spec.v<N>.md` (N > 1), он обязан содержать секцию `## Diff` | Mode 3 spec без diff |
 | `rework-has-migration-section` | Если plan — `<topic>_plan.v<N>.md` (N > 1), он обязан содержать секцию `## Migration` | Mode 3 plan без migration |
 | `spec-impact-fields-present` | Каждый `<topic>_spec.md` (кроме `lite-mode: bugfix`) содержит в frontmatter все 7 impact-полей с явным `yes`/`no`: 3 AP-13 (legal/validation/incident) + 4 AP-14 (journey/threat/scope/topology) | Spec без явных impact-полей — структурный read-pass пропущен (см. AP-14) |
+| `pr-ordering-for-multi-domain` | Если spec body содержит indicator'ы ≥ 2 domains (schema / API / UI), frontmatter обязан иметь `pr_ordering: [...]` с явным списком | Multi-domain фича без атомарного split'а (нарушает AP-19) |
 
 ### 9.2. Реализация
 

@@ -80,6 +80,12 @@ PM (или координирующий agent) запустил тебя в Step
   Order 4 (optional) — chore(db): cleanup phase Contract
   ```
   Каждый PR independently deployable + rollback'able. См. AP-19 для exception cases (release / docs / hotfix).
+
+  **Multi-domain checklist (перед submit'ом plan'а):**
+  1. Spec scenarios или Контекст касаются ≥ 2 из: schema/migration, API/endpoint, UI/component? → **multi-domain**, требуется `pr_ordering`.
+  2. Если multi-domain, frontmatter spec'а **обязан** содержать `pr_ordering: [...]` с явным списком (не `null`). Если поле пусто — **stop**, эскалируй оператору через AskUserQuestion с предложением split'а (recommend default order schema → backend → frontend → cleanup).
+  3. Single-domain (фича в одном слое) → `pr_ordering: null` OK.
+  4. CI gate `pr-ordering-for-multi-domain` (development-protocol.md § 9.1) auto-detect'ит нарушение по indicator regex'у — но planner должен закрыть это **до** Step 2 commit'а, не дожидаясь fail'а CI.
 - **Open questions** — нерешённые технические вопросы.
 - **Risks** — что может пойти не так. **Substantive risk analysis**: для каждого риска — likelihood, impact, mitigation (или почему mitigation deferred).
 
