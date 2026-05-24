@@ -6,9 +6,10 @@
 - `meta/audits/2026-05-25_post-refactor-second-pass.md` — defect findings (мой audit)
 - `meta/audits/2026-05-24_complexity-honesty.md` — архитектурный refactor (внешний audit)
 - `meta/audits/2026-05-24_competitive-landscape.md` — supporting input для Path A
+- `meta/audits/2026-05-24_critique-and-blindspots.md` — devil's-advocate против двух выше; meta-audit, заставляет добавить validation gate перед архитектурным рефактором
 - `meta/design/2026-05-24_mode-matrix-and-adoption.md` — baseline текущей architecture (v0.1.0)
 
-**Принцип:** не рефакторить broken baseline. Сначала фиксы (v0.2.0), затем consolidation (v0.3.0), затем layered minimal mode (v0.4.0), затем repositioning (v0.5.0). After v0.5.0 — first prod-run на HeartVault.
+**Принцип:** не рефакторить broken baseline → не рефакторить unvalidated baseline. Сначала фиксы (v0.2.0), затем **validation gate** (дыры 1+3 из critique audit), затем consolidation (v0.3.0), затем layered minimal mode (v0.4.0), затем repositioning (v0.5.0). After v0.5.0 — first prod-run на HeartVault.
 
 ---
 
@@ -38,16 +39,33 @@
   4. Reviewer size gate blind spots → size + content-aware override (auth/payments/migrations/crypto)
 - **Hybrid evolution:** `discipline-advisor` subagent поверх deterministic floor
 
-### Critical complementarity
+### Critique-and-blindspots audit (devil's-advocate)
 
-- Мой аудит — defect-level: исправить заявленное поведение
-- Внешний аудит — architecture-level: пересмотреть, что мы заявляем
+Третий audit оспаривает обоснование предыдущих двух. Ключевые holes:
 
-**Нельзя рефакторить broken baseline.** Поэтому фиксы сначала.
+| # | Дыра | Severity | Тип |
+|---|---|---|---|
+| 1 | Меряем feature count, а не outcomes — нет evidence что фреймворк ускоряет shipping | ★★★★★ | Methodology |
+| 2 | No-framework baseline (просто чат с Claude) проигнорирован — это реальный «конкурент» большинства | ★★★★☆ | Methodology |
+| 3 | Phantom user — целевая ниша «PM без tech intuition + AI» не верифицирована, возможно выборка из 1-2 человек | ★★★★★ | Validation |
+| 4 | Layer-climbing assumption — operators остаются где начали, advisor сигналы игнорируются | ★★★☆☆ | Implementation |
+| 5 | discipline-advisor — vaporware, проецируем выгоды на не-built tool | ★★★★☆ | Implementation |
+| 6 | AP-инварианты prescribe values под видом engineering laws (dogma) | ★★★☆☆ | Philosophy |
+| 7 | Оптимизируем под late-2025 AI; через 12-18 мес context/memory/grounding обесценят базовые assumptions | ★★★☆☆ | Strategy |
+
+**Грубый вывод аудита:** «Мы построили внутренне согласованную систему, но не валидировали её против реального мира».
+
+### Critical complementarity (трёх аудитов)
+
+- **Мой аудит** — defect-level: исправить заявленное поведение
+- **Complexity-honesty аудит** — architecture-level: пересмотреть, что мы заявляем
+- **Critique аудит** — meta-level: пересмотреть, основано ли всё это на verified premises
+
+**Sequencing:** нельзя рефакторить broken baseline (мой аудит → v0.2.0 fixes). Нельзя architectural refactor на unvalidated premise'ах (critique аудит → validation gate перед v0.3.0). И только после этого Paths C → B → A могут быть выполнены **с обоснованием** или **с repositioning'ом, если validation показал phantom user / no shipping speed advantage**.
 
 ---
 
-## Roadmap: v0.2.0 → v0.5.0
+## Roadmap: v0.2.0 → validation gate → v0.3.0 → v0.5.0
 
 ### v0.2.0 — Post-refactor fix wave + quick wins
 
@@ -77,9 +95,59 @@
 
 **Estimate:** 1-2 PR (можно объединить B-1..B-4 в один comprehensive fix PR + отдельный PR для size gate).
 
+**Note:** v0.2.0 fix wave может идти parallel с validation gate ниже — defect fixes correct regardless of framework positioning.
+
+---
+
+### Validation gate — закрытие дыр 1 и 3 (BLOCKING для v0.3.0+)
+
+**Без этого** все architectural решения в v0.3.0..v0.5.0 — теоретические выводы на unvalidated premise'ах. Critique audit Дыры 1 и 3 рейтинга ★★★★★ — подрывают обоснование существования фреймворка как такового.
+
+**Scope:**
+
+1. **Дыра 1 — Outcome data via self-experiment:**
+   - Взять 2 одинаковые micro-фичи (например, два simple endpoint'а или два UI компонента — оба сравнимой сложности)
+   - Одну реализовать через полный Stage F с фреймворком (spec → plan → coder → reviewer → merge)
+   - Вторую — голым чатом с Claude Code без `.ai-pm/` (просто instruction → код → review → commit)
+   - Замерить: time to first PR, time to merge, число iteration'ов, quality (bugs caught later в ходе использования), token cost
+   - **Decision gate:** если фреймворк не даёт ≥20% improvement на одной из outcome metrics (time / quality / cost) — **repositioning required**. Path A становится «recovery from chat-driven chaos», не «smart SDD»
+   - Output: `meta/experiments/2026-XX-XX_framework-vs-bare-chat.md` с numbers + qualitative observations
+
+2. **Дыра 3 — User research validation:**
+   - Опросить 5-10 реальных PM-ов (не друзей-разработчиков) из разных компаний
+   - Вопрос: «как вы сейчас работаете с AI на технических задачах?»
+   - Если доминирующий ответ «прошу разработчика» — phantom user confirmed, asymmetry-pillar irrelevant
+   - Если ≥2/10 говорят «хотел бы делать сам, но боюсь» — ниша реальна, может быть узкой
+   - **Alternative if PM access ограничен:** honest self-assessment — какие PM-ы реально захотят? Какие признаки в наблюдаемом behaviour'е? Какова вероятность ошибки в premise'е?
+   - Output: `meta/research/2026-XX-XX_pm-asymmetry-validation.md`
+
+3. **Дыра 2 — No-framework baseline в competitive-landscape:**
+   - Дополнить `meta/audits/2026-05-24_competitive-landscape.md` секцией «No-framework baseline» — самый частый «конкурент» большинства builder'ов
+   - Honest delta: наш Layer 0 vs goly chat — что добавляет, что отнимает
+   - Это input для Path A repositioning
+
+**Definition of done:**
+- Self-experiment проведён, outcome data зафиксирован
+- User research проведён или явно honest-assessed как «не возможен сейчас, premise остаётся conditional»
+- No-framework baseline в competitive-landscape добавлен
+- **Decision:** идём в v0.3.0 как планировалось / repositioning требуется / pivot полностью
+
+**Что меняется в зависимости от outcome:**
+
+| Validation result | Что делать |
+|---|---|
+| Outcome ≥20% improvement + ≥2/10 PM-ниша подтверждена | v0.3.0 → v0.5.0 как планировалось |
+| Outcome <20% improvement | v0.5.0 Path A repositioning меняется радикально — «recovery from chat-driven chaos» или «discipline framework для команд», не «smart SDD» |
+| Phantom user confirmed | Asymmetry pillar drop'ается, trust profiles B/C deprecate'ятся, repositioning под «opinionated discipline для solo dev + AI» |
+| Оба false | Pivot полностью — возможно фреймворк не нужен в текущем виде |
+
+**Estimate:** 2-3 дня для self-experiment + variable для user research (зависит от доступа к PM-ам).
+
 ---
 
 ### v0.3.0 — Path C: Stage consolidation
+
+**Pre-condition:** validation gate passed (или явно accepted decision продолжать на conditional premise'ах). Иначе v0.3.0 заблокирован.
 
 **Тип SemVer:** MINOR (additive merges с backwards-compat aliases) или MAJOR (если совсем ломаем существующие имена). Решение зависит от migration cost.
 
@@ -133,6 +201,8 @@
 
 ### v0.4.0 — Path B: Layered minimal mode
 
+**Pre-condition:** v0.3.0 merged + discipline-advisor PoC прошёл accuracy gate (см. ниже Дыра 5 mitigation). Без PoC validation — advisor реализация заблокирована, можно делать только static-quiz floor без smart layer.
+
 **Тип SemVer:** MAJOR (breaking — Stage B становится opt-in, mandatory_foundational_completeness меняется)
 
 **Scope — onion структура:**
@@ -159,7 +229,7 @@
   - Любой `yes` → Layer 2 becomes mandatory, opt-out недоступен
   - Ответы фиксируются в `bootstrap-state.md` (audit-trail)
 
-- **Hybrid evolution — `discipline-advisor` subagent:**
+- **Hybrid evolution — `discipline-advisor` subagent** (с PoC accuracy gate per Дыра 5):
   - Read-only subagent в `.claude/agents/discipline-advisor.md`
   - **Floor (irreducible deterministic):** hard detection PII / payments / crypto / auth в коде → Layer 2 mandatory без opt-out
   - **Smart layer:** scan кода / deps / manifests / sample файлов → structured advisory с pointer'ами на файл:строка
@@ -167,6 +237,12 @@
   - **Output:** `mandatory: [layer-2]` / `recommended: [...]` / `skip-safe: [...]` — с обоснованием через конкретные pointer'ы
   - Decisions log'аются в `bootstrap-state.md` (advisory-log section)
   - Тесты на false-negative: НЕ должен пропускать `stripe.charges`, sequelize raw queries, hardcoded JWT secrets, ENV `*_SECRET`
+  - **PoC accuracy gate (Дыра 5 mitigation):** перед тем как advisor станет mandatory, прогон на 3-5 реальных проектах с известным «correct» Layer selection. Если accuracy < 80% — отказаться от smart layer, оставить static quiz only. Bad advisor recommendations хуже, чем no advisor (false confidence)
+
+- **Layer-climbing mitigation (Дыра 4):**
+  - Advisor должен **escalate**, не просто recommend — с увеличивающейся severity со временем
+  - Skip'ы имеют **deadline-driven re-prompts** (operator подтвердил skip Stage B 3 месяца назад → заново валидируй; в state file `layer_decisions[].next_reprompt: <date>`)
+  - Без этого operators остаются на Layer 0 навсегда, Stages A-E становятся декоративными
 
 **State schema additions:**
 ```yaml
@@ -199,16 +275,24 @@ advisor_log:
 
 ### v0.5.0 — Path A: README repositioning
 
+**Pre-condition:** validation gate outcome известен. Само repositioning radically зависит от результата — см. таблицу в validation gate.
+
 **Тип SemVer:** PATCH (copy-only)
 
-**Scope:**
+**Scope (default — если validation passed):**
 - README перепозиционирование на «discipline framework для асимметричного PM/dev сотрудничества на compliance-sensitive multi-stack продуктах»
 - Self-select аудитории через явный заголовок и opening sections
-- Сравнительная таблица с OpenSpec / Ryan Carson / BMAD / Spec Kit (input из `competitive-landscape.md`)
-- Раздел «Когда наш фреймворк — overengineering» (явно говорим, кому идти к OpenSpec)
+- Сравнительная таблица с **no-framework baseline + OpenSpec / Ryan Carson / BMAD / Spec Kit** (input из `competitive-landscape.md` + Дыра 2 дополнение)
+- Раздел «Когда наш фреймворк — overengineering» (явно говорим, кому идти к OpenSpec / просто чату с Claude)
 - Раздел «Когда стоит платить эту complexity» (compliance / multi-stack / PM-asymmetric / audit-trail)
 - Layered minimal mode explainer (после v0.4.0 уже на бумаге)
 - Token cost transparency (rough estimates per PR size, ссылка на complexity-honesty)
+
+**Scope (alt — если validation showed repositioning needed):**
+Перепозиционирование может быть радикально другим (см. таблицу в validation gate). Возможные направления:
+- «Recovery from chat-driven chaos» — для тех, кто уже страдает от chaos в bare-chat workflow
+- «Opinionated discipline для solo dev + AI» — без PM-asymmetric pillar, если phantom user confirmed
+- «Discipline framework для команд» — если validation показала, что для solo тулинг overengineering, но для команд работает
 
 **Definition of done:**
 - README прошёл AP-12 grep
@@ -217,6 +301,44 @@ advisor_log:
 - Layered mode объяснён в 3 параграфа максимум
 
 **Estimate:** 1 PR.
+
+---
+
+## Cross-cutting work — дыры 6 и 7 из critique audit
+
+Не отдельный version bump, но должно быть incorporated через все версии.
+
+### Дыра 6 — AP-инварианты как trade-off, не dogma
+
+**Действие:** в `doc/anti-patterns.md` для каждого AP добавить три секции:
+- **Зачем введён** — incident / observation, который привёл к нему
+- **Когда применим** — default scope
+- **Когда НЕ применим** — explicit exceptions с reasoning (e.g. AP-19 не нужен на throwaway prototype'ах; AP-3 add'ит friction на personal weekend project'ах)
+
+**Когда:** инкрементально, parallel с v0.3.0 (Path C затрагивает много AP-aware кода — удобно одновременно).
+
+**Эффект:** brand меняется с «discipline framework» на «opinionated defaults с reasoning». Reduces dogma'тический attack surface. Сохраняет ту же floor для default scope, но явно признаёт contexts, где он лишний.
+
+### Дыра 7 — Timeless vs AI-state-specific decisions
+
+**Действие:** добавить в `doc/development-protocol.md` новый раздел «Timeless invariants vs AI-state-specific decisions»:
+
+**Timeless** (выдержат AI-evolution):
+- Operator authority (operator decides, AI recommends)
+- Atomicity (one logical change per PR)
+- Review discipline (independent verdict-gate before merge)
+- PM-asymmetric framing (если validation подтвердит нишу)
+- Composition decomposition (multi-stack via matrices)
+
+**AI-state-specific** (deprecate-candidates через 12-18 мес):
+- Foundational doc loading per session
+- Multi-subagent fan-out architecture
+- `.ai-pm/` persistent state files
+- Prompt templates с structured artifacts
+
+**Когда:** инкрементально, один section update в `development-protocol.md` parallel с v0.3.0 или v0.4.0.
+
+**Эффект:** framework стратегически защищён — те части, что обесценятся при долгом context'е или memory tool'е, явно маркированы. Когда time'll come — гранулярный rewrite, не полный pivot.
 
 ---
 
@@ -237,9 +359,11 @@ advisor_log:
 Framework считается **done для first prod-run'а на HeartVault**, когда:
 
 - [ ] v0.2.0 merged: все Blocking findings закрыты, baseline корректен
-- [ ] v0.3.0 merged: Stage consolidation, Stage E checkpoint reduction, mitigation 2/3 реализованы
-- [ ] v0.4.0 merged: 5 layers, pre-skip quiz, discipline-advisor (floor + smart), state schema additions
-- [ ] v0.5.0 merged: README repositioning
+- [ ] **Validation gate passed** (или явно accepted решение продолжать на conditional premise'ах): self-experiment проведён, PM-research проведён или honest-assessed, no-framework baseline зафиксирован
+- [ ] v0.3.0 merged: Stage consolidation, Stage E checkpoint reduction, mitigation 2/3 реализованы; AP trade-off documentation начата (дыра 6)
+- [ ] v0.4.0 merged: 5 layers, pre-skip quiz, discipline-advisor PoC прошёл accuracy gate ≥80% (или fallback static-quiz only), state schema additions, layer-climbing escalation (дыра 4)
+- [ ] v0.5.0 merged: README repositioning (default или alt в зависимости от validation outcome); no-framework baseline в comparison (дыра 2)
+- [ ] Timeless vs AI-state-specific section в development-protocol.md (дыра 7)
 - [ ] HeartVault `template-sync` PR проходит без потери content (verification report green)
 
 После того как все 5 пунктов закрыты — task #16 (HeartVault wipe-and-rebootstrap) считается **реально done** (на текущий момент marked completed, но это было до текущей mode matrix).
@@ -286,7 +410,8 @@ Framework считается **done для first prod-run'а на HeartVault**, 
 |---|---|---|---|
 | **v0.1.0** | initial | current state | — |
 | **v0.2.0** | PATCH + MINOR | Fix wave B-1..B-4 + High findings + size gate quick win | 1-2 PR |
-| **v0.3.0** | MINOR | Path C: Stage consolidation + bootstrap-verify.sh + merged docs templates | 3-5 PR |
-| **v0.4.0** | MAJOR | Path B: 5 layers + pre-skip quiz + discipline-advisor | 5-8 PR |
-| **v0.5.0** | PATCH | Path A: README repositioning | 1 PR |
+| **Validation gate** | — | Self-experiment + PM research + no-framework baseline; BLOCKING для v0.3.0+ | 2-3 дня + variable |
+| **v0.3.0** | MINOR | Path C: Stage consolidation + bootstrap-verify.sh + merged docs templates; AP trade-off docs (дыра 6) | 3-5 PR |
+| **v0.4.0** | MAJOR | Path B: 5 layers + pre-skip quiz + discipline-advisor (с PoC accuracy gate) + layer-climbing escalation (дыра 4) | 5-8 PR + PoC validation |
+| **v0.5.0** | PATCH | Path A: README repositioning (default / alt в зависимости от validation outcome); no-framework baseline (дыра 2); timeless vs AI-state-specific (дыра 7) | 1-2 PR |
 | **HeartVault** | — | First prod-run рефинированной системы через template-sync | 1 PR (downstream) |
