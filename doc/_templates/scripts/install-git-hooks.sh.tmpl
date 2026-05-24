@@ -52,10 +52,14 @@ if command -v gitleaks >/dev/null; then
   gitleaks protect --staged --redact --no-banner --exit-code 1
 fi
 
-# 4. Spec discipline check (если установлен)
-if [ -x "scripts/check-spec-discipline" ]; then
-  scripts/check-spec-discipline --staged-only
-fi
+# 4. Spec discipline check (если установлен).
+# Bootstrap-agent на Stage D генерирует один из .sh / .py / .ts вариантов по стеку проекта.
+for candidate in scripts/check-spec-discipline scripts/check-spec-discipline.sh scripts/check-spec-discipline.py scripts/check-spec-discipline.ts; do
+  if [ -x "$candidate" ]; then
+    "$candidate" --staged-only
+    break
+  fi
+done
 
 exit 0
 HOOK

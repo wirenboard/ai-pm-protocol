@@ -1,0 +1,8 @@
+{
+  "verdict": "approve",
+  "domain": "fix",
+  "branch": "fix/check-spec-discipline-wiring",
+  "summary": "Single-line fix: install-git-hooks.sh.tmpl теперь пробует 4 кандидата (extensionless / .sh / .py / .ts) вместо одного extensionless. Раньше hook silently skip'ал spec discipline check если bootstrap создал scripts/check-spec-discipline.sh (с расширением).",
+  "findings": [],
+  "trail_format_note": "Template self-repo PR. Не Stage E (нет _spec.md). Local trace JSON формат."
+}
