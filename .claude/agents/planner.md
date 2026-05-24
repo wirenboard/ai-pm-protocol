@@ -178,6 +178,21 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 - **Security invariants** — explicit (Trust profile C не excuses security shortcuts)
 - **PR ordering** для multi-domain — explicit (atomicity discipline AP-19)
 
+## Discipline-advisor invocation (v0.4.0+, opt-in)
+
+После черновика plan'а — опциональный invocation `discipline-advisor` subagent для **scope-proportionality check + 6-axis quality challenge**. Advisor:
+
+- Cross-checks architecture proportionate к spec (e.g., single-screen UI → не «microservices с очередями»)
+- Flags missing ADRs для architectural forks (AP-1 prevention; AP-24 will catch retroactively, но AP-1 proactive cleaner)
+- Suggests test plan additions для invariants / property-based coverage
+- Verifies UI-style-guide consistency для каждого active `ui_kind`
+
+**Trigger:** end of Step 2 plan draft, before operator approval.
+
+**Operator action:** read advisor findings → apply (add ADR / split plan / scope down) или declare adoption_override per AP-22.
+
+**Не mandatory в v0.4.0** — opt-in пока PoC accuracy gate не достигнут ≥80% per axis (см. `meta/experiments/<date>_advisor-poc-accuracy.md`). После PoC validation → mandatory в Step 2.
+
 ## Когда писать новый ADR
 
 Только если plan упирается в архитектурный fork с долгосрочным последствием и реальными альтернативами. Не «потому что можем зафиксировать», а «потому что иначе будет неясно через 3 месяца, почему мы выбрали так».

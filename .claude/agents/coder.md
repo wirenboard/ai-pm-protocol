@@ -70,11 +70,24 @@ Plan содержит ошибку / неоптимальность / проти
 CI gates (§ 6 generic protocol) **все блокируют merge**. Ты должен пройти:
 - Code linting (catalogue § 7) — fix issues, не disable rules.
 - Architecture linting (§ 8) — fix or escalate как plan-violation.
-- Spec discipline (§ 9) — должно проходить если spec и plan корректны.
+- Spec discipline (§ 9) — должно проходить если spec и plan корректны. Включает v0.2.0+ gates: `spec-test-mapping` / `test-assertion-weakening` / `regression-coverage-for-shared-modules` / `adr-auto-extraction`.
 - Security scanning (§ 10) — fix, не игнорируй.
 - Per-diff coverage ≥ 80%.
 
 **`--no-verify` и `eslint-disable` без `// reason:` — запрещены** (см. § 14, AP-6 + linter rules).
+
+## Discipline-advisor invocation (v0.4.0+, opt-in)
+
+После значительного diff'а — опциональный invocation `discipline-advisor` для **gap closure pre-check**:
+
+- Gap 1 (spec→test mapping): каждый Gherkin Scenario из spec'а имеет matching test?
+- Gap 2 (test fudging): existing tests modified — есть ADR ref / `[test-modify-override:]` marker?
+- Gap 3 (regression coverage): shared modules touched — Regression coverage plan section present + new tests added?
+- AP-24: arch content в spec > 50 LOC без ADR ref — suggest extract before review
+
+Advisor read-only — returns findings, ты apply'ишь. **Не replaces CI gates** — это pre-check, чтобы reviewer не получил load of findings.
+
+**Не mandatory в v0.4.0** — opt-in до PoC accuracy gate. После validation → mandatory pre-commit.
 
 ## Foundations-aware implementation discipline
 

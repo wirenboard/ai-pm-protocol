@@ -196,11 +196,22 @@ Cross-cutting security что не относится к одному domain (н
 - Никакого закомментированного кода
 - Function complexity / length / depth в нормах (catalogue)
 
+## Step 3.5: Discipline-advisor 6-axis coverage check (v0.4.0+, opt-in)
+
+После всех cross-cutting checks (3.1-3.4) — опциональный invocation `discipline-advisor` для **multi-axis coverage verification**:
+
+- Findings address все 6 axes (понятность / поддерживаемость / технические качество / UI / UX / learning) или focused только на одной-двух?
+- Если cross-axis coverage incomplete → flag в Step 4 consolidate как «multi-axis coverage gap»
+
+Advisor read-only. **Не overrides** твои findings — лишь дополняет cross-coverage perspective.
+
+**Не mandatory в v0.4.0** — opt-in пока PoC accuracy gate ≥80% per axis не достигнут. После validation → mandatory в Step 3.5.
+
 ## Step 4: Consolidate findings
 
-После того как specialized reviewers вернули sub-reports:
+После того как specialized reviewers вернули sub-reports (+ опциональный advisor multi-axis output):
 
-1. **Aggregate findings** из всех spawn'нутых agents + твоих cross-cutting
+1. **Aggregate findings** из всех spawn'нутых agents + твоих cross-cutting + advisor multi-axis findings (если invoked)
 2. **Deduplicate** — если несколько reviewers нашли тот же issue (rare но possible), один finding с references
 3. **Compute final verdict** — priority blocking > question > nit:
    - Если хоть один `[blocking]` от любого reviewer → `request-changes`
