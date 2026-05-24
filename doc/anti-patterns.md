@@ -728,73 +728,20 @@ topology_impact: yes|no      # фича вводит новый компонен
 
 ---
 
-## AP-12. Избыточные англицизмы в project artifacts
+## AP-12. Избыточные англицизмы в project artifacts (deprecated — soft recommendation only)
 
-**Что нельзя:**
+**Status:** mandatory grep-самопроверка **отключена**. AP-12 остаётся как контекст / brand voice рекомендация, не enforcement. Решение оператора 2026-05-24 — overhead дисциплины (manual grep перед каждым commit'ом + chat filter) не окупается; AI не может надёжно гарантировать без внешнего линтера, попытки наводят на дополнительные косяки (sed-passes ломающие грамматику). Если для конкретного проекта нужен strict mode — оператор может добавить linter / pre-commit hook в product.
 
-- AI пишет artifacts (vision, personas, spec, plan, review) с обилием англицизмов там, где есть нормальные русские эквиваленты.
-- Слова «content», «trigger», «wrap», «envelope», «scope», «boundary», «fork», «edge case», «retention», «grace period», «vacation mode», «check-in», «escalation», «onboarding», «upsell», «viral», «horizon», «use case», «early traction» — используются вместо русских аналогов в проектах с `primary_language: ru`.
+**Soft рекомендация (на `primary_language: ru` проектах):**
 
-**Почему:** На одном из ранних prod-run'ов (2026-05-22) оператор пожаловался «очень много англицизмов, мне тяжело». оператор-менеджер (Persona A) уже работает на максимуме cognitive budget — нагружать ещё и переводом каждого второго слова противоречит learning-layer principle ([[feedback-learning-layer-for-pm]]). Brand voice многих проектов (например, restraint + достоинство) конфликтует с англицизмами-блогизмами.
+- Предпочитай русские эквиваленты для общих понятий когда они одинаково ясны: scope → рамки, trigger → условие срабатывания, content → содержимое, metadata → метаданные, boundary → граница, edge case → крайний случай, retention → срок хранения, grace period → льготный период.
+- Стандарт индустрии оставляй как есть: MVP, ARPU, KDF, AEAD, Argon2id, WebAuthn, OWASP, CWE, ASVS, SemVer, GDPR, PWA, E2E, ADR, TLS, JWT, OAuth, SAST, DAST, IndexedDB, npm, git, grep, sed.
+- Если оператор просит конкретный термин по-русски — переводи. Не споришь.
+- Brand voice — приоритет: если артефакт продукта (vision / brand-voice / copy) требует строгий русский, следуй ему.
 
-**Как поступать вместо:**
+**Почему отключено:** на ранних prod-run'ах (2026-05-22) оператор поймал AI трижды в одной сессии на нарушениях. Mandatory grep не работал как enforcement — AI обучен на английском техническом материале, систематический пробел, не случайные ошибки. Бесконечные re-grep циклы + sed-passes ломающие грамматику = больше overhead чем пользы. Pragmatic acknowledgement: бороться там, где невозможно гарантировать без внешнего линтера, не имеет смысла.
 
-- На init bootstrap-agent определяет `primary_language` из state (default: русский для русскоязычных проектов).
-- В artifacts использовать **русский для общих понятий**, англицизмы только для **established технических терминов**:
-  - **Переводим:** scope → рамки, trigger → условие срабатывания, wrap → завёрнутый, content → содержимое, metadata → метаданные, boundary → граница, edge case → крайний случай, escalation → последовательность напоминаний, retention → срок хранения, grace period → льготный период, vacation mode → режим отпуска, onboarding → введение, upsell → допродажа, viral → вирусный, horizon → горизонт, use case → сценарий использования, paranoid mode → параноидальный режим, plaintext → открытый текст, ciphertext → шифротекст.
-  - **Оставляем как есть** (стандарт индустрии): MVP, ARPU, KDF, AEAD, Argon2id, WebAuthn, passkey, IndexedDB, OWASP, CWE, ASVS, SemVer, GDPR, PWA, E2E, ADR, TLS, JWT, OAuth, SAST, DAST.
-- Если AI не уверен — спросить оператора через AskUserQuestion: «оставить англицизм X или перевести как Y?»
-- При обнаружении англицизмы в собственном тексте — паузу, проверить «есть русский эквивалент / понятнее оператору?», если да — заменить.
-
-**Anti-pattern observation:** AI часто выбирает англицизм потому что он короче или потому что это термин из его training data. Это не повод писать `vacation mode` вместо `режим отпуска` — оператор просит русский.
-
-### Область применения и честное признание ограничения модели
-
-Оператор поймал AI **трижды в одной сессии** на том же нарушении (2026-05-22):
-
-1. Сначала в артефактах `strategic-frame.md` и `threat-model.md`.
-2. Потом в ответе оператору в чате, в момент извинения за первое нарушение.
-3. Потом снова, в продолжении того же обсуждения.
-
-**Корень проблемы — систематический пробел в обучении AI, не случайные ошибки.** AI обучен на огромных объёмах английских технических текстов; «plugin architecture», «multi-region», «pricing matrix», «trust profile» для AI идут как единые термины, не как составные. Это пробел в восприятии, не в знаниях. Клятвы «теперь буду внимательнее» **не работают** — следующее же сообщение содержит англицизмы.
-
-**Принятое решение (2026-05-22):** строгая дисциплина в **формальных частях проекта**, регрессия в чате допускается. Это honest acknowledgement ограничения модели — нет смысла бороться там, где невозможно гарантировать результат без внешнего линтера.
-
-**Строгая дисциплина (на `primary_language: ru` проектах):**
-
-| Где | Дисциплина | Кому адресовано |
-|---|---|---|
-| Артефакты в `doc/` (vision, personas, threat-model, strategic-frame, spec'и, plan'ы, review'ы, ADR-ы) | **Строгая** (обязательная grep самопроверка перед коммитом) | Любым пользователям AI в проекте — оператору, разработчик, дизайнер |
-| Сообщения коммитов (`git commit -m "..."`) | **Строгая** | Всем читателям истории репозитория |
-| Описания pull-request-ов | **Строгая** | Всем читателям GitHub/GitLab |
-| README, CHANGELOG, документация в репозитории | **Строгая** | Всем пользователям проекта |
-
-**Регрессия допускается (без боя):**
-
-| Где | Подход |
-|---|---|
-| Ответы в чате с пользователем | Стараться, но не пытаться достичь 100% — это в любом случае не получится |
-| Внутренние рассуждения AI (мышление) | Не релевантно |
-
-Где можно использовать англицизм даже в строгой зоне — только из явного белого списка (см. ниже). Всё остальное — переводить.
-
-**Перед каждым `git commit` doc-файла на `primary_language: ru` AI обязан запустить самопроверку:**
-
-```bash
-# Mandatory grep перед commit'ом любого doc-файла
-grep -oiE "\b(launch|content|trigger|wrap(ped)?|envelope|scope|boundary|fork|edge case|retention|grace|vacation|check-in|escalation|onboarding|upsell|viral|horizon|use case|paranoid|plaintext|ciphertext|client-side|server-side|cohort|hardening|adversar(ies|y)|delivery|payment provider|deployment|cross-jurisdictional|incident response|compliance|backup|hint|content-agnostic|pricing|front-loaded|contingency|ongoing|runway|pool|coverage|sandbox|kick-off|production-ready|foundational|working|distribution|constraints|phases|mitigations?|threats?)\b" <файл>.md | sort -u
-```
-
-Если найдено больше 3 непереведённых терминов (исключая стандартные технические термины из белого списка ниже) — **остановиться, исправить, повторить grep**, и только потом коммит.
-
-**Если найдена сломанная русская грамматическая конструкция (например, «запуск'а», «launch'ом», англо-русский гибрид) — это явный сигнал что был sed-pass или невнимательность. Переписать раздел заново, не точечно править.**
-
-**Перед каждым ответом в чате оператору на `primary_language: ru` проектах** — мысленно прогнать тот же фильтр. Если в черновике ответа есть «mandatory», «check», «defect», «obvious», «excuse» и подобные — заменить на «обязательный», «проверка», «нарушение», «очевидный», «отговорки».
-
-**Белый список (оставляем как есть, стандарт индустрии):**
-`MVP, ARPU, KDF, AEAD, Argon2id, WebAuthn, Passkey, IndexedDB, OWASP, CWE, ASVS, SemVer, GDPR, PWA, E2E, ADR, TLS, HSTS, CT, JWT, OAuth, SAST, DAST, RCE, CDN, VPS, MITM, DDoS, DNS, AIFC, DPA, ToS, CSAM, CCPA, KZT, RUB, EUR, USD, CRM, IFA, PII, API, CI, IP, RF, EU, KZ, UK, US, npm, git, grep, sed`.
-
-Не в белом списке — переводим всегда в `primary_language: ru` проектах.
+**Если хочется strict mode в конкретном продукте** — добавь pre-commit hook с linter (или CI gate), который проверяет doc/*.md на список англицизмов. Template не enforce'ит это.
 
 ---
 
