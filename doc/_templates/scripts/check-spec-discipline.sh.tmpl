@@ -316,6 +316,72 @@ check_pr_ordering_for_multi_domain() {
   log_ok "pr-ordering-for-multi-domain"
 }
 
+# === Check 12: test-assertion-weakening (AP-23 enforcement) ===
+# Detect модифицированные test-файлы в HEAD-commit (или staged set) и требует
+# в commit message ADR-NNNN reference ИЛИ explicit `[test-modify-override: <reason>]`
+# marker. Pure additions (новые test-файлы) — пропускаются, триггерят только modifications.
+#
+# Failure mode что закрывается: agent ослабляет existing assertion (`toBe(100)` →
+# `toBeGreaterThan(50)`), удаляет проверку, или mock'ает наружу — test runner
+# зелёный, но behaviour поменялся молча. Гейт заставляет declared trade-off
+# через ADR (см. AP-23, paradigm-compatible с AP-22).
+#
+# Mode: requires-ADR — не hard block. Operator override через ADR или marker.
+check_test_assertion_weakening() {
+  # Diff scope: при --staged-only — index vs HEAD; иначе HEAD vs HEAD~1.
+  local diff_args
+  if [ "${STAGED_ONLY:-0}" = "1" ]; then
+    diff_args="--cached"
+  else
+    # Если HEAD~1 нет (первый commit) — нечего проверять
+    if ! git rev-parse HEAD~1 >/dev/null 2>&1; then
+      log_ok "test-assertion-weakening (no prior commit, skip)"
+      return
+    fi
+    diff_args="HEAD~1 HEAD"
+  fi
+
+  # Modified-only (--diff-filter=M); added (A) и renamed (R) — не триггерят.
+  local modified_tests
+  modified_tests=$(git diff --diff-filter=M --name-only $diff_args 2>/dev/null | grep -E '(_test\.(go|py)|test_.+\.py|.+\.(test|spec)\.(js|jsx|ts|tsx|mjs|cjs)|_spec\.rb|Test\.(java|kt)|Tests\.cs|\.feature)$' || true)
+
+  if [ -z "$modified_tests" ]; then
+    log_ok "test-assertion-weakening (no modified test files)"
+    return
+  fi
+
+  # Получаем commit message (HEAD или, для staged режима — COMMIT_EDITMSG если pre-commit, иначе HEAD)
+  local commit_msg
+  if [ "${STAGED_ONLY:-0}" = "1" ] && [ -f ".git/COMMIT_EDITMSG" ]; then
+    commit_msg=$(cat .git/COMMIT_EDITMSG 2>/dev/null)
+  else
+    commit_msg=$(git log -1 --format=%B 2>/dev/null)
+  fi
+
+  # Check для ADR ref (формат ADR-NNNN — 4 digits) OR override marker
+  local has_adr_ref=0
+  local has_override=0
+  if echo "$commit_msg" | grep -qE 'ADR-[0-9]{4}'; then
+    has_adr_ref=1
+  fi
+  if echo "$commit_msg" | grep -qE '\[test-modify-override:[[:space:]]*[^]]+\]'; then
+    has_override=1
+  fi
+
+  if [ "$has_adr_ref" -eq 0 ] && [ "$has_override" -eq 0 ]; then
+    log_fail "test-assertion-weakening: modified test file(s) require ADR-NNNN reference OR [test-modify-override: <reason>] marker в commit message per AP-23"
+    echo "  Modified test files:" >&2
+    echo "$modified_tests" | sed 's/^/    - /' >&2
+    echo "  Recommended commit body line:" >&2
+    echo "    Modifies test: see ADR-NNNN — reason: <behaviour changed because Z>" >&2
+    echo "  OR explicit override:" >&2
+    echo "    [test-modify-override: <reason>]" >&2
+    return
+  fi
+
+  log_ok "test-assertion-weakening (declared trade-off present)"
+}
+
 # === Check 11: security-spec-cites-standard (conditional) ===
 check_security_spec_cites_standard() {
   for spec in "$DOC_ROOT/features/"*_spec.md; do
@@ -338,8 +404,10 @@ check_security_spec_cites_standard() {
 # === Main ===
 case "${1:-all}" in
   --staged-only)
-    # TODO: для pre-commit hook — только staged files
-    # На v0 — просто run all
+    # Pre-commit hook режим — checks, которые имеют смысл на staged set.
+    # На v0 запускаем те, которые работают на repo state без heavy file scans.
+    export STAGED_ONLY=1
+    check_test_assertion_weakening
     ;;
   --check)
     shift
@@ -361,6 +429,7 @@ case "${1:-all}" in
     check_spec_impact_fields
     check_pr_ordering_for_multi_domain
     check_security_spec_cites_standard
+    check_test_assertion_weakening
     ;;
 esac
 
