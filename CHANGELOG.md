@@ -15,7 +15,75 @@
 
 ## [Unreleased]
 
-(Изменения после v0.4.0 будут собираться здесь до следующего release.)
+(Изменения после v0.5.0 будут собираться здесь до следующего release.)
+
+---
+
+## [0.5.0] — 2026-05-25
+
+v0.5.0 Path A: documentation refresh под v0.4.0 reality. PATCH (docs only — README + personas + user-journeys; no template content / agent / script changes).
+
+**Note on Path A interpretation:** original plan v3 предполагал outcome-based hero positioning + central pain table. Этот подход был **rejected operator'ом** (feedback в session memory) — потерял PM/Developer symmetric pain framing, который является central differentiator. Revised approach: persona-language documentation refresh (per operator feedback `feedback_docs_reflect_persona_needs`) — preserve Core product thesis, обновить terminology под v0.4.0 reality.
+
+### Changed
+
+- **README.md** — minor sweep под v0.4.0:
+  - «шесть стадий» → «пять стадий» (Stage C упразднён в v0.3.0)
+  - Stage A artifacts: merged (`positioning.md` incl. competitive § 1, `ui-style-guide-base.md` incl. brand voice § 2)
+  - Stage B artifacts: `legal.md` (§ 1 frame + § 2 brief)
+  - Stage D artifacts: `tech-stack.md` (Stage C fold), `maintenance-playbook.md` (Part A dep + Part B refactor)
+  - Stage E: 1 checkpoint `bootstrap-verify.sh passed`
+  - Init flow добавлен Advisor preset (v0.4.0)
+  - Subagents: добавлен `discipline-advisor` (v0.4.0)
+  - Spec linting catalogue: добавлены v0.2.0+ gates (spec-test-mapping / test-assertion-weakening / regression-coverage / adr-auto-extraction)
+  - PM/Developer pain framing **preserved** (Core product thesis — central differentiator)
+
+- **doc/personas.md** — 3 minor touch-ups:
+  - Persona A: добавлено `template-sync` mode mention
+  - Persona C: добавлено `bug-fix` mode mention (primary user lite ceremony)
+  - Resolved decision 1: init вопросы updated с Advisor preset
+
+- **doc/user-journeys.md** — full rewrite:
+  - 3 journeys → **7 journeys** под current 5 modes:
+    - Journey 1: `new-product` (updated)
+    - Journey 2: `feature` в template-native проекте (updated — теперь чётко framed, не «cold start в existing repo»)
+    - Journey 3: `rework` (updated с advisor invocation)
+    - **Journey 4 NEW: `bug-fix`** — lite ceremony
+    - **Journey 5 NEW: `template-sync`** — 4 phases
+    - **Journey 6 NEW: Legacy adoption 3-choice** (Quick auto / Manual staged / Skip) — точка входа для existing проектов
+    - **Journey 7 NEW: Architecture overview keyword routing** — read-only Tier 0 scan
+  - Success metrics updated per current modes
+  - Resolved decisions updated:
+    - decision 4 (Recipe staleness): **deferred в v0.X** per operator discussion 2026-05-25 (рецепты обновляем руками)
+    - decision 5/6 added: 3-choice legacy entry + conditional skip per artifact
+
+### Architecture: v0.5.0 = framework production-ready milestone
+
+После v0.5.0 framework считается **готовым к first downstream prod-run**. Все pre-condition'ы closed:
+- ✅ v0.2.0 (silent-break gaps + AP-23/24 + size gate)
+- ✅ Validation gate (pain mapping + self-experiment + no-framework baseline)
+- ✅ v0.3.0 (Path C consolidation + lazy loading + bootstrap-verify.sh)
+- ✅ v0.4.0 (skip_eligibility + discipline-advisor opt-in + PoC accuracy protocol)
+- ✅ v0.5.0 (documentation refresh — README/personas/user-journeys current с v0.4.0 reality)
+
+Next milestone — task #65 «First downstream prod-run via `template-sync`». До этого — стратегическая беседа с оператором (memory `project-post-template-chat`).
+
+### Persona validation results (2026-05-25)
+
+Перед v0.5.0 проведена validation: персона needs из `personas.md` × template features в v0.4.0:
+
+- Persona A (PM-manager): **11/11 needs covered**, no gaps
+- Persona B (cross-stack senior): 7/9 covered, 2 partial (recipe coverage sparse — deferred, tier framework runtime — non-gap per personas.md decision 3 re-read)
+- Persona C (full-stack pro): 8/9 covered, 1 partial (same tier framework — non-gap)
+
+Net: validation **passes**. Recipe coverage sparseness — accepted scope для solo PM-AI workflow (community contributions or manual draft per stack).
+
+### Что НЕ сделано в v0.5.0 (deferred)
+
+- Outcome-based hero rewrite — rejected per operator feedback (preserve PM/Developer symmetric pain framing)
+- Pain → mitigation table как central section — rejected (operator: «PM в компании 100 человек тоже так себе заявление»)
+- Full per-AP trade-off filling — incremental backlog (AP-22/23/24 уже структурированы; AP-1..21 дополняются по мере real edge case'ов)
+- Downstream feedback loop — будет в task #65 (first downstream prod-run)
 
 ---
 
