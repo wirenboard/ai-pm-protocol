@@ -12,7 +12,7 @@ skip_eligibility:
 
 # <Project> — Tech Stack
 
-**Stage D artifact.** Merged артефакт (v0.3.0): combines ранее `topology.md` (Stage C — упразднён) + stack choice references + db_kind selection + database-design-*.md per-kind. Same axis quality — technical foundation.
+**Stage D artifact.** Technical foundation: stack choice + topology + db_kind references + deployment topology. Same axis quality — technical foundation.
 
 ---
 
@@ -21,11 +21,9 @@ skip_eligibility:
 Этот документ содержит **четыре тематически связанные секции одной оси** (technical foundation):
 
 - [ ] **§ 1 — Stack choice** (ссылка на bootstrap-state.md `stack:` field): language / framework / runtime / build tools
-- [ ] **§ 2 — Topology** (раньше отдельный `topology.md`, Stage C упразднён): high-level architecture, services, boundaries, data flows
+- [ ] **§ 2 — Topology**: high-level architecture, services, boundaries, data flows
 - [ ] **§ 3 — Database** (ссылки на per-kind `database-design-{embedded,external}.md`): db_kind selection + schema design references
 - [ ] **§ 4 — Deployment topology** (где живёт runtime): environments / regions / failover
-
-**Why Stage C упразднён:** topology тесно связан со stack choice и db_kind selection (per-kind database design). Раньше Stage C был «thin stage» с одним artifact'ом (topology). Fold в Stage D (Process) делает структуру coherent — все technical foundation в одном stage'е.
 
 **Soft cap:** документ > 600 LOC — рекомендуется split (либо topology перегружена details — превратить в per-service docs, либо database section перегружена schema — оставить только references на `database-design-*.md` файлы).
 

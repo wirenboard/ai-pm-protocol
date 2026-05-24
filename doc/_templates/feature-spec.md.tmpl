@@ -131,7 +131,7 @@ Scenario: <название>
 
 ## Competitive UX scan *(recommended для всех значимых фич)*
 
-**Цель — узкая:** как другие реализовали **этот тип фичи** (не всю category), что удобно, что неудобно. **НЕ landscape rebuild** — для этого есть `doc/competitive-analysis.md` (Stage A, делается раз). Здесь — **per-feature UX/UI scan**.
+**Цель — узкая:** как другие реализовали **этот тип фичи** (не всю category), что удобно, что неудобно. **НЕ landscape rebuild** — для этого есть `doc/positioning.md` § 1 (Stage A, делается раз). Здесь — **per-feature UX/UI scan**.
 
 ### Когда обязателен — explicit gate criteria
 
@@ -143,8 +143,8 @@ UX scan тратит время оператора и AI. Дисциплина: 
 
 | Mode | Условие | Обязательность |
 |---|---|---|
-| **new-product** | UX-significant фича **И** affects ≥ 10% expected user flow (heuristic: фича уровня onboarding, signup, main interaction, payments — а не tweak existing screen) **И** Stage A `competitive-analysis.md` был ≥ 60 дней назад | Обязателен |
-| **new-product** | UX-significant фича **И** Stage A `competitive-analysis.md` свежий (< 60 дней) **И** competitors landscape покрывает этот тип фичи (можно reference'ить Stage A анализ) | Опционально (можно reference Stage A) |
+| **new-product** | UX-significant фича **И** affects ≥ 10% expected user flow (heuristic: фича уровня onboarding, signup, main interaction, payments — а не tweak existing screen) **И** Stage A `positioning.md` § 1 был ≥ 60 дней назад | Обязателен |
+| **new-product** | UX-significant фича **И** Stage A `positioning.md` § 1 свежий (< 60 дней) **И** competitors landscape покрывает этот тип фичи (можно reference'ить Stage A анализ) | Опционально (можно reference Stage A) |
 | **feature** | UX-significant фича **И** добавляет UX pattern, не покрытый существующим `competitive-analysis.md` | Обязателен |
 | **feature** | UX-significant фича **И** pattern уже знаком (есть в Stage A или previous spec'ах) | Опционально (можно reference) |
 | **rework** | UI / UX рефакторится по существу | Обязателен (мир изменился с прошлого design'а) |
