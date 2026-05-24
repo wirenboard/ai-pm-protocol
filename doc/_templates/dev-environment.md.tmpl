@@ -229,7 +229,7 @@ Document optional `.editorconfig` integration, `lsp-config` recommendations дл
 
 ### 7.1. Update routine
 
-См. `dependency-policy.md` (отдельный artefact). Краткие правила:
+См. `maintenance-playbook.md` Part A. Краткие правила:
 
 - **Security patches (CVE) — automerge** если CI green (Dependabot / Renovate config)
 - **Patch versions (no CVE) — weekly review + merge** if no breakage
@@ -270,7 +270,7 @@ make deps-audit      # security audit (npm audit / pip-audit / cargo audit / etc
 
 ### 8.3. Performance budget
 
-Documented в `<topic>_spec.md` NFR (latency / memory / bundle size budgets per AP-13). Continuous performance gate в CI (см. `dependency-policy.md` cadence).
+Documented в `<topic>_spec.md` NFR (latency / memory / bundle size budgets per AP-13). Continuous performance gate в CI (см. `maintenance-playbook.md` Part A cadence).
 
 ---
 
@@ -317,7 +317,7 @@ Update это section по мере накопления opyta. Living document.
 
 ## 11. Связанные документы
 
-- `topology.md` — где компоненты в архитектуре (что dev'у нужно understand для setup)
+- `tech-stack.md` — где компоненты в архитектуре (что dev'у нужно understand для setup)
 - `development-protocol.md` overlay — workflow rules (branch strategy, commit conventions)
 - `dependency-policy.md` — dependency update cadence + automerge rules
 - `refactor-playbook.md` — positive guidance для safe refactor PRs
