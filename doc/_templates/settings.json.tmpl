@@ -44,6 +44,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "_comment": "При старте сессии — печатает expired skip-reprompts (AP layer-climbing escalation). Non-blocking, только информирует. Реализует обещание advisor'а 'через 90 дней напомню'.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "scripts/check-skip-reprompts.sh"
+          }
+        ]
+      }
     ]
   },
   "_notes_for_pm": [
