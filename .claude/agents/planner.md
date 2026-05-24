@@ -191,7 +191,7 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 
 **Operator action:** read advisor findings → apply (add ADR / split plan / scope down) или declare adoption_override per AP-22.
 
-**Не mandatory в v0.4.0** — opt-in пока PoC accuracy gate не достигнут ≥80% per axis (см. `meta/experiments/<date>_advisor-poc-accuracy.md`). После PoC validation → mandatory в Step 2.
+**Не mandatory в v0.4.0** — opt-in пока PoC accuracy gate не достигнут ≥80% per axis. После PoC validation → mandatory в Step 2.
 
 ## Когда писать новый ADR
 

@@ -116,12 +116,12 @@ Cross-check reviewer findings address все 6 axes (понятность / по
 
 Перед тем как advisor станет mandatory в Stage E triggers — required validation:
 
-1. **Test set:** 10-15 синтетических проектов разной size/domain (web app / CLI tool / embedded / multi-stack / single-user / multi-tenant / compliance-sensitive / weekend-prototype). См. `meta/experiments/<date>_advisor-accuracy-protocol.md` (создаётся перед PoC start — см. concerning-2 plan review).
+1. **Test set:** 10-15 синтетических проектов разной size/domain (web app / CLI tool / embedded / multi-stack / single-user / multi-tenant / compliance-sensitive / weekend-prototype). Accuracy protocol определяется перед PoC start.
 2. **Labelling rubric:** для каждого test project — known-correct expected output (skip / recommended / mandatory per artifact). Pre-labelled operator-judged.
 3. **Measurement protocol:** advisor runs blind (no access to expected labels) → compare output → per-axis accuracy.
 4. **Bar:** ≥80% accuracy per axis. Если ниже на любой axis — **отказаться от advisor для этой axis**, оставить static rules / quiz fallback. Bad advisor recommendations хуже, чем no advisor (false confidence).
 
-PoC validation document: `meta/experiments/<date>_advisor-poc-accuracy.md`. Generated после PoC runs, before merge v0.4.0 PR'а enabling mandatory triggers.
+PoC validation генерируется после PoC runs, before merge v0.4.0 PR'а enabling mandatory triggers.
 
 ## Layer-climbing escalation (дыра 4 critique audit)
 
