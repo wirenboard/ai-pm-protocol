@@ -504,6 +504,69 @@ check_regression_coverage_for_shared_modules() {
   fi
 }
 
+# === AP-24 (v0.2.0): adr-auto-extraction ===
+# Detect spec sections с keywords `инвариант`, `архитектура`, `trade-off`, `decision`,
+# измеряет LOC между `## <heading>` и следующим `## `:
+# - > 30 LOC arch content → warn (suggest ADR extraction)
+# - > 50 LOC arch content без ADR ref в spec'е → fail (AP-24)
+# Skip: lite-mode:bugfix.
+check_adr_auto_extraction() {
+  local fail_count=0
+  for spec in "$DOC_ROOT/features/"*_spec.md "$DOC_ROOT/features/"*_spec.v*.md; do
+    [ -e "$spec" ] || continue
+
+    # Skip bugfix
+    if grep -qE '^lite-mode:\s*bugfix' "$spec" 2>/dev/null; then
+      continue
+    fi
+
+    # Check: spec содержит ADR reference?
+    local has_adr_ref="no"
+    if grep -qE '(ADR-[0-9]+|architecture-decisions/[0-9])' "$spec" 2>/dev/null; then
+      has_adr_ref="yes"
+    fi
+
+    # Parse: для каждого `## <heading>` посчитать LOC до следующего `## ` или EOF
+    # Если heading имеет architectural keyword — проверить порог
+    awk -v spec="$spec" -v has_ref="$has_adr_ref" '
+      /^## / {
+        if (curr_section != "" && is_arch) {
+          if (loc > 50 && has_ref == "no") {
+            printf "ARCH_FAIL\t%s\t%s\t%d\n", spec, curr_section, loc
+          } else if (loc > 30) {
+            printf "ARCH_WARN\t%s\t%s\t%d\n", spec, curr_section, loc
+          }
+        }
+        curr_section = $0
+        is_arch = (tolower($0) ~ /инвариант|архитектура|trade.?off|decision|architectur/)
+        loc = 0
+        next
+      }
+      { loc++ }
+      END {
+        if (curr_section != "" && is_arch) {
+          if (loc > 50 && has_ref == "no") {
+            printf "ARCH_FAIL\t%s\t%s\t%d\n", spec, curr_section, loc
+          } else if (loc > 30) {
+            printf "ARCH_WARN\t%s\t%s\t%d\n", spec, curr_section, loc
+          }
+        }
+      }
+    ' "$spec" | while IFS=$'\t' read -r kind file section_hdr arch_loc; do
+      if [ "$kind" = "ARCH_FAIL" ]; then
+        log_fail "adr-auto-extraction: $file — '$section_hdr' содержит ${arch_loc} LOC architectural content без ADR ref (AP-24, extract в architecture-decisions/)"
+        fail_count=$((fail_count + 1))
+      else
+        log_warn "adr-auto-extraction: $file — '$section_hdr' содержит ${arch_loc} LOC architectural content (suggest ADR extraction per AP-24)"
+      fi
+    done
+  done
+
+  if [ "$fail_count" -eq 0 ]; then
+    log_ok "adr-auto-extraction"
+  fi
+}
+
 # === Main ===
 case "${1:-all}" in
   --staged-only)
@@ -535,6 +598,7 @@ case "${1:-all}" in
     check_spec_test_mapping
     check_test_assertion_weakening
     check_regression_coverage_for_shared_modules
+    check_adr_auto_extraction
     ;;
 esac
 

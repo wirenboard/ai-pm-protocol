@@ -79,13 +79,47 @@ PR должен touchать **один** domain (per-PR atomicity). Detection ч
 - `lite-mode: bugfix` — protocol-compliance terse focus (только spec↔code consistency + AP-6 silent deviation check); domain reviewer terse focus on fix correctness.
 - `lite-mode: small-fix` — standard 2-agent spawn, terser sub-reports.
 
+## Step 1.6: Size + content-aware fan-out gate (v0.2.0+)
+
+**Цель:** не палить tokens на specialized reviewer fan-out для маленьких PR'ов, где `protocol-compliance-reviewer` baseline нашёл бы то же сам. Token cost research (см. `meta/audits/2026-05-24_complexity-honesty.md`) показывает 3-5× overhead на small PR'ах при full fan-out.
+
+**Compute:**
+
+```bash
+LOC_CHANGED=$(git diff main...HEAD --shortstat | awk '{print $4+$6}')
+PATHS_CHANGED=$(git diff main...HEAD --name-only)
+```
+
+**Size gate (default):**
+
+- PR < 100 LOC → spawn **только** `protocol-compliance-reviewer`, skip domain reviewers (Step 2 ниже становится no-op для domain branch).
+- PR ≥ 100 LOC → full Step 2 routing.
+
+**Content-aware override (применяется НЕЗАВИСИМО от LOC):**
+
+Если хоть один path matches security-sensitive pattern — spawn full domain fan-out независимо от размера:
+
+| Pattern | Surface |
+|---|---|
+| `auth/`, `**/auth/**`, `*auth*` | Authentication / authorization |
+| `payments/`, `**/payments/**`, `*payment*` | Payments / billing |
+| `db/migrations/`, `**/migrations/**`, `schema.sql` | Schema migrations |
+| `crypto/`, `**/crypto/**`, `*crypto*`, `*kdf*`, `*encrypt*` | Cryptography |
+| `*.lock`, `package-lock.json`, `pnpm-lock.yaml`, `Cargo.lock`, `go.sum`, `Pipfile.lock` | Dependency lock files |
+
+**Configurability:** override-paths могут extended per-project в `.claude/settings.json` или в project's `development-protocol-overlay.md`. Defaults выше.
+
+**Why content-aware:** security-sensitive 30-LOC PR более рискован чем 500-LOC styling PR. Size gate без content awareness — false-cheap по security.
+
+---
+
 ## Step 2: Spawn specialized reviewers
 
 **Always:**
 
 1. **protocol-compliance-reviewer** — spawn unconditionally для каждого PR. Проверяет spec↔plan↔code consistency, frontmatter, AP discipline (AP-1/3/6/13/14/16/17/18/19).
 
-**Plus ONE domain-specific reviewer** based on detected scope:
+**Plus ONE domain-specific reviewer** based on detected scope **(skip если size gate выше triggered baseline-only)**:
 
 - `backend-reviewer` — для backend / API PRs
 - `frontend-reviewer` — для frontend / client PRs (per ui_kind)
