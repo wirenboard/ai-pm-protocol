@@ -1,53 +1,13 @@
-# Topology
+# Topology (deprecated as standalone — moved to tech-stack.md § 2)
 
-**Stage C artifact.** Высокоуровневая архитектура: какие сервисы, как они общаются, где deploy'ятся, какие данные где живут.
+**v0.3.0 redirect.** Topology больше не отдельный артефакт. Содержимое теперь живёт как **§ 2 в `tech-stack.md`** (Stage D, same axis — technical foundation). Stage C **упразднён** (раньше содержал только topology + reactive ADRs).
 
-Не путать с feature plan'ом: topology говорит о системе целиком, не о конкретной фиче.
+## Migration
 
----
+1. Скопировать filled content (diagram / services / boundaries / data flows / non-goals) → `tech-stack.md` § 2 (subsections 2.1-2.5)
+2. Удалить этот файл из `doc/`
+3. Update cross-references: feature spec'и с `topology_impact: yes` → ссылаться на `tech-stack.md#topology`
 
-## High-level diagram
+`template-sync-doc-migrate.py` автоматизирует это для template-native проектов.
 
-ASCII или ссылка на изображение. Должно помещаться в один экран.
-
-```
-[client] ---HTTPS---> [edge / CDN] ---> [api-server]
-                                            |
-                                            v
-                                       [db / cache]
-```
-
-## Сервисы
-
-Список логических сервисов с одним абзацем на каждый: что делает, зависимости, deployment unit.
-
-- **<service-1>:** <…>
-- **<service-2>:** <…>
-
-## Boundaries
-
-Где проходят границы доверия, языков, deployment'ов:
-
-- **B1:** <…> — <implications>
-
-## Data flows
-
-Где какие данные живут, куда копируются, как удаляются.
-
-- **<data type 1>:** <where stored / who reads / retention / encryption>
-
-## Deployment topology
-
-- **Environments:** <dev / staging / production>
-- **Regions:** <…>
-- **Failover / DR:** <…>
-
-## Non-goals (architectural)
-
-Что мы намеренно НЕ делаем архитектурно (например: «не делаем microservices до того, как boundary'и подтвердятся реальностью»).
-
----
-
-## Соответствие positioning'у и threat-model'и
-
-Каждое архитектурное решение в этом документе должно либо поддерживать positioning-тезис, либо mitigate'ить threat из threat-model. Если решение не привязывается ни к чему — это signal: либо решение преждевременное, либо мы что-то упустили в Stage A/B.
+См. `meta/design/2026-05-25_merged-optimization-plan.md` § v0.3.0 Path C.

@@ -268,18 +268,19 @@ Init bootstrap → first feature → another feature → bug-fix →
 
 ---
 
-## 4. Шесть stages
+## 4. Пять stages (v0.3.0: Stage C упразднён, fold в Stage D)
 
 | Stage | Что | new-product mode | feature mode | rework mode |
 |---|---|---|---|---|
-| **A. Discovery** | vision → personas → user-journeys → competitive-analysis → positioning → brand-voice (в этом порядке) | WRITE | READ + WRITE дельт | READ + WRITE дельт |
-| **B. Constraints** | strategic-frame, threat-model, mvp-scope, (legal-frame если применимо) | WRITE | READ + WRITE дельт | READ + WRITE дельт |
-| **C. Solution shape** | topology, foundational ADRs (только если есть реальные forks) | WRITE | READ | READ |
-| **D. Process** | overlay (`doc/development-protocol.md`), AI-linting mapping, subagent configs | WRITE | SKIP | SKIP |
-| **E. Bootstrap** | концретная infrastructure: CI, линтеры, security tools, pre-commit, branch protection (генерируется из catalogue + стек) | WRITE | SKIP (verify consistency) | SKIP |
+| **A. Discovery** | vision → personas → user-journeys → positioning (включает competitive landscape § 1) → ui-style-guide-base (включает brand voice § 2) | WRITE | READ + WRITE дельт | READ + WRITE дельт |
+| **B. Constraints** | strategic-frame, threat-model, mvp-scope, legal (если применимо), customer-interview-script, incident-runbook-draft | WRITE | READ + WRITE дельт | READ + WRITE дельт |
+| **D. Process** | tech-stack (включает topology + stack + db_kind references), dev-environment, ai-linting-rules, subagent configs verified, maintenance-playbook (опц.), development-protocol-overlay | WRITE | READ + reuse | READ + reuse |
+| **E. Bootstrap** | концретная infrastructure: CI, линтеры, security tools, pre-commit, branch protection (генерируется из catalogue + стек). 1 checkpoint + `bootstrap-verify.sh` health-check | WRITE | SKIP (verify consistency) | SKIP |
 | **F. Production** | `.ai-pm/doc/features/<topic>_{spec,plan,review}.md`, код, тесты | WRITE | WRITE | WRITE (с rework spec'/plan-структурой) |
 
-Stage E идёт **после** Stage A-D, не до — потому что infrastructure (какие линтеры включить, какие security rulesets, какой CI workflow) **выводится** из стека + project capabilities, зафиксированных в A-D. Создавать infrastructure упреждающе — анти-паттерн § AP-2. ADR-папка стартует **пустой**; первые ADR появляются либо в конце Stage C (foundational forks), либо в Step 2 plan'ов фич (§ AP-1).
+**Stage C упразднён в v0.3.0:** topology + foundational ADRs раньше были отдельным «thin» stage'ом (один artifact + опциональные ADRs). Fold в Stage D — topology + stack + db_kind tightly coupled (см. `tech-stack.md.tmpl`). ADRs остаются reactive (AP-1) — создаются в Step 2 plan'ов фич, не как Stage artifact.
+
+Stage E идёт **после** Stage A/B/D, не до — потому что infrastructure (какие линтеры включить, какие security rulesets, какой CI workflow) **выводится** из стека + project capabilities, зафиксированных в A/B/D. Создавать infrastructure упреждающе — анти-паттерн § AP-2. ADR-папка стартует **пустой**; первые ADR появляются в Step 2 plan'ов фич (§ AP-1) либо при foundational forks в Stage D `tech-stack.md` choice.
 
 ---
 
