@@ -20,6 +20,16 @@ set -e
 DOC_ROOT=$(awk -F': ' '/^doc_root:/ {print $2; exit}' .ai-pm/.bootstrap-state.md 2>/dev/null | tr -d ' ')
 DOC_ROOT="${DOC_ROOT:-doc}"
 
+# FOUNDATION_COMPLETENESS — читается из state file. Determines check behavior
+# для AP-14 / AP-15 / mini-* sections. См. design doc § F-I.
+# Values: complete | partial | minimal | none. Default: complete (backwards compat).
+FOUNDATION_COMPLETENESS=$(awk -F': ' '/^foundation_completeness:/ {print $2; exit}' .ai-pm/.bootstrap-state.md 2>/dev/null | tr -d ' ')
+FOUNDATION_COMPLETENESS="${FOUNDATION_COMPLETENESS:-complete}"
+
+# ADOPTION_OVERRIDES — список skip entries из state file (для downgrade affected checks).
+# Parsed best-effort через grep.
+ADOPTION_OVERRIDES_SKIP=$(awk '/^adoption_overrides:/,/^[a-z_]+:/ {if (/^\s*- skip:/) print $3}' .ai-pm/.bootstrap-state.md 2>/dev/null | tr -d '"' | tr -d "'")
+
 FAILED=0
 WARNINGS=0
 
@@ -37,11 +47,34 @@ log_ok() {
   echo "OK: $1"
 }
 
+# log_downgraded — used когда finding affected by adoption_override
+# Treats как warn, не fail. Surface override tag в message.
+log_downgraded() {
+  local check="$1"
+  local override="$2"
+  echo "WARN (adoption-trade-off accepted by operator: $override): $check" >&2
+  WARNINGS=$((WARNINGS + 1))
+}
+
+# is_overridden — check если component в adoption_overrides skip list
+is_overridden() {
+  local component="$1"
+  echo "$ADOPTION_OVERRIDES_SKIP" | grep -qE "^${component}$"
+}
+
 # === Check 1: personas-exist ===
+# State-aware: при foundation_completeness != complete — missing personas.md OK
+# если spec'и используют Mini-persona sections (Tier 1).
 check_personas_exist() {
   local f="$DOC_ROOT/personas.md"
   if [ ! -f "$f" ]; then
-    log_fail "personas-exist: $f не существует"
+    if [ "$FOUNDATION_COMPLETENESS" = "complete" ]; then
+      log_fail "personas-exist: $f не существует (foundation_completeness=complete required)"
+    elif is_overridden "personas"; then
+      log_downgraded "personas-exist: $f не существует" "personas"
+    else
+      log_warn "personas-exist: $f не существует (foundation_completeness=$FOUNDATION_COMPLETENESS — using Tier 1 mini-personas в spec'ах)"
+    fi
     return
   fi
   # Проверка что не placeholder (нет `<…>` маркеров на > 50% строк)
@@ -105,12 +138,21 @@ check_mvp_scope_no_orphans() {
 }
 
 # === Check 4: foundational-docs-filled ===
+# State-aware: при foundation_completeness != complete — missing docs ожидаемы.
+# При complete — все 4 должны быть filled.
 check_foundational_docs_filled() {
   local docs=("personas.md" "user-journeys.md" "threat-model.md" "mvp-scope.md")
   for doc in "${docs[@]}"; do
     local f="$DOC_ROOT/$doc"
+    local component_name="${doc%.md}"
     if [ ! -f "$f" ]; then
-      log_fail "foundational-docs-filled: $f отсутствует"
+      if [ "$FOUNDATION_COMPLETENESS" = "complete" ]; then
+        log_fail "foundational-docs-filled: $f отсутствует"
+      elif is_overridden "$component_name"; then
+        log_downgraded "foundational-docs-filled: $f отсутствует" "$component_name"
+      else
+        log_warn "foundational-docs-filled: $f отсутствует (foundation_completeness=$FOUNDATION_COMPLETENESS — using Tier 1 mini-sections)"
+      fi
       continue
     fi
     local total=$(wc -l < "$f")
@@ -170,22 +212,28 @@ check_rework_sections() {
 }
 
 # === Check 8: spec-references-persona ===
+# State-aware: при foundation_completeness != complete — spec может использовать
+# Mini-persona section inline вместо project-wide persona reference. OK тоже.
 check_spec_references_persona() {
   local personas=$(grep -oE '^## Persona [A-Z0-9]+' "$DOC_ROOT/personas.md" 2>/dev/null | awk '{print $3}' | tr -d ':' || true)
-  if [ -z "$personas" ]; then
-    return
-  fi
   for spec in "$DOC_ROOT/features/"*_spec.md; do
     [ -e "$spec" ] || continue
     local found=0
-    for persona in $personas; do
-      if grep -q "Persona $persona\|persona $persona" "$spec"; then
-        found=1
-        break
-      fi
-    done
+    # Check 1: references к project-wide personas
+    if [ -n "$personas" ]; then
+      for persona in $personas; do
+        if grep -q "Persona $persona\|persona $persona" "$spec"; then
+          found=1
+          break
+        fi
+      done
+    fi
+    # Check 2: inline Mini-persona section (Tier 1)
+    if [ "$found" -eq 0 ] && grep -qF "## Mini-persona" "$spec"; then
+      found=1
+    fi
     if [ "$found" -eq 0 ]; then
-      log_fail "spec-references-persona: $spec не ссылается ни на одну persona"
+      log_fail "spec-references-persona: $spec не ссылается ни на одну persona и не содержит Mini-persona section"
     fi
   done
   log_ok "spec-references-persona"

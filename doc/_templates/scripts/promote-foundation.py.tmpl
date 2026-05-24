@@ -1,0 +1,321 @@
+#!/usr/bin/env python3
+"""
+.ai-pm/tooling/scripts/promote-foundation.py
+
+Tier 2 promotion routine — consolidates mini-* sections из feature spec'ов
+в project-wide foundation artifacts (personas.md / user-journeys.md /
+threat-model.md).
+
+Invoked operator-initiated через project-bootstrap keyword routing
+(«адаптируй полностью» / «promote foundation» / «consolidate»).
+
+Usage:
+    python3 promote-foundation.py [--dry-run] [--root <dir>]
+
+Behavior:
+    1. Scan <doc_root>/features/*_spec.md
+    2. Extract Mini-persona / Journey context / Mini-threat-list sections
+    3. Aggregate distinct entries across фич
+    4. Draft consolidated personas.md / user-journeys.md / threat-model.md
+    5. Write drafts с operator-marker «Consolidated YYYY-MM-DD via promote-
+       foundation.py from N specs. Operator should review and refine.»
+    6. Print summary; operator должен manually approve и update state file
+       foundation_completeness accordingly.
+
+NOT done by this script (operator responsibility):
+    - State file update (foundation_completeness)
+    - Removing mini-* sections from existing specs (after consolidation)
+    - Approval workflow
+"""
+
+import argparse
+import re
+import sys
+from datetime import date
+from pathlib import Path
+
+
+def find_spec_files(doc_root: Path):
+    """Find all feature spec files."""
+    features_dir = doc_root / 'features'
+    if not features_dir.exists():
+        return []
+    return sorted(features_dir.glob('*_spec.md')) + sorted(features_dir.glob('*_spec.v*.md'))
+
+
+def extract_section(content: str, section_header: str) -> str | None:
+    """Extract content of a Markdown section between header and next ## header."""
+    pattern = re.compile(
+        rf'^{re.escape(section_header)}\b.*?\n(.*?)(?=\n##\s|\Z)',
+        re.MULTILINE | re.DOTALL
+    )
+    match = pattern.search(content)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def extract_mini_personas(spec_files):
+    """Extract Mini-persona sections from spec files."""
+    personas = []
+    for spec_file in spec_files:
+        try:
+            content = spec_file.read_text(encoding='utf-8')
+            section = extract_section(content, '## Mini-persona')
+            if section:
+                personas.append({
+                    'topic': spec_file.stem.replace('_spec', '').replace('.v', '_v'),
+                    'content': section,
+                    'source': str(spec_file.name),
+                })
+        except Exception as e:
+            print(f'  Warning: could not parse {spec_file.name}: {e}', file=sys.stderr)
+    return personas
+
+
+def extract_mini_journeys(spec_files):
+    """Extract Journey context sections from spec files."""
+    journeys = []
+    for spec_file in spec_files:
+        try:
+            content = spec_file.read_text(encoding='utf-8')
+            section = extract_section(content, '## Journey context')
+            if section:
+                journeys.append({
+                    'topic': spec_file.stem.replace('_spec', '').replace('.v', '_v'),
+                    'content': section,
+                    'source': str(spec_file.name),
+                })
+        except Exception:
+            pass
+    return journeys
+
+
+def extract_mini_threats(spec_files):
+    """Extract Mini-threat-list sections from spec files."""
+    threats = []
+    for spec_file in spec_files:
+        try:
+            content = spec_file.read_text(encoding='utf-8')
+            section = extract_section(content, '## Mini-threat-list')
+            if section:
+                threats.append({
+                    'topic': spec_file.stem.replace('_spec', '').replace('.v', '_v'),
+                    'content': section,
+                    'source': str(spec_file.name),
+                })
+        except Exception:
+            pass
+    return threats
+
+
+def generate_personas_consolidated(personas, today):
+    """Generate consolidated personas.md draft."""
+    lines = []
+    lines.append('# Personas (consolidated)')
+    lines.append('')
+    lines.append(f'<!-- Consolidated {today} via promote-foundation.py from {len(personas)} specs. Operator should review and refine. -->')
+    lines.append('')
+    lines.append('## Сводка')
+    lines.append('')
+    lines.append(f'Источник: {len(personas)} feature specs с Mini-persona sections.')
+    lines.append('')
+    lines.append('## Personas')
+    lines.append('')
+
+    if not personas:
+        lines.append('_No mini-personas found in specs._')
+        return '\n'.join(lines) + '\n'
+
+    for i, p in enumerate(personas, 1):
+        # Try to extract a single «name / role» from mini section
+        content = p['content']
+        # Extract имя / роль heuristic
+        name_match = re.search(r'\*\*Имя\s*/\s*роль:\*\*\s*(.+?)(?:\n|$)', content)
+        name = name_match.group(1).strip() if name_match else f'Persona {i}'
+
+        lines.append(f'## Persona {chr(64+i)}: {name}')
+        lines.append('')
+        lines.append(f'_Source: `{p["source"]}` (topic: `{p["topic"]}`)_')
+        lines.append('')
+        lines.append(content)
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+    lines.append('## Operator review checklist')
+    lines.append('')
+    lines.append('- [ ] Merge duplicate personas (если одна и та же persona появляется в multiple specs)')
+    lines.append('- [ ] Refine descriptions — mini sections были per-feature focused, project-wide может потребовать broader scope')
+    lines.append('- [ ] Verify все personas distinct и nameable')
+    lines.append('- [ ] Update feature specs — replace `## Mini-persona` sections с references to project-wide personas')
+
+    return '\n'.join(lines) + '\n'
+
+
+def generate_journeys_consolidated(journeys, today):
+    """Generate consolidated user-journeys.md draft."""
+    lines = []
+    lines.append('# User journeys (consolidated)')
+    lines.append('')
+    lines.append(f'<!-- Consolidated {today} via promote-foundation.py from {len(journeys)} specs. Operator should review and refine. -->')
+    lines.append('')
+    lines.append('## Сводка')
+    lines.append('')
+    lines.append(f'Источник: {len(journeys)} feature specs с Journey context sections.')
+    lines.append('')
+    lines.append('## Journeys')
+    lines.append('')
+
+    if not journeys:
+        lines.append('_No journey contexts found in specs._')
+        return '\n'.join(lines) + '\n'
+
+    for i, j in enumerate(journeys, 1):
+        lines.append(f'### Journey {i}: feature `{j["topic"]}`')
+        lines.append('')
+        lines.append(f'_Source: `{j["source"]}`_')
+        lines.append('')
+        lines.append(j['content'])
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+    lines.append('## Operator review checklist')
+    lines.append('')
+    lines.append('- [ ] Identify common journey threads — features часто share start/end steps')
+    lines.append('- [ ] Group features по journey-level (signup / onboarding / main usage / advanced)')
+    lines.append('- [ ] Identify gaps в journey coverage (что operator знает но не зафиксировано в specs)')
+
+    return '\n'.join(lines) + '\n'
+
+
+def generate_threats_consolidated(threats, today):
+    """Generate consolidated threat-model.md draft."""
+    lines = []
+    lines.append('# Threat model (consolidated)')
+    lines.append('')
+    lines.append(f'<!-- Consolidated {today} via promote-foundation.py from {len(threats)} specs. Operator should review and refine. -->')
+    lines.append('')
+    lines.append('## Сводка')
+    lines.append('')
+    lines.append(f'Источник: {len(threats)} feature specs с Mini-threat-list sections.')
+    lines.append('')
+    lines.append('## Threats')
+    lines.append('')
+
+    if not threats:
+        lines.append('_No mini-threat-lists found in specs._')
+        return '\n'.join(lines) + '\n'
+
+    for t in threats:
+        lines.append(f'### Threats для feature `{t["topic"]}`')
+        lines.append('')
+        lines.append(f'_Source: `{t["source"]}`_')
+        lines.append('')
+        lines.append(t['content'])
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+    lines.append('## Operator review checklist')
+    lines.append('')
+    lines.append('- [ ] Renumber T-IDs из T-mini-N → T-N (project-wide)')
+    lines.append('- [ ] Merge duplicate threats (same vector appearing в multiple specs)')
+    lines.append('- [ ] Add missing threats — mini-lists были per-feature; project-wide может cover broader surface (например, infrastructure threats не упомянутые в specs)')
+    lines.append('- [ ] Map threats к features — какой T-ID какие features mitigate')
+
+    return '\n'.join(lines) + '\n'
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', default='.', help='Project root (default: .)')
+    parser.add_argument('--dry-run', action='store_true', help='Print summary но не write files')
+    args = parser.parse_args()
+
+    root = Path(args.root).resolve()
+
+    # Read doc_root from state
+    state_file = root / '.ai-pm' / '.bootstrap-state.md'
+    doc_root_name = 'doc'
+    if state_file.exists():
+        for line in state_file.read_text(encoding='utf-8').splitlines():
+            if line.startswith('doc_root:'):
+                doc_root_name = line.split(':', 1)[1].strip()
+                break
+    doc_root = root / doc_root_name
+
+    if not doc_root.exists():
+        print(f'Error: doc_root {doc_root} not found', file=sys.stderr)
+        sys.exit(1)
+
+    today = date.today().isoformat()
+    specs = find_spec_files(doc_root)
+
+    if not specs:
+        print(f'No spec files found в {doc_root}/features/', file=sys.stderr)
+        sys.exit(0)
+
+    print(f'Scanning {len(specs)} spec files...', file=sys.stderr)
+
+    personas = extract_mini_personas(specs)
+    journeys = extract_mini_journeys(specs)
+    threats = extract_mini_threats(specs)
+
+    print(f'  Mini-personas extracted: {len(personas)}', file=sys.stderr)
+    print(f'  Journey contexts extracted: {len(journeys)}', file=sys.stderr)
+    print(f'  Mini-threat-lists extracted: {len(threats)}', file=sys.stderr)
+
+    if args.dry_run:
+        print('\nDRY RUN — no files written. Would create:', file=sys.stderr)
+        if personas:
+            print(f'  {doc_root}/personas.md ({len(personas)} personas)', file=sys.stderr)
+        if journeys:
+            print(f'  {doc_root}/user-journeys.md ({len(journeys)} journeys)', file=sys.stderr)
+        if threats:
+            print(f'  {doc_root}/threat-model.md ({len(threats)} threat-lists)', file=sys.stderr)
+        return
+
+    # Write consolidated drafts
+    if personas:
+        personas_path = doc_root / 'personas.md'
+        if personas_path.exists():
+            backup = doc_root / f'personas.md.before-promote-{today}'
+            backup.write_text(personas_path.read_text(encoding='utf-8'), encoding='utf-8')
+            print(f'  Backed up existing personas.md → {backup.name}', file=sys.stderr)
+        personas_path.write_text(generate_personas_consolidated(personas, today), encoding='utf-8')
+        print(f'  Written: {personas_path}', file=sys.stderr)
+
+    if journeys:
+        journeys_path = doc_root / 'user-journeys.md'
+        if journeys_path.exists():
+            backup = doc_root / f'user-journeys.md.before-promote-{today}'
+            backup.write_text(journeys_path.read_text(encoding='utf-8'), encoding='utf-8')
+            print(f'  Backed up existing user-journeys.md → {backup.name}', file=sys.stderr)
+        journeys_path.write_text(generate_journeys_consolidated(journeys, today), encoding='utf-8')
+        print(f'  Written: {journeys_path}', file=sys.stderr)
+
+    if threats:
+        threats_path = doc_root / 'threat-model.md'
+        if threats_path.exists():
+            backup = doc_root / f'threat-model.md.before-promote-{today}'
+            backup.write_text(threats_path.read_text(encoding='utf-8'), encoding='utf-8')
+            print(f'  Backed up existing threat-model.md → {backup.name}', file=sys.stderr)
+        threats_path.write_text(generate_threats_consolidated(threats, today), encoding='utf-8')
+        print(f'  Written: {threats_path}', file=sys.stderr)
+
+    print('', file=sys.stderr)
+    print('=== Tier 2 promotion complete ===', file=sys.stderr)
+    print('', file=sys.stderr)
+    print('Next steps (operator):', file=sys.stderr)
+    print('  1. Review consolidated drafts — apply operator review checklists в каждом', file=sys.stderr)
+    print('  2. Manually update .ai-pm/.bootstrap-state.md → foundation_completeness:', file=sys.stderr)
+    print('     - `complete` если все три (personas/journeys/threats) consolidated и reviewed', file=sys.stderr)
+    print('     - `partial` если только часть', file=sys.stderr)
+    print('  3. Remove Mini-* sections из existing specs (Tier 1 → Tier 2 cleanup)', file=sys.stderr)
+    print('  4. Open PR с consolidation', file=sys.stderr)
+
+
+if __name__ == '__main__':
+    main()

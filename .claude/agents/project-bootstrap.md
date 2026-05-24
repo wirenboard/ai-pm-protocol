@@ -363,7 +363,11 @@ Template-sync has **3 phases:** template files apply, schema migration, **docume
 
 #### 3.1. Detect migration categories
 
-AI scan product docs и identify migration needs:
+**Implementation:** script `scripts/template-sync-doc-migrate.py` (генерируется на Stage E из `_templates/scripts/template-sync-doc-migrate.py.tmpl`). Read-only analysis, writes report в `meta/template-sync-doc-migration-<date>.md` с counts + preview examples + affected files.
+
+Invoke: `python3 scripts/template-sync-doc-migrate.py --from <old_version> --to <new_version>`
+
+AI scan product docs и identify migration needs (через script + manual review):
 
 | Category | Что detect'им | Source change |
 |---|---|---|
@@ -492,20 +496,17 @@ AI применяет approved migrations:
 
 **Invoked manually** через «адаптируй полностью» / «promote foundation» / «consolidate».
 
+**Implementation:** script `scripts/promote-foundation.py` (генерируется на Stage E из `_templates/scripts/promote-foundation.py.tmpl`). Read-only analysis + drafts; не auto-commit'ит.
+
 **Когда уместно:** оператор сделал N фич с Tier 1 mini-research, теперь готов consolidate в project-wide artifacts.
 
 ### Steps
 
-1. Scan `.ai-pm/doc/features/*_spec.md` на наличие mini-* sections:
-   - `## Mini-persona (для этой фичи)`
-   - `## Journey context (где встаёт фича)`
-   - `## Mini-threat-list (если security path)`
-2. Aggregate distinct personas / journey-steps / threats across фич
-3. Draft project-wide artifacts:
-   - `.ai-pm/doc/personas.md` consolidated
-   - `.ai-pm/doc/user-journeys.md` consolidated
-   - `.ai-pm/doc/threat-model.md` consolidated (если есть mini-threats)
-4. AskUserQuestion: «Готов consolidated draft. ОК / правки / переделать?»
+1. **Run script dry-run первым:** `python3 scripts/promote-foundation.py --dry-run`. Shows: сколько mini-personas / mini-journeys / mini-threats обнаружено.
+2. AskUserQuestion: «Found N mini-personas, M mini-journeys, K mini-threats. Consolidate в `personas.md` / `user-journeys.md` / `threat-model.md`? Existing files (если есть) будут backup'ed.»
+3. После approval — run `python3 scripts/promote-foundation.py` (no --dry-run). Script writes consolidated drafts с backup'ами existing files (`<name>.md.before-promote-<date>`).
+4. Apply operator review checklists (каждый consolidated файл имеет inline checklist sections для cleanup).
+5. AskUserQuestion: «Consolidated drafts ready (см. `personas.md`, `user-journeys.md`, `threat-model.md`). Review + approve + commit?»
 5. После approval — commit + update state:
    ```yaml
    foundation_completeness: complete  # или partial если consolidated не все Stage A-B artifacts
