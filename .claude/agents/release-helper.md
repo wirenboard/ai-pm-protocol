@@ -88,8 +88,75 @@ description: Подготавливает release — анализирует con
 
 Если release включает изменение `.ai-pm/version` (template version pin):
 - Document downstream impact в release notes — какие subagents / templates / hooks changed
-- Flag оператору если template MAJOR — может требоваться coordinated bootstrap re-run в downstream products
+- Flag оператору если template MAJOR — может требоваться coordinated bootstrap re-run в downstream products (или template-sync workflow, см. § 7)
 - AP-17 grep на product-name leak — release-helper не должен copy/paste content из downstream product в template release notes
+
+### 7. Template-side release (когда template repo делает self-release)
+
+Это **template-internal release** — release самого ai-pm-protocol template'а (НЕ release product, использующего template). Применяется когда оператор работает в template repo (не в product) и накопились changes к subagents / _templates / scripts / anti-patterns / dev-protocol.
+
+**SemVer для template'а:**
+
+- **MAJOR** — breaking changes:
+  - `bootstrap-state.md.tmpl` schema incompatible (removed fields / type changes)
+  - Removed/renamed AP с consumers в downstream products
+  - Breaking changes в subagent prompt format (downstream agent invocations break)
+  - Removed/renamed _templates files
+- **MINOR** — additive features:
+  - New subagent
+  - New AP (additive only)
+  - New `ui_kind` / `db_kind` support
+  - New `_templates/*.tmpl` file
+  - New `mode` value
+- **PATCH** — fixes / refinements:
+  - Typo fixes в prompts
+  - Clarifications в protocol
+  - Bug fixes в scripts
+  - Non-functional formatting changes
+
+**Tagging discipline:**
+
+После merge release PR в template `main`:
+1. `git tag -a v0.X.Y -m "Release v0.X.Y: <one-line summary>"`
+2. `git push origin v0.X.Y`
+3. (Опционально) GitHub release с body = CHANGELOG entry
+
+**Downstream impact для product projects:**
+
+После release template — downstream products **могут** запустить `template-sync` mode для apply:
+- MAJOR — strongly recommended, possible breaking changes требуют coordinated update
+- MINOR — recommended (новые features available)
+- PATCH — opportunistic (fixes, не блокирует existing workflow)
+
+Release-helper в template repo flag'ит в CHANGELOG body: «MAJOR / MINOR / PATCH — downstream products should consider template-sync».
+
+**Documentation migration impact** (для downstream template-sync Phase 3):
+
+В CHANGELOG body **обязательно** документировать какие product documentation migrations потребует new version — это input для downstream template-sync Phase 3 (Documentation migration) routine. Categories к перечислению:
+
+- **Spec frontmatter additions:** новые поля во `feature-spec.md.tmpl` frontmatter (e.g., «v0.2 added `version:` field per AP-21»)
+- **Spec sections additions:** новые секции (e.g., «v0.3 added optional Mini-persona section для legacy adoption foundation»)
+- **Foundational artifact restructure:** splits / merges existing files (e.g., «v0.1 split single `ui-style-guide.md` на base + per-kind»)
+- **Mode/state field renames:** schema rename impacts (e.g., «v0.2 renamed `mode: new-feature` → `mode: feature`»)
+- **AP discipline introduction:** new AP с enforcement (e.g., «v0.2 introduced AP-21 — Mode 3 rework spec.v3+ requires AskUserQuestion exit confirmation»)
+
+Format в CHANGELOG body:
+
+```markdown
+## Documentation migration impact (для downstream template-sync)
+
+Downstream projects при template-sync v0.<old> → v0.<new> должны:
+
+- [Spec frontmatter] Add `<field>` field в existing `_spec.md` (default: `<value>`)
+- [Spec sections] Add optional `<section>` section при condition X
+- [Mode rename] `mode: new-feature` → `mode: feature` (alias preserved для backwards compat)
+
+Downstream template-sync Phase 3 routine handle'ит каждую category с explicit operator approval + verification preservation.
+```
+
+Без этого секции — downstream template-sync не знает что migrate. Release без documentation migration impact = breaking change без instructions = downstream products broken.
+
+**`[skip-review]` для template self-release** разрешён для PATCH bump (typo-tier). MINOR и MAJOR требуют full reviewer pass per AP-16.
 
 ## Что ты НЕ делаешь
 
