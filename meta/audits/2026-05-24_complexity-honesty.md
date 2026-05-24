@@ -2,7 +2,7 @@
 
 **Scope:** честный разбор сложности `ai-pm-protocol` относительно альтернатив. Каждая «уникальная фишка» проверяется на marginal value vs marginal cost. Цель — понять, что является pay-for-what-you-use, что conditional value, что sunk overhead.
 
-**Method:** сравнение surface area с конкурентами (см. `2026-05-24_competitive-landscape.md`), декомпозиция уникальных опор, тест на user-profile fit.
+**Method:** сравнение surface area с аналогами (см. `2026-05-24_competitive-landscape.md`), декомпозиция уникальных опор, тест на user-profile fit.
 
 ---
 
@@ -111,7 +111,7 @@ AP-1 reactive ADR / AP-2 derived infra / AP-3 operator-gate / AP-19 per-PR atomi
 
 ---
 
-## Что показывает сравнение с конкурентами
+## Что показывает сравнение с аналогами
 
 - **OpenSpec / Ryan Carson** — single-purpose, минимум surface area. Покрывают solo-dev case. **Если ваш проект — это их кейс, наш фреймворк overengineering.**
 - **BMAD** — сложнее их, но имеет `quick-dev` escape hatch для простых случаев. У нас аналога нет.
@@ -345,3 +345,189 @@ Stage B сейчас содержит **bounds** (threats, legal, SLO) **и** **
 Из трёх Path C — самая «безопасная» (не меняет философию discipline, только убирает duplication). Path B самая impactful. Path A — pure marketing/copy.
 
 **Порядок выполнения, если делать все три:** C → B → A. Сначала сжать до core (C), потом сделать слоёным (B), потом написать README, который про получившееся (A).
+
+---
+
+## Quality preservation — обязательные mitigations при реализации Paths B/C
+
+Без mitigations Paths B/C ускоряют и снижают нагрузку **за счёт реальной потери качества** в 4 предсказуемых failure mode'ах. Mitigations недорогие, но должны быть зафиксированы как **часть plan'ов реализации**, а не отложены на «потом».
+
+### Risk 1 — Path B opt-in trap (самый серьёзный)
+
+**Failure mode:** когда Stage B (Constraints) становится opt-in, часть пользователей пропустит его там, где не должны были. Не распознают, что у них есть threats / legal / compliance impact, пока не упрутся в инцидент. Редко, но иногда катастрофично (data leak, GDPR-fine, compliance failure).
+
+**Mitigation:** **обязательный pre-skip quiz** перед opt-out из Stage B:
+- Processes PII?
+- Handles payments / financial data?
+- Stores user-generated content?
+- Subject to GDPR / HIPAA / SOC 2 / иной compliance?
+- Public-facing (internet-reachable)?
+- Multi-tenant?
+
+Если хоть один **yes** → Stage B становится mandatory, opt-out недоступен. Quiz запускается bootstrap-agent'ом, ответы фиксируются в `bootstrap-state.md` (audit-trail).
+
+**Стоимость:** 1 AskUserQuestion block в `project-bootstrap` agent'е, ~30 sec оператору на ответы.
+
+### Risk 2 — Merged docs теряют cognitive prominence
+
+**Failure mode:** когда `vision` + `strategic-frame` сливаются в один файл, SLO-секция (которая жила отдельным документом) получает меньше внимания. Читатель прочитает сверху, SLO в конце пропустит. Аналогично — для всех 9 merge'ев из Path C.
+
+**Mitigation:** **жёсткая структура merged docs**:
+- TL;DR-блок в начале каждого merged doc с явным перечнем секций.
+- Checkbox-чеклист в шапке («все секции заполнены?»).
+- Каждая бывшая отдельная секция начинается с **bold-prompt'а** («**Что это:** SLO — обещания продукта по uptime / latency / error rate. **Зачем читать:** если не заполнено, оператор не знает, что обещать пользователям»).
+- В template'ах ставить **soft-cap on section length** (если секция > N строк — рекомендация split в отдельный artifact).
+
+**Стоимость:** template-update'ы при выполнении Path C, дополнительные пол-часа на каждый merge.
+
+### Risk 3 — Stage E single checkpoint скрывает тихие baseline-дыры
+
+**Failure mode:** 12 текущих checkbox'ов ловили частные ошибки (branch protection не включён, settings.json hooks битые, .gitignore без `.ai-pm/.reviews/`). Если заменить на одну строку «make setup && make test green» — тесты пройдут, baseline-дыры останутся незамеченными до первого force-push в main или leak'а `.reviews/` в репу.
+
+**Mitigation:** **separation of validation and tracking**:
+- `bootstrap-verify.sh` script автоматически проверяет все 12 пунктов как **health-check** (запускается из `make setup` и в CI).
+- В `bootstrap-state.md` остаётся **один tracking checkpoint** («Stage E verify passed»).
+- Если verify падает — output script'а явно показывает, **какие именно** пункты failed.
+
+Validation остаётся granular; tracking становится coarse. Лучшее из обоих миров.
+
+**Стоимость:** написать `bootstrap-verify.sh` (~100 LOC bash), включить в CI workflow.
+
+### Risk 4 — Reviewer size gate создаёт слепые зоны на маленьких PR'ах
+
+**Failure mode:** 50-строчный PR может содержать реальный domain-bug (SQL injection, missing auth check, leaked credential, broken migration), который специализированный reviewer бы нашёл. Без fan-out — только protocol-compliance baseline, который не domain-aware.
+
+**Mitigation:** **size gate + content-aware override**:
+- Default: PR < N LOC (например, < 100) → только baseline, без fan-out.
+- **Override:** если diff трогает `auth/`, `payments/`, `db/migrations/`, `crypto/`, `*.lock`, security-sensitive paths → fan-out **независимо от размера**.
+- Override-paths конфигурируются в `.claude/settings.json` или в `development-protocol-overlay.md` per-project.
+
+Альтернативно: размер не единственный триггер, можно добавить keyword scan по diff (`SELECT *`, `eval(`, `dangerouslySetInnerHTML`, etc.) для дополнительного override.
+
+**Стоимость:** правило в primary reviewer agent prompt'е (50 LOC), конфиг override-paths в settings (10 LOC).
+
+---
+
+### Сводная таблица risk × mitigation × стоимость
+
+| Risk | Mitigation | Стоимость реализации |
+|---|---|---|
+| Path B opt-in trap | Pre-skip quiz с автоматическим mandatory-промоушеном | Низкая (1 AskUserQuestion block) |
+| Merged docs prominence loss | TL;DR + checkbox + section-soft-cap в templates | Средняя (template-updates × 9) |
+| Stage E silent baseline holes | `bootstrap-verify.sh` script + один tracking checkpoint | Низкая (~100 LOC bash) |
+| Reviewer size gate blind spots | Size + content-aware override (auth/payments/migrations/crypto) | Низкая (правило в agent prompt) |
+
+### Жёсткая рекомендация
+
+**Paths B и C без этих 4 mitigations реализовывать нельзя.** Иначе фактический trade-off: «cut'нули complexity, получили back fewer guardrails» — то есть продали discipline за convenience.
+
+С mitigations: net win на трёх осях (скорость + cognitive load + token cost) **без статистически значимой потери качества**.
+
+В plan'ах реализации Path B и Path C соответствующие mitigations должны быть **non-skippable checkboxes**, не «nice-to-have». Это часть definition of done для самих этих рефакторингов.
+
+---
+
+## Эволюция mitigations: `discipline-advisor` как smart layer поверх floor'а
+
+Static mitigations выше (quiz, verify-script, content-aware override) — это **deterministic floor**: robust, дешёвые, но dumb. Они защищают от known failure mode'ов через жёсткие правила.
+
+Качественно лучше — добавить **smart layer**: read-only subagent `discipline-advisor`, который **читает evidence** (код, артефакты, state, deps) и проактивно рекомендует стадии с обоснованием через концретные pointer'ы.
+
+### Принцип: hybrid (floor + advisor), не замена
+
+Advisor **дополняет** deterministic floor, а не заменяет его. Иначе получаем «smart quiz, который умеет тонко обходить сам себя» под operator pressure.
+
+**Floor (irreducible):**
+- AP-3 operator-gate всегда on.
+- Protocol-compliance baseline всегда on.
+- Hard detection rules для PII / payments / crypto / auth — если обнаружены, Stage B mandatory без opt-out.
+- AP-19, AP-20 не отключаются никогда.
+
+**Smart layer (advisor):**
+- Все остальное — recommendation с обоснованием.
+- Operator decides; решения логируются в `bootstrap-state.md` для audit-trail.
+
+### Архитектура `discipline-advisor` subagent
+
+```
+Operator entry → discipline-advisor (read-only)
+                 │
+                 ├─ читает: bootstrap-state.md, package.json/Cargo.toml/go.mod,
+                 │          existing artifacts, sample code (bounded scan),
+                 │          vision artifact, ENV templates, project topology
+                 │
+                 ├─ применяет: hard rules (mandatory) + heuristics (recommended)
+                 │
+                 └─ выдает structured advisory:
+                      mandatory: [stage-B]  reason: «vижу `stripe.charges.create`
+                                            в src/payments/checkout.ts:42 → PCI
+                                            scope, legal+threat обязательны»
+                      recommended: [stage-D-maintenance-playbook]
+                                            reason: «monorepo + 5 packages →
+                                            dependency-policy окупится за квартал»
+                      skip-safe: [stage-A-personas]
+                                            reason: «single-developer PoC, no
+                                            users yet — заполнить позже»
+
+Operator confirms / overrides → logged → bootstrap proceeds with subset
+```
+
+### Применение к каждому из 4 risks
+
+| Risk | Floor (deterministic) | Advisor (smart layer) |
+|---|---|---|
+| 1. Path B opt-in trap | Hard detection: PII / payments / crypto / auth → Stage B mandatory | Scan code / deps на `bcrypt`, `passport`, `stripe`, ENV `*_SECRET`, public URLs → говорит «вы ответили no, но вижу X — pointer на файл:строка» |
+| 2. Merged docs prominence loss | TL;DR + checkbox в template'ах | На входе в Stage F видит пустую SLO-секцию → «без SLO acceptance тесты не определены, [конкретный сценарий риска]» |
+| 3. Stage E silent baseline holes | `bootstrap-verify.sh` health-check | На failed verify **объясняет**: «branch protection off → AP-19 ломается, потому что [конкретный сценарий force-push в main]» вместо просто «verify failed» |
+| 4. Reviewer size gate blind spots | Size + path override (auth/payments/migrations/crypto) | Scan **content** diff'а (`eval(`, raw SQL, secrets-like strings, hardcoded URLs) → routing по содержимому, не только по path |
+
+### Где advisor сам по себе недостаточен (почему floor остаётся)
+
+- **LLM может пропустить категорию**, которой не было в его training. Static rules всегда применяются.
+- **LLM может over-recommend под operator pressure** («хочу быстрее») — рационализирует skip опасного. Hard floor этому сопротивляется.
+- **Determinism для audit** — статический ответ в `bootstrap-state.md` — claim, который можно проверить. LLM-recommendation в session N может отличаться от session N+1 при том же коде.
+- **Cost-bound** — если advisor читает весь codebase на каждый запуск, экономия от skip Stage B растворится в его token cost.
+
+### Стоимость vs static-only mitigations
+
+| Подход | Реализация | Token cost (за сессию) | Quality |
+|---|---|---|---|
+| Static quiz + script (только floor) | Низкая | ~0 (quiz tiny, script local) | Robust но dumb |
+| Advisor (только smart, без floor) | Средняя (новый subagent) | Средняя (1 bounded code-scan на entry) | Smart но fragile под pressure |
+| **Hybrid (floor + advisor)** | Средняя | Средняя | **Robust + smart** |
+
+Гибрид — additional ~10-20% bootstrap token cost за **значительно лучший** experience: оператор получает обоснованные рекомендации с pointer'ами на конкретные строки кода, а не yes/no quiz.
+
+### Cost-bounded design для advisor
+
+Чтобы advisor не съел экономию от skip'ов:
+- **Bounded scan**: читает не весь codebase, а sample (entry points + package manifests + 5-10 файлов по эвристике важности).
+- **Cached на session**: на повторный entry в течение сессии не пере-сканирует, использует кэш.
+- **Trigger-based, не always-on**: запускается на ключевых решениях (bootstrap entry, Path B layer change, Stage F entry с пустыми foundations), не на каждый message.
+- **Hard token budget**: < 10k tokens на одну advisory session. Если scope превышает — degraded mode с warning «полный анализ требует X, делаю partial».
+
+### Где advisor — уже существующий паттерн в системе
+
+Это не новая концепция:
+- **Tier framework** (auto-extract / mini-research / promote / override) уже работает по этому принципу для extraction'а stack'а — applied to artifact content. Advisor — **тот же паттерн, applied to stage selection**.
+- **Specialized reviewer routing** — primary reviewer уже делает domain detection и routing. Advisor — **тот же паттерн на этапе bootstrap, не review**.
+- **AP-3 operator-gate** уже разделяет «agent recommends» от «operator decides». Advisor работает в той же модели.
+
+### Что добавить в plan'ы Path B / Path C
+
+Помимо 4 static mitigations выше, в plan'е реализации фиксировать:
+- [ ] `discipline-advisor` subagent определён в `.claude/agents/`.
+- [ ] Hard detection rules (PII / payments / crypto / auth) реализованы как irreducible floor.
+- [ ] Advisor триггеры: bootstrap entry, Path B layer change, Stage F entry с empty foundations.
+- [ ] Advisor decisions логируются в `bootstrap-state.md` (advisory-log section).
+- [ ] Bounded scan policy + cache + token budget зафиксированы в agent prompt.
+- [ ] Тесты на тривиальные false-negative cases (advisor НЕ должен пропускать stripe.charges, sequelize raw queries, hardcoded JWT secrets).
+
+### Финальная рекомендация
+
+**Реализовывать Paths B/C не как «static mitigations only», а как «hybrid floor + advisor».**
+
+Это качественный шаг — фреймворк становится **adaptive вместо checklist-based**. И это естественная эволюция: мы уже используем этот паттерн (Tier, reviewer routing) — просто распространяем на bootstrap.
+
+**Стоимость:** +1 subagent определение, +10-20% bootstrap session cost, ~1-2 дня имплементации.  
+**Выгода:** advisory с pointer'ами на код вместо checkbox-quiz; коллапсирует на простых проектах (advisor говорит «всё skip-safe»), активируется на сложных (advisor подсвечивает реальные риски, которые operator мог пропустить).
