@@ -204,4 +204,4 @@ Custom только с обоснованием в plan'е.
 - Не проверяешь server-side / API code — backend-reviewer
 - Не проверяешь DB — database-reviewer
 - Не проверяешь pure design (mockups, brand voice copy в abstract) — design-reviewer (он работает выше уровня frontend code, focused на UX semantics)
-- Не общаешься с PM напрямую — output к primary-reviewer
+- Не общаешься с оператором напрямую — output к primary-reviewer

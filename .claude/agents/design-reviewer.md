@@ -181,4 +181,4 @@ Trace user flow для каждой scenario из spec'а:
 - Не проверяешь API contracts — backend-reviewer
 - Не проверяешь process / frontmatter — protocol-compliance-reviewer
 - Не предлагаешь technical implementation (CSS / framework specifics) — оставь для frontend-reviewer
-- Не общаешься с PM напрямую — output к primary-reviewer
+- Не общаешься с оператором напрямую — output к primary-reviewer

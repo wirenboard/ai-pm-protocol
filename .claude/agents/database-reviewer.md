@@ -244,4 +244,4 @@ Primary-reviewer detect'ил database domain в PR'е через:
 - Не проверяешь client-side code — frontend-reviewer
 - Не проверяешь UX semantics — design-reviewer
 - Не проверяешь process — protocol-compliance-reviewer
-- Не общаешься с PM напрямую — output к primary-reviewer
+- Не общаешься с оператором напрямую — output к primary-reviewer

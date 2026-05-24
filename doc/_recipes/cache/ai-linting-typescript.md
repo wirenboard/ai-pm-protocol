@@ -202,8 +202,8 @@ gitleaks protect --staged
 
 Bootstrap-агент в Mode 1 (new-product), при работе над Stage D:
 
-1. Спрашивает PM: «стек TypeScript?».
+1. Спрашивает оператора: «стек TypeScript?».
 2. Читает этот recipe.
 3. Создаёт в проекте `.ai-pm/doc/ai-linting-rules.md` со ссылкой на этот recipe + project-specific дополнения (если есть).
 4. Создаёт скелеты `.eslintrc`, `tsconfig.base.json`, `.dependency-cruiser.cjs`, `ci/semgrep-rules/` со ссылкой на этот recipe.
-5. Проверяет: все 17 категорий из `development-protocol.md § 6.1` имеют конкретное правило в маппинге. Если нет — flag PM'у.
+5. Проверяет: все 17 категорий из `development-protocol.md § 6.1` имеют конкретное правило в маппинге. Если нет — flag оператору.

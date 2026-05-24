@@ -87,7 +87,7 @@ parse_verdict_json() {
   fi
 }
 
-# block_on_verdict: если verdict не green — exit 2. PM может override через
+# block_on_verdict: если verdict не green — exit 2. оператор может override через
 # `[review-override: <reason>]` на отдельной строке HEAD commit body.
 block_on_verdict() {
   local verdict="$1"
@@ -97,13 +97,13 @@ block_on_verdict() {
       return 0
       ;;
     request-changes|changes-requested)
-      # PM-override: если в HEAD commit body есть `[review-override: <reason>]`
-      # на отдельной строке — PM явно принимает PR с findings. Reason обязателен,
+      # operator-override: если в HEAD commit body есть `[review-override: <reason>]`
+      # на отдельной строке — оператор явно принимает PR с findings. Reason обязателен,
       # visible в git log навсегда.
       if echo "$HEAD_BODY" | grep -qE '^\[review-override:[[:space:]]*[^]]+\][[:space:]]*$'; then
         REASON=$(echo "$HEAD_BODY" | grep -oE '^\[review-override:[[:space:]]*[^]]+\]' | sed -E 's/^\[review-override:[[:space:]]*//; s/\]$//')
-        echo "INFO: PM-override через [review-override: $REASON]" >&2
-        echo "      Verdict был '$verdict', но PM явно принимает PR. Override visible в git log." >&2
+        echo "INFO: operator-override через [review-override: $REASON]" >&2
+        echo "      Verdict был '$verdict', но оператор явно принимает PR. Override visible в git log." >&2
         return 0
       fi
       echo "" >&2
@@ -112,7 +112,7 @@ block_on_verdict() {
       echo "Создание/merge PR с unresolved findings нарушает offline-first design (AP-16):" >&2
       echo "review должен быть зелёным ДО публикации PR, а не после." >&2
       echo "" >&2
-      echo "AI ничего не решает сам — спроси оператора (PM/dev) через AskUserQuestion:" >&2
+      echo "AI ничего не решает сам — спроси оператора через AskUserQuestion:" >&2
       echo "  (а) Зафиксить все findings — AI применяет fix'ы, перезапускает reviewer-agent," >&2
       echo "      когда verdict станет approve / approve-with-comments — повтори '$CMD'" >&2
       echo "  (б) Зафиксить часть + override deferred — оператор указывает что fix, что deferred" >&2

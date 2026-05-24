@@ -16,7 +16,7 @@ if [ -z "$CMD" ]; then
   exit 0
 fi
 
-# Block list — паттерны команд, которые запрещены без явного PM-approval.
+# Block list — паттерны команд, которые запрещены без явного operator-approval.
 
 # 1. Direct push в main/master
 if echo "$CMD" | grep -qE "git\s+push.*\b(main|master)\b" && \
@@ -49,10 +49,10 @@ if echo "$CMD" | grep -qE "git\s+checkout\s+(main|master)" && \
   exit 1
 fi
 
-# 5. git config user (изменение identity — нужно явное PM решение)
+# 5. git config user (изменение identity — нужно явное operator-решение)
 if echo "$CMD" | grep -qE "git\s+config\s+user\.(name|email)"; then
-  echo "BLOCKED: изменение git user.name/user.email требует явного PM-approval." >&2
-  echo "Если это нужно — PM сделает руками или через explicit instruction." >&2
+  echo "BLOCKED: изменение git user.name/user.email требует явного operator-approval." >&2
+  echo "Если это нужно — оператор сделает руками или через explicit instruction." >&2
   exit 1
 fi
 

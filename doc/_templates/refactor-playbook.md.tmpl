@@ -219,7 +219,7 @@ Refactor PRs — **continuous improvement**, не «спецоперация» �
 
 ## 8. Connect to AP-6 + AP-19
 
-- **AP-6 (no silent deviation):** AI **никогда** не refactors silently as part of feature PR. Если AI замечает refactor opportunity during feature work — flag PM/operator, separate PR.
+- **AP-6 (no silent deviation):** AI **никогда** не refactors silently as part of feature PR. Если AI замечает refactor opportunity during feature work — flag оператора, separate PR.
 - **AP-19 (per-PR atomicity):** refactor PR = single scope. Не mix refactor + feature в одном PR.
 - **AP-18 (deploy safety):** behavior-preserving refactors usually rollback-safe (по definition behavior same). Но если refactor включает internal API changes used by other modules — может всё равно требоваться expand-contract если эти modules are deployed separately.
 

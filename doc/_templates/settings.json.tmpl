@@ -51,7 +51,7 @@
     ]
   },
   "_notes_for_pm": [
-    "Если какой-то hook fail'ит на чём-то, что должно быть legit — НЕ отключай hook. Исправь причину, либо обсуди adjustment с PM.",
+    "Если какой-то hook fail'ит на чём-то, что должно быть legit — НЕ отключай hook. Исправь причину, либо обсуди adjustment с оператором.",
     "Hook'и парсят tool_input.file_path / tool_input.command из stdin JSON (Claude Code hook API).",
     "exit 0 = allow, exit 2 = block с передачей stderr обратно AI.",
     "check-pr-has-review.sh: блокирует gh pr create и gh pr merge без локального review-trail (см. AP-16). Offline-first design. Поддерживаемые формы trail: committed doc/features/<topic>_review.md (Stage F), .ai-pm/.reviews/<branch>.json (chore/docs/template-extension). Skip-marker [skip-review] на отдельной строке в HEAD commit body — explicit override для trivial chore'ов."

@@ -13,30 +13,30 @@
 **Шаг 1: Прочитай `.ai-pm/.bootstrap-state.md`.**
 
 - **Если файла нет** → invoke `project-bootstrap` subagent. Мы в самом начале (new-product Mode 1).
-- **Если Stage A-E не closed** (не все checkbox'ы) → invoke `project-bootstrap` subagent, скажи PM «Bootstrap не завершён, продолжаем со stage X». Не работай над фичами.
+- **Если Stage A-E не closed** (не все checkbox'ы) → invoke `project-bootstrap` subagent, скажи оператору «Bootstrap не завершён, продолжаем со stage X». Не работай над фичами.
 - **Если Stage A-E closed** → продолжай шаг 2.
 
 **Шаг 2: Просканируй `{{doc_root}}/features/` на in-progress фичи.**
 
 Признаки in-progress:
 - `<topic>_spec.md` есть, `<topic>_plan.md` НЕТ → Step 1 done, ждём Step 2 (planner).
-- `<topic>_plan.md` есть, в spec/plan нет PM-marker `acceptance: ok` или `merged: yes` (в frontmatter) → Step 3-4-5 ongoing.
+- `<topic>_plan.md` есть, в spec/plan нет operator-marker `acceptance: ok` или `merged: yes` (в frontmatter) → Step 3-4-5 ongoing.
 - PR открыт, `<topic>_review.md` нет → Step 7 pending (invoke reviewer).
 - Spec.v<N> (N > 1) есть, но `<topic>_review.v<N>.md` нет → rework Step 7 pending.
 
-**Если найдена in-progress фича** → скажи PM: «Вижу in-progress фичу `<topic>`. State: <конкретно>. Resume — invoke <agent>? Или закончить иначе?»
+**Если найдена in-progress фича** → скажи оператору: «Вижу in-progress фичу `<topic>`. State: <конкретно>. Resume — invoke <agent>? Или закончить иначе?»
 
-**Шаг 3: Слушай PM. Routing по keywords (см. ниже).**
+**Шаг 3: Слушай оператора. Routing по keywords (см. ниже).**
 
 ---
 
-## Keyword routing в чате PM
+## Keyword routing в чате оператору
 
-Когда PM пишет что-то в чате — детектируй intent и предлагай (или invoke) соответствующего subagent'а:
+Когда оператор пишет что-то в чате — детектируй intent и предлагай (или invoke) соответствующего subagent'а:
 
-| PM пишет / keyword | Routing |
+| Оператор пишет / keyword | Routing |
 |---|---|
-| «хочу добавить фичу X» / «новая фича» / «add feature» | Step 1: предложить draft `<topic>_spec.md` (сам draft'ишь или PM пишет) |
+| «хочу добавить фичу X» / «новая фича» / «add feature» | Step 1: предложить draft `<topic>_spec.md` (сам draft'ишь или оператор пишет) |
 | «исправь баг X» / «fix bug» / «починим» | Bug-fix variant — короткий spec с `lite-mode: bugfix`, потом обычный workflow Step 2-7 |
 | «переделать X» / «rework» / «переписать фичу X» | Mode 3 rework — invoke `project-bootstrap` для rework routing |
 | «продолжай работу над X» / «resume» | Найди state фичи X, invoke соответствующий step agent |
@@ -45,7 +45,7 @@
 | «план для X» / «как реализуем» / «plan» | (если spec X есть) invoke `planner` для Step 2 |
 | «обнови threat-model / personas / journeys» | Отдельный PR на foundational docs (branch `docs/<topic>`) — НЕ в feature branch |
 
-**Routing — это suggestion, не auto-invoke.** Объясни PM что предлагаешь и почему, спроси «делаем так?».
+**Routing — это suggestion, не auto-invoke.** Объясни оператору что предлагаешь и почему, спроси «делаем так?».
 
 ---
 
@@ -55,9 +55,9 @@
 - **Никакого упреждающего ADR** (AP-1). ADR пишется только в Step 2 plan'а, когда упёрся в архитектурный fork.
 - **Никаких direct-commits в `main`** (§ 13). Только feature/<topic> branch'и + PR + squash & merge.
 - **`--no-verify` запрещён** (AP-6). Если pre-commit hook fail'ит — fix корень, не обходи.
-- **Reviewer-agent обязателен для каждого PR перед `gh pr create` / `gh pr merge`** — mandatory all modes, не только feature PR. Layer 2 hook `scripts/check-pr-has-review.sh` блокирует обе команды если (a) нет локального review-trail **или** (b) verdict = `request-changes` (AP-16). Offline-first дизайн: review всегда фиксируется локально **до** создания PR; цикл «открыть PR → дождаться comment'ов → гонять fix'ы» устранён by design. Допустимые формы trail: committed `doc/features/<topic>_review.md` для Stage F (с `**Verdict:** approve|approve-with-comments|request-changes` в первых 50 строках), local trace `.ai-pm/.reviews/<branch>.json` для chore / docs / template-extension (с полем `verdict`). Skip-marker `[skip-review]` **на отдельной строке** в HEAD commit body — explicit override только для trivial chore'ов (typo / dep bump / README). `gh pr review` не используется — review живёт в репе/локально, дублирование в GitHub UI не имеет смысла для PM+AI workflow.
-- **PM никогда не читает код.** Не показывай diff'ы PM'у. Если нужно обсудить, что AI сделал — формулируй в spec terms (поведение / scenarios / architectural decisions), не в code terms (модули / функции).
-- **Языковая дисциплина: формальные части проекта пишутся на `primary_language` из `.bootstrap-state.md`** (AP-12). Это **строгое требование** для: артефактов в `doc/`, сообщений коммитов, описаний pull-request-ов, README, CHANGELOG, документации в репозитории. Адресовано всем пользователям AI в проекте — PM, разработчику, дизайнеру. **В чате допускается регрессия** (без боя — это ограничение модели, AI обучен на английском IT-материале). Для русскоязычных проектов: общие слова — по-русски (содержимое, доставка, угрозы, меры защиты, граница, рамки, льготный период, отметка присутствия, обязательный, проверка, нарушение, отговорки, и т.д.); англицизмы оставляем **только** для стандартных технических терминов из белого списка (MVP, KDF, AEAD, TLS, GDPR, AIFC, OWASP, и подобных стандартов индустрии). **Перед каждым коммитом doc-файла** AI обязан запустить grep самопроверку (см. AP-12). Точечная замена через sed запрещена (русская грамматика ломается — «запуск'а» не русский); только Edit / переписать раздел.
+- **Reviewer-agent обязателен для каждого PR перед `gh pr create` / `gh pr merge`** — mandatory all modes, не только feature PR. Layer 2 hook `scripts/check-pr-has-review.sh` блокирует обе команды если (a) нет локального review-trail **или** (b) verdict = `request-changes` (AP-16). Offline-first дизайн: review всегда фиксируется локально **до** создания PR; цикл «открыть PR → дождаться comment'ов → гонять fix'ы» устранён by design. Допустимые формы trail: committed `doc/features/<topic>_review.md` для Stage F (с `**Verdict:** approve|approve-with-comments|request-changes` в первых 50 строках), local trace `.ai-pm/.reviews/<branch>.json` для chore / docs / template-extension (с полем `verdict`). Skip-marker `[skip-review]` **на отдельной строке** в HEAD commit body — explicit override только для trivial chore'ов (typo / dep bump / README). `gh pr review` не используется — review живёт в репе/локально, дублирование в GitHub UI не имеет смысла для оператора+AI workflow.
+- **оператор при Trust profile A никогда не читает код.** Не показывай diff'ы оператору. Если нужно обсудить, что AI сделал — формулируй в spec terms (поведение / scenarios / architectural decisions), не в code terms (модули / функции).
+- **Языковая дисциплина: формальные части проекта пишутся на `primary_language` из `.bootstrap-state.md`** (AP-12). Это **строгое требование** для: артефактов в `doc/`, сообщений коммитов, описаний pull-request-ов, README, CHANGELOG, документации в репозитории. Адресовано всем пользователям AI в проекте — оператору, разработчику, дизайнеру. **В чате допускается регрессия** (без боя — это ограничение модели, AI обучен на английском IT-материале). Для русскоязычных проектов: общие слова — по-русски (содержимое, доставка, угрозы, меры защиты, граница, рамки, льготный период, отметка присутствия, обязательный, проверка, нарушение, отговорки, и т.д.); англицизмы оставляем **только** для стандартных технических терминов из белого списка (MVP, KDF, AEAD, TLS, GDPR, AIFC, OWASP, и подобных стандартов индустрии). **Перед каждым коммитом doc-файла** AI обязан запустить grep самопроверку (см. AP-12). Точечная замена через sed запрещена (русская грамматика ломается — «запуск'а» не русский); только Edit / переписать раздел.
 
 ---
 
@@ -76,7 +76,7 @@
 - **`database-reviewer`** — spawned для `feat(db)`/`feat(schema)`/`feat(migration)`. Schema design, expand-contract migrations, indexing, identifier strategy.
 - **`release-helper`** — release PR при накоплении merged feature-PR'ов. SemVer bump + CHANGELOG.
 
-Запуск: `claude --agent <name>`. Или ты в main session приглашаешь PM: «invoke <agent>?», ждёшь approval, и сам передаёшь управление (через Agent tool с appropriate subagent_type).
+Запуск: `claude --agent <name>`. Или ты в main session приглашаешь оператора: «invoke <agent>?», ждёшь approval, и сам передаёшь управление (через Agent tool с appropriate subagent_type).
 
 ---
 
@@ -90,19 +90,19 @@
 ### Scenario: New feature в зрелом проекте
 
 - `.bootstrap-state.md` закрыт, Stage A-E done.
-- PM: «хочу добавить фичу X».
-- Routing: Step 1 spec для X (PM draft или ты draft → PM approve) → Step 2 planner → ...
+- Оператор: «хочу добавить фичу X».
+- Routing: Step 1 spec для X (оператор draft или ты draft → оператор approve) → Step 2 planner → ...
 - Stage A-C read-pass — если фича требует новой persona / journey / threat surface → отдельный PR в `docs/<topic>` branch ДО feature branch.
 
 ### Scenario: Bug fix в зрелом проекте
 
-- PM: «починим baг X».
+- Оператор: «починим baг X».
 - Routing: lite-mode spec с `lite-mode: bugfix` в frontmatter → planner лёгкий → coder с failing test first → reviewer (terser).
 - НЕ lite-mode если bug в security path — full ceremony.
 
 ### Scenario: Rework existing feature (Mode 3)
 
-- PM: «переработаем фичу X, меняется поведение».
+- Оператор: «переработаем фичу X, меняется поведение».
 - Routing: project-bootstrap для rework setup → `<topic>_spec.v<N>.md` с Diff секцией → `_plan.v<N>.md` с Migration секцией → coder → mandatory reviewer.
 
 ### Scenario: Resume interrupted session
@@ -118,7 +118,7 @@
 
 ### Scenario: Release time
 
-- PM: «релиз?» или несколько fic merged в main без release.
+- Оператор: «релиз?» или несколько fic merged в main без release.
 - Routing: invoke `release-helper`.
 
 ---
@@ -177,4 +177,4 @@ Bootstrap-agent + main session обновляют эти поля по мере 
 - Anti-patterns — `.ai-pm/tooling/anti-patterns.md` + `{{doc_root}}/anti-patterns.md`.
 - В случае разрыва между generic и overlay — generic primat.
 
-**Если ты в сомнении, должен ли ты делать действие — спрашивай PM через AskUserQuestion. Лучше переспросить, чем нарушить протокол.**
+**Если ты в сомнении, должен ли ты делать действие — спрашивай оператора через AskUserQuestion. Лучше переспросить, чем нарушить протокол.**

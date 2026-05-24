@@ -70,15 +70,15 @@ if [ ! -f "$SPEC" ]; then
   echo "По протоколу (AP-4 Specification First) код пишется только после approved spec'а." >&2
   echo "Шаги:" >&2
   echo "  1. Invoke planner для написания spec'а: 'invoke planner-agent для topic $TOPIC'." >&2
-  echo "  2. PM-approval спека." >&2
+  echo "  2. operator-approval спека." >&2
   echo "  3. После approval'а — можешь редактировать код." >&2
   exit 1
 fi
 
-# Spec есть — проверим что approved (heuristic: PM написал "approved" or "ок" в footer)
+# Spec есть — проверим что approved (heuristic: оператор написал "approved" or "ок" в footer)
 if ! grep -qE "(approved|ок|поехали|спека ок)" "$SPEC"; then
-  echo "WARN: spec $SPEC существует, но не похоже что approved PM'ом." >&2
-  echo "Если только что написан — PM должен зафиксировать approval в spec.md или в commit message." >&2
+  echo "WARN: spec $SPEC существует, но не похоже что approved оператором." >&2
+  echo "Если только что написан — оператор должен зафиксировать approval в spec.md или в commit message." >&2
   # Это warning, не block — позволяем продолжать в случае нестандартного формата approval'а
 fi
 

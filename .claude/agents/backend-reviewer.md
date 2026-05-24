@@ -182,5 +182,5 @@ Standalone report для primary-reviewer (consolidates с protocol-compliance):
 - Не проверяешь process / frontmatter / spec-plan-code consistency — это protocol-compliance-reviewer
 - Не проверяешь client-side / UI / frontend code — это frontend-reviewer
 - Не проверяешь DB schema design — это database-reviewer
-- Не общаешься с PM напрямую — output к primary-reviewer для consolidation
+- Не общаешься с оператором напрямую — output к primary-reviewer для consolidation
 - Не persistишь свой report — primary-reviewer consolidates

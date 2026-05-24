@@ -143,7 +143,7 @@ check_plan_exists_for_spec() {
     local topic=$(basename "$spec" _spec.md)
     local plan="$DOC_ROOT/features/${topic}_plan.md"
     if [ ! -f "$plan" ]; then
-      # OK если spec ещё не approved (нет PM-marker)
+      # OK если spec ещё не approved (нет operator-marker)
       if grep -qE "(approved|ок|поехали)" "$spec"; then
         log_fail "plan-exists-for-spec: $spec помечен approved, но $plan отсутствует"
       fi
