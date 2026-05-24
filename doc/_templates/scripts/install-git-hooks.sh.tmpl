@@ -11,6 +11,21 @@ if [ ! -d "$HOOK_DIR" ]; then
   exit 1
 fi
 
+# === Ensure .ai-pm/.session-state.md is gitignored ===
+# Session state — local-only resume hint (см. feature session-resume-state).
+# Никогда не должен попадать в commit / release diff.
+GITIGNORE=".gitignore"
+SESSION_STATE_PATTERN=".ai-pm/.session-state.md"
+if [ -f "$GITIGNORE" ]; then
+  if ! grep -qxF "$SESSION_STATE_PATTERN" "$GITIGNORE"; then
+    printf '\n# Session resume state (local-only, never committed)\n%s\n' "$SESSION_STATE_PATTERN" >> "$GITIGNORE"
+    echo "Added $SESSION_STATE_PATTERN to .gitignore"
+  fi
+else
+  printf '# Session resume state (local-only, never committed)\n%s\n' "$SESSION_STATE_PATTERN" > "$GITIGNORE"
+  echo "Created .gitignore с entry для $SESSION_STATE_PATTERN"
+fi
+
 # === pre-commit hook ===
 cat > "$HOOK_DIR/pre-commit" <<'HOOK'
 #!/usr/bin/env bash
