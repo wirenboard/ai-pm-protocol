@@ -50,17 +50,33 @@ Scenario: <название>
 
 **Цель — узкая:** как другие реализовали **этот тип фичи** (не всю category), что удобно, что неудобно. **НЕ landscape rebuild** — для этого есть `doc/competitive-analysis.md` (Stage A, делается раз). Здесь — **per-feature UX/UI scan**.
 
-### Когда обязателен
+### Когда обязателен — explicit gate criteria
 
-- **Mode 1 (new-product) для каждой значимой UX-фичи** — Stage A дал landscape, здесь добавляем per-feature слой. Без этого UX слабее, даже если позиционирование сильное.
-- **Mode 2 (new-feature)** — обязателен (Stage A не повторяется, per-feature scan компенсирует).
-- **Mode 3 (rework-feature)** — особенно важен — мы редизайним то, что было; стоит посмотреть как другие решали это с тех пор.
+UX scan тратит время оператора и AI. Дисциплина: scan обязателен **только** при срабатывании одного из gate'ов ниже. Иначе — опциональный.
 
-### Когда можно пропустить
+**Gate 1 — UX-significant фича.** Spec scenarios действительно затрагивают пользовательский flow (не «улучшить retry logic в notification queue»). Heuristic: scenarios описывают то, что пользователь **видит / делает / читает**.
+
+**Gate 2 — один из 3 mode-cases:**
+
+| Mode | Условие | Обязательность |
+|---|---|---|
+| **Mode 1** (new-product) | UX-significant фича **И** affects ≥ 10% expected user flow (heuristic: фича уровня onboarding, signup, main interaction, payments — а не tweak existing screen) **И** Stage A `competitive-analysis.md` был ≥ 60 дней назад | Обязателен |
+| **Mode 1** (new-product) | UX-significant фича **И** Stage A `competitive-analysis.md` свежий (< 60 дней) **И** competitors landscape покрывает этот тип фичи (можно reference'ить Stage A анализ) | Опционально (можно reference Stage A) |
+| **Mode 2** (new-feature) | UX-significant фича **И** добавляет UX pattern, не покрытый существующим `competitive-analysis.md` | Обязателен |
+| **Mode 2** (new-feature) | UX-significant фича **И** pattern уже знаком (есть в Stage A или previous spec'ах) | Опционально (можно reference) |
+| **Mode 3** (rework-feature) | UI / UX рефакторится по существу | Обязателен (мир изменился с прошлого design'а) |
+| **bug-fix** | Любой scope | Не нужен |
+
+**Gate 3 — relevant аналог существует.** Если фича настолько уникальна, что нет relevant competitors (редко в Mode 1, ещё реже в Mode 2), — scan не имеет смысла. Зафиксируйте «No comparable feature found at scan time» с 2-3 проверенными источниками поиска.
+
+### Когда заведомо пропускаем
 
 - Bugfix / lite-mode small changes (см. `lite-mode: bugfix | small-fix | c-fast` в frontmatter).
-- Чисто backend фичи без UX (типа «улучшить retry logic для notification queue»).
-- Фичи, где no relevant аналог не существует (часто проверка — у Mode 1 редкая).
+- Чисто backend фичи без UX (нет User stories, только Non-functional изменения).
+- Internal infrastructure фичи (CI, deploy, observability).
+- Доступа к аналогам нет (paywall / proprietary / acquihired — зафиксируйте reason).
+
+**Если в сомнении** — спросите оператора через AskUserQuestion: «Scan делать? Mode = X, gate-условия = Y. Recommendation: <yes/no>».
 
 ### Что собираем
 
