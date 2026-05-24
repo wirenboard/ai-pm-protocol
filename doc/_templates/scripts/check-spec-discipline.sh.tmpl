@@ -191,7 +191,46 @@ check_spec_references_persona() {
   log_ok "spec-references-persona"
 }
 
-# === Check 9: security-spec-cites-standard (conditional) ===
+# === Check 9: spec-impact-fields-present (AP-14 enforcement) ===
+# Каждый _spec.md обязан содержать 7 impact полей в frontmatter:
+# 3 operational (AP-13): legal_impact, validation_required, incident_impact
+# 4 structural (AP-14): journey_impact, threat_impact, scope_impact, topology_impact
+# Каждое поле должно иметь значение `yes` или `no` — не пусто, не отсутствовать.
+# Это enforce'ит обязательный structural read-pass перед draft'ом spec'а.
+check_spec_impact_fields() {
+  local required_fields=(
+    "legal_impact"
+    "validation_required"
+    "incident_impact"
+    "journey_impact"
+    "threat_impact"
+    "scope_impact"
+    "topology_impact"
+  )
+  for spec in "$DOC_ROOT/features/"*_spec.md; do
+    [ -e "$spec" ] || continue
+    # Skip lite-mode: bugfix — для bugfix импакты обычно тривиальны (см. AP-13/14 exceptions)
+    if grep -qE '^lite-mode:[[:space:]]*bugfix' "$spec"; then
+      continue
+    fi
+    # Extract frontmatter block (от первого `---` до второго)
+    local frontmatter
+    frontmatter=$(awk '/^---$/{c++; next} c==1' "$spec" 2>/dev/null)
+    if [ -z "$frontmatter" ]; then
+      log_fail "spec-impact-fields-present: $spec не содержит frontmatter блока"
+      continue
+    fi
+    for field in "${required_fields[@]}"; do
+      # Поле должно присутствовать с явным yes|no значением
+      if ! echo "$frontmatter" | grep -qE "^${field}:[[:space:]]+(yes|no)([[:space:]]|$)"; then
+        log_fail "spec-impact-fields-present: $spec — поле '${field}' отсутствует или не yes/no (AP-14 read-pass пропущен)"
+      fi
+    done
+  done
+  log_ok "spec-impact-fields-present"
+}
+
+# === Check 10: security-spec-cites-standard (conditional) ===
 check_security_spec_cites_standard() {
   for spec in "$DOC_ROOT/features/"*_spec.md; do
     [ -e "$spec" ] || continue
@@ -233,6 +272,7 @@ case "${1:-all}" in
     check_plan_exists_for_spec
     check_rework_sections
     check_spec_references_persona
+    check_spec_impact_fields
     check_security_spec_cites_standard
     ;;
 esac
