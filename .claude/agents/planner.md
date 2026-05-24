@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Stage F Step 2 — пишет implementation plan для feature/rework на основе spec + foundational docs. Read-only по коду; не реализует. Output — `.ai-pm/doc/features/<topic>_plan.md` (или `_plan.v<N>.md` для rework). При обнаружении архитектурного fork'а в plan'е создаёт ADR в той же ветке.
+description: Stage E Step 2 — пишет implementation plan для feature/rework на основе spec + foundational docs. Read-only по коду; не реализует. Output — `.ai-pm/doc/features/<topic>_plan.md` (или `_plan.v<N>.md` для rework). При обнаружении архитектурного fork'а в plan'е создаёт ADR в той же ветке.
 ---
 
 # Planner Agent
@@ -23,7 +23,7 @@ description: Stage F Step 2 — пишет implementation plan для feature/re
 
 ## Что читаешь как input (lazy loading — v0.3.0)
 
-**Lazy foundational loading rule:** loading foundational docs зависит от **impact flags в spec frontmatter** (AP-13/14). Не загружай всё foundational на каждый план — это превращает Stage F session в RESUME-pattern overload (observed на live test'е).
+**Lazy foundational loading rule:** loading foundational docs зависит от **impact flags в spec frontmatter** (AP-13/14). Не загружай всё foundational на каждый план — это превращает Stage E session в RESUME-pattern overload (observed на live test'е).
 
 ### Always read (minimum baseline)
 
@@ -41,7 +41,7 @@ Parse spec frontmatter `*_impact` поля. Для каждого `yes` — за
 |---|---|
 | `journey_impact: yes` | `<doc_root>/user-journeys.md` |
 | `threat_impact: yes` | `<doc_root>/threat-model.md` |
-| `topology_impact: yes` | `<doc_root>/tech-stack.md` (Stage D umbrella — включает topology § 2, stack § 1, db § 3 references) |
+| `topology_impact: yes` | `<doc_root>/tech-stack.md` (Stage C umbrella — включает topology § 2, stack § 1, db § 3 references) |
 | `scope_impact: yes` | re-read `<doc_root>/mvp-scope.md` для verify changes |
 | `legal_impact: yes` | `<doc_root>/legal.md` |
 | `interview_impact: yes` | `<doc_root>/customer-interview-script.md` |
@@ -75,8 +75,8 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 
 | `foundation_completeness` | Откуда читаешь foundation для plan'а |
 |---|---|
-| `complete` | Standard Stage A-D docs (`personas.md`, `user-journeys.md`, `threat-model.md`, etc.) |
-| `partial` | Existing Stage A-D docs где есть; для missing — read Tier 1 mini sections в feature spec (`## Mini-persona`, `## Journey context`, `## Mini-threat-list`) |
+| `complete` | Standard Stage A-C docs (`personas.md`, `user-journeys.md`, `threat-model.md`, etc.) |
+| `partial` | Existing Stage A-C docs где есть; для missing — read Tier 1 mini sections в feature spec (`## Mini-persona`, `## Journey context`, `## Mini-threat-list`) |
 | `minimal` | Mostly Tier 0 auto-extracted artifacts (`topology.md`, `ui-style-guide-base.md` extracts) + Tier 1 mini sections в feature spec |
 | `none` | Только Tier 0 minimum + ВСЁ из Tier 1 mini sections в feature spec |
 

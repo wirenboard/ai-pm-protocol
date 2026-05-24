@@ -1,6 +1,6 @@
 ---
 status: draft
-stage: D
+stage: C
 artifact: tech-stack
 created: YYYY-MM-DD
 last_review: YYYY-MM-DD
@@ -12,7 +12,7 @@ skip_eligibility:
 
 # <Project> — Tech Stack
 
-**Stage D artifact.** Technical foundation: stack choice + topology + db_kind references + deployment topology. Same axis quality — technical foundation.
+**Stage C artifact.** Technical foundation: stack choice + topology + db_kind references + deployment topology. Same axis quality — technical foundation.
 
 ---
 
@@ -35,7 +35,7 @@ skip_eligibility:
 
 **Зачем читать:** все subagents / scripts / CI gates адаптируются под stack — без этого decision dev-environment / ai-linting-rules / template-sync не могут быть generated correctly.
 
-**Stack:** см. `.ai-pm/.bootstrap-state.md` field `stack:`. Значение определяется bootstrap-agent'ом на Stage D через `extract-stack.sh` (Tier 0 auto-extract) или operator choice.
+**Stack:** см. `.ai-pm/.bootstrap-state.md` field `stack:`. Значение определяется bootstrap-agent'ом на Stage C через `extract-stack.sh` (Tier 0 auto-extract) или operator choice.
 
 **Recommended additions для clarity (опционально):**
 
@@ -103,7 +103,7 @@ ASCII или ссылка на изображение. Должно помеща
 
 **Что это:** db_kind selection (один или несколько) + ссылки на per-kind schema design.
 
-**Зачем читать:** database-reviewer Stage F Step 7 проверяет migrations / schema changes against этот раздел. AP-20 routing.
+**Зачем читать:** database-reviewer Stage E Step 7 проверяет migrations / schema changes against этот раздел. AP-20 routing.
 
 ### 3.1. db_kind selection
 

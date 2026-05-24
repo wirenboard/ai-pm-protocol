@@ -141,7 +141,7 @@ jobs:
 
 ---
 
-## Применение в Stage E
+## Применение в Stage D
 
 Init-agent в new-product mode при stack=go:
 1. Использует этот recipe.

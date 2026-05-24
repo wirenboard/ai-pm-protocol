@@ -198,9 +198,9 @@ gitleaks protect --staged
 
 ---
 
-## Применение в Stage D
+## Применение в Stage C
 
-Bootstrap-агент в new-product mode, при работе над Stage D:
+Bootstrap-агент в new-product mode, при работе над Stage C:
 
 1. Спрашивает оператора: «стек TypeScript?».
 2. Читает этот recipe.

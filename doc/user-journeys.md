@@ -4,7 +4,7 @@
 
 Без UI-деталей; только последовательность точек принятия решения и эмоциональный регистр.
 
-**Контекст:** v0.4.0 framework state. После v0.3.0 — 5 stages (Stage C упразднён, fold в Stage D). После v0.4.0 — conditional skip framework + discipline-advisor (opt-in до PoC validation).
+**Контекст:** v0.4.0 framework state. После v0.3.0 — 5 stages (Stage C упразднён, fold в Stage C). После v0.4.0 — conditional skip framework + discipline-advisor (opt-in до PoC validation).
 
 ---
 
@@ -28,10 +28,10 @@
 | 10 | **Stage A — Discovery.** vision → personas → user-journeys → positioning (включает competitive landscape § 1) → ui-style-guide-base (включает brand voice § 2) + per-kind ui-style-guide-<kind>. По 2-3 вопроса per artifact, draft → operator-marker → ОК | Растёт ощущение «эта штука думает за меня правильно» |
 | 11 | Закрывает Stage A. **Сессия 1 done** (60-90 минут). | Усталость + удовлетворённость |
 | 12 | **Stage B — Constraints.** strategic-frame → threat-model → mvp-scope → legal (если applicable) → customer-interview-script → incident-runbook-draft (если runtime). Сессия 2 (60-90 минут). | — |
-| 13 | **Stage D — Process.** tech-stack (включает topology § 2 + stack § 1 + db_kind references § 3 + deployment § 4) → dev-environment → ai-linting-rules → subagent configs verified → maintenance-playbook (опц.) → development-protocol-overlay. **Stage C упразднён в v0.3.0** — topology fold в tech-stack. | Зависит от persona (см. friction ниже) |
-| 14 | **Stage E — Bootstrap.** Bootstrap-agent генерирует CI workflow, конфиги линтеров, security tools, pre-commit, branch protection rules — всё из catalogue + стек. Output: 1 checkpoint `bootstrap-verify.sh passed` (script внутри проверяет 12 granular items). | Радость: «я ничего не настраивал руками» |
+| 13 | **Stage C — Process.** tech-stack (включает topology § 2 + stack § 1 + db_kind references § 3 + deployment § 4) → dev-environment → ai-linting-rules → subagent configs verified → maintenance-playbook (опц.) → development-protocol-overlay. **Stage C упразднён в v0.3.0** — topology fold в tech-stack. | Зависит от persona (см. friction ниже) |
+| 14 | **Stage D — Bootstrap.** Bootstrap-agent генерирует CI workflow, конфиги линтеров, security tools, pre-commit, branch protection rules — всё из catalogue + стек. Output: 1 checkpoint `bootstrap-verify.sh passed` (script внутри проверяет 12 granular items). | Радость: «я ничего не настраивал руками» |
 | 15 | Initial CI run проходит (foundational docs готовы). | Validation |
-| 16 | **Stage F — Production.** Первая `<topic>_spec.md`. Бутстрап завершён. | Standard mode |
+| 16 | **Stage E — Production.** Первая `<topic>_spec.md`. Бутстрап завершён. | Standard mode |
 
 ### Friction points per persona
 
@@ -59,12 +59,12 @@
 
 ### Что должно быть выполнено к концу journey'я
 
-- Все Stage A/B/D artifacts заполнены в `doc/`, отмечены `[x]` в `.bootstrap-state.md` (или в `.ai-pm/doc/` для Mode 2/3 retrofit layout).
+- Все Stage A-C artifacts заполнены в `doc/`, отмечены `[x]` в `.bootstrap-state.md` (или в `.ai-pm/doc/` для Mode 2/3 retrofit layout).
 - `.ai-pm/tooling/` подключено по выбранному integration mode.
 - В существующем `ci.yml` добавлены `ai-pm:*` jobs.
 - Branch protection rules для `main` настроены.
-- `bootstrap-verify.sh passed` — Stage E checkpoint закрыт.
-- Repo готов к первой `<topic>_spec.md` в Stage F.
+- `bootstrap-verify.sh passed` — Stage D checkpoint закрыт.
+- Repo готов к первой `<topic>_spec.md` в Stage E.
 
 ---
 
@@ -123,7 +123,7 @@
 |---|---|---|
 | 1 | Identifying фичу для rework, говорит bootstrap-agent'у: «mode rework, topic <topic>» | Готовность к работе |
 | 2 | Agent читает существующие `<topic>_spec.md`, `_plan.md`, код, тесты. Даёт summary: «Текущее поведение — X. Текущий plan — Y. Что меняется?» | — |
-| 3 | Agent ведёт через Stage A/B/D read-pass (lazy, по impact flags), плюс: «Rework меняет persona / journey / threats / positioning?» | — |
+| 3 | Agent ведёт через Stage A-C read-pass (lazy, по impact flags), плюс: «Rework меняет persona / journey / threats / positioning?» | — |
 | 4 | Draft'ит `<topic>_spec.v<N>.md` с обязательной секцией **Diff**: «было / становится / мигрирует / deprecated / breaking yes-no» (enforce'ится через CI gate `rework-has-diff-section`) | — |
 | 5 | Operator ревьюит spec.v<N>, маркирует ОК | — |
 | 6 | Draft'ит `<topic>_plan.v<N>.md` с обязательной секцией **Migration**: backward compatibility / data migration / deprecation timeline / rollback strategy (CI gate `rework-has-migration-section`). **Опционально (v0.4.0+):** advisor invocation для scope-proportionality | — |
@@ -153,7 +153,7 @@
 
 ## Journey 4: Mode `bug-fix` — quick fix без full ceremony
 
-**Контекст входа.** Existing template-native проект. Bug в существующей фиче (или в shared module). Оператор хочет fix без full Stage F ceremony.
+**Контекст входа.** Existing template-native проект. Bug в существующей фиче (или в shared module). Оператор хочет fix без full Stage E ceremony.
 
 ### Шаги
 
@@ -231,11 +231,11 @@
 | 3 | Agent сканит репу: пытается определить стек по manifests | Любопытство |
 | 4 | **3-choice entry** (AskUserQuestion): «Foundation completeness? Quick auto / Manual staged / Skip» | Дилемма time-cost |
 | 5a | **Quick auto (5-10 min, recommended):** Tier 0 auto-extract scripts → stack / ui_kind / db_kind / topology sketch / ui-style-guide-base extract / database-design extract. `foundation_completeness: minimal`, `adoption_path: legacy-quick`. Trade-off: «первая фича каждого нового domain'а потребует Tier 1 mini-research» | Облегчение |
-| 5b | **Manual staged (часы-дни):** AskUserQuestion multi-select какие Stage A/B/D artifacts адаптировать сейчас. AI extracts baseline + ведёт через formal stage process. `foundation_completeness: partial` или `complete`, `adoption_path: legacy-staged` | Investment |
-| 5c | **Skip adoption (sub-minute):** только trust_profile + stack auto-detected + Stage E hooks. `foundation_completeness: none`, `adoption_path: legacy-skip`. **Hard floors** (security path) enforce'ятся mandatory даже в legacy-skip | Pragmatism |
-| 6 | Stage E (упрощённый): не генерирует новый CI from scratch, а **дополняет** существующий `ci.yml` jobs'ами `ai-pm:*`. Линтеры которые user уже имеет — отмечает «covered, skip». Добавляет только missing категории | Облегчение: incremental adoption |
+| 5b | **Manual staged (часы-дни):** AskUserQuestion multi-select какие Stage A-C artifacts адаптировать сейчас. AI extracts baseline + ведёт через formal stage process. `foundation_completeness: partial` или `complete`, `adoption_path: legacy-staged` | Investment |
+| 5c | **Skip adoption (sub-minute):** только trust_profile + stack auto-detected + Stage D hooks. `foundation_completeness: none`, `adoption_path: legacy-skip`. **Hard floors** (security path) enforce'ятся mandatory даже в legacy-skip | Pragmatism |
+| 6 | Stage D (упрощённый): не генерирует новый CI from scratch, а **дополняет** существующий `ci.yml` jobs'ами `ai-pm:*`. Линтеры которые user уже имеет — отмечает «covered, skip». Добавляет только missing категории | Облегчение: incremental adoption |
 | 7 | **`skip_eligibility` framework (v0.4.0+) activated.** Per-artifact decisions: разрешено skip'ать optional / conditional артефакты при detected capabilities. `skip_decisions[]` в state. Hard floors (PII / payments / crypto) → mandatory без opt-out | — |
-| 8 | Stage F: первая `<topic>_spec.md` в feature/<topic> branch. Для `foundation_completeness: minimal/none` — spec включает Tier 1 mini sections (Mini-persona / Journey context / Mini-threat-list) inline | Standard workflow |
+| 8 | Stage E: первая `<topic>_spec.md` в feature/<topic> branch. Для `foundation_completeness: minimal/none` — spec включает Tier 1 mini sections (Mini-persona / Journey context / Mini-threat-list) inline | Standard workflow |
 | 9 | После 2-3 фич: возможно Tier 2 promotion routine — consolidate Mini-* sections в project-wide foundational docs (`promote-foundation.py`) | Растёт ощущение control'а |
 
 ### Friction points per persona
@@ -258,9 +258,9 @@
 
 ### Success metrics
 
-- Quick auto: ≤ 1 сессия (5-10 min до Stage F ready)
+- Quick auto: ≤ 1 сессия (5-10 min до Stage E ready)
 - Manual staged: ≤ 2-4 сессии (зависит от scope)
-- Skip adoption: ≤ 5 минут (sub-minute до Stage F с hard floors only)
+- Skip adoption: ≤ 5 минут (sub-minute до Stage E с hard floors only)
 
 ---
 
@@ -311,7 +311,7 @@
 
 - **Каждая фича template'а** проходит через эти 7 journeys как acceptance tests. Если фича делает journey хуже (больше шагов, больше friction, больше времени) — она режется или переделывается.
 - **Главные метрики успеха v0.4.0:**
-  - `new-product` mode: до Stage F за ≤ 4 рабочих сессий
+  - `new-product` mode: до Stage E за ≤ 4 рабочих сессий
   - `feature` mode: первая фича в template-native проекте за ≤ 2 сессии
   - `rework` mode: rework spec + plan + acceptance за ≤ 3 сессии
   - `bug-fix` mode: ≤ 1 сессия

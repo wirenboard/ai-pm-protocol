@@ -1,5 +1,5 @@
 {
-  "_comment": "Skeleton для .claude/settings.json в product repo. Bootstrap-agent копирует и адаптирует на Stage E.",
+  "_comment": "Skeleton для .claude/settings.json в product repo. Bootstrap-agent копирует и адаптирует на Stage D.",
   "_what_this_does": [
     "Layer 2 enforcement из 5-layer стратегии (см. README template'а).",
     "PreToolUse hooks блокируют actions, нарушающие protocol.",
@@ -8,7 +8,7 @@
   ],
   "_notes_for_paths": [
     "Скрипты живут в product репозитории (scripts/ или эквивалент), НЕ в submodule .ai-pm/tooling/.",
-    "Bootstrap-agent на Stage E читает .tmpl из submodule, адаптирует и создаёт реальные scripts/*.sh."
+    "Bootstrap-agent на Stage D читает .tmpl из submodule, адаптирует и создаёт реальные scripts/*.sh."
   ],
   "hooks": {
     "PreToolUse": [
@@ -54,6 +54,6 @@
     "Если какой-то hook fail'ит на чём-то, что должно быть legit — НЕ отключай hook. Исправь причину, либо обсуди adjustment с оператором.",
     "Hook'и парсят tool_input.file_path / tool_input.command из stdin JSON (Claude Code hook API).",
     "exit 0 = allow, exit 2 = block с передачей stderr обратно AI.",
-    "check-pr-has-review.sh: блокирует gh pr create и gh pr merge без локального review-trail (см. AP-16). Offline-first design. Поддерживаемые формы trail: committed doc/features/<topic>_review.md (Stage F), .ai-pm/.reviews/<branch>.json (chore/docs/template-extension). Skip-marker [skip-review] на отдельной строке в HEAD commit body — explicit override для trivial chore'ов."
+    "check-pr-has-review.sh: блокирует gh pr create и gh pr merge без локального review-trail (см. AP-16). Offline-first design. Поддерживаемые формы trail: committed doc/features/<topic>_review.md (Stage E), .ai-pm/.reviews/<branch>.json (chore/docs/template-extension). Skip-marker [skip-review] на отдельной строке в HEAD commit body — explicit override для trivial chore'ов."
   ]
 }

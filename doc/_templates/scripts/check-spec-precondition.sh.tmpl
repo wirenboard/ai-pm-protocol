@@ -3,7 +3,7 @@
 # Layer 2 enforcement: blocks Write/Edit в code paths без соответствующего spec'а.
 # Используется как PreToolUse hook в .claude/settings.json.
 #
-# Bootstrap-agent копирует этот skeleton на Stage E и адаптирует под layout проекта.
+# Bootstrap-agent копирует этот skeleton на Stage D и адаптирует под layout проекта.
 #
 # Input через env vars (Claude Code hook interface):
 #   CLAUDE_TOOL_NAME       — "Write" или "Edit"
@@ -19,7 +19,7 @@ if [ -z "$FILE" ]; then
 fi
 
 # Code paths, требующие spec'а перед изменением.
-# Адаптируется под стек проекта на Stage E.
+# Адаптируется под стек проекта на Stage D.
 # Default: apps/, packages/, src/, lib/.
 CODE_PATTERNS=(
   "^apps/"

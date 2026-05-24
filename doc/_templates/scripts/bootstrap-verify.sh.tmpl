@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/bootstrap-verify.sh
-# Stage E health-check (v0.3.0+). Replaces 12 granular checkboxes в bootstrap-state.md
+# Stage D health-check (v0.3.0+). Replaces 12 granular checkboxes в bootstrap-state.md
 # одной строкой "bootstrap-verify.sh passed" + script проверяет all 12 пунктов.
 #
 # Usage:
@@ -15,7 +15,7 @@
 # - Validation (this script) — granular per-item checks
 # - Tracking (bootstrap-state.md) — 1 coarse checkpoint
 #
-# См. AP-2 (no premature Stage E) — script запускается ТОЛЬКО после Stage A-D closed.
+# См. AP-2 (no premature Stage D) — script запускается ТОЛЬКО после Stage A-C closed.
 
 set -e
 
@@ -78,7 +78,7 @@ check_claude_md() {
   if [ -f "CLAUDE.md" ]; then
     log_ok "CLAUDE.md в product root"
   else
-    log_fail "CLAUDE.md в product root — file missing (briefing для Claude sessions, Stage E required)"
+    log_fail "CLAUDE.md в product root — file missing (briefing для Claude sessions, Stage D required)"
   fi
 }
 
@@ -186,7 +186,7 @@ check_make_targets() {
 }
 
 # === Main ===
-echo "Stage E bootstrap verification (v0.3.0+)"
+echo "Stage D bootstrap verification (v0.3.0+)"
 echo "========================================"
 
 check_ci_workflow
@@ -212,11 +212,11 @@ if [ "$FAILED" -gt 0 ]; then
     echo "  - $item"
   done
   echo ""
-  echo "Stage E не closed. Fix failed items и re-run."
+  echo "Stage D не closed. Fix failed items и re-run."
   exit 1
 fi
 
 echo ""
-echo "Stage E verified — все granular пункты passed. Update .bootstrap-state.md:"
+echo "Stage D verified — все granular пункты passed. Update .bootstrap-state.md:"
 echo "  - [x] bootstrap-verify.sh passed ($(date +%Y-%m-%d))"
 exit 0

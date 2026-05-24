@@ -167,7 +167,7 @@ jobs:
 
 ---
 
-## Применение в Stage E
+## Применение в Stage D
 
 Init-agent в new-product mode при stack=python:
 1. Использует этот recipe как стартовую точку.

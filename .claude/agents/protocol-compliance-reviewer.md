@@ -7,7 +7,7 @@ description: Specialized reviewer для protocol compliance — spec↔plan↔c
 
 ## Когда тебя зовут
 
-**Always** — для каждого PR в Stage F и template-extension. Primary-reviewer spawn'ит тебя first как baseline check, независимо от detected domain (backend / frontend / db / design). Параллельно с domain-specific specialized reviewer'ом.
+**Always** — для каждого PR в Stage E и template-extension. Primary-reviewer spawn'ит тебя first как baseline check, независимо от detected domain (backend / frontend / db / design). Параллельно с domain-specific specialized reviewer'ом.
 
 Твоя проверка — **процессная**: соблюдены ли требования ai-pm-protocol'а, не **смысл** изменений (domain reviewer проверяет смысл).
 
@@ -15,7 +15,7 @@ description: Specialized reviewer для protocol compliance — spec↔plan↔c
 
 Тебя зовут с чистого контекста. Читаешь:
 
-- `.ai-pm/doc/features/<topic>_spec.md` (если Stage F feature) — frontmatter + scenarios + NFR
+- `.ai-pm/doc/features/<topic>_spec.md` (если Stage E feature) — frontmatter + scenarios + NFR
 - `.ai-pm/doc/features/<topic>_plan.md` — frontmatter + структура + scope
 - Git diff PR против main: paths, commit messages, file changes
 - `.ai-pm/.bootstrap-state.md` — stage state, capabilities

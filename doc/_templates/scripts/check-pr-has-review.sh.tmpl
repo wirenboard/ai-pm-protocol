@@ -11,7 +11,7 @@
 #   exit 2 = block; stderr передаётся AI
 #
 # Дизайн: **offline-first**. Review всегда происходит локально через reviewer-agent
-# **до** создания PR. Trail хранится в репозитории (committed _review.md для Stage F)
+# **до** создания PR. Trail хранится в репозитории (committed _review.md для Stage E)
 # или локально (.ai-pm/.reviews/<branch>.json для chore / docs / template-extension).
 # Hook не только проверяет наличие trail'а, но и парсит verdict — `request-changes`
 # блокирует `gh pr create`, чтобы убрать антипаттерн «открыть PR с unresolved
@@ -138,7 +138,7 @@ block_on_verdict() {
   esac
 }
 
-# === Check 2: Committed _review.md для Stage F фичи ===
+# === Check 2: Committed _review.md для Stage E фичи ===
 if [ -n "$REPO_ROOT" ] && [ -n "$CURRENT_BRANCH" ]; then
   case "$CURRENT_BRANCH" in
     feature/*)
@@ -173,7 +173,7 @@ echo "" >&2
 echo "Review всегда происходит локально через reviewer-agent ДО создания PR." >&2
 echo "Перед '$CMD' нужно одно из:" >&2
 echo "  (а) Запустить reviewer-agent (см. .claude/agents/reviewer.md), который сохранит:" >&2
-echo "      • Для Stage F (branch feature/<topic>): committed 'doc/features/<topic>_review.md'" >&2
+echo "      • Для Stage E (branch feature/<topic>): committed 'doc/features/<topic>_review.md'" >&2
 echo "        с '**Verdict:** approve' или 'approve-with-comments' в первых 50 строках" >&2
 echo "      • Для chore / docs / template-extension: '.ai-pm/.reviews/<branch>.json'" >&2
 echo "        с полем 'verdict' = approve | approve-with-comments" >&2

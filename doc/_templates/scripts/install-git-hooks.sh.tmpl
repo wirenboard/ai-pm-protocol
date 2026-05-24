@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/install-git-hooks.sh
 # Устанавливает git hooks для local enforcement (Layer 4).
-# Bootstrap-agent запускает на Stage E.
+# Bootstrap-agent запускает на Stage D.
 
 set -e
 
@@ -35,7 +35,7 @@ if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
   exit 1
 fi
 
-# 2. Запустить linters (stack-specific, генерируется на Stage E под выбранный стек)
+# 2. Запустить linters (stack-specific, генерируется на Stage D под выбранный стек)
 # Адаптируется bootstrap-agent'ом. Default — попытка запустить generic commands.
 if [ -f "package.json" ] && command -v pnpm >/dev/null; then
   pnpm run lint:fix 2>/dev/null || true

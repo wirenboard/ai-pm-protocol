@@ -11,10 +11,10 @@ Read-only subagent — **никогда не пишет файлы**, тольк
 
 - **Bootstrap entry** — какие артефакты нужны based on detected capabilities; hard floor (PII / payments / crypto / auth) → mandatory recommendation
 - **Preset change** — оператор хочет switch advisor_preset → challenge через evidence
-- **Stage F Step 1 (spec draft)** — spec scenarios покрывают user journey? Acceptance criteria measurable? Security invariants для security path?
-- **Stage F Step 2 (plan draft)** — proposed архитектура proportionate к spec? Не over-engineered? Test plan covers all scenarios?
-- **Stage F Step 4 (coding diff)** — spec→test mapping (gap 1)? Test fudging (gap 2)? Regression coverage для shared modules (gap 3)? ADR extraction (AP-24)?
-- **Stage F Step 7 (review)** — reviewer findings address all 6 axes (понятность / поддерживаемость / технические качество / UI / UX / learning)?
+- **Stage E Step 1 (spec draft)** — spec scenarios покрывают user journey? Acceptance criteria measurable? Security invariants для security path?
+- **Stage E Step 2 (plan draft)** — proposed архитектура proportionate к spec? Не over-engineered? Test plan covers all scenarios?
+- **Stage E Step 4 (coding diff)** — spec→test mapping (gap 1)? Test fudging (gap 2)? Regression coverage для shared modules (gap 3)? ADR extraction (AP-24)?
+- **Stage E Step 7 (review)** — reviewer findings address all 6 axes (понятность / поддерживаемость / технические качество / UI / UX / learning)?
 
 ## Архитектура: hybrid floor + smart layer
 
@@ -66,7 +66,7 @@ Detect project capabilities through scan. Apply skip_eligibility rules from each
 
 **Operator action:** confirm/override → updates `skip_decisions: []` в state.
 
-### Stage F Step 1 (spec draft)
+### Stage E Step 1 (spec draft)
 
 Read spec draft. Check:
 - **UX axis:** spec scenarios покрывают user journey? Gherkin acceptance criteria measurable?
@@ -76,7 +76,7 @@ Read spec draft. Check:
 
 **Output (если issues):** suggestions с pointer'ами на конкретные missing sections / vague scenarios.
 
-### Stage F Step 2 (plan draft)
+### Stage E Step 2 (plan draft)
 
 Read plan draft. Check:
 - **Поддерживаемость axis:** proposed architecture proportionate к spec? Heuristic — если spec describes single-screen UI flow, не должно быть «microservices с message queue»
@@ -86,7 +86,7 @@ Read plan draft. Check:
 
 **Output:** scope-proportionality findings, missing ADRs, missing tests.
 
-### Stage F Step 4 (coding diff)
+### Stage E Step 4 (coding diff)
 
 Read diff. Check:
 - **Технические axis (gap 1):** spec→test mapping — каждый Gherkin Scenario имеет matching test (forward reference на `check-spec-discipline.sh#spec-test-mapping`)
@@ -97,7 +97,7 @@ Read diff. Check:
 
 **Output:** specific test missing / weakening risks / ADR extraction suggestions.
 
-### Stage F Step 7 (review)
+### Stage E Step 7 (review)
 
 Cross-check reviewer findings address все 6 axes (понятность / поддерживаемость / технические качество / UI / UX / learning). Если reviewer focused только на одной axis — flag «multi-axis coverage incomplete».
 
@@ -109,12 +109,12 @@ Cross-check reviewer findings address все 6 axes (понятность / по
 
 - **Bounded scan:** читает sample, не весь codebase. Default: entry points (`main.{rs,go,py,ts}`, `index.{js,ts}`, `app/`, `cmd/`) + package manifests (`package.json` / `pyproject.toml` / `Cargo.toml` / `go.mod`) + 5-10 файлов по эвристике важности (LOC weight, last modified).
 - **Cached per session:** на повторный entry в течение session не пере-сканирует, использует cache. Cache invalidates на `git checkout` или explicit operator request.
-- **Trigger-based, не always-on:** запускается на ключевых решениях (bootstrap entry / preset change / Stage F Step 1/2/4/7), не на каждый message.
+- **Trigger-based, не always-on:** запускается на ключевых решениях (bootstrap entry / preset change / Stage E Step 1/2/4/7), не на каждый message.
 - **Hard token budget:** < 10k tokens на одну advisory session. Если scope превышает — degraded mode с warning «полный анализ требует X, делаю partial scan: <list>».
 
 ## PoC accuracy gate ≥80% per axis (mandatory before advisor становится mandatory)
 
-Перед тем как advisor станет mandatory в Stage F triggers — required validation:
+Перед тем как advisor станет mandatory в Stage E triggers — required validation:
 
 1. **Test set:** 10-15 синтетических проектов разной size/domain (web app / CLI tool / embedded / multi-stack / single-user / multi-tenant / compliance-sensitive / weekend-prototype). См. `meta/experiments/<date>_advisor-accuracy-protocol.md` (создаётся перед PoC start — см. concerning-2 plan review).
 2. **Labelling rubric:** для каждого test project — known-correct expected output (skip / recommended / mandatory per artifact). Pre-labelled operator-judged.
@@ -130,7 +130,7 @@ Operator может skip артефакт, потом 90 дней назад →
 **Mechanism:**
 
 - `skip_decisions[].next_reprompt` field — default 90 days from `declared_at`
-- На Stage F entry — check expired re-prompts: если `next_reprompt < today` для active skip → trigger advisor «время re-validate skip <artifact>: ситуация изменилась?»
+- На Stage E entry — check expired re-prompts: если `next_reprompt < today` для active skip → trigger advisor «время re-validate skip <artifact>: ситуация изменилась?»
 - Severity escalates: 1st re-prompt — friendly suggestion; 2nd (180d) — warning; 3rd (270d) — finding в review trail
 - Operator может extend `next_reprompt` после re-validation («всё ok, продолжаем skip, next check 90d again»)
 

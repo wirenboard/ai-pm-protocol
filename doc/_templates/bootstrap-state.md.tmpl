@@ -14,7 +14,7 @@ Pre-filled state означает что оператор bypass'нул question
 -->
 ---
 # Mode — какой workflow используется сейчас. См. development-protocol.md § 3.
-# new-product — greenfield bootstrap (Stage A-E formal)
+# new-product — greenfield bootstrap (Stage A-D formal)
 # feature — новая фича (любое состояние проекта)
 # rework — modify existing feature
 # bug-fix — lite variant of feature
@@ -34,18 +34,18 @@ template_version_applied: v0.X.Y
 
 # Foundation state — orthogonal к mode. Определяет глубину AP-14 read-pass
 # requirements. См. design doc в meta/design/2026-05-24_mode-matrix-and-adoption.md.
-# complete — full Stage A-D filled (greenfield closed Stage E или legacy-staged completed)
-# partial — некоторые Stage A-D artifacts есть, не все
+# complete — full Stage A-C filled (greenfield closed Stage D или legacy-staged completed)
+# partial — некоторые Stage A-C artifacts есть, не все
 # minimal — только Tier 0 auto-extract artifacts (legacy-quick adoption)
-# none — только trust_profile + stack + Stage E hooks (legacy-skip adoption)
+# none — только trust_profile + stack + Stage D hooks (legacy-skip adoption)
 foundation_completeness: complete | partial | minimal | none
 
 # Adoption path — как проект попал в текущее состояние foundation.
-# greenfield — Stage A-E formal с нуля (через new-product mode)
+# greenfield — Stage A-D formal с нуля (через new-product mode)
 # legacy-quick — Tier 0 auto-extract при legacy adoption (5-10 min)
-# legacy-staged — operator multi-selected Stage A-E artifacts (часы-дни)
-# legacy-skip — только minimum + Stage E hooks (sub-minute)
-# null — для greenfield projects пока Stage E не closed
+# legacy-staged — operator multi-selected Stage A-D artifacts (часы-дни)
+# legacy-skip — только minimum + Stage D hooks (sub-minute)
+# null — для greenfield projects пока Stage D не closed
 adoption_path: greenfield | legacy-quick | legacy-staged | legacy-skip | null
 
 # Adoption overrides — declared trade-offs (Tier 3). Parallel к AP-16 review-override.
@@ -82,7 +82,7 @@ project_capabilities:
   # Multi-value для composite stacks (e.g. "embedded, external" для mobile с
   # local cache + central API). `none` для stateless services / pure compute.
   # Определяет какие database-design-*.md файлы пишет bootstrap-agent.
-  # Заполняется на Stage D вместе со stack choice. См. AP-18.
+  # Заполняется на Stage C вместе со stack choice. См. AP-18.
   - db_kind: tbd | none | <comma-separated list>
 
 # === v0.4.0 additions: discipline-advisor + conditional skip framework ===
@@ -158,7 +158,7 @@ advisor_log: []
 - [ ] topology (YYYY-MM-DD)
 - [ ] foundational ADRs (YYYY-MM-DD, или «none needed yet»)
 
-## Stage D — Process
+## Stage C — Process
 
 - [ ] stack chosen (YYYY-MM-DD)
 - [ ] db_kind chosen + database-design-base.md + database-design-<kind>.md per каждому db_kind (YYYY-MM-DD) — **new-product mode с persistent data:** обязательно (вместе со stack). Multi-value (например `embedded, external` для mobile с local cache + central API). `none` для stateless services. **feature/rework modes:** опираемся на existing schema/migrations practices; extract в отдельный `docs/database-design-extract` PR если formal guide отсутствует. См. AP-18.
@@ -169,15 +169,15 @@ advisor_log: []
 - [ ] ai-linting-rules.md (YYYY-MM-DD)
 - [ ] subagent configs verified (YYYY-MM-DD)
 
-## Stage E — Bootstrap
+## Stage D — Bootstrap
 
 **v0.3.0:** 12 granular checkboxes collapsed в **1 checkpoint** + `bootstrap-verify.sh` health-check (separation of validation от tracking — script проверяет все 12 пунктов, state остаётся coarse).
 
 - [ ] `bootstrap-verify.sh passed` (YYYY-MM-DD) — все granular пункты (CI / linters / security tools / CLAUDE.md / .claude/settings.json / .gitignore / auto-extract scripts / foundation maintenance scripts / git hooks / branch protection / developer ergonomics scaffold / `make setup && make test`) verified script'ом. На failed verify — script явно показывает какие именно пункты не прошли.
 
-Стрипт находится в product `scripts/bootstrap-verify.sh` (генерируется из `_templates/scripts/bootstrap-verify.sh.tmpl` на Stage E init). Запускается из `make setup` + в CI.
+Стрипт находится в product `scripts/bootstrap-verify.sh` (генерируется из `_templates/scripts/bootstrap-verify.sh.tmpl` на Stage D init). Запускается из `make setup` + в CI.
 
-## Stage F — Production
+## Stage E — Production
 
 (не tracked в state — каждая feature в `.ai-pm/doc/features/`)
 
