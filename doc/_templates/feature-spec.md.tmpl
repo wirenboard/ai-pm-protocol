@@ -109,14 +109,14 @@ UX scan тратит время оператора и AI. Дисциплина: 
 
 | Mode | Условие | Обязательность |
 |---|---|---|
-| **Mode 1** (new-product) | UX-significant фича **И** affects ≥ 10% expected user flow (heuristic: фича уровня onboarding, signup, main interaction, payments — а не tweak existing screen) **И** Stage A `competitive-analysis.md` был ≥ 60 дней назад | Обязателен |
-| **Mode 1** (new-product) | UX-significant фича **И** Stage A `competitive-analysis.md` свежий (< 60 дней) **И** competitors landscape покрывает этот тип фичи (можно reference'ить Stage A анализ) | Опционально (можно reference Stage A) |
-| **Mode 2** (feature) | UX-significant фича **И** добавляет UX pattern, не покрытый существующим `competitive-analysis.md` | Обязателен |
-| **Mode 2** (feature) | UX-significant фича **И** pattern уже знаком (есть в Stage A или previous spec'ах) | Опционально (можно reference) |
-| **Mode 3** (rework) | UI / UX рефакторится по существу | Обязателен (мир изменился с прошлого design'а) |
+| **new-product** | UX-significant фича **И** affects ≥ 10% expected user flow (heuristic: фича уровня onboarding, signup, main interaction, payments — а не tweak existing screen) **И** Stage A `competitive-analysis.md` был ≥ 60 дней назад | Обязателен |
+| **new-product** | UX-significant фича **И** Stage A `competitive-analysis.md` свежий (< 60 дней) **И** competitors landscape покрывает этот тип фичи (можно reference'ить Stage A анализ) | Опционально (можно reference Stage A) |
+| **feature** | UX-significant фича **И** добавляет UX pattern, не покрытый существующим `competitive-analysis.md` | Обязателен |
+| **feature** | UX-significant фича **И** pattern уже знаком (есть в Stage A или previous spec'ах) | Опционально (можно reference) |
+| **rework** | UI / UX рефакторится по существу | Обязателен (мир изменился с прошлого design'а) |
 | **bug-fix** | Любой scope | Не нужен |
 
-**Gate 3 — relevant аналог существует.** Если фича настолько уникальна, что нет relevant competitors (редко в Mode 1, ещё реже в Mode 2), — scan не имеет смысла. Зафиксируйте «No comparable feature found at scan time» с 2-3 проверенными источниками поиска.
+**Gate 3 — relevant аналог существует.** Если фича настолько уникальна, что нет relevant competitors (редко в new-product mode, ещё реже в feature mode), — scan не имеет смысла. Зафиксируйте «No comparable feature found at scan time» с 2-3 проверенными источниками поиска.
 
 ### Когда заведомо пропускаем
 

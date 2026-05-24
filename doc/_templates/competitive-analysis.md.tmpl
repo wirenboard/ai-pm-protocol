@@ -1,24 +1,24 @@
 # Competitive Analysis
 
-**Stage A artifact (для Mode 1 / new-product).** Полный landscape analysis при создании продукта. Цели:
+**Stage A artifact (для new-product mode / new-product).** Полный landscape analysis при создании продукта. Цели:
 
 1. **Осмотреть landscape** — кто ещё в нише, какие сегменты, какие фреймы.
 2. **Понять сильные и слабые места конкурентов** — где они угрозы, где у них дыры.
 3. **Правильно спозиционировать себя** — выводы → `positioning.md` тезисы.
 4. **Разведать ёмкость рынка** — обороты, exit'ы, funding (понять есть ли деньги в нише).
 
-**Этот артефакт — для всего продукта целиком.** Делается **один раз при bootstrap'е продукта** (Mode 1) и **пересматривается quarterly** (см. § Review cadence в конце).
+**Этот артефакт — для всего продукта целиком.** Делается **один раз при bootstrap'е продукта** (new-product mode) и **пересматривается quarterly** (см. § Review cadence в конце).
 
-### Два слоя анализа в Mode 1 (new-product)
+### Два слоя анализа в new-product mode
 
 Полный конкурентный анализ для нового продукта = **два слоя**, не один:
 
 1. **Этот артефакт** (`doc/competitive-analysis.md`, Stage A) — **landscape**: финансы, frame'ы, позиционирование, ёмкость рынка. Делается один раз при создании продукта.
 2. **Competitive UX scan на Stage F per-feature** (секция «Competitive UX scan» в `<topic>_spec.md`) — **per-feature**: как другие реализовали ЭТУ фичу, что удобно, что неудобно. Делается **для каждой значимой фичи** при разработке.
 
-Оба слоя нужны для Mode 1. Landscape **без** per-feature scan = слабый UX. Per-feature scan **без** landscape = слабое позиционирование.
+Оба слоя нужны для new-product mode. Landscape **без** per-feature scan = слабый UX. Per-feature scan **без** landscape = слабое позиционирование.
 
-### Mode 2 (feature) и Mode 3 (rework)
+### feature mode и rework mode
 
 Для существующих продуктов **landscape слой не дублируется** — используется существующий `doc/competitive-analysis.md` (обновляется только если landscape сдвинулся). **Per-feature UX scan делается всегда** при создании / редизайне фичи. Цель здесь — узкая: «как другие реализовали similar feature, что удобно / что неудобно».
 

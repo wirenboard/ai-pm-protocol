@@ -143,7 +143,7 @@ jobs:
 
 ## Применение в Stage E
 
-Init-agent в Mode 1 при stack=go:
+Init-agent в new-product mode при stack=go:
 1. Использует этот recipe.
 2. Создаёт `.golangci.yml` с включёнными linters из mapping.
 3. Создаёт `gosec.yaml` если нужны custom configs.

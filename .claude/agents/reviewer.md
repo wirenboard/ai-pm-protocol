@@ -269,7 +269,7 @@ Hook **парсит verdict** из trail и блокирует `gh pr create` / 
 
 Override mechanic (AP-16): `[review-override: <reason>]` на отдельной строке HEAD commit body. Reason **формулирует оператор**, не AI.
 
-## Mode 3 (rework) специфика
+## rework mode специфика
 
 Дополнительно проверяешь (cross-cutting, не domain):
 - Diff-секция spec.v<N> исчерпывающая
@@ -295,7 +295,7 @@ Domain-specific aspects rework'а — в соответствующих speciali
 2. Решение **оператора**, не твоё. До явного ответа AI не продолжает review v{N+1} цикл.
 3. См. AP-21 (anti-patterns.md) — exit condition mechanic против бесконечного rework'а.
 
-Это защита от audit finding [H-2]: без exit condition Mode 3 может стать бесконечным циклом spec.v2 → v3 → v4 → … без сходящегося результата.
+Это защита от audit finding [H-2]: без exit condition rework mode может стать бесконечным циклом spec.v2 → v3 → v4 → … без сходящегося результата.
 
 ## Что ты НЕ делаешь
 

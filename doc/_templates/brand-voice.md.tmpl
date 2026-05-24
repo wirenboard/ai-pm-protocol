@@ -1,6 +1,6 @@
 # Brand Voice
 
-**Stage A artifact (для Mode 1 / new-product).** Как мы разговариваем с пользователем. Опирается на `positioning.md` (что мы из себя представляем) и `personas.md` (для понимания audience contexts, **не** для разных tone'ов).
+**Stage A artifact (для new-product mode / new-product).** Как мы разговариваем с пользователем. Опирается на `positioning.md` (что мы из себя представляем) и `personas.md` (для понимания audience contexts, **не** для разных tone'ов).
 
 ## Архитектурное правило по умолчанию: один tone, дифференциация через landing pages + presets
 
@@ -23,11 +23,11 @@
 
 | Mode | Что делаем |
 |---|---|
-| **Mode 1 (new-product)** | Полный артефакт (этот шаблон). Brand voice — half от того, что мы продаём; нужен формальный документ с tone, регистрами, vocabulary, copy примерами. |
-| **Mode 2/3 + существующий `brand-voice.md`** | Используем как есть, ссылаемся в feature spec'ах. Обновления — отдельный PR `docs/brand-voice-revisit`. |
-| **Mode 2/3 + brand-voice.md ОТСУТСТВУЕТ** (retrofit на existing project без brand voice) | AI **извлекает упрощённый brand voice из existing исходного кода / UI copy / marketing страниц** проекта. Создаёт **lightweight** `brand-voice.md` (3-5 абзацев: observed tone, 5-10 vocabulary pairs, 2-3 copy примера) и помечает `inferred: true` в frontmatter. Этого достаточно для consistency в новой фиче; full brand voice — отдельный PR позже. |
+| **new-product mode** | Полный артефакт (этот шаблон). Brand voice — half от того, что мы продаём; нужен формальный документ с tone, регистрами, vocabulary, copy примерами. |
+| **feature/rework modes + существующий `brand-voice.md`** | Используем как есть, ссылаемся в feature spec'ах. Обновления — отдельный PR `docs/brand-voice-revisit`. |
+| **feature/rework modes + brand-voice.md ОТСУТСТВУЕТ** (retrofit на existing project без brand voice) | AI **извлекает упрощённый brand voice из existing исходного кода / UI copy / marketing страниц** проекта. Создаёт **lightweight** `brand-voice.md` (3-5 абзацев: observed tone, 5-10 vocabulary pairs, 2-3 copy примера) и помечает `inferred: true` в frontmatter. Этого достаточно для consistency в новой фиче; full brand voice — отдельный PR позже. |
 
-**Inference recipe для Mode 2/3 без brand voice:**
+**Inference recipe для feature/rework modes без brand voice:**
 
 1. **Scan existing strings** — UI labels, error messages, button text, marketing landing copy, README, social media bios.
 2. **Identify patterns:**

@@ -169,7 +169,7 @@ jobs:
 
 ## Применение в Stage E
 
-Init-agent в Mode 1 при stack=python:
+Init-agent в new-product mode при stack=python:
 1. Использует этот recipe как стартовую точку.
 2. Создаёт `.ai-pm/doc/ai-linting-rules.md` со ссылкой + project-deltas.
 3. Скаффолдит конфиги: `pyproject.toml` с `[tool.ruff]` + `[tool.mypy]` блоками, `bandit.yaml`, semgrep rules, pre-commit.

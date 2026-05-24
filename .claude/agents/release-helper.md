@@ -138,7 +138,7 @@ Release-helper в template repo flag'ит в CHANGELOG body: «MAJOR / MINOR / P
 - **Spec sections additions:** новые секции (e.g., «v0.3 added optional Mini-persona section для legacy adoption foundation»)
 - **Foundational artifact restructure:** splits / merges existing files (e.g., «v0.1 split single `ui-style-guide.md` на base + per-kind»)
 - **Mode/state field renames:** schema rename impacts (e.g., «v0.2 renamed `mode: new-feature` → `mode: feature`»)
-- **AP discipline introduction:** new AP с enforcement (e.g., «v0.2 introduced AP-21 — Mode 3 rework spec.v3+ requires AskUserQuestion exit confirmation»)
+- **AP discipline introduction:** new AP с enforcement (e.g., «v0.2 introduced AP-21 — rework mode spec.v3+ requires AskUserQuestion exit confirmation»)
 
 Format в CHANGELOG body:
 

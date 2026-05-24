@@ -4,7 +4,7 @@
 
 Проект использует **ai-pm-protocol**. Полная документация — `{{doc_root}}/development-protocol.md` (project overlay) + `.ai-pm/tooling/development-protocol.md` (generic protocol).
 
-**Конвенция paths:** `{{doc_root}}` в этом briefing'е — placeholder, который bootstrap-agent заменил на `doc` (Mode 1 / greenfield) или `.ai-pm/doc` (Mode 2/3 с existing top-level `doc/`). Какое именно — см. `.ai-pm/.bootstrap-state.md` frontmatter `doc_root:`.
+**Конвенция paths:** `{{doc_root}}` в этом briefing'е — placeholder, который bootstrap-agent заменил на `doc` (new-product mode / greenfield) или `.ai-pm/doc` (feature/rework modes с existing top-level `doc/`). Какое именно — см. `.ai-pm/.bootstrap-state.md` frontmatter `doc_root:`.
 
 ---
 
@@ -12,7 +12,7 @@
 
 **Шаг 1: Прочитай `.ai-pm/.bootstrap-state.md`.**
 
-- **Если файла нет** → invoke `project-bootstrap` subagent. Мы в самом начале (new-product Mode 1).
+- **Если файла нет** → invoke `project-bootstrap` subagent. Мы в самом начале (new-product new-product mode).
 - **Если Stage A-E не closed** (не все checkbox'ы) → invoke `project-bootstrap` subagent, скажи оператору «Bootstrap не завершён, продолжаем со stage X». Не работай над фичами.
 - **Если Stage A-E closed** → продолжай шаг 2.
 
@@ -38,7 +38,7 @@
 |---|---|
 | «хочу добавить фичу X» / «новая фича» / «add feature» | Step 1: предложить draft `<topic>_spec.md` (сам draft'ишь или оператор пишет) |
 | «исправь баг X» / «fix bug» / «починим» | Bug-fix variant — короткий spec с `lite-mode: bugfix`, потом обычный workflow Step 2-7 |
-| «переделать X» / «rework» / «переписать фичу X» | Mode 3 rework — invoke `project-bootstrap` для rework routing |
+| «переделать X» / «rework» / «переписать фичу X» | rework mode — invoke `project-bootstrap` для rework routing |
 | «продолжай работу над X» / «resume» | Найди state фичи X, invoke соответствующий step agent |
 | «выпустить релиз» / «release» / «релиз» | invoke `release-helper` |
 | «ревью PR» / «проверь код» / «review» | invoke `reviewer` для текущего feature-branch |
@@ -100,7 +100,7 @@
 - Routing: lite-mode spec с `lite-mode: bugfix` в frontmatter → planner лёгкий → coder с failing test first → reviewer (terser).
 - НЕ lite-mode если bug в security path — full ceremony.
 
-### Scenario: Rework existing feature (Mode 3)
+### Scenario: Rework existing feature (rework mode)
 
 - Оператор: «переработаем фичу X, меняется поведение».
 - Routing: project-bootstrap для rework setup → `<topic>_spec.v<N>.md` с Diff секцией → `_plan.v<N>.md` с Migration секцией → coder → mandatory reviewer.
@@ -154,7 +154,7 @@ Product code — в стандартных директориях проекта
 topic: auth-signup
 mode: feature  # или: new-product (если первая фича) | rework
 lite-mode: no  # или: yes, bugfix, small-fix — означает упрощённый workflow
-version: 1  # spec.v1 (default); spec.v2 / v3 для Mode 3 rework. См. AP-21 ограничение на бесконечные итерации.
+version: 1  # spec.v1 (default); spec.v2 / v3 для rework mode. См. AP-21 ограничение на бесконечные итерации.
 created: YYYY-MM-DD
 spec_approved: YYYY-MM-DD  # operator-marker; пусто пока не approved
 plan_approved: YYYY-MM-DD
@@ -166,7 +166,7 @@ review_url: ...
 
 Bootstrap-agent + main session обновляют эти поля по мере прохождения Step'ов. Это даёт programmatic state без отдельного state-file per feature.
 
-**Spec versioning (AP-21):** `version: 1` для new spec'а; для Mode 3 rework — увеличивается на каждую следующую iteration (`spec.v2.md` → `version: 2`, `spec.v3.md` → `version: 3`). При `version: 3+` reviewer **обязан** через AskUserQuestion подтвердить осознанность: «3-я iteration — адресует ли findings v2? Или split / abort?». Это exit condition против бесконечного цикла rework'ов (см. AP-21).
+**Spec versioning (AP-21):** `version: 1` для new spec'а; для rework mode — увеличивается на каждую следующую iteration (`spec.v2.md` → `version: 2`, `spec.v3.md` → `version: 3`). При `version: 3+` reviewer **обязан** через AskUserQuestion подтвердить осознанность: «3-я iteration — адресует ли findings v2? Или split / abort?». Это exit condition против бесконечного цикла rework'ов (см. AP-21).
 
 ---
 

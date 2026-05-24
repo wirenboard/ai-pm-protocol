@@ -24,7 +24,7 @@ Template **симметрично закрывает обе** через cross-s
 
 Любой продуктовый проект проходит шесть стадий — **последовательность layered constraints**, где каждая следующая опирается на предыдущую и **не может** начаться, пока предыдущая не закрыта оператором («operator-gate», AP-3). Возврат назад допустим, если обнаружили пробел — фиксируется в `.bootstrap-state.md`. На каждой стадии **AI драфтит** артефакты, **оператор маркирует** «ОК / поменять X»; в неоднозначных местах AI задаёт вопросы через `AskUserQuestion`. Оператор владеет **решением**, AI — **исполнением**: оператор не пишет ни кода, ни artifact'ов руками.
 
-| # | Stage | Что закрываем | Ключевые артефакты | Mode 1 (greenfield) | Mode 2/3 (existing) |
+| # | Stage | Что закрываем | Ключевые артефакты | new-product mode (greenfield) | feature/rework modes (existing) |
 |---|---|---|---|---|---|
 | **A** | **Discovery** | Кто / для кого / в каких сценариях / как звучим / как выглядим | vision, personas, user-journeys, competitive-analysis, positioning, brand-voice, `ui-style-guide-base.md` + per-kind | WRITE | READ + WRITE дельт |
 | **B** | **Constraints** | Что должно работать (SLO), что не должно сломаться (threats / legal / incidents), что отрезаем (scope) | strategic-frame, threat-model, legal-frame / legal-brief, customer-interview-script, incident-runbook-draft, mvp-scope | WRITE | READ + WRITE дельт |
@@ -181,7 +181,7 @@ ai-pm-protocol/
 
 ```
 <product-repo>/
-├── doc/                              ← committed product content (Mode 1, top-level)
+├── doc/                              ← committed product content (new-product mode, top-level)
 │   ├── personas.md, user-journeys.md, threat-model.md, ...
 │   ├── ai-linting-rules.md, development-protocol.md
 │   ├── architecture-decisions/
@@ -194,7 +194,7 @@ ai-pm-protocol/
 └── (rest of product code)
 ```
 
-`doc/` для Mode 1 (new-product) — top-level. Для Mode 2/3 с existing top-level `doc/` — content в `.ai-pm/doc/` (см. development-protocol.md § 2 для retrofit layout'а).
+`doc/` для new-product mode — top-level. Для feature/rework modes с existing top-level `doc/` — content в `.ai-pm/doc/` (см. development-protocol.md § 2 для retrofit layout'а).
 
 ## Setup для product repo
 

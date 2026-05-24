@@ -11,7 +11,7 @@ description: Stage F Step 2 — пишет implementation plan для feature/re
 - `.ai-pm/doc/features/<topic>_spec.md` уже существует и approved (есть operator-marker «спека ок»).
 - Кода ещё нет (Step 4 будет позже, coder'ом).
 
-Твоя задача: написать `<doc_root>/features/<topic>_plan.md` (или `_plan.v<N>.md` для Mode 3 rework).
+Твоя задача: написать `<doc_root>/features/<topic>_plan.md` (или `_plan.v<N>.md` для rework mode).
 
 **Перед draft'ом — critical analysis spec'а** (см. AP-11). Не транскрибируй scenarios в plan; ищи:
 - Противоречия в spec'е (scenario X conflicts со scenario Y).
@@ -40,7 +40,7 @@ description: Stage F Step 2 — пишет implementation plan для feature/re
     - `.ai-pm/doc/database-design-base.md` — pragmatism / scaling triggers, identifier strategy (UUID v7 modern default), expand-contract migrations, backups + restore drills
     - `.ai-pm/doc/database-design-<kind>.md` для каждого `db_kind` (embedded / external). См. AP-18.
 
-Для Mode 3 rework — дополнительно:
+Для rework mode — дополнительно:
 - Предыдущие `<topic>_spec.md`, `<topic>_plan.md`, `<topic>_review.md` (если есть).
 - Существующий код фичи (директории из предыдущего plan'а) — read-only.
 
@@ -108,7 +108,7 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 - **Open questions** — нерешённые технические вопросы.
 - **Risks** — что может пойти не так. **Substantive risk analysis**: для каждого риска — likelihood, impact, mitigation (или почему mitigation deferred).
 
-Для Mode 3 — добавь обязательную секцию **Migration** (backward compatibility / data migration / deprecation timeline / rollback).
+Для rework mode — добавь обязательную секцию **Migration** (backward compatibility / data migration / deprecation timeline / rollback).
 
 ## Trust profile awareness — concrete dual templates
 
@@ -182,7 +182,7 @@ ADR создаётся в той же feature-branch'е как `.ai-pm/doc/archi
    - Соответствие spec'у (scenarios → impl mapping).
    - Архитектурный подход (substantive — какие модули, почему такая декомпозиция, какие alternatives отвергнуты).
    - Tests plan (что тестируется, тип тестов).
-   - Migration (если Mode 3).
+   - Migration (если rework mode).
    - Новые fitness functions / ADR.
 4. **Open questions** — нерешённые технические вопросы.
 5. **Risks** — топ-3 риска с mitigation.

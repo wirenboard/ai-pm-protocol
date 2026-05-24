@@ -98,17 +98,17 @@ project_capabilities:
 - [ ] competitive-analysis (YYYY-MM-DD, или N/A с reason)
 - [ ] positioning (YYYY-MM-DD, или N/A с reason) — angle / differentiators живут здесь
 - [ ] brand-voice (YYYY-MM-DD, или N/A с reason)
-- [ ] ui-style-guide-base.md (YYYY-MM-DD) — **Mode 1:** обязательно (8 фундаментальных принципов, brand voice, i18n discipline, accessibility общая, frameworks-first, общий checklist). **Mode 2/3:** опираемся на existing design system продукта, новый артефакт не создаём.
+- [ ] ui-style-guide-base.md (YYYY-MM-DD) — **new-product mode:** обязательно (8 фундаментальных принципов, brand voice, i18n discipline, accessibility общая, frameworks-first, общий checklist). **feature/rework modes:** опираемся на existing design system продукта, новый артефакт не создаём.
 - [ ] ui-style-guide-<kind>.md per каждому `ui_kind` (YYYY-MM-DD) — для каждого значения в `project_capabilities.ui_kind` пишется соответствующий per-kind файл (web / native-mobile / native-desktop / tui / cli / embedded / backend). Например, для full-stack web project с `ui_kind: web, backend` — пишутся `ui-style-guide-web.md` И `ui-style-guide-backend.md`. См. AP-15.
 
 ## Stage B — Constraints
 
-- [ ] strategic-frame (YYYY-MM-DD) — включая секции «Обещания и метрики (SLO)» и «Метод валидации гипотез» (обязательно для Mode 1; см. AP-13)
+- [ ] strategic-frame (YYYY-MM-DD) — включая секции «Обещания и метрики (SLO)» и «Метод валидации гипотез» (обязательно для new-product mode; см. AP-13)
 - [ ] threat-model (YYYY-MM-DD)
 - [ ] legal-frame (YYYY-MM-DD, или N/A — переносится на этап 1 если применимо)
-- [ ] legal-brief (YYYY-MM-DD) — **Mode 1: обязательно** перед началом юридической работы на этапе 1; **Mode 2/3:** условно по `legal_impact` в spec'е. См. AP-13
-- [ ] customer-interview-script (YYYY-MM-DD) — **Mode 1: обязательно** перед альфа-когортой; **Mode 2/3:** условно по `validation_required`. См. AP-13
-- [ ] incident-runbook-draft (YYYY-MM-DD) — **Mode 1 с runtime: обязательно** (скелет на стадии B, финализация на этапе 1); **Mode 2/3:** условно по `incident_impact`. См. AP-13
+- [ ] legal-brief (YYYY-MM-DD) — **new-product mode: обязательно** перед началом юридической работы на этапе 1; **feature/rework modes:** условно по `legal_impact` в spec'е. См. AP-13
+- [ ] customer-interview-script (YYYY-MM-DD) — **new-product mode: обязательно** перед альфа-когортой; **feature/rework modes:** условно по `validation_required`. См. AP-13
+- [ ] incident-runbook-draft (YYYY-MM-DD) — **new-product mode с runtime: обязательно** (скелет на стадии B, финализация на этапе 1); **feature/rework modes:** условно по `incident_impact`. См. AP-13
 - [ ] mvp-scope (YYYY-MM-DD)
 
 ## Stage C — Solution shape
@@ -119,8 +119,8 @@ project_capabilities:
 ## Stage D — Process
 
 - [ ] stack chosen (YYYY-MM-DD)
-- [ ] db_kind chosen + database-design-base.md + database-design-<kind>.md per каждому db_kind (YYYY-MM-DD) — **Mode 1 с persistent data:** обязательно (вместе со stack). Multi-value (например `embedded, external` для mobile с local cache + central API). `none` для stateless services. **Mode 2/3:** опираемся на existing schema/migrations practices; extract в отдельный `docs/database-design-extract` PR если formal guide отсутствует. См. AP-18.
-- [ ] dev-environment.md (YYYY-MM-DD) — foundational dev ergonomics: prerequisites, setup script, day-to-day commands (Makefile / justfile), hot reload, IDE configs, debug entry points, dependency management, profiling. Закрывает «from git clone до working state» < 5 min. **Mode 1:** обязательно. **Mode 2/3:** опираемся на existing CONTRIBUTING / README — если formal guide отсутствует, extract в отдельный `docs/dev-environment-extract` PR.
+- [ ] db_kind chosen + database-design-base.md + database-design-<kind>.md per каждому db_kind (YYYY-MM-DD) — **new-product mode с persistent data:** обязательно (вместе со stack). Multi-value (например `embedded, external` для mobile с local cache + central API). `none` для stateless services. **feature/rework modes:** опираемся на existing schema/migrations practices; extract в отдельный `docs/database-design-extract` PR если formal guide отсутствует. См. AP-18.
+- [ ] dev-environment.md (YYYY-MM-DD) — foundational dev ergonomics: prerequisites, setup script, day-to-day commands (Makefile / justfile), hot reload, IDE configs, debug entry points, dependency management, profiling. Закрывает «from git clone до working state» < 5 min. **new-product mode:** обязательно. **feature/rework modes:** опираемся на existing CONTRIBUTING / README — если formal guide отсутствует, extract в отдельный `docs/dev-environment-extract` PR.
 - [ ] dependency-policy.md (YYYY-MM-DD, опционально) — cadence + automerge rules для dependency bumps (security patches automerge / patch weekly / minor biweekly / major quarterly)
 - [ ] refactor-playbook.md (YYYY-MM-DD, опционально) — positive guidance для safe refactor PRs (scope: refactor-only, before/after test snapshot, no behavior changes)
 - [ ] development-protocol overlay (YYYY-MM-DD)
@@ -152,6 +152,6 @@ project_capabilities:
 ## Notes
 
 - **Возвраты в предыдущий stage:** если при работе над текущим stage'ом обнаружили пробел в предыдущем — записать с timestamp и причиной.
-- **Quick-draft mode (для Mode 2):** добавить маркер `quick-draft: yes` в шапку соответствующих artifacts; promotion в full — отдельным PR.
+- **Quick-draft mode (для feature mode):** добавить маркер `quick-draft: yes` в шапку соответствующих artifacts; promotion в full — отдельным PR.
 - **Stage перешёл в closed:** добавь строку `Stage X closed: YYYY-MM-DD` под stage блоком.
 - **Sessions log (опционально):** даты + что было сделано — для long-running bootstrap'а через несколько сессий.

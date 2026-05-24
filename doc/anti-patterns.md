@@ -116,9 +116,9 @@
 
 **Что нельзя:**
 
-- В Mode 1 (new-product) закрывать Stage B без `legal-brief.md` — «юрист задействуется на этапе 1, тогда и брифинг напишем». Юрист потратит лишнюю неделю на разбор vision / strategic-frame / threat-model.
-- В Mode 1 с runtime-сервисом закрывать Stage B без `incident-runbook-draft.md` — «процедуры напишем при первом инциденте». В момент инцидента — не время писать процедуру.
-- В Mode 1 закрывать Stage B без `customer-interview-script.md` — «вопросы придумаем перед интервью». Альфа = chatting без скрипта, не валидация.
+- В new-product mode закрывать Stage B без `legal-brief.md` — «юрист задействуется на этапе 1, тогда и брифинг напишем». Юрист потратит лишнюю неделю на разбор vision / strategic-frame / threat-model.
+- В new-product mode с runtime-сервисом закрывать Stage B без `incident-runbook-draft.md` — «процедуры напишем при первом инциденте». В момент инцидента — не время писать процедуру.
+- В new-product mode закрывать Stage B без `customer-interview-script.md` — «вопросы придумаем перед интервью». Альфа = chatting без скрипта, не валидация.
 - В Stage B `strategic-frame.md` без секций «Обещания и метрики (SLO)» и «Метод валидации гипотез» — SLO формализуются юридически, метод валидации определяет risk проекта.
 
 **Почему:** на одном из ранних prod-run'ов template'а Stage B был закрыт без этих 3 артефактов и 2 секций. Meta-анализ показал: каждый отложенный артефакт — будущая операционная боль. Юрист — лишняя неделя. Альфа без скрипта — потерянная валидация. SLO без формулировки — пустое обещание.
@@ -127,19 +127,19 @@
 
 | Mode | legal-brief | customer-interview-script | incident-runbook-draft | SLO + метод валидации |
 |---|---|---|---|---|
-| **Mode 1 (new-product)** | Обязательно | Обязательно | Обязательно (если есть runtime) | Обязательно |
-| **Mode 2 (feature)** | Условно (если фича меняет legal surface) | Условно (если меняет ключевой journey / добавляет персону / меняет цену) | Условно (если добавляет новый класс инцидентов) | Условно (если меняет SLO продукта) |
-| **Mode 3 (rework)** | Условно (если rework меняет legal/regulatory) | Условно (если UX переделка, не internal refactor) | Условно (как Mode 2) | Условно (как Mode 2) |
+| **new-product mode** | Обязательно | Обязательно | Обязательно (если есть runtime) | Обязательно |
+| **feature mode** | Условно (если фича меняет legal surface) | Условно (если меняет ключевой journey / добавляет персону / меняет цену) | Условно (если добавляет новый класс инцидентов) | Условно (если меняет SLO продукта) |
+| **rework mode** | Условно (если rework меняет legal/regulatory) | Условно (если UX переделка, не internal refactor) | Условно (как feature mode) | Условно (как feature mode) |
 | **Lite-mode / bugfix** | Нет | Нет | Нет | Нет |
 
 **Решение mode-aware применимости** принимает оператор при создании feature-spec — отмечает в frontmatter `legal_impact: yes|no`, `validation_required: yes|no`, `incident_impact: yes|no`. Если `yes` — соответствующий артефакт обновляется через PR.
 
 **Как поступать вместо:**
 
-- В Stage B чек-листе bootstrap-state.md.tmpl добавить 3 артефакта (mode-aware: для Mode 1 обязательно, для Mode 2/3 условно).
-- В strategic-frame.md.tmpl добавить 2 обязательные секции (SLO + метод валидации) для Mode 1.
+- В Stage B чек-листе bootstrap-state.md.tmpl добавить 3 артефакта (mode-aware: для new-product mode обязательно, для feature/rework modes условно).
+- В strategic-frame.md.tmpl добавить 2 обязательные секции (SLO + метод валидации) для new-product mode.
 - В feature-spec.md.tmpl добавить frontmatter поля для mode-aware impact assessment.
-- Bootstrap-агент при закрытии Stage B проверяет наличие этих 3 артефактов (для Mode 1) — если нет, не позволяет закрыть.
+- Bootstrap-агент при закрытии Stage B проверяет наличие этих 3 артефактов (для new-product mode) — если нет, не позволяет закрыть.
 
 ---
 
@@ -191,11 +191,11 @@
 
 **Что нельзя:**
 
-- Mode 3 rework: `spec.v1` → operator не одобрил → `spec.v2` → не одобрил → `spec.v3` → … — без явного exit condition.
+- rework mode: `spec.v1` → operator не одобрил → `spec.v2` → не одобрил → `spec.v3` → … — без явного exit condition.
 - AI пассивно ждёт operator-approval, не задавая вопрос «адресует ли v3 findings v2 или мы зашли в тупик».
 - Repeated re-spec'и одной фичи в попытке угадать operator intent.
 
-**Почему:** Mode 3 (`rework`) разрешает iteration spec'ов через `_spec.v<N>.md`. Это полезный механизм для серьёзной переработки фичи. Но без верхнего предела — это **потенциально бесконечный цикл**: каждая новая версия может породить новые findings и привести к следующей. Audit finding [H-2] выявил, что reviewer не имеет explicit exit check'а. Цикл может вытянуть недели работы оператора без сходящегося результата — это противоположно цели шаблона (атомарная продуктивная работа per feature).
+**Почему:** rework mode (`rework`) разрешает iteration spec'ов через `_spec.v<N>.md`. Это полезный механизм для серьёзной переработки фичи. Но без верхнего предела — это **потенциально бесконечный цикл**: каждая новая версия может породить новые findings и привести к следующей. Audit finding [H-2] выявил, что reviewer не имеет explicit exit check'а. Цикл может вытянуть недели работы оператора без сходящегося результата — это противоположно цели шаблона (атомарная продуктивная работа per feature).
 
 **Как поступать вместо:**
 
@@ -428,7 +428,7 @@ done < .ai-pm/.product-names-blocklist
 
 **Решение — offline-first design + verdict-gate.** Layer 2 hook `scripts/check-pr-has-review.sh` блокирует `gh pr create` **и** `gh pr merge` если: нет trail ИЛИ verdict не green. Hook читает HEAD commit body (skip-marker), committed `_review.md` с парсингом `**Verdict:**`, и local trace file с парсингом `.verdict` — **без** обращения к GitHub API. Работает одинаково online и offline, на любой git-платформе (GitHub / GitLab / Gitea / self-hosted). AI **не может** обойти через --no-verify (это запрещено § 14.7).
 
-**Применение** — для всех проектов с PR-flow. Mode-agnostic (одинаково для Mode 1 / 2 / 3 / lite).
+**Применение** — для всех проектов с PR-flow. Mode-agnostic (одинаково для new-product mode / 2 / 3 / lite).
 
 **Как поступать вместо:**
 
@@ -472,9 +472,9 @@ Format: `[review-override: <reason>]` на отдельной строке HEAD 
 
 **Что нельзя:**
 
-- В Mode 1 (new-product) с UI / API составляющей закрывать Stage A без `ui-style-guide-base.md` + соответствующих `ui-style-guide-<kind>.md` файлов. Coder в Stage F будет изобретать визуальный / интерфейсный язык на лету — палитру, типографику, paddings, API conventions, error formats — без shared reference. Результат: непоследовательный UI / API, accessibility-долг, повторные переделки.
+- В new-product mode с UI / API составляющей закрывать Stage A без `ui-style-guide-base.md` + соответствующих `ui-style-guide-<kind>.md` файлов. Coder в Stage F будет изобретать визуальный / интерфейсный язык на лету — палитру, типографику, paddings, API conventions, error formats — без shared reference. Результат: непоследовательный UI / API, accessibility-долг, повторные переделки.
 - Реализовывать UI / API фичу в Stage F без cross-ref'а в feature spec'е на соответствующий `ui-style-guide-<kind>.md` или existing design system продукта.
-- В Mode 2/3 фича вводит **новый UI-паттерн или API convention**, не описанный в existing design system — без обновления design system'а через отдельный PR.
+- В feature/rework modes фича вводит **новый UI-паттерн или API convention**, не описанный в existing design system — без обновления design system'а через отдельный PR.
 
 **Почему:** на одном из ранних prod-run'ов template'а Stage A был закрыт без формализованного UI guide (он не был в чек-листе). При начале первой UI-фичи AI попытался сделать визуальный дизайн без shared reference — палитра, шрифты, spacing «как у всех». Получился generic результат, не отражающий operator-vision. Plus accessibility / dark theme / responsive были treated как «доделаем потом» — задержали merge feature PR на сутки cleanup'а.
 
@@ -502,10 +502,10 @@ Format: `[review-override: <reason>]` на отдельной строке HEAD 
 
 | Mode | ui-style-guide-*.md |
 |---|---|
-| **Mode 1 (new-product) с UI / API** | **Обязательно** в Stage A: base + per каждому ui_kind. Без них Stage F фичи **запрещено** начинать |
-| **Mode 1 (new-product) без UI / API** (исключительно library / SDK без runtime) | N/A с reason в `.bootstrap-state.md`. Редкий кейс |
-| **Mode 2 (feature) в существующем продукте** | **Не создаём** с нуля. READ existing design system. Если в продукте нет формализованных guides — extract'им неформальные через separate `docs/ui-style-guide-extract` PR |
-| **Mode 3 (rework) с изменением UI / API** | READ existing + extend для нового паттерна (отдельный PR в `docs/<doc>-update` ветке) |
+| **new-product mode с UI / API** | **Обязательно** в Stage A: base + per каждому ui_kind. Без них Stage F фичи **запрещено** начинать |
+| **new-product mode без UI / API** (исключительно library / SDK без runtime) | N/A с reason в `.bootstrap-state.md`. Редкий кейс |
+| **feature mode в существующем продукте** | **Не создаём** с нуля. READ existing design system. Если в продукте нет формализованных guides — extract'им неформальные через separate `docs/ui-style-guide-extract` PR |
+| **rework mode с изменением UI / API** | READ existing + extend для нового паттерна (отдельный PR в `docs/<doc>-update` ветке) |
 | **Lite-mode / bugfix** | N/A — не вводит новых паттернов |
 
 **`ui_kind` определяется на Stage A после vision artifact'а**, не на Init — иногда форма продукта не известна без vision / market research. Default `tbd` в state file на момент Init, fill во время Stage A. Может evolve (additive): добавление нового ui_kind позже — update state + write новый файл.
@@ -524,10 +524,10 @@ Format: `[review-override: <reason>]` на отдельной строке HEAD 
 **Как поступать вместо:**
 
 - В `bootstrap-state.md.tmpl` Stage A checklist — `ui-style-guide-base.md` + `ui-style-guide-<kind>.md per каждому ui_kind`.
-- В `project-bootstrap.md` Stage A flow для Mode 1 — обязательный шаг: определение `ui_kind` после vision + write base + per-kind files; для Mode 2/3 — READ existing.
+- В `project-bootstrap.md` Stage A flow для new-product mode — обязательный шаг: определение `ui_kind` после vision + write base + per-kind files; для feature/rework modes — READ existing.
 - В `feature-spec.md.tmpl` NFR — соответствующий per-kind checklist (по форме UI которую фича touches).
 - В `reviewer.md` — структурный consistency check (UI / API фича без cross-ref на соответствующий ui-style-guide-<kind>.md → blocking finding).
-- В `development-protocol.md` § 11.0 (Stage F readiness) — `ui-style-guide-base.md` + per-kind для Mode 1.
+- В `development-protocol.md` § 11.0 (Stage F readiness) — `ui-style-guide-base.md` + per-kind для new-product mode.
 
 ---
 
@@ -536,7 +536,7 @@ Format: `[review-override: <reason>]` на отдельной строке HEAD 
 **Что нельзя:**
 
 - Драфтить feature spec без явного read-pass'а структурных Stage A-C документов (`user-journeys.md`, `threat-model.md`, `mvp-scope.md`, `topology.md`).
-- В Mode 2/3 фича вводит новый шаг journey'я / меняет вектор угроз / переносит артефакт между фазами scope'а / добавляет новый компонент в топологию — а feature spec этого не отражает.
+- В feature/rework modes фича вводит новый шаг journey'я / меняет вектор угроз / переносит артефакт между фазами scope'а / добавляет новый компонент в топологию — а feature spec этого не отражает.
 - Merge feature spec PR без соответствующих docs PR'ов на затронутые структурные документы.
 
 **Почему:** на одном из ранних prod-run'ов (2026-05-23) AI зафиксировал в feature spec одну архитектуру auth flow (single-secret), а `threat-model.md` описывал другую (two-secret split). Конфликт обнаружили только при ручной сверке оператором — если бы оператор не спросил «а в ранних документах ничего менять не надо?», фича была бы реализована вопреки threat-model, который — legal artifact для compliance / audit. Класс ошибок: AI не сверяет spec против Stage A-C, оператор не открывает Stage A-C при review feature spec'а (по дизайну — Trust profile A не читает код **и не вычитывает foundational docs повторно**).
@@ -592,7 +592,7 @@ topology_impact: yes|no      # фича вводит новый компонен
 - В `development-protocol.md` § 11 (Stage F readiness) формализовать AP-14 как обязательный шаг перед Step 1.
 - (Опционально, отдельным PR) CI-job, валидирующая frontmatter feature-spec'и и наличие docs PR'ов.
 
-**Что делать если структурного документа физически нет** (актуально для Mode 2 на legacy-проекте, где, например, `topology.md` отсутствует):
+**Что делать если структурного документа физически нет** (актуально для feature mode на legacy-проекте, где, например, `topology.md` отсутствует):
 
 1. AI в Stage F handoff routine останавливается на шаге чтения, объявляет оператору: «документа `<file>` нет в проекте».
 2. оператор выбирает из трёх вариантов:

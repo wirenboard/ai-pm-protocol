@@ -72,7 +72,7 @@
 
 | Шаг | Что делает | Что чувствует |
 |---|---|---|
-| 1 | Открывает template'а README, видит секцию modes | Узнаёт себя в Mode 2 |
+| 1 | Открывает template'а README, видит секцию modes | Узнаёт себя в feature mode |
 | 2 | Решает: НЕ клонировать template целиком в проект, использовать через `.ai-pm/` namespace | Прагматизм |
 | 3 | Создаёт `.ai-pm/` в existing repo, активирует bootstrap-agent | — |
 | 4 | Agent: «Mode? Integration?» — отвечает feature + gitignore | Деловой режим |
@@ -87,7 +87,7 @@
 
 ### Friction points per persona
 
-**Persona A:** уже описан в personas.md как primary user template'а; в Mode 2 — реже встречается (Persona A обычно строит новые продукты с нуля).
+**Persona A:** уже описан в personas.md как primary user template'а; в feature mode — реже встречается (Persona A обычно строит новые продукты с нуля).
 
 **Persona B (cross-stack senior):**
 - Шаг 5: agent определяет стек автоматически — критично для Persona B в out-of-domain контексте.
@@ -116,23 +116,23 @@
 |---|---|---|
 | 1 | Identifying фичу для rework, говорит bootstrap-agent'у: «mode rework, topic `<topic>`» | Готовность к работе |
 | 2 | Agent читает существующие `<topic>_spec.md`, `_plan.md`, код, тесты. Даёт PM summary: «Текущее поведение — X. Текущий plan — Y. Что меняется?» | — |
-| 3 | Agent ведёт через Stage A-C read-pass (как Mode 2), плюс задаёт: «Rework меняет persona / journey / threats / mvp-positioning?» | — |
+| 3 | Agent ведёт через Stage A-C read-pass (как feature mode), плюс задаёт: «Rework меняет persona / journey / threats / mvp-positioning?» | — |
 | 4 | Draft'ит `<topic>_spec.v<N>.md` с обязательной секцией **Diff**: «было / становится / мигрирует / deprecated / breaking yes-no» | — |
 | 5 | PM ревьюит spec.v<N>, маркирует ОК | — |
 | 6 | Draft'ит `<topic>_plan.v<N>.md` с обязательной секцией **Migration**: backward compatibility / data migration / deprecation timeline / rollback strategy | — |
 | 7 | PM ревьюит plan.v<N>, маркирует «поехали» | — |
 | 8 | Implementation в branch `feature/<topic>-rework` | Standard implementation |
-| 9 | CI: spec discipline, code linting, **mandatory `<topic>_review.v<N>.md`** (Step 7 не опциональный в Mode 3) | — |
+| 9 | CI: spec discipline, code linting, **mandatory `<topic>_review.v<N>.md`** (Step 7 не опциональный в rework mode) | — |
 | 10 | PM acceptance: проходит сценарии в running app, сравнивает с поведением до rework'а | Sanity check |
 | 11 | PR с squash & merge в main | — |
 
 ### Friction points per persona
 
-**Все personas:** обязательность reviewer-agent в Mode 3 — это **разумная** цена за migration risk. Friction только если reviewer findings противоречивы и блокируют (что нормально, надо разрешить, не bypass'ить).
+**Все personas:** обязательность reviewer-agent в rework mode — это **разумная** цена за migration risk. Friction только если reviewer findings противоречивы и блокируют (что нормально, надо разрешить, не bypass'ить).
 
-**Persona A (не читает код):** для неё Mode 3 особенно стрессовый, потому что migration-related ошибки PM не поймает inspection'ом. **Полагается на тесты + reviewer + acceptance**. Spec.v<N> Diff-секция должна быть исчерпывающей.
+**Persona A (не читает код):** для неё rework mode особенно стрессовый, потому что migration-related ошибки PM не поймает inspection'ом. **Полагается на тесты + reviewer + acceptance**. Spec.v<N> Diff-секция должна быть исчерпывающей.
 
-**Persona B (cross-stack):** если rework в родном стеке — comfortable; в чужом — boost'и reviewer-агенту, аналогично Mode 1.
+**Persona B (cross-stack):** если rework в родном стеке — comfortable; в чужом — boost'и reviewer-агенту, аналогично new-product mode.
 
 **Persona C (full-stack pro):** ревьюит и spec.v<N> diff и migration plan, и затем код. Reviewer-agent — secondary check. Может frustration'иться, если reviewer выдаёт обширные findings для мелкого rework'а (см. open question про lite-mode).
 
@@ -152,7 +152,7 @@
 2. **Agent задаёт > 3 вопроса per artifact.** Cognitive load → drop-off для всех personas (особенно Persona C).
 3. **Artifacts разрастаются.** Каждый > 2 страниц — риск для Persona A и Persona C. Persona B толерантнее, но и она бросит на 5+ страницах.
 4. **Линтеры fail'ят без понятной diagnostics.** Universal kill switch.
-5. **Template требует переписать существующий repo.** Особенно критично для Mode 2/3.
+5. **Template требует переписать существующий repo.** Особенно критично для feature/rework modes.
 6. **CI gates не блокируют реальные риски** (например, миграция без rollback strategy не fails'ит). Подрывает доверие.
 
 ---
@@ -161,15 +161,15 @@
 
 - **Каждая фича template'а** должна проходить через эти 3 journeys как acceptance tests. Если фича делает journey хуже (больше шагов, больше friction, больше времени) — она режется или переделывается.
 - **Главная метрика успеха v0:**
-  - Mode 1 (new-product): PM добирается до Stage F за ≤ 4 рабочих сессий.
-  - Mode 2 (feature): первая фича в existing repo через template за ≤ 2 сессии.
-  - Mode 3 (rework): rework spec + plan + acceptance за ≤ 3 сессии.
+  - new-product mode: PM добирается до Stage F за ≤ 4 рабочих сессий.
+  - feature mode: первая фича в existing repo через template за ≤ 2 сессии.
+  - rework mode: rework spec + plan + acceptance за ≤ 3 сессии.
 
 ---
 
 ## Resolved decisions
 
-1. **Quick-draft Stage A для Mode 2** — отличается от full так:
+1. **Quick-draft Stage A для feature mode** — отличается от full так:
    - **1 persona** (главный/типичный user, без cross-persona analysis).
    - **1 journey** (главный happy path, без edge cases / cross-journey).
    - **mvp-scope: один абзац** «что в проекте есть, что нет» без F-IDs.
