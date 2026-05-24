@@ -151,9 +151,9 @@ while read -r local_ref local_sha remote_ref remote_sha; do
       ;;
   esac
 
-  # (2) review-trail для feature/feat/chore/docs/fix push'ей
+  # (2) review-trail для feature/feat/chore/docs/fix/refactor push'ей
   case "$remote_ref" in
-    refs/heads/feature/*|refs/heads/feat/*|refs/heads/chore/*|refs/heads/docs/*|refs/heads/fix/*)
+    refs/heads/feature/*|refs/heads/feat/*|refs/heads/chore/*|refs/heads/docs/*|refs/heads/fix/*|refs/heads/refactor/*)
       branch="${remote_ref#refs/heads/}"
       check_review_trail "$branch" || exit 1
       ;;

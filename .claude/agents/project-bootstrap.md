@@ -319,148 +319,103 @@ Multi-value possible (`web, backend` для full-stack TypeScript / Next.js).
 
 **Invoked manually** оператором через «обнови template» / «template-sync» / «bump template». **AI не предлагает sync proactively** (respect AP-3 operator-gate).
 
-### Steps
+Это **agent-driven** routine — LLM читает шпаргалку + CHANGELOG, holistically сравнивает project с template, решает per-decision с operator approval. Никаких scripted detection categories.
 
-Template-sync has **3 phases:** template files apply, schema migration, **documentation migration**. Каждая phase требует explicit operator approval per category. Документация product'а **тоже** разъезжается с новой версией template'а — example: template добавил поле `version:` в feature-spec frontmatter → existing spec'и lack it → migration нужна.
+### Routine
 
-### Phase 1: Template files apply
+1. **Read pinned version** — `.ai-pm/.bootstrap-state.md` → `template_version_applied` (или `template_version`)
 
-1. **Read state:** `template_version_applied` из `.ai-pm/.bootstrap-state.md`
-2. **Read current template version:**
-   - Submodule integration: `cd .ai-pm/tooling && git fetch && git describe --tags --abbrev=0`
-   - Symlink integration: same в symlinked clone
-   - Vendor integration: оператор предоставляет latest version manually (через AskUserQuestion)
-3. **Compare:**
-   - Equal → «Template up to date, no sync needed»
-   - Mismatch → continue
-4. **Generate diff** между applied и latest:
-   - `.claude/agents/*.md` — usually safe to auto-apply (template-controlled prompts)
-   - `_templates/*.tmpl` — flag для review (product может custom'ить slot values)
-   - `scripts/*.sh.tmpl` → product `scripts/*.sh` — flag для review (product может tweak'ать)
-   - `anti-patterns.md` — apply additive changes (new APs); flag deletions для review
-   - `development-protocol.md` — same logic
-5. **Apply safe changes auto**, **flag manual review items**:
-   - Show оператору список что auto-applied / что manual
+2. **Determine target version** — AskUserQuestion: «target = latest tag (stable) или main HEAD (bleeding edge, unreleased)?». Default — latest tag (более safe для production).
 
-### Phase 2: Schema migration (state file)
-
-После Phase 1 detect changes в `bootstrap-state.md.tmpl` schema:
-
-1. **Compare schema fields** в product `.ai-pm/.bootstrap-state.md` vs new template:
-   - Missing fields → нужно add с defaults
-   - Removed fields → нужно migrate values или drop с reason
-   - Type changes → нужно convert + verify
-2. **Per-field AskUserQuestion** с предложенным значением:
+3. **Bump submodule к target:**
    ```
-   «Template v0.X добавил поле `foundation_completeness`. У вас этот field отсутствует.
-   Предложенный default: `complete` (если Stage A-D closed). Accept / override / skip с reason?»
+   cd .ai-pm/tooling && git fetch
+   git checkout <target>  # tag или HEAD commit
+   cd ../.. && git add .ai-pm/tooling
    ```
-3. **Verify backwards-compat** для existing values (mode aliases, etc.)
+   (Commit отложен — будет частью первого PR'а после audit)
 
-### Phase 3: Documentation migration (existing product docs)
+4. **No-op check:** если pinned == target → «template up to date, ничего мигрировать не нужно», просто commit submodule bump + update `.ai-pm/.bootstrap-state.md` → PR `chore: bump template к <target> (no migration)`. Routine завершена.
 
-**Самая критическая phase** — product docs могут расходиться с новой template schema/conventions, и **silent migration недопустим** (потеря context / surprises). Каждая migration **требует explicit operator approval с preview diff**.
+5. **Read cheat sheet** — `.ai-pm/tooling/doc/template-evolution.md`. Перейди к секциям **после** pinned версии до target. Это навигационная карта: per-version key changes, renames, file moves, action items для product.
 
-#### 3.1. Detect migration categories
+6. **Read CHANGELOG entries** для тех же версий — `.ai-pm/tooling/CHANGELOG.md`. Шпаргалка указывает что искать, CHANGELOG содержит детали.
 
-**Implementation:** script `scripts/template-sync-doc-migrate.py` (генерируется на Stage D из `_templates/scripts/template-sync-doc-migrate.py.tmpl`). Read-only analysis, writes report в `.ai-pm/migrations/<date>-template-sync-doc-migration.md` с counts + preview examples + affected files.
+7. **Walk project docs holistically:**
+   - `CLAUDE.md`, `.ai-pm/.bootstrap-state.md`
+   - `doc/**/*.md` (или `.ai-pm/doc/**/*.md` для retrofit layout)
+   - `scripts/*.sh` (если есть)
+   - `.claude/settings.json`
+   - `.github/workflows/*.yml`
 
-Invoke: `python3 scripts/template-sync-doc-migrate.py --from <old_version> --to <new_version>`
+8. **Identify discrepancies** — что в project не соответствует target version conventions. Группируй по типу:
+   - **Outdated terminology** (Mode 1/2/3, Stage F, husky refs, и т.п.)
+   - **Missing artifacts** (e.g., `database-design-*.md` если db_kind=external — AP-18)
+   - **Schema gaps** в state file (отсутствующие frontmatter поля)
+   - **File splits/folds** ещё не применённые (e.g., monolithic `ui-style-guide.md` без base + per-kind)
+   - **Broken/missing scripts** (e.g., старый `check-pr-has-review.sh` без замены на новый `check-review-trail.sh`)
+   - **Custom-modified template files** — flag, не auto-overwrite
 
-AI scan product docs и identify migration needs (через script + manual review):
+9. **Inspection-before-regenerate discipline** — **обязательно** перед blindly копированием `_templates/scripts/*.tmpl` → `product scripts/`:
+   - Сравни interface (stdin format, env vars, argv) — мог быть silent break #49
+   - Если product version корректнее template version — flag, не replace
 
-| Category | Что detect'им | Source change |
-|---|---|---|
-| **Spec frontmatter additions** | Existing `<topic>_spec.md` файлы lack новых полей frontmatter (например `version:`, `pr_ordering:`, impact flags) | Template добавил поля в `feature-spec.md.tmpl` |
-| **Spec sections additions** | Existing spec'и lack новых обязательных секций (например Mini-persona / Mini-threat-list) | Template добавил new section в `feature-spec.md.tmpl` |
-| **Foundational artifact split** | Existing монолитный `ui-style-guide.md` → нужен split на base + per-kind | Template split single file на multiple per ui_kind |
-| **Frontmatter mode rename** | Existing spec'и используют `mode: new-feature` → нужно alias на `mode: feature` | Template renamed modes |
-| **State field renames** | Existing state field renamed в новой версии | Template renamed |
-| **AP discipline introduction** | Existing spec'и не соответствуют new AP (например, AP-21 require `version:` field) | Template ввёл new AP с enforcement |
+10. **Group discrepancies в logical PR'ы:**
+    - **НЕ один мега-PR.** Split по concern'ам: infrastructure (scripts/hooks/CI) → schema (state + CLAUDE.md) → docs (Stage A-C artifacts) → features cleanup
+    - Easier review, easier rollback при проблеме
+    - Каждый PR — самодостаточный, может быть merged отдельно
 
-#### 3.2. Per-category proposal через AskUserQuestion
-
-**Для каждой detected category** — отдельный AskUserQuestion с:
-- **Описание изменения:** «Template v0.X добавил `<change>`. Это влияет на N artifact'ов в product.»
-- **Preview diff:** показать sample (1-2 файла) что именно поменяется
-- **Список affected files** полностью
-- **Options:**
-  - `Apply migration` — AI применит changes, content preserved, добавляются только new fields/sections с defaults
-  - `Apply selectively` — operator выбирает per-file (через follow-up AskUserQuestion)
-  - `Skip с reason` — не migrate, declare `adoption_override` (AP-22) с reason
-  - `Show full diff first` — AI генерирует diff в `.ai-pm/migrations/<date>-template-sync-doc-migration.diff` для review, потом снова ask
-
-#### 3.3. Apply migration (после approval)
-
-AI применяет approved migrations:
-- **Frontmatter additions** — добавляет new fields **только** в конец frontmatter с default values, не touch'ит existing fields
-- **Sections additions** — добавляет new sections **только** если они optional или с placeholder marker; mandatory sections без content → flag оператору
-- **Renames** — replace exact pattern, verify nothing else matched
-- **Splits (например ui-style-guide)** — extract content по разделам в new файлы, original sохраняется с pointer markers
-
-#### 3.4. Verification — content preservation
-
-**Обязательная step после apply:**
-
-1. **Diff before/after** — для каждого modified файла генерировать diff
-2. **Content integrity check:**
-   - Original sections preserved? (no content removed unintentionally)
-   - Total length comparison (если уменьшилось > 5% — flag)
-   - Key headers preserved
-3. **Generate verification report** в `.ai-pm/migrations/<date>-template-sync-verification-v0.X.Y.md`:
+11. **Output conformance report** (перед PR'ами) — operator решает идти ли в migration:
    ```markdown
-   # Documentation Migration Verification — template-sync v0.<old> → v0.<new>
+   # Template-sync conformance report
 
-   ## Files modified
+   Project: <name>
+   Pinned: v0.X.Y → Target: v0.Z (HEAD)
 
-   | File | Before lines | After lines | Delta | Status |
-   |---|---|---|---|---|
-   | `doc/features/auth_spec.md` | 245 | 252 | +7 | OK (frontmatter additions) |
-   | `doc/ui-style-guide.md` | 320 | 0 | -320 | SPLIT into 3 files |
-   | `doc/ui-style-guide-base.md` | 0 | 180 | +180 | NEW |
-   | `doc/ui-style-guide-web.md` | 0 | 140 | +140 | NEW |
-   | `doc/ui-style-guide-backend.md` | 0 | 95 | +95 | NEW |
+   ## Discrepancies found (N)
 
-   ## Content preservation check
+   ### Outdated terminology
+   - file:line — what
 
-   - [x] Original ui-style-guide.md splittable headers preserved across base/web/backend
-   - [x] Spec frontmatter additions: 12 specs gained `version: 1` field (default)
-   - [x] Spec frontmatter renames: 8 specs `mode: new-feature` → `mode: feature`
+   ### Missing artifacts
+   - ...
 
-   ## Anomalies detected
+   ### Schema gaps
+   - ...
 
-   - None
+   ### File splits/folds
+   - ...
+
+   ### Custom modifications (do not auto-overwrite)
+   - ...
+
+   ## Proposed PR plan
+
+   1. chore: ... (infrastructure)
+   2. chore: ... (schema)
+   3. chore: ... (docs)
+
+   Estimated effort: <N PR'ов, ориентировочно X commits each>
    ```
-4. **Show оператору в чате** structure verification report + flag anomalies
-5. **Если detected потеря content** (большой delta, missing headers, etc.) — STOP migration, rollback changes на staging branch, escalate оператору с specific finding
 
-#### 3.5. Operator final approval
+   Сохрани report в `.ai-pm/audits/<date>-template-sync-conformance.md`. Покажи оператору в чате + AskUserQuestion: «Migration plan такой <summary>. Approve / adjust / abort?»
 
-После Phase 3 verification — AskUserQuestion: «Documentation migration applied. Verification report показывает: <summary>. Proceed с PR? Или rollback и обсудить?»
+12. **Per-PR execution** (после approval plan'а) — для каждого proposed PR:
+    - Branch, commits, AskUserQuestion на decision points (renames preview, custom-modified merge approach, adoption_overrides)
+    - Phase output report в PR body
+    - Update `.ai-pm/.bootstrap-state.md` `template_version_applied` в финальном PR
 
-### Phase 4: Generate PR
+13. **`[skip-review]` marker** — только для PATCH-tier bumps (docs only refresh). MINOR/MAJOR требуют reviewer pass (AP-16).
 
-После всех 3 phase approved:
+### Adoption_overrides (AP-22)
 
-1. **Generate PR** на branch `chore/template-sync-v0.X.Y`:
-   - Title: `chore(template-sync): v0.<old> → v0.<new>`
-   - Body sections:
-     - **Phase 1 — Template files:** что auto-applied / manual review items
-     - **Phase 2 — Schema migration:** какие fields added / renamed
-     - **Phase 3 — Documentation migration:** список migration categories с counts (e.g., «12 specs gained `version` field, 8 specs renamed mode, ui-style-guide split на 3 файла»)
-     - **Verification report:** ссылка на `.ai-pm/migrations/<date>-template-sync-verification-v0.X.Y.md`
-     - **Adoption overrides declared:** если operator chose skip для каких-то migrations
-     - **Breaking changes** (если MAJOR bump)
-   - Update `.ai-pm/.bootstrap-state.md` field `template_version_applied: v0.X.Y`
-2. **`[skip-review]` marker** для PATCH bumps только. MINOR/MAJOR требуют reviewer pass на consolidated changes (см. AP-16).
-3. Operator reviews + merges
+Если product intentionally skip'ает какую-то convention (e.g., product без UI → skip `ui-style-guide-*` split) — задекларируй в `.bootstrap-state.md` `adoption_overrides:` с `reason` + `accepted-risk` + `declared_at`. AI ничего не override'ит сам.
 
-### Conflict resolution (Phase 1 files only)
+### Conflict resolution (custom-modified files)
 
 Если sync хочет обновить файл который product custom'нул:
-- AI **не auto-overwrites** — это unsafe
-- Generates `*.template-sync.new` файл рядом с existing
-- В CHANGELOG body: «File `<path>` customized by product, manual merge required. Old version + new diff в `<path>.template-sync.new`»
+- AI **не auto-overwrites** — unsafe
+- Generates `*.template-sync.new` файл рядом, в PR body — note о manual merge
 - Оператор решает merge approach
 
 ---

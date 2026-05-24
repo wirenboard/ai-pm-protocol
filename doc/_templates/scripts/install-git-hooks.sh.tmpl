@@ -120,7 +120,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
   # (2) review-trail для feature/<topic> push'ей
   case "$remote_ref" in
-    refs/heads/feature/*|refs/heads/feat/*|refs/heads/chore/*|refs/heads/docs/*|refs/heads/fix/*)
+    refs/heads/feature/*|refs/heads/feat/*|refs/heads/chore/*|refs/heads/docs/*|refs/heads/fix/*|refs/heads/refactor/*)
       BRANCH="${remote_ref#refs/heads/}"
       if [ -x "scripts/check-review-trail.sh" ]; then
         if ! scripts/check-review-trail.sh "$BRANCH"; then

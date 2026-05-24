@@ -188,16 +188,11 @@ Lite variant of `feature` для bugs. Workflow тот же, но lite-mode ра
 
 Bump template version в template-native проекте. **Manual-only** invocation — оператор пишет «обнови template» / «template-sync» / «bump template». AI **не предлагает** sync proactively (respect AP-3 operator-gate).
 
-Workflow:
-1. Read `template_version_applied` from state
-2. Read latest tag from template repo (через submodule HEAD or remote)
-3. Compare:
-   - Equal → «template up to date, no sync needed»
-   - Mismatch → continue
-4. Generate diff между applied и latest (subagents, _templates, scripts, anti-patterns, dev-protocol)
-5. Apply safe changes auto (subagent prompts, AP additions); flag manual review где customization clash possible (per-kind artifacts c product-specific slot values)
-6. Generate PR на `chore/template-sync-v0.X.Y` branch с CHANGELOG showing apply summary + manual review items + breaking changes (если MAJOR bump)
-7. Update `.ai-pm/version` в state после operator merge
+**Agent-driven routine** (не scripted): LLM holistically сравнивает project с template, опираясь на `doc/template-evolution.md` cheat sheet + CHANGELOG. Per-decision operator approval. Split на logical PR'ы, не один мега-PR.
+
+Полное описание routine — `.claude/agents/project-bootstrap.md` § Template-sync workflow.
+
+**Template-side maintenance discipline:** при добавлении в template breaking change / rename / new artifact / removal — **обновляй `doc/template-evolution.md`** синхронно с CHANGELOG entry. Шпаргалка — navigation map для downstream template-sync; без своевременных updates routine становится partial.
 
 См. release-helper.md для template-side SemVer release process.
 
