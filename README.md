@@ -41,6 +41,26 @@ Template **симметрично закрывает обе** через cross-s
 
 Подробности — `doc/development-protocol.md` § 4-5.
 
+## Четыре режима — какой когда выбирать
+
+Bootstrap-agent на init спрашивает **режим** (`mode`) — это определяет, как проходятся стадии. Режимы **не взаимоисключающие во времени**: проект стартует в Mode 1, потом живёт в Mode 2 (фича за фичей), периодически уходит в Mode 3 (rework) и `bug-fix`. Mode фиксируется per-feature во frontmatter `<topic>_spec.md`.
+
+| Mode | Когда выбирать | Что делает | Stage A-D | Stage F particulars |
+|---|---|---|---|---|
+| **`new-product`** | Greenfield: новый продукт, нет ни кода ни docs. Bootstrap впервые. | Полный путь Stage A→E с нуля, затем feature work. | WRITE всё | Standard `_spec.md` + `_plan.md` |
+| **`new-feature`** | Существующий продукт, добавляем фичу. Bootstrap уже сделан раньше (Stage A-E closed). | READ-pass по Stage A-C, опционально WRITE дельт (если фича вводит новую persona / threat / scope item), потом Stage F. | READ + WRITE дельт | Standard `_spec.md` + `_plan.md` |
+| **`rework-feature`** | Переписываем существующую фичу — поведение меняется. | Как `new-feature`, плюс обязательное чтение существующих `_spec.md` / `_plan.md` / кода / тестов. | READ | `_spec.v<N>.md` с **Diff**-секцией + `_plan.v<N>.md` с **Migration**-секцией |
+| **`bug-fix`** | Не отдельный mode, а **вариация** `new-feature` для багфикса. | Lite-mode разрешён по умолчанию: краткий spec (Context / Expected / Fix scope / Test), упрощённый plan, **failing test first**, terser review. | READ | `_spec.md` с `lite-mode: bugfix` |
+
+**Важно про bug-fix:**
+
+- **Security bugs — full ceremony, no lite-mode.** Если bug в auth / crypto / PII / payments / sessions — полный workflow + threat-model cross-check.
+- **Lite-mode hierarchy:** `bugfix` (Mode 2 bugs) → `small-fix` (мелкая дельта без bug) → `c-fast` (Trust profile C + small + non-security). См. `coder.md`.
+
+**Lifecycle continuum:** project-bootstrap agent ведёт оператора через все режимы по мере того, как меняются intent'ы (новая фича / bug / rework / release). Session resume — bootstrap читает `.bootstrap-state.md` и scans `doc/features/` на in-progress topic'и.
+
+Полное описание — `doc/development-protocol.md` § 3.
+
 ## Структура репо template'а
 
 ```
