@@ -5,6 +5,10 @@ artifact: legal
 created: {{date}}
 last_review: {{date}}
 mode: {{mode}}
+skip_eligibility:
+  default: conditional
+  skip_if: "processes-pii = no AND no payments AND no GDPR-jurisdiction"
+  hard_floor: "never if processes-pii = yes"
 ---
 
 # {{Project}} — Legal frame + Brief

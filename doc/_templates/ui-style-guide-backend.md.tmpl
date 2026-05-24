@@ -4,6 +4,10 @@ stage: A
 artifact: ui-style-guide-backend
 created: YYYY-MM-DD
 last_review: YYYY-MM-DD
+skip_eligibility:
+  default: conditional
+  skip_if: "нет backend компонента"
+  hard_floor: "never if backend component present"
 ---
 
 # <Project> — UI Style Guide: backend

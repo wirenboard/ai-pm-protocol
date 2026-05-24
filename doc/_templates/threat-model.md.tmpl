@@ -1,3 +1,10 @@
+---
+skip_eligibility:
+  default: conditional
+  skip_if: "все security capabilities = no"
+  hard_floor: "never if any security capability = yes"
+---
+
 # Threat Model
 
 **Stage B artifact.** Что защищаем, от кого, какими средствами. Опирается на `personas.md` (кто наши actors / adversaries в конкретных терминах) и `strategic-frame.md` (jurisdictions, compliance).

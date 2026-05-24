@@ -4,6 +4,10 @@ stage: A
 artifact: ui-style-guide-native-mobile
 created: YYYY-MM-DD
 last_review: YYYY-MM-DD
+skip_eligibility:
+  default: conditional
+  skip_if: "ui_kind не содержит native-mobile"
+  hard_floor: "never if ui_kind contains native-mobile"
 ---
 
 # <Project> — UI Style Guide: native mobile

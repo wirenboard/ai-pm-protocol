@@ -6,6 +6,10 @@ created: {{date}}
 last_review: {{date}}
 mode: {{mode}}
 target: финализация перед публичным запуском
+skip_eligibility:
+  default: conditional
+  skip_if: "no runtime (build-time tool)"
+  hard_floor: "never if uses-containers = yes OR public-web = yes"
 ---
 
 # {{Project}} — Incident Runbook (черновик)

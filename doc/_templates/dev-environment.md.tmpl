@@ -4,6 +4,10 @@ stage: D
 artifact: dev-environment
 created: YYYY-MM-DD
 last_review: YYYY-MM-DD
+skip_eligibility:
+  default: required
+  skip_if: "template-sync mode"
+  hard_floor: "never"
 ---
 
 # <Project> — Developer Environment

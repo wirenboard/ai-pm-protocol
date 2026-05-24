@@ -4,6 +4,10 @@ stage: A
 artifact: ui-style-guide-tui
 created: YYYY-MM-DD
 last_review: YYYY-MM-DD
+skip_eligibility:
+  default: conditional
+  skip_if: "ui_kind не содержит tui"
+  hard_floor: "never if ui_kind contains tui"
 ---
 
 # <Project> — UI Style Guide: TUI (terminal user interface)

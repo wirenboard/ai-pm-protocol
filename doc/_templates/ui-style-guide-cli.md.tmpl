@@ -4,6 +4,10 @@ stage: A
 artifact: ui-style-guide-cli
 created: YYYY-MM-DD
 last_review: YYYY-MM-DD
+skip_eligibility:
+  default: conditional
+  skip_if: "ui_kind не содержит cli"
+  hard_floor: "never if ui_kind contains cli"
 ---
 
 # <Project> — UI Style Guide: CLI (command-line interface)

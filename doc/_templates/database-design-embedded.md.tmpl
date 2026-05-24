@@ -4,6 +4,10 @@ stage: D
 artifact: database-design-embedded
 created: YYYY-MM-DD
 last_review: YYYY-MM-DD
+skip_eligibility:
+  default: conditional
+  skip_if: "db_kind не содержит embedded"
+  hard_floor: "never if db_kind contains embedded"
 ---
 
 # <Project> — Database Design: embedded

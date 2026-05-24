@@ -84,6 +84,50 @@ project_capabilities:
   # Определяет какие database-design-*.md файлы пишет bootstrap-agent.
   # Заполняется на Stage D вместе со stack choice. См. AP-18.
   - db_kind: tbd | none | <comma-separated list>
+
+# === v0.4.0 additions: discipline-advisor + conditional skip framework ===
+
+# Advisor preset — определяет how aggressive advisor рекомендует skip артефактов.
+# Per-artifact override через adoption_overrides выше.
+# - full (default для existing projects) — keep all artifacts. Backwards compat.
+# - standard (default для новых проектов в v0.4.0+) — skip только conditional-no
+#   (e.g., threat-model если все security capabilities = no)
+# - minimal — агрессивно рекомендует skip всё что не hard floor (для weekend
+#   projects / personal utilities)
+advisor_preset: full | standard | minimal
+
+# Skip decisions — log per-artifact decisions от advisor + operator confirmation.
+# Расширяет adoption_overrides для finer granularity (per-artifact, не just stage).
+# next_reprompt — для layer-climbing escalation (дыра 4 critique audit):
+# operator подтвердил skip 90 дней назад → re-validate.
+skip_decisions: []
+# Example:
+# skip_decisions:
+#   - artifact: threat-model.md
+#     state: skipped | active | mandatory-promoted
+#     reason: «no security surface detected (uses-auth=no, processes-pii=no, ...)»
+#     declared_at: YYYY-MM-DD
+#     next_reprompt: YYYY-MM-DD  # default 90 days from declared_at
+#     promoted_by: advisor-floor | quiz | operator
+#   - artifact: customer-interview-script.md
+#     state: skipped
+#     reason: «internal tool, no external validation needed»
+#     declared_at: YYYY-MM-DD
+#     next_reprompt: YYYY-MM-DD
+#     promoted_by: operator
+
+# Advisor log — read-only trace of advisory triggers + findings + outcomes.
+# Append-only, для audit trail.
+advisor_log: []
+# Example:
+# advisor_log:
+#   - timestamp: 2026-05-25T14:30:00Z
+#     trigger: bootstrap-entry | preset-change | stage-f-entry | spec-draft | plan-draft | code-diff | review
+#     axis: понятность | поддерживаемость | технические качество | UI | UX | learning
+#     findings:
+#       - "stripe.charges.create detected at src/payments/checkout.ts:42 → Stage B mandatory (hard floor)"
+#       - "single-file utility detected → maintenance-playbook skip-safe"
+#     applied: yes | no
 ---
 
 # Bootstrap state

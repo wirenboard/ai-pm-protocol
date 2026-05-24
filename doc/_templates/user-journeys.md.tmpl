@@ -1,3 +1,10 @@
+---
+skip_eligibility:
+  default: recommended
+  skip_if: "mode = bug-fix; OR (no UI)"
+  hard_floor: "never if ui_kind has any value"
+---
+
 # User Journeys
 
 **Stage A artifact.** Что делает каждая persona по шагам. Один journey на persona, плюс возможно «cross-persona» journeys для interaction-сценариев (например, отправитель ↔ получатель).
