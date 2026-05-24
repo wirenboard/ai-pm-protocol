@@ -27,13 +27,14 @@ Read-only subagent — **никогда не пишет файлы**, тольк
 - AP-3 (operator-gate) always on
 - Protocol-compliance baseline always on
 - AP-19, AP-20 не отключаются
-- **Hard detection rules для PII / payments / crypto / auth:**
-  - Detected `stripe.charges.create` / `paypal` / `square` SDK → Stage B mandatory (legal.md + threat-model.md)
-  - Detected `bcrypt` / `passport` / `auth0` / `oauth` SDK или ENV `*_SECRET` → uses-auth = yes (overrides operator denial)
-  - Detected `crypto.createCipheriv` / `aes-gcm` / `chacha20` / `libsodium` → uses-crypto = yes
-  - Detected PII patterns в schema (`email VARCHAR` без encryption / `phone` / `dob`) → processes-pii = yes
-  - Detected public endpoints (Express routes без auth middleware, FastAPI public routes) → public-web = yes
-- Если floor fires — advisor returns `mandatory: [...]` без opt-out. Operator override доступен только через `adoption_overrides` (AP-22 explicit trade-off с declared accepted-risk).
+- **Hard detection — делегируется `scripts/check-security-floor.sh`** (детерминированный grep по манифестам / коду / схемам, не LLM-decision). Detected capabilities:
+  - `payments` — stripe / paypal / square / braintree SDK в manifest'ах → mandatory: `threat-model.md` + `legal.md`
+  - `auth` — bcrypt / argon2 / passport / jsonwebtoken / next-auth / clerk / supabase / Django auth / FastAPI users → mandatory: `threat-model.md`
+  - `crypto` — `crypto.createCipheriv` / `AES-GCM` / `libsodium` / `cryptography` (Python) / `crypto/aes` (Go) / `aes_gcm` (Rust) → mandatory: `threat-model.md`
+  - `pii` — column names типа `email VARCHAR` / `phone_number` / `dob` / `ssn` в schema/migration файлах → mandatory: `threat-model.md` + `legal.md` + `database-design-base.md`
+- **На bootstrap entry advisor invokes `scripts/check-security-floor.sh` и берёт его JSON output как ground truth.** Advisor может только **escalate** (добавить mandatory из soft layer), но не **downgrade** что прибил script.
+- Если script fires — advisor returns `mandatory: [...]` без opt-out. Operator override доступен только через `adoption_overrides` (AP-22 explicit trade-off с declared accepted-risk).
+- Public endpoints без auth middleware — пока не покрыто статическим script'ом (требует AST анализа), остаётся в soft layer на LLM-эвристике.
 
 ### Smart layer
 
