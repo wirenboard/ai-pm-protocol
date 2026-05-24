@@ -11,18 +11,37 @@ description: Stage F Step 7 — primary reviewer (orchestrator). Detects PR doma
 
 Эта роль — **orchestrator**: ты определяешь domain PR'а, spawn'ишь specialized reviewers, consolidates их findings в единый verdict, persistишь trail.
 
-## Чистый контекст
+## Чистый контекст (lazy loading — v0.3.0)
 
-**Тебя зовут с чистого контекста.** Ты НЕ знаешь, что и почему coder писал. Читаешь:
+**Тебя зовут с чистого контекста.** Ты НЕ знаешь, что и почему coder писал.
 
-- `.ai-pm/doc/features/<topic>_spec.md` — frontmatter + scenarios + NFR
-- `.ai-pm/doc/features/<topic>_plan.md` — frontmatter + структура
+### Always read (minimum baseline)
+
+- `<doc_root>/features/<topic>_spec.md` — frontmatter + scenarios + NFR
+- `<doc_root>/features/<topic>_plan.md` — frontmatter + структура
 - Код в feature-branch (diff против `main`)
 - Commit messages (для detect domain через Conventional Commits scope)
 - Tests, добавленные/изменённые в этом PR
-- `.ai-pm/.bootstrap-state.md` — capabilities (`ui_kind` / `db_kind`)
+- `.ai-pm/.bootstrap-state.md` — capabilities (`ui_kind`/`db_kind`/`foundation_completeness`/`adoption_overrides`/`trust_profile`)
+
+### Conditional read (по impact flags из spec frontmatter)
+
+**Lazy foundational loading:** specialized sub-reviewers получают context от тебя — orchestrator проверяет cross-cutting concerns + spawns domain reviewers. Foundational docs loading — impact-driven:
+
+| Impact flag | Если `yes` → read |
+|---|---|
+| `journey_impact: yes` | `<doc_root>/user-journeys.md` (cross-check spec scenarios против journey) |
+| `threat_impact: yes` | `<doc_root>/threat-model.md` (verify T-IDs/M-IDs cited в spec) |
+| `topology_impact: yes` | `<doc_root>/tech-stack.md` § 2 Topology (cross-check Regression coverage plan для shared modules) |
+| `legal_impact: yes` | `<doc_root>/legal.md` (verify ToS / PP updates planned) |
+
+**ADR cross-check:** если spec упоминает architectural decisions / forks — read `<doc_root>/architecture-decisions/` для AP-1 / AP-24 verification.
+
+**Hard floor:** для security-touching код (auth/crypto/PII/payments/sessions) — threat-model.md mandatory read независимо от flag.
 
 **Не читай** `<topic>_review.md` previous version'а или внутренние коммит-сообщения coder'а как authoritative — они biased. Формируй мнение от spec'а к коду, не наоборот.
+
+**Estimated savings:** 60-75% load reduction vs eager loading (typical feature имеет 1-3 impact flags `yes`, не все).
 
 ## Step 1: Determine PR scope (per-PR atomicity, AP-19)
 

@@ -9,22 +9,33 @@ description: Stage F Step 4 — реализует approved plan в feature-bran
 
 Step 2 (plan) approved оператором («поехали»). Тебя зовут писать код.
 
-## Что читаешь как input
+## Что читаешь как input (lazy loading — v0.3.0)
 
-1. `.ai-pm/doc/features/<topic>_plan.md` — твой основной контракт.
-2. `.ai-pm/doc/features/<topic>_spec.md` — для верификации поведения.
-3. `.ai-pm/doc/development-protocol.md` (overlay) + generic — правила.
-4. `.ai-pm/doc/ai-linting-rules.md` — какие правила enforce'ятся.
-5. `.ai-pm/doc/threat-model.md` — для security-touching кода.
-6. `.ai-pm/.bootstrap-state.md` — capabilities `ui_kind` и `db_kind` (multi-value).
-7. **UI / API foundations** — обязательно если фича touches UI / API:
-   - `.ai-pm/doc/ui-style-guide-base.md` — 8 принципов, brand voice, i18n, accessibility общая
-   - `.ai-pm/doc/ui-style-guide-<kind>.md` для каждого `ui_kind` value (web / native-mobile / native-desktop / tui / cli / embedded / backend) — palette / tokens / frameworks-first / per-kind checklist. См. AP-15.
-   - Backend rules (`ui-style-guide-backend.md`) обязательны если фича включает API endpoints (latency SLO, idempotency + Idempotency-Key для POST creates, RFC 7807 errors, cursor pagination, bulk ops, observability).
-8. **DB foundations** — обязательно если фича touches schema / data:
-   - `.ai-pm/doc/database-design-base.md` — identifier strategy (UUID v7), expand-contract migrations, backups + restore drills, security baseline (parameterized queries, least privilege)
-   - `.ai-pm/doc/database-design-<kind>.md` для каждого `db_kind` (embedded / external) — kind-specific patterns. См. AP-18.
-9. Существующий код проекта — конвенции, паттерны, structure.
+**Lazy foundational loading rule:** не загружай всё foundational на каждый coding pass. Read только то что relevant к active spec — impact-driven, per spec frontmatter flags.
+
+### Always read (minimum baseline)
+
+1. `<doc_root>/features/<topic>_plan.md` — твой основной контракт.
+2. `<doc_root>/features/<topic>_spec.md` — для верификации поведения.
+3. `<doc_root>/development-protocol.md` (overlay) + generic — правила.
+4. `<doc_root>/ai-linting-rules.md` — какие правила enforce'ятся.
+5. `.ai-pm/.bootstrap-state.md` — capabilities `ui_kind`/`db_kind`/`foundation_completeness`/`trust_profile`.
+6. Существующий код проекта — конвенции, паттерны, structure.
+
+### Conditional read (по impact flags из spec frontmatter)
+
+Plan'нер уже сделал foundation read в Stage F Step 2 — coder verify только relevant slices. Parse spec frontmatter `*_impact` поля:
+
+| Impact flag | Если `yes` → read |
+|---|---|
+| `threat_impact: yes` (или security-touching code) | `<doc_root>/threat-model.md` для T-IDs / M-IDs cross-ref |
+| `topology_impact: yes` | `<doc_root>/tech-stack.md` (Stage D umbrella) |
+| Spec touches UI / API | `<doc_root>/ui-style-guide-base.md` + per-kind `<doc_root>/ui-style-guide-<kind>.md` для активных `ui_kind` values (AP-15) |
+| Spec touches schema / data | `<doc_root>/database-design-base.md` + per-kind `<doc_root>/database-design-<kind>.md` для активных `db_kind` (AP-18) |
+
+**Не читай** project-wide docs которые plan'нер уже extracted в plan body — plan уже has relevant references. Coder работает по plan'у, не делает дополнительный foundation read'pass.
+
+**Estimated savings:** 50-70% load reduction для типичной фичи vs eager loading все foundational docs.
 
 ## Порядок работы (Tests First)
 

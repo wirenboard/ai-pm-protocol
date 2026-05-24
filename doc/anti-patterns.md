@@ -1,6 +1,19 @@
 # Anti-patterns
 
-Правила «никогда так не делай», выведенные из реального опыта prod-run'ов. Каждый правило фиксирует **что нельзя**, **почему** (с конкретным случаем) и **как поступать вместо**.
+Правила «никогда так не делай», выведенные из реального опыта prod-run'ов. Каждое правило фиксирует **что нельзя**, **почему** (с конкретным случаем) и **как поступать вместо**.
+
+---
+
+## Note on trade-off documentation (v0.3.0+ direction)
+
+AP-инварианты — **opinionated defaults**, не engineering laws. Каждый AP имеет:
+
+- **Default scope** (когда применим без обсуждения — most cases)
+- **Edge cases** (когда не применим — explicit exceptions с reasoning)
+
+**Текущий status:** AP-22 / AP-23 / AP-24 (v0.2.0 additions) уже структурированы в этом формате (Что нельзя / Почему / Решение / Relationship). Для AP-1 .. AP-21 trade-off дополнения вводятся **инкрементально** — добавляются при возникновении real edge case'ов через v0.4.0+. Это **honest признание** что framework состоит из values (когда применять discipline), не absolute engineering laws.
+
+См. `meta/audits/2026-05-24_critique-and-blindspots.md` дыра 6 («AP-инварианты как dogma»).
 
 ---
 
