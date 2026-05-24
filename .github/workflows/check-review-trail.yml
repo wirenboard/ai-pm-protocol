@@ -1,0 +1,94 @@
+name: Check review-trail (AP-16)
+
+# Layer 5 enforcement: блокирует merge PR без валидного review-trail.
+# Дополняет Layer 4 (git pre-push hook .githooks/pre-push) как defense-in-depth.
+# Если кто-то обошёл pre-push hook (--no-verify запрещён § 14.7, но если),
+# либо опен PR через web UI напрямую — этот CI gate всё равно остановит merge.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, master]
+
+jobs:
+  check-review-trail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Verify review-trail
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -e
+          # Inline check (template repo не имеет scripts/check-review-trail.sh — only product repos do).
+          # Логика mirror'ит .githooks/pre-push.
+
+          HEAD_BODY=$(git log -1 --pretty=%B)
+
+          # Skip-marker
+          if echo "$HEAD_BODY" | grep -qE '^\[skip-review\][[:space:]]*$'; then
+            echo "::notice::[skip-review] маркер в HEAD commit — review enforcement пропущен."
+            exit 0
+          fi
+
+          parse_verdict_md() {
+            head -n 50 "$1" | grep -iE '^\*\*Verdict:\*\*' | head -1 \
+              | sed -E 's/^.*Verdict:\*\*[[:space:]]*//' | awk '{print $1}' | tr 'A-Z' 'a-z' || true
+          }
+
+          handle_verdict() {
+            local verdict="$1" source="$2"
+            case "$verdict" in
+              approve|approve-with-comments) return 0 ;;
+              request-changes|changes-requested)
+                if echo "$HEAD_BODY" | grep -qE '^\[review-override:[[:space:]]*[^]]+\][[:space:]]*$'; then
+                  echo "::notice::operator-override через [review-override:] — verdict был '$verdict', операторски принят."
+                  return 0
+                fi
+                echo "::error::Review verdict = '$verdict' (источник: $source). Merge заблокирован per AP-16."
+                echo "::error::Зафиксить findings и перезапустить reviewer, или operator-override через [review-override: reason]."
+                return 1
+                ;;
+              *)
+                echo "::error::Unknown verdict в review-trail (источник: $source). Ожидаемый формат: '**Verdict:** approve|approve-with-comments|request-changes' в первых 50 строках."
+                return 1
+                ;;
+            esac
+          }
+
+          # Committed _review.md для Stage E feature (feature/<topic> или feat/<topic>)
+          TOPIC=""
+          case "$BRANCH" in
+            feature/*) TOPIC="${BRANCH#feature/}" ;;
+            feat/*)    TOPIC="${BRANCH#feat/}" ;;
+          esac
+          if [ -n "$TOPIC" ]; then
+            for path in "doc/features/${TOPIC}_review.md" ".ai-pm/doc/features/${TOPIC}_review.md"; do
+              if [ -f "$path" ]; then
+                VERDICT=$(parse_verdict_md "$path")
+                handle_verdict "$VERDICT" "$path"
+                exit $?
+              fi
+            done
+          fi
+
+          # Нет trail вообще — explicit operator-override (для bootstrap / chicken-egg)
+          if echo "$HEAD_BODY" | grep -qE '^\[review-override:[[:space:]]*[^]]+\][[:space:]]*$'; then
+            REASON=$(echo "$HEAD_BODY" | grep -oE '^\[review-override:[[:space:]]*[^]]+\]' | sed -E 's/^\[review-override:[[:space:]]*//; s/\]$//')
+            echo "::notice::operator-override через [review-override: $REASON] (review-trail отсутствует)."
+            exit 0
+          fi
+
+          # Для не-Stage-E (chore/docs/fix) — local trace gitignored, поэтому
+          # CI его не видит. Требуется [skip-review] или [review-override:] маркер.
+          echo "::error::Для ветки '$BRANCH' не найден committed review-trail в репе."
+          echo "::error::Опции: (а) Stage E фича — committed doc/features/<topic>_review.md;"
+          echo "::error::       (б) chore/docs/fix — [skip-review] на отдельной строке HEAD commit body"
+          echo "::error::           (для trivial) или [review-override: reason] (для bootstrap/deferred)."
+          echo "::error::См. AP-16."
+          exit 1

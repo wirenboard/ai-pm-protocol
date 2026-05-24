@@ -23,16 +23,12 @@
         ]
       },
       {
-        "_comment": "Блокирует опасные git операции: direct push в main, --no-verify, force push, изменение git identity. Плюс блокирует gh pr create / gh pr merge без локального review-trail (AP-16, offline-first).",
+        "_comment": "Блокирует опасные git операции: direct push в main, --no-verify, force push, изменение git identity. Review-trail enforcement (AP-16) перенесён в git pre-push hook (Layer 4) + CI workflow (Layer 5) — см. scripts/check-review-trail.sh.",
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
             "command": "scripts/check-git-safety.sh"
-          },
-          {
-            "type": "command",
-            "command": "scripts/check-pr-has-review.sh"
           }
         ]
       }
@@ -54,6 +50,6 @@
     "Если какой-то hook fail'ит на чём-то, что должно быть legit — НЕ отключай hook. Исправь причину, либо обсуди adjustment с оператором.",
     "Hook'и парсят tool_input.file_path / tool_input.command из stdin JSON (Claude Code hook API).",
     "exit 0 = allow, exit 2 = block с передачей stderr обратно AI.",
-    "check-pr-has-review.sh: блокирует gh pr create и gh pr merge без локального review-trail (см. AP-16). Offline-first design. Поддерживаемые формы trail: committed doc/features/<topic>_review.md (Stage E), .ai-pm/.reviews/<branch>.json (chore/docs/template-extension). Skip-marker [skip-review] на отдельной строке в HEAD commit body — explicit override для trivial chore'ов."
+    "check-review-trail.sh: review-trail enforcement (AP-16). Вызывается из git pre-push hook (Layer 4) и из CI workflow .github/workflows/check-review-trail.yml (Layer 5) — defense-in-depth, не зависит от gh CLI. Поддерживаемые формы trail: committed doc/features/<topic>_review.md (Stage E), .ai-pm/.reviews/<branch>.json (chore/docs/template-extension). Override-маркеры [skip-review] / [review-override: reason] на отдельной строке HEAD commit body."
   ]
 }

@@ -88,19 +88,24 @@ exit 0
 HOOK
 chmod +x "$HOOK_DIR/commit-msg"
 
-# === pre-push hook (hard block на main / master) ===
-# На GitHub free private plan серверная branch protection недоступна (требует
-# GitHub Pro / Team / Enterprise). Этот hook — клиентский эквивалент защиты
-# main: блокирует прямой push, § 14.7 development-protocol запрещает
-# --no-verify-обход. Для public репозиториев и платных планов hook остаётся
-# как defense-in-depth поверх серверной branch protection (см. § 14.6).
+# === pre-push hook ===
+# Два независимых блока:
+#   1. Hard block на main / master push (клиентский эквивалент branch protection
+#      для GitHub free private plan'ов без серверной protection).
+#   2. Review-trail check для feature/<topic> push'ей (AP-16 Layer 4 enforcement).
+#      Блокирует push если нет review-файла / verdict=request-changes / unknown verdict.
+#      Override-маркеры [skip-review] / [review-override:] в HEAD commit body — поддерживаются.
+# § 14.7 development-protocol запрещает обход через --no-verify.
 cat > "$HOOK_DIR/pre-push" <<'HOOK'
 #!/usr/bin/env bash
-# Pre-push: блокирует прямой push в main / master.
+# Pre-push:
+#  (1) hard block на main / master push
+#  (2) review-trail enforcement для feature/<topic> push'ей (AP-16)
 
 protected_pattern='refs/heads/(main|master)'
 
 while read -r local_ref local_sha remote_ref remote_sha; do
+  # (1) main / master block
   if echo "$remote_ref" | grep -qE "^$protected_pattern$"; then
     echo "" >&2
     echo "BLOCKED: прямой push в $remote_ref запрещён." >&2
@@ -112,6 +117,19 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     echo "" >&2
     exit 1
   fi
+
+  # (2) review-trail для feature/<topic> push'ей
+  case "$remote_ref" in
+    refs/heads/feature/*|refs/heads/feat/*|refs/heads/chore/*|refs/heads/docs/*|refs/heads/fix/*)
+      BRANCH="${remote_ref#refs/heads/}"
+      if [ -x "scripts/check-review-trail.sh" ]; then
+        if ! scripts/check-review-trail.sh "$BRANCH"; then
+          # check-review-trail.sh уже напечатал детали в stderr
+          exit 1
+        fi
+      fi
+      ;;
+  esac
 done
 
 exit 0
@@ -121,4 +139,4 @@ chmod +x "$HOOK_DIR/pre-push"
 echo "Git hooks installed:"
 echo "  - pre-commit: lint, format, secret-scan, spec-discipline"
 echo "  - commit-msg: Conventional Commits 1.0 enforcement"
-echo "  - pre-push: hard block на main / master push (клиентский эквивалент branch protection для free private repo)"
+echo "  - pre-push: hard block на main/master + review-trail enforcement (AP-16) для feature/chore/docs/fix push'ей"
