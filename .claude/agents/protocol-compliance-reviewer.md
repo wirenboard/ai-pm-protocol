@@ -39,7 +39,7 @@ description: Specialized reviewer для protocol compliance — spec↔plan↔c
 
 ```yaml
 topic: <topic>
-mode: new-feature | rework-feature | bugfix
+mode: feature | rework | bugfix
 lite-mode: no | yes | bugfix | small-fix
 created: YYYY-MM-DD
 spec_approved: YYYY-MM-DD

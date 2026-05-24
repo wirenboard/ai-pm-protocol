@@ -17,8 +17,8 @@ target: brief для юриста (когда задействуется)
 | Mode | Обязательно? | Зачем |
 |---|---|---|
 | **Mode 1 (new-product)** | **Да, обязательно** | Юрист пишет ToS / Privacy Policy / Refund Policy с нуля. Без brief'а — потратит лишнюю неделю на разбор vision / strategic-frame / threat-model. |
-| **Mode 2 (new-feature)** | **Условно** — только если фича меняет: ToS surface (новый платный продукт / новый refund сценарий), Privacy footprint (новый тип PII / новый процессинг), Regulatory surface (новая юрисдикция / новый класс пользователей) | Если фича в существующем regulatory скоупе — brief не нужен, существующие ToS / PP покрывают. |
-| **Mode 3 (rework-feature)** | **Условно** — только если меняет regulatory / legal характеристики существующей фичи | То же что Mode 2. |
+| **Mode 2 (feature)** | **Условно** — только если фича меняет: ToS surface (новый платный продукт / новый refund сценарий), Privacy footprint (новый тип PII / новый процессинг), Regulatory surface (новая юрисдикция / новый класс пользователей) | Если фича в существующем regulatory скоупе — brief не нужен, существующие ToS / PP покрывают. |
+| **Mode 3 (rework)** | **Условно** — только если меняет regulatory / legal характеристики существующей фичи | То же что Mode 2. |
 | **Lite-mode / bugfix** | Нет | Bugfix-spec не меняет legal surface. |
 
 **Решение принимает оператор при создании feature-spec** — отметить в frontmatter spec'а `legal_impact: yes|no`. Если `yes` — этот brief обновляется и юрист рассматривает.

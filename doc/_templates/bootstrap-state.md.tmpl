@@ -5,7 +5,7 @@
 
 Если ты setup'ишь свежую репку:
 1. Скопируй этот template как `.ai-pm/.bootstrap-state.md`.
-2. ОСТАВЬ frontmatter values как pipe-separated options (mode: new-product | new-feature | rework-feature).
+2. ОСТАВЬ frontmatter values как pipe-separated options (mode: new-product | feature | rework | bug-fix | template-sync).
 3. НЕ заменяй values на «то, что ты помнишь из conversation» — это anti-pattern AP-9.
 4. Bootstrap-agent на init задаст оператору вопросы через AskUserQuestion и **сам** заполнит frontmatter.
 5. После каждого Stage closure — обновляешь Stages checkboxes ниже.
@@ -13,14 +13,53 @@
 Pre-filled state означает что оператор bypass'нул question flow и решения были сделаны лениво вместо явно — это нарушение AP-3 (operator-gate) и AP-9.
 -->
 ---
-mode: new-product | new-feature | rework-feature
+# Mode — какой workflow используется сейчас. См. development-protocol.md § 3.
+# new-product — greenfield bootstrap (Stage A-E formal)
+# feature — новая фича (любое состояние проекта)
+# rework — modify existing feature
+# bug-fix — lite variant of feature
+# template-sync — bump template version в template-native проекте
+mode: new-product | feature | rework | bug-fix | template-sync
 integration: gitignore | submodule | vendor
 trust_profile: A | B | C
-doc_root: doc | .ai-pm/doc        # top-level для Mode 1 + Mode 2 без existing doc/, иначе .ai-pm/doc/
+doc_root: doc | .ai-pm/doc        # top-level для new-product + feature/rework без existing doc/, иначе .ai-pm/doc/
 primary_language: ru | en | other # язык project artifacts. AI переводит общие англицизмы; established техтермины (MVP, KDF, AEAD, WebAuthn) оставляет.
 started: YYYY-MM-DD
 last_update: YYYY-MM-DD
-template_version: v0.1
+
+# Template versioning — SemVer (vMAJOR.MINOR.PATCH), tag в template repo.
+# template_version_applied фиксирует какая версия шаблона применена сейчас.
+# Сравнивается с latest tag при `template-sync` mode для diff'а.
+template_version_applied: v0.X.Y
+
+# Foundation state — orthogonal к mode. Определяет глубину AP-14 read-pass
+# requirements. См. design doc в meta/design/2026-05-24_mode-matrix-and-adoption.md.
+# complete — full Stage A-D filled (greenfield closed Stage E или legacy-staged completed)
+# partial — некоторые Stage A-D artifacts есть, не все
+# minimal — только Tier 0 auto-extract artifacts (legacy-quick adoption)
+# none — только trust_profile + stack + Stage E hooks (legacy-skip adoption)
+foundation_completeness: complete | partial | minimal | none
+
+# Adoption path — как проект попал в текущее состояние foundation.
+# greenfield — Stage A-E formal с нуля (через new-product mode)
+# legacy-quick — Tier 0 auto-extract при legacy adoption (5-10 min)
+# legacy-staged — operator multi-selected Stage A-E artifacts (часы-дни)
+# legacy-skip — только minimum + Stage E hooks (sub-minute)
+# null — для greenfield projects пока Stage E не closed
+adoption_path: greenfield | legacy-quick | legacy-staged | legacy-skip | null
+
+# Adoption overrides — declared trade-offs (Tier 3). Parallel к AP-16 review-override.
+# Каждый entry требует reason + accepted-risk. AI не override'ит сам — только
+# explicit operator instruction. См. AP-22 в anti-patterns.md.
+adoption_overrides: []
+# Example:
+# adoption_overrides:
+#   - skip: stage-e-hooks
+#     reason: «legacy CI integration conflicts, hooks moved to separate PR»
+#     accepted-risk: «AP-16 enforcement soft, manual review-trail discipline»
+#     declared_at: YYYY-MM-DD
+#     expires_at: YYYY-MM-DD  # optional sunset, force re-evaluation
+
 stack: typescript | python | go | rust | ... | unknown
 project_capabilities:
   - uses-crypto: yes | no
