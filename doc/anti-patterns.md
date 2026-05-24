@@ -143,6 +143,48 @@
 
 ---
 
+## AP-23. Test assertion weakened без declared behaviour change
+
+**Что нельзя:**
+
+- Существующий тест `expect(result.amount).toBe(100)` → agent видит, что реальный `amount = 95` → меняет на `expect(result.amount).toBeGreaterThan(50)`, удаляет assertion целиком, или mock'ает зависимость наружу — test runner зелёный, coverage сохранён, никто не заметил.
+- Модифицировать existing assertion (loosening, удаление, replacement on mock) внутри того же PR, в котором написан новый production-код, **без** декларирования reason: «behaviour поменялось потому что Z».
+- Скрывать assertion-weakening в большом diff (рефакторинг + test edit одновременно) — теряется audit trail, reviewer не видит, что именно ослабло.
+
+**Почему:** failure mode — точечная подгонка тестов под реальный output вместо подгонки кода под spec. Test runner green, coverage сохранён, CI зелёный, reviewer не замечает (один из тысячи изменённых строк в diff). Фича уезжает в production со сломанным contract'ом, потому что test, который должен был его защищать, был молча ослаблен. Это **silent break** — наиболее опасный класс регрессий, потому что framework (linters, coverage, CI gates) сообщают «всё хорошо», а реальное поведение деградировало. Зафиксировано в operator pain: «existing assertion `toBe(100)` → реальный `amount = 95` → agent меняет проверку, не код».
+
+**Mode:** *requires-ADR (declared trade-off)*, не hard block — paradigm-compatible с AP-22. Если behaviour действительно поменялось (legitimate refactor / contract change / новая граничная история), это **разрешено**, но требует явной декларации через ADR (`ADR-NNNN`) или explicit override marker. Цель — не запретить test edit, а заставить declared trade-off вместо silent fudging.
+
+**Как поступать вместо:**
+
+1. **Detect через `git diff --diff-filter=M`** (modified, не added) на pre-commit и в CI gate `test-assertion-weakening` (см. § 9.1).
+2. Test-file patterns: `*_test.{go,py}`, `test_*.py`, `*.{test,spec}.{js,jsx,ts,tsx}`, `*_spec.rb`, `*Test.{java,kt}`, `*Tests.cs`, `*.feature`.
+3. Если modified test-file detected — commit message обязан содержать **одно из двух**:
+   - **ADR reference**: `Modifies test: see ADR-NNNN — reason: <behaviour changed because Z>`. ADR создаётся через обычный routing (см. AP-1 — ADR только из plan'а при architectural fork). Это predominant path: если test был валиден, а сейчас невалиден — что-то поменялось архитектурно, это и есть fork.
+   - **Explicit override marker**: `[test-modify-override: <reason>]` в commit body. Используется для редких случаев, когда модификация тривиальна и ADR overkill (rename test helper, обновление test data на neutral value, fix opaque assertion message). Marker visible в git log forever — даёт audit trail без heavy ADR.
+4. **Pure additions** (новые test-файлы или новые assertions в existing file без удаления старых) — **не триггерят** check. Adding tests всегда OK без декларации.
+5. **Reviewer (Step 7)** при finding `test-assertion-weakening` fail смотрит на commit body, проверяет соответствие reason реальному change в diff. Если reason не соответствует (например, marker говорит «rename», а diff показывает loosened assertion) — это **отдельный** finding `[blocking]` про обман audit trail.
+
+**Use case examples:**
+
+- *Legitimate case:* spec поменялся (rework mode), новый scenario заменил старый. Plan содержит `ADR-0012` «migrate user.amount semantics from gross to net». Commit message: `feat(pricing): switch amount to net — see ADR-0012`. Test `expect(result.amount).toBe(100)` → `expect(result.amount).toBe(95)` (net вместо gross). Declared, traceable, reviewer одобряет.
+- *Silent break (что блокируется):* agent имплементировал новую `discount`-логику, оказалось что `amount` теперь 95, не 100. Без ADR / marker меняет test на `toBeGreaterThan(50)`. Pre-commit fail'ит с инструкцией: «add ADR ref or override marker». Agent должен либо признать, что spec не подразумевал change (тогда fix код, не test), либо declared через ADR / marker.
+- *Trivial override:* test had stale fixture `user.email = 'old@example.com'`, agent обновил на `'new@example.com'`. Не assertion, а test-data. Commit message: `chore(tests): refresh email fixtures [test-modify-override: refresh stale test data]`. Marker honest, reviewer одобряет.
+
+**Hard floor** — override **не разрешён** для:
+
+- Modifying tests в security-touching коде (auth / crypto / PII / payments / sessions) без ADR. `[test-modify-override:]` marker недостаточен — security regressions через ослабленные assertions критичны.
+
+**Cross-references:**
+
+- AP-22 (adoption-override) — parallel pattern «declared trade-off через explicit reason».
+- AP-1 (no upfront ADR) — ADR при test-assertion change пишется реактивно, как при любом architectural fork.
+- AP-5 (tests-first) — если test-assertion-weakening нужен, скорее всего нарушен tests-first: spec поменялся, но test не был обновлён proactively через failing-test-first PR.
+- AP-6 (no silent deviation) — assertion-weakening без декларации — это silent deviation в test surface.
+- Gap 2 в `meta/audits/2026-05-24_silent-break-gaps.md` — origin этого AP, описание failure mode и rationale.
+
+---
+
 ## AP-22. Adoption-override без declared trade-off
 
 **Что нельзя:**
@@ -650,6 +692,21 @@ topology_impact: yes|no      # фича вводит новый компонен
 - Reviewer-agent в Секции 0 видит маркер и может re-raise finding, если в коде / структурных документах появляются признаки конфликта.
 
 **Дополнительно — отличие от существующего лёгкого упоминания в lifecycle routing:** в `project-bootstrap.md` уже была фраза «Если фича требует новой persona/journey/threat — предложи отдельный PR docs/<topic>». Это **suggestion**, не **routine**. AP-14 превращает это в обязательный читаемый шаг с frontmatter-маркером, который reviewer-agent физически проверяет.
+
+**Regression coverage discipline (v0.2.0+, silent-break gap 3 extension):**
+
+При `topology_impact: yes` (или явное изменение shared modules — `*shared*`, `lib/`, `common/`, `core/` paths) feature spec **обязан** содержать секцию `## Regression coverage plan` (см. шаблон `_templates/feature-spec.md.tmpl`). Секция перечисляет:
+
+1. Shared modules, трогаемые фичей + features которые их используют
+2. Existing tests, покрывающие affected behaviour — проверка что они пройдут на новом коде
+3. New regression tests — если existing coverage gap
+4. Coverage delta verification — coverage shared modules не уменьшился после implementation
+
+**Why:** на первом live test'е template'а observed pattern — Feature B трогает shared module, Feature A использует тот же module, broken часть Feature A не имеет existing теста (или test обходит affected branch), ломается, ловится только в production. Per-diff coverage ≥ 80% gate видит «new code 80%», existing tests all pass — silent break на legacy / untested code paths.
+
+**Enforcement:** CI gate `regression-coverage-for-shared-modules` в `check-spec-discipline` — detect specs с `topology_impact: yes`, require `## Regression coverage plan` секцию. Skip: `lite-mode: bugfix` (regression через failing-test-first AP-5), standalone новые фичи без shared dependencies (явная пометка `N/A — standalone`).
+
+**Mode legacy adoption** (foundation_completeness=minimal/none): первый раз touched shared module → minimum 60% coverage growth required (новые regression tests должны существенно увеличить coverage).
 
 ---
 
