@@ -7,16 +7,16 @@
 **Core product thesis:** есть два архетипа solo-builder'ов с симметричной болью:
 
 - **PM боль:** «знаю что нужно (продукт / users / business), не могу писать код в нужном темпе/качестве».
-- **Developer боль:** «умею писать код, не знаю что именно полезно делать».
+- **Developer боль:** «умею писать код — но как сделать его максимально полезным и удобным для реальных пользователей?» (не «что делать» — задачу всегда можно найти; а **как** сделать ценно).
 
 Template **симметрично закрывает обе** через cross-substitution:
 
 | Сторона | Что получает | Pain закрывается |
 |---|---|---|
-| **PM** (Trust profile A) | AI как personal developer + automation/reviewer = peer-review team | «писать код» |
-| **Developer** (Trust profile B/C) | Template как PM-discipline (Stages A-D, enforced spec linkage, formalized review) | «что делать полезного» |
+| **PM** (Trust profile A) | AI как personal developer + automation/reviewer = peer-review team | «писать код в нужном темпе и качестве» |
+| **Developer** (Trust profile B/C) | Template как PM-discipline (Stage A discovery → personas, journeys, competitive UX scan, brand voice; Stage B constraints → SLO, threats, validation script; enforced spec linkage; formalized review) | «делать полезно и удобно для пользователей» |
 
-**Bidirectional learning:** PM по ходу осваивает архитектуру (через learning-oriented review-выходы, см. `reviewer.md`), developer — продуктовое мышление и соседние стеки (через Stage A-C foundational artefacts). Template — **усилитель компетенций**, не **замена навыков**.
+**Bidirectional learning:** PM по ходу осваивает архитектуру (через learning-oriented review-выходы, см. `reviewer.md`), developer — **продуктовое мышление и UX-интуицию** (через Stage A discovery, journeys, competitive UX scan, brand voice) и соседние стеки (через Stage C topology + Trust profile B). Template — **усилитель компетенций**, не **замена навыков**.
 
 **Чем это не является:** не методология для команд > 1 человека. Не code generator. Не AI hype. Не vibecoding tool.
 
