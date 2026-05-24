@@ -15,7 +15,16 @@
 
 ## [Unreleased]
 
-(Изменения после v0.6.0 будут собираться здесь до следующего release.)
+### Added
+
+- **`scripts/update-session-state.sh.tmpl` + `scripts/print-session-state.sh.tmpl` — session resume hint** (feature `session-resume-state`):
+  - PostToolUse hook эвристически определяет step по file_path (spec/plan/review/code/ADR/rework) и перезаписывает mechanical поля (`current_topic` / `current_branch` / `current_step` / `last_update`) в `.ai-pm/.session-state.md` через atomic temp+mv.
+  - Semantic поля (`pending_agents` / `blocker` / `active_pr_series`) preserved — hook их не трогает, только operator/main-agent fill.
+  - SessionStart hook `cat`'ает state в stderr → Claude видит «где мы» в первые секунды без скана веток / PR / features/. Missing file → fallback message с git/gh recovery инструкцией.
+  - Gitignore wiring в `install-git-hooks.sh.tmpl` — `.ai-pm/.session-state.md` local-only, никогда не commit'ится.
+  - 9 smoke tests в `scripts/tests/session-state-smoke.sh.tmpl`.
+  - Параллельная регистрация с existing `update-bootstrap-state.sh` / `check-skip-reprompts.sh` в `settings.json.tmpl` массивах — независимость failure mode.
+  - `CLAUDE.md.tmpl` шаг 1.1 в session start routine — Claude читает state-файл если SessionStart hook output был скипнут оператором.
 
 ---
 

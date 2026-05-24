@@ -35,23 +35,31 @@
     ],
     "PostToolUse": [
       {
-        "_comment": "После Write в doc/features/ обновляет last_update в .ai-pm/.bootstrap-state.md.",
+        "_comment": "После Write в doc/features/ обновляет last_update в .ai-pm/.bootstrap-state.md + перезаписывает mechanical поля в .ai-pm/.session-state.md (resume hint, см. feature session-resume-state).",
         "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
             "command": "scripts/update-bootstrap-state.sh"
+          },
+          {
+            "type": "command",
+            "command": "scripts/update-session-state.sh"
           }
         ]
       }
     ],
     "SessionStart": [
       {
-        "_comment": "При старте сессии — печатает expired skip-reprompts (AP layer-climbing escalation). Non-blocking, только информирует. Реализует обещание advisor'а 'через 90 дней напомню'.",
+        "_comment": "При старте сессии — печатает expired skip-reprompts (layer-climbing escalation) + содержимое .ai-pm/.session-state.md (lightweight resume hint, см. feature session-resume-state). Оба hook non-blocking.",
         "hooks": [
           {
             "type": "command",
             "command": "scripts/check-skip-reprompts.sh"
+          },
+          {
+            "type": "command",
+            "command": "scripts/print-session-state.sh"
           }
         ]
       }

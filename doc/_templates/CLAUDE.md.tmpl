@@ -16,6 +16,10 @@
 - **Если Stage A-D не closed** (не все checkbox'ы) → invoke `project-bootstrap` subagent, скажи оператору «Bootstrap не завершён, продолжаем со stage X». Не работай над фичами.
 - **Если Stage A-D closed** → продолжай шаг 1.5.
 
+**Шаг 1.1: Если есть `.ai-pm/.session-state.md` — прочитай его.**
+
+Это lightweight hint «где мы во флоу» (current_topic / branch / step / pending sub-agents). SessionStart hook уже напечатал содержимое в stderr, но дублирующее чтение защищает от случая когда оператор скипнул hook output. Если файла нет — восстанови контекст через `git branch --show-current` + `gh pr list --state open` + scan `{{doc_root}}/features/*_spec.md` без парного `_plan.md`. State — hint, не contract: git wins при расхождении (см. feature session-resume-state).
+
 **Шаг 1.5: Проверь `foundation_completeness` в state.**
 
 - **`complete`** → standard workflow, AP-14 full read-pass.
