@@ -41,25 +41,47 @@ Template **симметрично закрывает обе** через cross-s
 
 Подробности — `doc/development-protocol.md` § 4-5.
 
-## Четыре режима — какой когда выбирать
+## Пять режимов — какой когда выбирать
 
-Bootstrap-agent на init спрашивает **режим** (`mode`) — это определяет, как проходятся стадии. Режимы **не взаимоисключающие во времени**: проект стартует в Mode 1, потом живёт в Mode 2 (фича за фичей), периодически уходит в Mode 3 (rework) и `bug-fix`. Mode фиксируется per-feature во frontmatter `<topic>_spec.md`.
+Bootstrap-agent на init спрашивает **режим** (`mode`) — это определяет тип работы. Режимы **не взаимоисключающие во времени**: проект стартует в `new-product`, потом живёт в `feature` (фича за фичей), периодически уходит в `rework`, `bug-fix`, и `template-sync` (для bump'ов версии шаблона). Mode фиксируется per-feature во frontmatter `<topic>_spec.md`.
 
 | Mode | Когда выбирать | Что делает | Stage A-D | Stage F particulars |
 |---|---|---|---|---|
-| **`new-product`** | Greenfield: новый продукт, нет ни кода ни docs. Bootstrap впервые. | Полный путь Stage A→E с нуля, затем feature work. | WRITE всё | Standard `_spec.md` + `_plan.md` |
-| **`new-feature`** | Существующий продукт, добавляем фичу. Bootstrap уже сделан раньше (Stage A-E closed). | READ-pass по Stage A-C, опционально WRITE дельт (если фича вводит новую persona / threat / scope item), потом Stage F. | READ + WRITE дельт | Standard `_spec.md` + `_plan.md` |
-| **`rework-feature`** | Переписываем существующую фичу — поведение меняется. | Как `new-feature`, плюс обязательное чтение существующих `_spec.md` / `_plan.md` / кода / тестов. | READ | `_spec.v<N>.md` с **Diff**-секцией + `_plan.v<N>.md` с **Migration**-секцией |
-| **`bug-fix`** | Не отдельный mode, а **вариация** `new-feature` для багфикса. | Lite-mode разрешён по умолчанию: краткий spec (Context / Expected / Fix scope / Test), упрощённый plan, **failing test first**, terser review. | READ | `_spec.md` с `lite-mode: bugfix` |
+| **`new-product`** | Greenfield: новый продукт, нет ни кода ни docs | Полный путь Stage A→E с нуля, затем feature work | WRITE всё | Standard `_spec.md` + `_plan.md` |
+| **`feature`** | Новая фича. Любое состояние проекта (template-native, после legacy adoption) | READ-pass по Stage A-C (или mini-research per feature, если foundation incomplete), потом Stage F | READ + WRITE дельт | Standard `_spec.md` + `_plan.md` |
+| **`rework`** | Переписываем существующую фичу — поведение меняется | Как `feature`, плюс обязательное чтение existing `_spec` / `_plan` / кода / тестов | READ | `_spec.v<N>.md` с **Diff** + `_plan.v<N>.md` с **Migration** |
+| **`bug-fix`** | Lite вариация `feature` для багфикса | Краткий spec (Context / Expected / Fix scope / Test), упрощённый plan, **failing test first**, terser review | READ | `_spec.md` с `lite-mode: bugfix` |
+| **`template-sync`** | Bump template version в template-native проекте | Diff applied vs latest, apply safe changes auto, flag manual review items | N/A | `chore/template-sync-v0.X.Y` PR |
 
 **Важно про bug-fix:**
 
 - **Security bugs — full ceremony, no lite-mode.** Если bug в auth / crypto / PII / payments / sessions — полный workflow + threat-model cross-check.
-- **Lite-mode hierarchy:** `bugfix` (Mode 2 bugs) → `small-fix` (мелкая дельта без bug) → `c-fast` (Trust profile C + small + non-security). См. `coder.md`.
+- **Lite-mode hierarchy:** `bugfix` (bugs) → `small-fix` (мелкая дельта без bug) → `c-fast` (Trust profile C + small + non-security). См. `coder.md`.
 
-**Lifecycle continuum:** project-bootstrap agent ведёт оператора через все режимы по мере того, как меняются intent'ы (новая фича / bug / rework / release). Session resume — bootstrap читает `.bootstrap-state.md` и scans `doc/features/` на in-progress topic'и.
+**Lifecycle continuum:** project-bootstrap agent ведёт оператора через все режимы по мере того, как меняются intent'ы (новая фича / bug / rework / release / template-sync). Session resume — bootstrap читает `.bootstrap-state.md` и scans `doc/features/` на in-progress topic'и.
 
-Полное описание — `doc/development-protocol.md` § 3.
+## Legacy adoption — для проектов без `.ai-pm/`
+
+Что если у вас legacy продукт (код работает, шаблона никогда не было)? При первой session AI detect'ит legacy и явно предлагает **3 варианта** с trade-off explanations:
+
+| Choice | Time | Что делает | Trade-off |
+|---|---|---|---|
+| **Quick auto** (recommended) | 5-10 min | Tier 0 auto-extract: stack / `ui_kind` / `db_kind` / topology / ui-style / database-design + Stage E hooks | Быстро, но первая фича каждого нового domain'а требует Tier 1 mini-research (10-30 min) |
+| **Manual staged** | часы-дни | Operator multi-selects какие Stage A-E artifacts адаптировать сейчас, AI ведёт через formal process | Больше времени upfront, потом standard workflow без per-feature overhead |
+| **Skip adoption** | sub-minute | Только `trust_profile` + `stack` auto-detected + Stage E hooks (hard floor) | Zero upfront, AP-14/15/18 enforce'ы limited, каждая фича требует mini-research |
+
+После adoption проект становится **template-native** (с possibly incomplete foundation), дальше использует standard 5 modes выше. **Foundation completeness** растёт incrementally — `minimal` → `partial` → `complete` через operator-initiated promotion.
+
+**Tier framework — что обрабатывается на каком уровне:**
+
+| Tier | Что | Когда |
+|---|---|---|
+| **Tier 0 — auto-extract** | AI extracts без вопросов: stack / ui_kind / db_kind / topology / ui-style / database-design | Quick adoption + standalone keyword routing «составь архитектуру проекта» |
+| **Tier 1 — mini-research** | Per-feature mini-persona / journey-step / threat-list (5-30 min AskUserQuestion) | При `foundation_completeness: minimal/none` и фича требует context |
+| **Tier 2 — promotion** | Consolidation mini-* sections → project-wide artifacts | Operator-initiated «адаптируй полностью» |
+| **Tier 3 — declared overrides** | `[adopt-override: skip-X, reason, accepted-risk]` для declared trade-offs | Когда что-то нельзя/не нужно делать. Reviewer downgrades affected checks |
+
+Подробное описание — `doc/development-protocol.md` § 3 + design doc `meta/design/2026-05-24_mode-matrix-and-adoption.md`.
 
 ## Какие механики защищают качество
 
@@ -279,6 +301,8 @@ Template enforce'ит протокол через 5 защитных слоёв 
 - **AP-18:** Unsafe deploys / migrations без rollback guarantee (cross-cutting)
 - **AP-19:** Mixed-domain PR (нарушает per-PR atomicity)
 - **AP-20:** Naive «all-specialized-always» reviewer spawn (overhead)
+- **AP-21:** Бесконечный rework без exit condition (spec.v3+ requires AskUserQuestion confirmation)
+- **AP-22:** Adoption-override без declared trade-off (legacy adoption discipline)
 
 ## Subagents
 

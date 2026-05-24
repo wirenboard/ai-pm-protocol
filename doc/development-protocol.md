@@ -114,25 +114,64 @@ ai-pm-specific jobs (spec discipline, security catalogue, AI-linting catalogue) 
 
 ---
 
-## 3. Three initialization modes
+## 3. Five modes + foundation state
 
-Bootstrap-агент первым делом спрашивает mode, потому что mode определяет, как проходятся Stage A-E.
+Шаблон поддерживает **5 mode'ов** (linear) + **foundation_completeness** как orthogonal state. Mode определяет **тип работы**; foundation state определяет **глубину foundational artifacts** и triggers per-feature mini-research vs full Stage A-D read-pass.
 
-### 3.1. Mode `new-product`
+### 3.1. Modes (5)
 
-Greenfield. Init-agent ведёт оператора через Stage A-D (контент: personas, journeys, threat-model, scope, topology, выбор стека), потом делает Stage E (генерирует infrastructure из catalogue + стек), потом Stage F (фичи).
+| Mode | Когда |
+|---|---|
+| `new-product` | Greenfield: новый продукт, нет ни кода ни docs. Stage A-E formal с нуля |
+| `feature` | Новая фича — любое состояние проекта (template-native / legacy после adoption) |
+| `rework` | Modify existing feature — поведение меняется. Spec.v<N> с Diff + Migration |
+| `bug-fix` | Lite variant of `feature` для bugs. `lite-mode: bugfix` в frontmatter |
+| `template-sync` | Bump template version в template-native проекте. Manual-only invocation |
 
-### 3.2. Mode `new-feature`
+### 3.2. Foundation completeness — orthogonal state
 
-Существующий продукт. Stage A-D уже наполнены, Stage E (infrastructure) существует. Init-agent делает READ-pass по Stage A-C (опционально WRITE дельт), проверяет соответствие infrastructure ожиданиям (Stage E consistency), переходит к Stage F.
+В `.bootstrap-state.md` поле `foundation_completeness`:
 
-### 3.3. Mode `rework-feature`
+| Value | Что значит | AP-14 read-pass |
+|---|---|---|
+| `complete` | Full Stage A-D filled (greenfield closed Stage E или legacy-staged completed) | Standard full read-pass |
+| `partial` | Некоторые Stage A-D artifacts есть, не все | Read-pass на existing, mini-research для missing |
+| `minimal` | Только Tier 0 auto-extract artifacts (legacy-quick adoption) | Per-feature mini-research для каждой фичи |
+| `none` | Только trust_profile + stack + Stage E hooks (legacy-skip adoption) | Mini-research для всего; hard floors enforce'ятся |
 
-Существующий продукт, переработка фичи. Как Mode 2, плюс обязательное чтение существующих `<topic>_spec.md`, `_plan.md`, кода, тестов. На Stage F — `_spec.v<N>.md` с обязательной секцией Diff и `_plan.v<N>.md` с обязательной секцией Migration. Step 7 (reviewer) обязателен (но он и так обязателен для всех modes — см. § 11).
+### 3.3. Adoption path — как проект попал в текущее foundation state
 
-### 3.4. Bug-fix variant (вариация Mode 2)
+Поле `adoption_path` в state:
 
-Bug-fix — это **не отдельный mode**, а вариация Mode 2 (`new-feature`). Workflow тот же, но lite-mode разрешён по умолчанию:
+| Value | Когда |
+|---|---|
+| `greenfield` | Stage A-E formal с нуля (через `new-product` mode) |
+| `legacy-quick` | Tier 0 auto-extract при legacy adoption (5-10 min) |
+| `legacy-staged` | Operator multi-selected Stage A-E artifacts (часы-дни) |
+| `legacy-skip` | Только minimum + Stage E hooks (sub-minute) |
+| `null` | Для greenfield projects пока Stage E не closed |
+
+### 3.4. Mode `new-product` (greenfield)
+
+Init-agent ведёт оператора через Stage A-D (контент: personas, journeys, threat-model, scope, topology, выбор стека), потом делает Stage E (генерирует infrastructure из catalogue + стек), потом Stage F (фичи). После Stage E closed:
+- `foundation_completeness: complete`
+- `adoption_path: greenfield`
+
+### 3.5. Mode `feature`
+
+Новая фича. Работает для **любого** состояния проекта:
+- `foundation_completeness: complete` → standard READ-pass Stage A-C, потом Stage F
+- `partial` / `minimal` / `none` → AP-14 read-pass triggers per-feature mini-research где нужно (см. § 3.10)
+
+Init-agent проверяет соответствие infrastructure ожиданиям (Stage E consistency), переходит к Stage F.
+
+### 3.6. Mode `rework`
+
+Modify existing feature — поведение меняется. Как `feature`, плюс обязательное чтение существующих `<topic>_spec.md`, `_plan.md`, кода, тестов. На Stage F — `_spec.v<N>.md` с обязательной секцией Diff и `_plan.v<N>.md` с обязательной секцией Migration. Step 7 (reviewer) обязателен (но он и так обязателен для всех modes — см. § 11). Spec version exit condition при v3+ (AP-21).
+
+### 3.7. Mode `bug-fix` (variant)
+
+Lite variant of `feature` для bugs. Workflow тот же, но lite-mode разрешён по умолчанию:
 
 - `<topic>_spec.md` с frontmatter `lite-mode: bugfix` (см. CLAUDE.md):
   - Краткая структура: **Context** (что баг, как воспроизвести), **Expected behavior**, **Fix scope**, **Test** (failing test, который должен начать проходить).
@@ -143,17 +182,35 @@ Bug-fix — это **не отдельный mode**, а вариация Mode 2 
 
 **Исключение — security bugs:** если bug в security path (auth/crypto/PII/payments/sessions) — full ceremony, **no lite-mode**. Security bugs требуют полного review + threat-model-cross-check.
 
-### 3.5. Lifecycle continuum
+### 3.8. Mode `template-sync`
+
+Bump template version в template-native проекте. **Manual-only** invocation — оператор пишет «обнови template» / «template-sync» / «bump template». AI **не предлагает** sync proactively (respect AP-3 operator-gate).
+
+Workflow:
+1. Read `template_version_applied` from state
+2. Read latest tag from template repo (через submodule HEAD or remote)
+3. Compare:
+   - Equal → «template up to date, no sync needed»
+   - Mismatch → continue
+4. Generate diff между applied и latest (subagents, _templates, scripts, anti-patterns, dev-protocol)
+5. Apply safe changes auto (subagent prompts, AP additions); flag manual review где customization clash possible (per-kind artifacts c product-specific slot values)
+6. Generate PR на `chore/template-sync-v0.X.Y` branch с CHANGELOG showing apply summary + manual review items + breaking changes (если MAJOR bump)
+7. Update `.ai-pm/version` в state после operator merge
+
+См. release-helper.md для template-side SemVer release process.
+
+### 3.9. Lifecycle continuum
 
 Жизненный цикл проекта — **не одноразовый bootstrap**, а **постоянная последовательность циклов Stage F**:
 
 ```
-Init bootstrap (Mode 1) → first feature → another feature → bug-fix → 
-                          → rework existing feature → release → 
-                          → new feature wave → ...
+Init bootstrap → first feature → another feature → bug-fix →
+                                 → rework existing feature → release →
+                                 → template-sync (periodic) →
+                                 → new feature wave → ...
 ```
 
-`project-bootstrap` agent — orchestrator всего жизненного цикла. На каждый новый operator-intent (новая фича / bug / rework / release / docs update) он определяет правильное routing.
+`project-bootstrap` agent — orchestrator всего жизненного цикла. На каждый новый operator-intent (новая фича / bug / rework / release / template-sync / docs update / architecture overview) он определяет правильное routing.
 
 **Session resume:** если оператор прервал работу в середине фичи (session crashed / next day), на новой сессии `project-bootstrap`:
 1. Reads `.ai-pm/.bootstrap-state.md`.
@@ -162,12 +219,52 @@ Init bootstrap (Mode 1) → first feature → another feature → bug-fix →
 
 См. CLAUDE.md.tmpl «Session start routine» и project-bootstrap.md «Lifecycle routing» для деталей.
 
-### 3.4. Дискриминаторы
+### 3.10. Legacy adoption — 3-choice entry
 
-Если оператор не уверен, mode определяется по:
-1. Существует `.ai-pm/doc/personas.md` с реальным контентом? — нет → new-product.
-2. Меняется поведение/API/схема существующей фичи? — да → rework-feature.
-3. Иначе → new-feature.
+При first session в проекте **без `.ai-pm/`**, project-bootstrap detect'ит legacy и явно представляет оператору **3 варианта** через AskUserQuestion (Quick первым, **recommended**):
+
+**Choice 1: Quick auto** (5-10 min, recommended)
+- AI auto-extracts: stack / `ui_kind` / `db_kind` / `topology.md` sketch / `ui-style-guide-base.md` extract / `database-design-*.md` extract (Tier 0, см. § 3.11)
+- Stage E infrastructure setup (CI hooks Layer 2, git hooks Layer 4, branch protection Layer 5)
+- State: `foundation_completeness: minimal`, `adoption_path: legacy-quick`
+- Trade-off: «быстрый старт, но первая фича каждого нового domain'а потребует Tier 1 mini-research (10-30 min)»
+
+**Choice 2: Manual staged** (часы-дни)
+- AskUserQuestion multi-select: «Какие Stage A-E artifacts адаптировать сейчас?»
+- AI extracts baseline + ведёт через formal Stage process для выбранных
+- State: `foundation_completeness: partial`/`complete`, `adoption_path: legacy-staged`
+- Trade-off: «больше времени upfront, потом standard workflow без per-feature overhead»
+
+**Choice 3: Skip adoption** (sub-minute)
+- Только: `trust_profile`, `stack` auto-detected, Stage E hooks
+- State: `foundation_completeness: none`, `adoption_path: legacy-skip`
+- Trade-off: «zero upfront, AP-14/15/18 enforce'ы limited, каждая фича требует mini-research»
+
+**Hard floor** — что нельзя skip даже в Choice 3:
+- Stage E infrastructure hooks (без них AP-16 enforcement soft)
+- `trust_profile` (без него agents не знают как общаться)
+- `stack` (без него нельзя ai-linting-rules или security catalogue)
+
+Если оператор настаивает на skip даже этих — explicit `adoption_overrides` с reason + accepted-risk (см. AP-22).
+
+### 3.11. Tier framework (для legacy + per-feature)
+
+| Tier | Что | Когда |
+|---|---|---|
+| **Tier 0 — auto-extract** | AI extracts без вопросов: stack / ui_kind / db_kind / topology / ui-style / database-design | Quick adoption + architecture-overview keyword routing |
+| **Tier 1 — mini-research** | Per-feature mini-persona / journey-step / threat-list (5-30 min AskUserQuestion) | При `foundation_completeness: minimal/none` и фича требует context |
+| **Tier 2 — promotion** | Operator-initiated consolidation mini-* sections → project-wide artifacts | Когда оператор готов «адаптируй полностью» |
+| **Tier 3 — declared overrides** | Operator declares trade-off в `adoption_overrides` с reason + accepted-risk | Когда что-то нельзя/не нужно делать |
+
+### 3.12. Дискриминаторы (если оператор не уверен)
+
+1. Существует `.ai-pm/`? Нет → проект **legacy** → 3-choice entry.
+2. Существует `.ai-pm/`, никогда не было кода? → `new-product` (если bootstrap ещё не done).
+3. `.ai-pm/` есть, Stage A-E closed, новая работа? Mode по характеру:
+   - Меняется поведение/API/схема существующей фичи → `rework`
+   - Bug в existing feature → `bug-fix`
+   - Template отстал от latest → `template-sync`
+   - Иначе → `feature`
 
 ---
 

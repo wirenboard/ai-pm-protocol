@@ -1,6 +1,6 @@
 # User Journeys — ai-pm-protocol
 
-**Stage A artifact.** Что делает PM по шагам, проходя через template. Журнализированы по **mode'у** (`new-product` / `new-feature` / `rework-feature`); внутри каждого journey — секция «Friction per persona», где отмечены различия для Persona A/B/C (см. `.ai-pm/doc/personas.md`).
+**Stage A artifact.** Что делает PM по шагам, проходя через template. Журнализированы по **mode'у** (`new-product` / `feature` / `rework`); внутри каждого journey — секция «Friction per persona», где отмечены различия для Persona A/B/C (см. `.ai-pm/doc/personas.md`).
 
 Без UI-деталей; только последовательность точек принятия решения и эмоциональный регистр.
 
@@ -18,7 +18,7 @@
 | 2 | Читает README template'а (30 сек — 2 мин) | Решает: имеет смысл попробовать или нет |
 | 3 | Клонирует/устанавливает template в новый репо проекта | Деловой режим |
 | 4 | Запускает `claude` в новом репо; bootstrap-agent активируется | Ожидание |
-| 5 | Bootstrap-agent: «Mode? `new-product` / `new-feature` / `rework-feature`» (через AskUserQuestion) | Понимает, что сейчас сам выбирает направление |
+| 5 | Bootstrap-agent: «Mode? `new-product` / `feature` / `rework`» (через AskUserQuestion) | Понимает, что сейчас сам выбирает направление |
 | 6 | Bootstrap-agent: «Integration mode? gitignore / submodule / vendor» (default gitignore) | — |
 | 7 | Bootstrap-agent создаёт `.ai-pm/doc/` skeleton с placeholder'ами | Втягивается |
 | 8 | **Stage A — Discovery.** Bootstrap-agent проходит: vision → personas → user-journeys → competitive-analysis → positioning → brand-voice. По 2-3 вопроса per artifact, draft → PM-marker → ОК | Растёт ощущение «эта штука думает за меня правильно» |
@@ -64,7 +64,7 @@
 
 ---
 
-## Journey 2: Mode `new-feature` — добавление фичи в существующий проект
+## Journey 2: Mode `feature` — добавление фичи в существующий проект
 
 **Контекст входа.** Существующий продукт со своим repo, package.json/pyproject.toml/etc., своим CI, своим `doc/` (если есть). PM решает adopt'ить protocol для будущих фич, не переписывая прошлое.
 
@@ -75,7 +75,7 @@
 | 1 | Открывает template'а README, видит секцию modes | Узнаёт себя в Mode 2 |
 | 2 | Решает: НЕ клонировать template целиком в проект, использовать через `.ai-pm/` namespace | Прагматизм |
 | 3 | Создаёт `.ai-pm/` в existing repo, активирует bootstrap-agent | — |
-| 4 | Agent: «Mode? Integration?» — отвечает new-feature + gitignore | Деловой режим |
+| 4 | Agent: «Mode? Integration?» — отвечает feature + gitignore | Деловой режим |
 | 5 | Agent сканит репу: пытается определить стек по `package.json` / `pyproject.toml` / `go.mod` / `Cargo.toml`. Сообщает результат | Любопытство |
 | 6 | Agent: «У тебя нет `.ai-pm/doc/personas.md`. Stage A не пройден. Хочешь quick-draft (1 persona + 1 journey, 5-10 минут) или full Stage A (60-90 минут)?» | Дилемма time-cost vs full discipline |
 | 7 | PM соглашается на quick-draft или full. Bootstrap-agent проходит соответствующий путь. | — |
@@ -106,7 +106,7 @@
 
 ---
 
-## Journey 3: Mode `rework-feature` — переработка существующей фичи
+## Journey 3: Mode `rework` — переработка существующей фичи
 
 **Контекст входа.** Существующий продукт с написанной фичей. Поведение / API / схема меняется (breaking change или significant rework). PM хочет, чтобы AI сделал rework без накапливания технического долга.
 
@@ -114,7 +114,7 @@
 
 | Шаг | Что делает | Что чувствует |
 |---|---|---|
-| 1 | Identifying фичу для rework, говорит bootstrap-agent'у: «mode rework-feature, topic `<topic>`» | Готовность к работе |
+| 1 | Identifying фичу для rework, говорит bootstrap-agent'у: «mode rework, topic `<topic>`» | Готовность к работе |
 | 2 | Agent читает существующие `<topic>_spec.md`, `_plan.md`, код, тесты. Даёт PM summary: «Текущее поведение — X. Текущий plan — Y. Что меняется?» | — |
 | 3 | Agent ведёт через Stage A-C read-pass (как Mode 2), плюс задаёт: «Rework меняет persona / journey / threats / mvp-positioning?» | — |
 | 4 | Draft'ит `<topic>_spec.v<N>.md` с обязательной секцией **Diff**: «было / становится / мигрирует / deprecated / breaking yes-no» | — |
@@ -162,8 +162,8 @@
 - **Каждая фича template'а** должна проходить через эти 3 journeys как acceptance tests. Если фича делает journey хуже (больше шагов, больше friction, больше времени) — она режется или переделывается.
 - **Главная метрика успеха v0:**
   - Mode 1 (new-product): PM добирается до Stage F за ≤ 4 рабочих сессий.
-  - Mode 2 (new-feature): первая фича в existing repo через template за ≤ 2 сессии.
-  - Mode 3 (rework-feature): rework spec + plan + acceptance за ≤ 3 сессии.
+  - Mode 2 (feature): первая фича в existing repo через template за ≤ 2 сессии.
+  - Mode 3 (rework): rework spec + plan + acceptance за ≤ 3 сессии.
 
 ---
 
@@ -184,7 +184,7 @@
 
    ```markdown
    ---
-   mode: new-product | new-feature | rework-feature
+   mode: new-product | feature | rework | bug-fix | template-sync
    integration: gitignore | submodule | vendor
    trust_profile: A | B | C
    started: YYYY-MM-DD

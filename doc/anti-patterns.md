@@ -128,8 +128,8 @@
 | Mode | legal-brief | customer-interview-script | incident-runbook-draft | SLO + метод валидации |
 |---|---|---|---|---|
 | **Mode 1 (new-product)** | Обязательно | Обязательно | Обязательно (если есть runtime) | Обязательно |
-| **Mode 2 (new-feature)** | Условно (если фича меняет legal surface) | Условно (если меняет ключевой journey / добавляет персону / меняет цену) | Условно (если добавляет новый класс инцидентов) | Условно (если меняет SLO продукта) |
-| **Mode 3 (rework-feature)** | Условно (если rework меняет legal/regulatory) | Условно (если UX переделка, не internal refactor) | Условно (как Mode 2) | Условно (как Mode 2) |
+| **Mode 2 (feature)** | Условно (если фича меняет legal surface) | Условно (если меняет ключевой journey / добавляет персону / меняет цену) | Условно (если добавляет новый класс инцидентов) | Условно (если меняет SLO продукта) |
+| **Mode 3 (rework)** | Условно (если rework меняет legal/regulatory) | Условно (если UX переделка, не internal refactor) | Условно (как Mode 2) | Условно (как Mode 2) |
 | **Lite-mode / bugfix** | Нет | Нет | Нет | Нет |
 
 **Решение mode-aware применимости** принимает оператор при создании feature-spec — отмечает в frontmatter `legal_impact: yes|no`, `validation_required: yes|no`, `incident_impact: yes|no`. Если `yes` — соответствующий артефакт обновляется через PR.
@@ -143,6 +143,50 @@
 
 ---
 
+## AP-22. Adoption-override без declared trade-off
+
+**Что нельзя:**
+
+- Записывать `adoption_overrides` entry в `.bootstrap-state.md` без полей `reason` и `accepted-risk`.
+- AI самостоятельно добавлять `adoption_overrides` (только operator-initiated через explicit instruction).
+- Override без `declared_at` timestamp (затрудняет audit trail).
+- Skip Stage E infrastructure hooks без override — это hard floor для adoption (AP-16 enforcement не работает без hooks).
+
+**Почему:** `adoption_overrides` — это операторская декларация risk acceptance при legacy adoption (см. design doc `meta/design/2026-05-24_mode-matrix-and-adoption.md` Tier 3). Это **разрешённый** механизм для declared trade-offs (например, «skip threat-model.md потому что продукт без production users»), но **требует явного reason + accepted-risk**, иначе теряется audit trail и оператор не понимает что выключает. AI самостоятельно override'ить — нарушение AP-3 operator-gate.
+
+**Как поступать вместо:**
+
+- Override добавляется только operator-initiated через explicit ask. AI **не предлагает** override proactively — только когда оператор требует «skip X».
+- Format в `.bootstrap-state.md`:
+  ```yaml
+  adoption_overrides:
+    - skip: <component>          # обязательно
+      reason: <why>              # обязательно
+      accepted-risk: <what breaks>  # обязательно
+      declared_at: YYYY-MM-DD    # обязательно
+      expires_at: YYYY-MM-DD     # опционально — sunset date forces re-evaluation
+  ```
+- AI prompts при добавлении override: «Skip `<component>` означает: `<consequence>`. Confirm с reason и accepted-risk?» через AskUserQuestion.
+- Optional `expires_at` для time-bounded overrides — после даты reviewer surface'ит «override expired, re-evaluate or extend».
+- Reviewer-agent читает `adoption_overrides` from state и downgrades findings attributable к overridden component до `[question]` с tag `adoption-trade-off accepted by operator`. Surface override list в review summary.
+
+**Use case override examples:**
+
+- `skip: threat-model-for-security-path` — `reason: «продукт без production users, low risk surface»` — `accepted-risk: «AP-14 security check incomplete, риск compliance / audit issues при scaling»`
+- `skip: customer-interview-script` — `reason: «MVP demo для internal stakeholders, не для customers»` — `accepted-risk: «validation gap до alpha cohort»`
+- `skip: ui-style-guide-extract` — `reason: «backend-only продукт, минимальный UI»` — `accepted-risk: «AP-15 enforcement не применяется, UI inconsistency возможна»`
+
+**Hard floor** — override **не разрешён** для:
+- `stage-e-hooks` — без них AP-16 enforcement полностью soft, AI может open PR без trail. Critical.
+- `trust_profile` — без него agents не знают как общаться.
+- `stack` — без него нельзя ai-linting-rules или security catalogue (Tier 0 auto-detected, оператор не должен skip явно).
+
+Если оператор настаивает на skip даже этих — это сигнал для re-discussion adoption approach, не для override. AI отказывает и эскалирует.
+
+См. также AP-16 (review-override mechanic — parallel pattern) и design doc § I.
+
+---
+
 ## AP-21. Бесконечный rework без exit condition
 
 **Что нельзя:**
@@ -151,7 +195,7 @@
 - AI пассивно ждёт operator-approval, не задавая вопрос «адресует ли v3 findings v2 или мы зашли в тупик».
 - Repeated re-spec'и одной фичи в попытке угадать operator intent.
 
-**Почему:** Mode 3 (`rework-feature`) разрешает iteration spec'ов через `_spec.v<N>.md`. Это полезный механизм для серьёзной переработки фичи. Но без верхнего предела — это **потенциально бесконечный цикл**: каждая новая версия может породить новые findings и привести к следующей. Audit finding [H-2] выявил, что reviewer не имеет explicit exit check'а. Цикл может вытянуть недели работы оператора без сходящегося результата — это противоположно цели шаблона (атомарная продуктивная работа per feature).
+**Почему:** Mode 3 (`rework`) разрешает iteration spec'ов через `_spec.v<N>.md`. Это полезный механизм для серьёзной переработки фичи. Но без верхнего предела — это **потенциально бесконечный цикл**: каждая новая версия может породить новые findings и привести к следующей. Audit finding [H-2] выявил, что reviewer не имеет explicit exit check'а. Цикл может вытянуть недели работы оператора без сходящегося результата — это противоположно цели шаблона (атомарная продуктивная работа per feature).
 
 **Как поступать вместо:**
 
@@ -460,7 +504,7 @@ Format: `[review-override: <reason>]` на отдельной строке HEAD 
 |---|---|
 | **Mode 1 (new-product) с UI / API** | **Обязательно** в Stage A: base + per каждому ui_kind. Без них Stage F фичи **запрещено** начинать |
 | **Mode 1 (new-product) без UI / API** (исключительно library / SDK без runtime) | N/A с reason в `.bootstrap-state.md`. Редкий кейс |
-| **Mode 2 (new-feature) в существующем продукте** | **Не создаём** с нуля. READ existing design system. Если в продукте нет формализованных guides — extract'им неформальные через separate `docs/ui-style-guide-extract` PR |
+| **Mode 2 (feature) в существующем продукте** | **Не создаём** с нуля. READ existing design system. Если в продукте нет формализованных guides — extract'им неформальные через separate `docs/ui-style-guide-extract` PR |
 | **Mode 3 (rework) с изменением UI / API** | READ existing + extend для нового паттерна (отдельный PR в `docs/<doc>-update` ветке) |
 | **Lite-mode / bugfix** | N/A — не вводит новых паттернов |
 
@@ -503,10 +547,19 @@ AP-13 закрывает аналогичный пробел для **опера
 
 | Mode | journey-impact | threat-impact | scope-impact | topology-impact |
 |---|---|---|---|---|
-| **Mode 1 (new-product)** | автоматически (Stage A-C создаются вместе со Step 1) | автоматически | автоматически | автоматически |
-| **Mode 2 (new-feature)** | Условно (вводит новый шаг / новую персону) | Условно (вводит новые векторы / меры) | Условно (переносит артефакт между фазами / меняет границы v0) | Условно (вводит новый компонент / поток данных) |
-| **Mode 3 (rework-feature)** | Условно (rework меняет journey-flow) | Условно (rework меняет threat surface) | Условно (rework меняет scope) | Условно (rework меняет топологию) |
-| **Lite-mode / bugfix** | Нет | Нет (исключение: security path → full ceremony) | Нет | Нет |
+| **`new-product`** | автоматически (Stage A-C создаются вместе со Step 1) | автоматически | автоматически | автоматически |
+| **`feature`** | Условно (вводит новый шаг / новую персону) | Условно (вводит новые векторы / меры) | Условно (переносит артефакт между фазами / меняет границы v0) | Условно (вводит новый компонент / поток данных) |
+| **`rework`** | Условно (rework меняет journey-flow) | Условно (rework меняет threat surface) | Условно (rework меняет scope) | Условно (rework меняет топологию) |
+| **`bug-fix` / lite-mode** | Нет | Нет (исключение: security path → full ceremony) | Нет | Нет |
+
+**Foundation-completeness применение** (для legacy adoption):
+
+| `foundation_completeness` | AP-14 read-pass behavior |
+|---|---|
+| `complete` | Standard full read-pass per выше |
+| `partial` | Read-pass на existing docs, **Tier 1 mini-research** для missing (mini-persona / mini-journey / mini-threat-list в feature spec inline) |
+| `minimal` | Tier 1 mini-research для каждой фичи; **hard floors** enforce'ятся (security path требует formal `threat-model.md` даже в legacy — нельзя только mini) |
+| `none` | То же что `minimal`, plus reviewer downgrades affected checks с tag «adoption-trade-off accepted by operator» (см. AP-22) |
 
 **Критерий «security path»** (для исключения lite-mode → full ceremony): фича или баг касается **хотя бы одного** из:
 
