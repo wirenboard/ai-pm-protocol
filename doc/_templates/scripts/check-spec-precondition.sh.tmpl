@@ -1,26 +1,43 @@
 #!/usr/bin/env bash
 # scripts/check-spec-precondition.sh
-# Layer 2 enforcement: blocks Write/Edit в code paths без соответствующего spec'а.
-# Используется как PreToolUse hook в .claude/settings.json.
+# Layer 2 enforcement: блокирует Write/Edit в code paths без соответствующего spec'а (AP-4).
+# Используется как PreToolUse hook в .claude/settings.json для Write|Edit matcher'а.
 #
-# Bootstrap-agent копирует этот skeleton на Stage D и адаптирует под layout проекта.
+# Bootstrap-agent копирует этот skeleton на Stage D и адаптирует CODE_PATTERNS под layout проекта.
 #
-# Input через env vars (Claude Code hook interface):
-#   CLAUDE_TOOL_NAME       — "Write" или "Edit"
-#   CLAUDE_TOOL_PARAM_FILE — путь к файлу, который AI собирается изменить
+# Hook input: JSON через stdin (Claude Code hook API):
+#   { "tool_name": "Write|Edit", "tool_input": { "file_path": "..." } }
 #
-# Output: exit 0 = allow; exit 1 + STDERR message = block.
+# Exit codes:
+#   0 — allow
+#   2 — block (stderr передаётся AI обратно)
+#
+# Smoke-test:
+#   echo '{"tool_name":"Write","tool_input":{"file_path":"src/index.ts"}}' | bash scripts/check-spec-precondition.sh
 
 set -e
 
-FILE="${CLAUDE_TOOL_PARAM_FILE:-}"
-if [ -z "$FILE" ]; then
-  exit 0  # не file-modifying tool — пропускаем
+INPUT=$(cat)
+
+if command -v jq >/dev/null 2>&1; then
+  TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty')
+  FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+else
+  TOOL=$(echo "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*:[[:space:]]*"([^"]+)"/\1/' | head -1)
+  FILE=$(echo "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*:[[:space:]]*"([^"]+)"/\1/' | head -1)
 fi
+
+# Не Write/Edit — пропускаем (на случай matcher misconfiguration)
+case "$TOOL" in
+  Write|Edit) ;;
+  *) exit 0 ;;
+esac
+
+# Не file-modifying call (пустой file_path) — пропускаем
+[ -z "$FILE" ] && exit 0
 
 # Code paths, требующие spec'а перед изменением.
 # Адаптируется под стек проекта на Stage D.
-# Default: apps/, packages/, src/, lib/.
 CODE_PATTERNS=(
   "^apps/"
   "^packages/"
@@ -28,7 +45,6 @@ CODE_PATTERNS=(
   "^lib/"
 )
 
-# Проверяем, попадает ли $FILE в code-path
 IS_CODE=0
 for pattern in "${CODE_PATTERNS[@]}"; do
   if echo "$FILE" | grep -qE "$pattern"; then
@@ -37,49 +53,53 @@ for pattern in "${CODE_PATTERNS[@]}"; do
   fi
 done
 
-if [ $IS_CODE -eq 0 ]; then
-  exit 0  # не code-файл, hook не применим
-fi
+[ $IS_CODE -eq 0 ] && exit 0
 
-# Получаем текущую git-ветку
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
   echo "BLOCKED: прямое изменение кода в main/master ветке запрещено." >&2
   echo "Создай feature/<topic> branch и работай там. См. development-protocol.md § 14." >&2
-  exit 1
+  exit 2
 fi
 
-# Extracting topic из ветки: feature/<topic> → <topic>
+# feature/<topic> или feat/<topic>
 TOPIC=""
-if echo "$BRANCH" | grep -qE "^feature/"; then
-  TOPIC="${BRANCH#feature/}"
-fi
+case "$BRANCH" in
+  feature/*) TOPIC="${BRANCH#feature/}" ;;
+  feat/*)    TOPIC="${BRANCH#feat/}" ;;
+esac
 
 if [ -z "$TOPIC" ]; then
-  echo "BLOCKED: текущая ветка '$BRANCH' не следует convention feature/<topic>." >&2
+  echo "BLOCKED: текущая ветка '$BRANCH' не следует convention feature/<topic> или feat/<topic>." >&2
   echo "См. development-protocol.md § 14.1." >&2
-  exit 1
+  exit 2
 fi
 
-# Проверяем наличие spec'а для topic'а
-SPEC=".ai-pm/doc/features/${TOPIC}_spec.md"
-if [ ! -f "$SPEC" ]; then
+# Spec может лежать в doc/features/ (new-product) или .ai-pm/doc/features/ (retrofit layout)
+SPEC=""
+for candidate in "doc/features/${TOPIC}_spec.md" ".ai-pm/doc/features/${TOPIC}_spec.md"; do
+  if [ -f "$candidate" ]; then
+    SPEC="$candidate"
+    break
+  fi
+done
+
+if [ -z "$SPEC" ]; then
   echo "BLOCKED: попытка изменить '$FILE' без соответствующего spec'а." >&2
-  echo "Expected: $SPEC" >&2
+  echo "Expected: doc/features/${TOPIC}_spec.md (или .ai-pm/doc/features/${TOPIC}_spec.md)" >&2
   echo "" >&2
   echo "По протоколу (AP-4 Specification First) код пишется только после approved spec'а." >&2
   echo "Шаги:" >&2
-  echo "  1. Invoke planner для написания spec'а: 'invoke planner-agent для topic $TOPIC'." >&2
+  echo "  1. Invoke planner для написания spec'а: 'invoke planner-agent для topic ${TOPIC}'." >&2
   echo "  2. operator-approval спека." >&2
   echo "  3. После approval'а — можешь редактировать код." >&2
-  exit 1
+  exit 2
 fi
 
-# Spec есть — проверим что approved (heuristic: оператор написал "approved" or "ок" в footer)
+# Spec есть — soft-check approval (heuristic). Не блокирующий — позволяем нестандартный формат.
 if ! grep -qE "(approved|ок|поехали|спека ок)" "$SPEC"; then
   echo "WARN: spec $SPEC существует, но не похоже что approved оператором." >&2
   echo "Если только что написан — оператор должен зафиксировать approval в spec.md или в commit message." >&2
-  # Это warning, не block — позволяем продолжать в случае нестандартного формата approval'а
 fi
 
 exit 0
