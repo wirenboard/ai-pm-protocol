@@ -154,8 +154,9 @@ Product code — в стандартных директориях проекта
 topic: auth-signup
 mode: new-feature  # или: new-product (если первая фича) | rework-feature
 lite-mode: no  # или: yes, bugfix, small-fix — означает упрощённый workflow
+version: 1  # spec.v1 (default); spec.v2 / v3 для Mode 3 rework. См. AP-21 ограничение на бесконечные итерации.
 created: YYYY-MM-DD
-spec_approved: YYYY-MM-DD  # PM-marker; пусто пока не approved
+spec_approved: YYYY-MM-DD  # operator-marker; пусто пока не approved
 plan_approved: YYYY-MM-DD
 acceptance: pending | ok | failed
 merged: no | yes (PR-url)
@@ -164,6 +165,8 @@ review_url: ...
 ```
 
 Bootstrap-agent + main session обновляют эти поля по мере прохождения Step'ов. Это даёт programmatic state без отдельного state-file per feature.
+
+**Spec versioning (AP-21):** `version: 1` для new spec'а; для Mode 3 rework — увеличивается на каждую следующую iteration (`spec.v2.md` → `version: 2`, `spec.v3.md` → `version: 3`). При `version: 3+` reviewer **обязан** через AskUserQuestion подтвердить осознанность: «3-я iteration — адресует ли findings v2? Или split / abort?». Это exit condition против бесконечного цикла rework'ов (см. AP-21).
 
 ---
 

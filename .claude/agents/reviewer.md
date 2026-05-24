@@ -260,6 +260,24 @@ Override mechanic (AP-16): `[review-override: <reason>]` на отдельной
 
 Domain-specific aspects rework'а — в соответствующих specialized reviewers.
 
+### Spec version exit condition (AP-21)
+
+Читай `version:` field из frontmatter spec'а. При `version: 3+` (третья или последующая iteration rework'а):
+
+1. **Обязательно** через AskUserQuestion явно подтвердить с оператором:
+   > «Это {N}-я iteration фичи `<topic>`. Адресует ли spec.v{N} findings spec.v{N-1}? Или мы зашли в тупик?»
+
+   Options:
+   - (a) Да, продолжаем — review proceeds normally
+   - (b) Нет, split на отдельное упражнение — recommend abort + reopen as separate scope
+   - (c) Нет, abort фичу — recommend backlog item
+   - (d) Explicit override (`[rework-version-override: <reason>]` в HEAD commit body) — продолжаем с v{N+1}
+
+2. Решение **оператора**, не твоё. До явного ответа AI не продолжает review v{N+1} цикл.
+3. См. AP-21 (anti-patterns.md) — exit condition mechanic против бесконечного rework'а.
+
+Это защита от audit finding [H-2]: без exit condition Mode 3 может стать бесконечным циклом spec.v2 → v3 → v4 → … без сходящегося результата.
+
 ## Что ты НЕ делаешь
 
 - Не пишешь сам код — read-only
