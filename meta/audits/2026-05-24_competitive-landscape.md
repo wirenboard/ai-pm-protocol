@@ -97,3 +97,51 @@
 - `github.com/cameronsjo/spec-compare`
 - `thebcms.com/blog/spec-driven-development`
 - `arxiv.org/pdf/2507.19902` (AgentMesh)
+- `github.com/github/spec-kit` (fetched 2026-05-24)
+- `github.com/Fission-AI/OpenSpec` (fetched 2026-05-24)
+- `buildermethods.com/agent-os` (fetched 2026-05-24)
+- `kiro.dev` (fetched 2026-05-24)
+
+---
+
+## TODO: пожелания к переработке README (для будущего pass'а)
+
+Не редактировать сейчас, чтобы не мешать параллельной работе над проектом. Зафиксированы выводы из доп. deep-dive'ов (Spec Kit / OpenSpec / Agent OS / Kiro) от 2026-05-24, дополнивших исходный аудит.
+
+### Главный вывод позиционирования
+
+Сейчас README читается как «yet another SDD framework» — это создаёт ложное сравнение с Spec Kit / BMAD / OpenSpec на их поле (workflow shape). Более честная и **более узкая** формулировка:
+
+> **Discipline framework для асимметричного PM/dev сотрудничества с AI**, где оператор может быть PM'ом со слабой tech intuition, а не developer'ом.
+
+В эту нишу никто из пяти разобранных конкурентов не целится. Все они assume `user = developer` (BMAD моделирует это team-simulation'ом, Agent OS — context layer'ом, Kiro — IDE wrap'ом).
+
+### Что обязательно отразить в новом README
+
+1. **Назвать категорию (SDD) и ближайших альтернатив** (BMAD, Spec Kit, OpenSpec, Agent OS, Kiro) с честным короткиим сравнением — снижает «not invented here» подозрение, помогает self-selection.
+2. **Явно сказать «когда брать НЕ нас»**: solo-developer без PM-asymmetry → OpenSpec легче. Команда с enterprise compliance → Spec Kit стандартнее. AWS-shop → Kiro нативнее.
+3. **Перечислить уникальные опоры** (trust profiles A/B/C, AP-discipline как numbered invariants, Constraints layer Stage B, composition matrices, per-kind UI guides, Tier framework, 5 modes) — эти семь пунктов реально не покрыты никем.
+4. **Переформулировать Stages A-E из BDUF-стиля в iterative-стиль.** Сейчас «mandatory» читается как waterfall, хотя de facto Tier framework позволяет skip. OpenSpec явно отрицает «phase gates» — рынок этот нарратив подхватил.
+5. **Позиционировать как complement, не replacement** к Claude Code (по аналогии с Agent OS «complement to Cursor / Claude Code») — это снижает switching cost восприятия.
+
+### Кандидаты на feature-backlog (отдельная оценка)
+
+Из доп. deep-dive'ов, не включённые в исходную таблицу Feature gaps:
+
+- **Spec Kit** — `/analyze` как explicit oper-команда (ad-hoc protocol-compliance в середине Stage F); templates для `/checklist` в `doc/_templates/`.
+- **OpenSpec** — brownfield как **дефолт** в onboarding (сейчас 3-choice, но default-greenfield); формулировка «iterative not waterfall».
+- **Agent OS** — automated Discover для Mode 2 (code-scan'ит и драфтит standards для legacy); standards vs foundational как отдельные категории по lifecycle.
+- **Kiro** — EARS notation (`WHEN ... the system SHALL ...`) в acceptance секции spec'а; hooks-style automation на git-events через settings.json.
+
+### Risks для отражения в позиционировании
+
+- **Vendor-neutral wave**: Spec Kit (30+ агентов) + OpenSpec (20+) задают ожидание agent-agnostic. Мы Claude-only — назвать это явно как осознанный trade-off, а не дыру.
+- **«Complement, not replace» framing** (Agent OS) — снижает switching cost для пользователя; нам стоит явно занять ту же позицию.
+- **IDE-bundled distribution** (Kiro): если pattern сработает у Cursor / Anthropic, CLI/template-based решения станут tier-2. Это долгосрочный repositioning risk, не immediate.
+
+### Что НЕ делать
+
+- Не добавлять named personas (Mary / Quinn) — против AP-3 operator-gate.
+- Не добавлять Party Mode (multi-agent collaboration) — same reason.
+- Не пытаться conkурировать на ecosystem (★, expansion packs) — нам не выиграть и не нужно.
+- Не делать `change=folder` à la OpenSpec — migration cost > выигрыш, наш per-PR atomicity (AP-19) решает ту же задачу на уровне PR'а.

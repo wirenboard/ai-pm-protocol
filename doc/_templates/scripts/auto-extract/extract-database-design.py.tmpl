@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""
+.ai-pm/tooling/scripts/auto-extract/extract-database-design.py
+
+Tier 0 auto-extract — generates database-design-*.md sketch from existing schema.
+
+Sources (по priority):
+    - Prisma schema (prisma/schema.prisma)
+    - SQL migrations (migrations/*.sql, db/migrate/*.rb для Rails)
+    - SQLAlchemy models (heuristic search для Base = declarative_base())
+    - Drizzle ORM schema files
+    - Plain SQL DDL files
+
+Outputs separate files per db_kind (database-design-embedded.md / database-design-external.md).
+"""
+
+import argparse
+import re
+import sys
+from datetime import date
+from pathlib import Path
+from collections import defaultdict
+
+
+def find_prisma_schema(root: Path):
+    path = root / 'prisma' / 'schema.prisma'
+    return path if path.exists() else None
+
+
+def parse_prisma_schema(path: Path):
+    """Parse Prisma schema — extract datasource provider + models + fields."""
+    info = {'provider': 'unknown', 'models': [], 'enums': []}
+    try:
+        text = path.read_text(encoding='utf-8')
+
+        # datasource provider
+        ds_match = re.search(r'provider\s*=\s*"([^"]+)"', text)
+        if ds_match:
+            info['provider'] = ds_match.group(1)
+
+        # models
+        model_pattern = re.compile(r'model\s+(\w+)\s*\{([^}]+)\}', re.DOTALL)
+        for match in model_pattern.finditer(text):
+            model_name = match.group(1)
+            body = match.group(2)
+            fields = []
+            for line in body.strip().split('\n'):
+                line = line.strip()
+                if not line or line.startswith('//') or line.startswith('@@'):
+                    continue
+                field_match = re.match(r'(\w+)\s+(\w+(?:\?|\[\])?)\s*(.*)', line)
+                if field_match:
+                    fields.append({
+                        'name': field_match.group(1),
+                        'type': field_match.group(2),
+                        'attrs': field_match.group(3).strip()
+                    })
+            info['models'].append({'name': model_name, 'fields': fields})
+
+        # enums
+        enum_pattern = re.compile(r'enum\s+(\w+)\s*\{([^}]+)\}', re.DOTALL)
+        for match in enum_pattern.finditer(text):
+            info['enums'].append({'name': match.group(1), 'values': [
+                v.strip() for v in match.group(2).strip().split('\n')
+                if v.strip() and not v.strip().startswith('//')
+            ]})
+    except Exception as e:
+        print(f'Warning: failed to parse Prisma schema: {e}', file=sys.stderr)
+    return info
+
+
+def find_sql_migrations(root: Path):
+    """Find SQL migration files."""
+    migrations = []
+    for pattern in ['migrations/*.sql', 'migrations/**/*.sql', 'db/migrate/*.rb',
+                    'sql/migrations/*.sql', 'database/migrations/*.sql', 'alembic/versions/*.py']:
+        migrations.extend(root.glob(pattern))
+    return [m for m in migrations if not any(
+        part in {'node_modules', '.git', 'dist', 'build'} for part in m.parts
+    )]
+
+
+def parse_sql_create_tables(file_paths):
+    """Heuristic parse CREATE TABLE statements."""
+    tables = []
+    pattern = re.compile(
+        r'CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\(([^;]+)\)',
+        re.IGNORECASE | re.DOTALL
+    )
+    for path in file_paths:
+        try:
+            text = path.read_text(encoding='utf-8', errors='ignore')
+            for match in pattern.finditer(text):
+                table_name = match.group(1).strip('"\'`[]')
+                cols_block = match.group(2)
+                columns = []
+                for line in cols_block.split('\n'):
+                    line = line.strip().rstrip(',')
+                    if not line or line.startswith('--'):
+                        continue
+                    # Skip constraints
+                    if any(line.upper().startswith(kw) for kw in ('PRIMARY KEY', 'FOREIGN KEY', 'UNIQUE', 'CHECK', 'CONSTRAINT', 'INDEX')):
+                        continue
+                    col_match = re.match(r'(\w+)\s+([\w()]+)', line)
+                    if col_match:
+                        columns.append({'name': col_match.group(1), 'type': col_match.group(2)})
+                tables.append({'name': table_name, 'columns': columns, 'source': str(path.relative_to(path.parents[2] if len(path.parents) > 2 else path.parent))})
+        except Exception:
+            continue
+    return tables
+
+
+def detect_identifier_strategy(models_or_tables):
+    """Heuristic: какая identifier strategy используется."""
+    strategies = defaultdict(int)
+    for item in models_or_tables:
+        fields = item.get('fields', []) or item.get('columns', [])
+        for f in fields:
+            name = f.get('name', '').lower()
+            ftype = f.get('type', '').lower()
+            attrs = f.get('attrs', '').lower()
+            if name == 'id':
+                if 'uuid' in ftype or 'uuid' in attrs:
+                    strategies['uuid'] += 1
+                elif 'serial' in ftype or 'autoincrement' in attrs or 'bigserial' in ftype:
+                    strategies['serial'] += 1
+                elif 'int' in ftype:
+                    strategies['integer'] += 1
+                else:
+                    strategies['unknown'] += 1
+    if not strategies:
+        return 'unknown'
+    return max(strategies, key=strategies.get)
+
+
+def generate_markdown(provider, models_or_tables, enums, identifier_strategy, sources, db_kind):
+    """Generates database-design-<kind>.md draft."""
+    today = date.today().isoformat()
+    lines = []
+    lines.append(f'# Database design — {db_kind} (auto-extracted)')
+    lines.append('')
+    lines.append(f'<!-- Auto-extracted {today} via scripts/auto-extract/extract-database-design.py. Operator may refine. -->')
+    lines.append('')
+    lines.append('## Сводка')
+    lines.append('')
+    lines.append(f'- **DB kind:** `{db_kind}`')
+    if provider != 'unknown':
+        lines.append(f'- **Provider:** `{provider}`')
+    lines.append(f'- **Identifier strategy:** `{identifier_strategy}`')
+    lines.append(f'- **Entities detected:** {len(models_or_tables)}')
+    if enums:
+        lines.append(f'- **Enums detected:** {len(enums)}')
+
+    lines.append('')
+    lines.append('## Источники extract')
+    lines.append('')
+    if sources:
+        for s in sources:
+            lines.append(f'- `{s}`')
+    else:
+        lines.append('- _Нет schema sources обнаружено._')
+
+    lines.append('')
+    lines.append('## Сущности')
+    lines.append('')
+
+    if not models_or_tables:
+        lines.append('_Сущностей не обнаружено._')
+    else:
+        for item in models_or_tables[:30]:  # cap at 30
+            name = item.get('name')
+            fields = item.get('fields', []) or item.get('columns', [])
+            lines.append(f'### {name}')
+            lines.append('')
+            if fields:
+                lines.append('| Поле | Тип |')
+                lines.append('|---|---|')
+                for f in fields[:20]:
+                    fname = f.get('name', '?')
+                    ftype = f.get('type', '?')
+                    lines.append(f'| `{fname}` | `{ftype}` |')
+                if len(fields) > 20:
+                    lines.append(f'| _… {len(fields) - 20} more_ | _… _ |')
+            lines.append('')
+
+        if len(models_or_tables) > 30:
+            lines.append(f'_… {len(models_or_tables) - 30} more entities truncated._')
+            lines.append('')
+
+    if enums:
+        lines.append('## Enums')
+        lines.append('')
+        for e in enums[:20]:
+            lines.append(f'- **{e["name"]}**: {", ".join(e["values"][:10])}')
+            if len(e['values']) > 10:
+                lines.append(f'  _и ещё {len(e["values"]) - 10} values_')
+        lines.append('')
+
+    lines.append('## Что НЕ извлечено (operator must add)')
+    lines.append('')
+    lines.append('- **Foreign key relations + cascade rules** — partial extract from raw SQL/Prisma; refine с pkg-aware tools')
+    lines.append('- **Indexes (composite / partial / unique)** — partial extract; verify')
+    lines.append('- **Migrations discipline** — backwards-compat strategy, expand-contract sequences (AP-18)')
+    lines.append('- **Backup discipline** — frequency, retention, restore testing cadence')
+    lines.append('- **Encryption at rest** (если PII) — solution + key management')
+    lines.append('- **Access control** — roles, audit logging discipline')
+
+    return '\n'.join(lines) + '\n'
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', default='.')
+    parser.add_argument('--output-dir', help='Default: <doc_root>/ (writes database-design-*.md per detected kind)')
+    args = parser.parse_args()
+
+    root = Path(args.root).resolve()
+
+    # Determine output dir
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+    else:
+        state_file = root / '.ai-pm' / '.bootstrap-state.md'
+        doc_root = 'doc'
+        if state_file.exists():
+            for line in state_file.read_text(encoding='utf-8').splitlines():
+                if line.startswith('doc_root:'):
+                    doc_root = line.split(':', 1)[1].strip()
+                    break
+        output_dir = root / doc_root
+
+    sources = []
+    prisma = find_prisma_schema(root)
+    if prisma:
+        prisma_info = parse_prisma_schema(prisma)
+        sources.append(str(prisma.relative_to(root)))
+        provider = prisma_info['provider']
+        # Determine db_kind from provider
+        if provider == 'sqlite':
+            db_kind = 'embedded'
+        elif provider in ('postgresql', 'mysql', 'mongodb', 'sqlserver', 'cockroachdb'):
+            db_kind = 'external'
+        else:
+            db_kind = 'external'
+
+        identifier = detect_identifier_strategy(prisma_info['models'])
+        content = generate_markdown(
+            provider, prisma_info['models'], prisma_info['enums'],
+            identifier, sources, db_kind
+        )
+        output_path = output_dir / f'database-design-{db_kind}.md'
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(content, encoding='utf-8')
+        print(f'Database design extracted (Prisma): {output_path}', file=sys.stderr)
+        print(f'  Provider: {provider}', file=sys.stderr)
+        print(f'  Models: {len(prisma_info["models"])}', file=sys.stderr)
+        return
+
+    # Fallback: SQL migrations
+    migrations = find_sql_migrations(root)
+    if migrations:
+        sources = [str(m.relative_to(root)) for m in migrations[:10]]
+        if len(migrations) > 10:
+            sources.append(f'... ещё {len(migrations) - 10} migration files')
+        tables = parse_sql_create_tables(migrations)
+        identifier = detect_identifier_strategy(tables)
+        # Default к external для SQL migrations (sqlite migrations реже на disk)
+        db_kind = 'external'  # heuristic
+        content = generate_markdown('sql', tables, [], identifier, sources, db_kind)
+        output_path = output_dir / f'database-design-{db_kind}.md'
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(content, encoding='utf-8')
+        print(f'Database design extracted (SQL migrations): {output_path}', file=sys.stderr)
+        print(f'  Tables: {len(tables)}', file=sys.stderr)
+        return
+
+    print('No database schema sources found (no Prisma, no migrations). Skipping.', file=sys.stderr)
+    sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()

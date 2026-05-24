@@ -179,6 +179,14 @@ adoption_overrides: []
 
 ## Tier 0 routine — auto-extract из existing code
 
+**Implementation:** scripts в `scripts/auto-extract/` (генерируются на Stage E из `doc/_templates/scripts/auto-extract/*.tmpl`). Orchestrator — `scripts/auto-extract/extract-all.sh`.
+
+**Invocation:**
+- **Quick adoption full:** `./scripts/auto-extract/extract-all.sh` — writes artifacts в `doc_root`
+- **Architecture overview keyword routing:** `./scripts/auto-extract/extract-all.sh --read-only` — writes в `meta/architecture-extract-<date>.md`, **не меняет state**
+- **Manual staged adoption (где applicable):** individual scripts (`extract-stack.sh`, `extract-ui-kind.sh`, etc.) per нужный аспект
+- **Skip adoption:** только `extract-stack.sh` для stack auto-detection
+
 **Invoked в:** Quick adoption (full) / Manual staged (где applicable) / Skip adoption (только stack) / Architecture overview keyword routing (read-only)
 
 ### Stack detection
