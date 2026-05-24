@@ -1,3 +1,25 @@
+---
+topic: <feature-topic-kebab-case>
+mode: new-product | feature | rework | bug-fix    # один из 5 modes (см. development-protocol § 3)
+lite-mode: no                                      # no | yes | bugfix | small-fix — упрощённый workflow
+created: YYYY-MM-DD
+spec_approved:                                     # PM-marker; YYYY-MM-DD когда оператор approve'ит spec
+plan_approved:                                     # YYYY-MM-DD когда оператор approve'ит plan
+acceptance: pending                                # pending | ok | failed
+merged: no                                         # no | yes (PR-URL)
+review_url:                                        # ссылка на committed review trail (meta/reviews/...)
+pr_ordering:                                       # null для single-domain; explicit list для multi-domain (AP-19)
+template_version_applied: v0.X.Y                   # версия template'а, в котором писался spec — для template-sync
+# 7 impact полей (3 operational AP-13 + 4 structural AP-14)
+legal_impact: no                                   # меняет ли фича ToS / Privacy / regulatory surface
+interview_impact: no                               # invalidates ли customer-interview-script
+incident_impact: no                                # добавляет ли фича новый класс runtime-инцидентов
+journey_impact: no                                 # фича меняет existing journey / вводит новый шаг / добавляет персону
+threat_impact: no                                  # фича вводит новые векторы атак / меры защиты / меняет T-/M-IDs
+scope_impact: no                                   # фича переносит артефакты между фазами или меняет границы
+topology_impact: no                                # фича вводит новый компонент / поток / зависимость / интеграцию
+---
+
 # <Feature name>
 
 **Stage F artifact, Step 1.** Спецификация на естественном языке. Контракт между оператор и AI.
