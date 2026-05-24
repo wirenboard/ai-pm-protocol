@@ -1,26 +1,161 @@
-#!/usr/bin/env sh
-# ai-pm-protocol — pre-push hook
+#!/usr/bin/env bash
+# ai-pm-protocol — pre-push hook (template's own)
 #
-# Запрещает прямой push в main / master (development-protocol.md § 14).
-# Защита дублирует серверную branch protection как defense-in-depth и
-# работает, даже если серверная protection временно снята (например, на
-# этапе bootstrap-а нового зеркала / форка).
+# Два независимых блока:
+#  (1) Hard block на main / master push (development-protocol.md § 14). Дублирует
+#      серверную branch protection как defense-in-depth и работает даже если
+#      серверная protection временно снята.
+#  (2) Review-trail enforcement (AP-16 Layer 4) для feature/chore/docs/fix push'ей.
+#      Блокирует push без review-файла / verdict=request-changes / unknown verdict.
+#      Override-маркеры [skip-review] / [review-override:] в HEAD commit body —
+#      поддерживаются.
 #
 # Активация:
 #   git config core.hooksPath .githooks
 #
 # § 14.7 development-protocol запрещает обход через --no-verify.
 
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+HEAD_BODY=$(git -C "$REPO_ROOT" log -1 --pretty=%B 2>/dev/null || echo "")
+
+parse_verdict_md() {
+  local file="$1"
+  local line
+  line=$(head -n 50 "$file" | grep -iE '^\*\*Verdict:\*\*[[:space:]]*(approve-with-comments|approve|request-changes|changes-requested)' | head -1 || true)
+  case "$line" in
+    *[Aa]pprove-with-comments*) echo "approve-with-comments" ;;
+    *[Rr]equest-changes*|*[Cc]hanges-requested*) echo "request-changes" ;;
+    *[Aa]pprove*) echo "approve" ;;
+    *) echo "unknown" ;;
+  esac
+}
+
+parse_verdict_json() {
+  local file="$1"
+  if command -v jq >/dev/null 2>&1; then
+    jq -r '.verdict // "unknown"' "$file" 2>/dev/null || echo "unknown"
+  else
+    grep -oE '"verdict"[[:space:]]*:[[:space:]]*"[^"]+"' "$file" 2>/dev/null \
+      | sed -E 's/.*"([^"]+)"$/\1/' | head -1 || echo "unknown"
+  fi
+}
+
+check_review_trail() {
+  local branch="$1"
+
+  # Skip-marker (line-anchored)
+  if echo "$HEAD_BODY" | grep -qE '^\[skip-review\][[:space:]]*$'; then
+    echo "INFO: [skip-review] маркер — review enforcement пропущен (trivial chore)." >&2
+    return 0
+  fi
+
+  # Committed _review.md для Stage E feature (feature/<topic> или feat/<topic>)
+  local topic=""
+  case "$branch" in
+    feature/*) topic="${branch#feature/}" ;;
+    feat/*)    topic="${branch#feat/}" ;;
+  esac
+  if [ -n "$topic" ]; then
+    for review_path in "$REPO_ROOT/doc/features/${topic}_review.md" \
+                       "$REPO_ROOT/.ai-pm/doc/features/${topic}_review.md"; do
+      if [ -f "$review_path" ]; then
+        local verdict
+        verdict=$(parse_verdict_md "$review_path")
+        handle_verdict "$verdict" "$review_path" || return 1
+        return 0
+      fi
+    done
+  fi
+
+  # Local trace file
+  local trace_name
+  trace_name=$(echo "$branch" | tr '/' '-')
+  local trace_file="$REPO_ROOT/.ai-pm/.reviews/${trace_name}.json"
+  if [ -f "$trace_file" ]; then
+    local verdict
+    verdict=$(parse_verdict_json "$trace_file")
+    handle_verdict "$verdict" "$trace_file" || return 1
+    return 0
+  fi
+
+  # Нет trail вообще — последний шанс: explicit operator-override
+  if echo "$HEAD_BODY" | grep -qE '^\[review-override:[[:space:]]*[^]]+\][[:space:]]*$'; then
+    local reason
+    reason=$(echo "$HEAD_BODY" | grep -oE '^\[review-override:[[:space:]]*[^]]+\]' | sed -E 's/^\[review-override:[[:space:]]*//; s/\]$//')
+    echo "INFO: operator-override через [review-override: $reason] (review-trail отсутствует)." >&2
+    return 0
+  fi
+
+  echo "" >&2
+  echo "BLOCKED: для ветки '$branch' не найден review-trail." >&2
+  echo "" >&2
+  echo "Опции перед git push:" >&2
+  echo "  (а) Запустить reviewer-agent (.claude/agents/reviewer.md) — он сохранит trail" >&2
+  echo "      (committed doc/features/<topic>_review.md для Stage E или" >&2
+  echo "       .ai-pm/.reviews/<branch>.json для chore/docs/template-extension)" >&2
+  echo "  (б) Для trivial chore (typo / dep bump) — добавить [skip-review] на" >&2
+  echo "      отдельной строке HEAD commit body" >&2
+  echo "  (в) Explicit operator-override — [review-override: <reason>] на отдельной" >&2
+  echo "      строке HEAD commit body (для bootstrap / chicken-egg / declared trade-off)" >&2
+  echo "" >&2
+  echo "См. AP-16 в doc/anti-patterns.md." >&2
+  echo "" >&2
+  return 1
+}
+
+handle_verdict() {
+  local verdict="$1"
+  local source="$2"
+  case "$verdict" in
+    approve|approve-with-comments) return 0 ;;
+    request-changes|changes-requested)
+      if echo "$HEAD_BODY" | grep -qE '^\[review-override:[[:space:]]*[^]]+\][[:space:]]*$'; then
+        local reason
+        reason=$(echo "$HEAD_BODY" | grep -oE '^\[review-override:[[:space:]]*[^]]+\]' | sed -E 's/^\[review-override:[[:space:]]*//; s/\]$//')
+        echo "INFO: operator-override через [review-override: $reason]." >&2
+        return 0
+      fi
+      echo "" >&2
+      echo "BLOCKED: review verdict = '$verdict' (источник: $source)." >&2
+      echo "Push с unresolved findings нарушает AP-16." >&2
+      echo "" >&2
+      echo "Опции: (а) зафиксить findings и перезапустить reviewer-agent;" >&2
+      echo "       (б) operator-override через [review-override: <reason>] на отдельной" >&2
+      echo "           строке HEAD commit body (git commit --amend), потом git push." >&2
+      echo "" >&2
+      return 1
+      ;;
+    *)
+      echo "" >&2
+      echo "BLOCKED: unknown verdict в review-trail (источник: $source)." >&2
+      echo "Ожидаемый формат: '**Verdict:** approve|approve-with-comments|request-changes'" >&2
+      echo "в первых 50 строках review-файла (либо поле 'verdict' в local trace JSON)." >&2
+      echo "" >&2
+      return 1
+      ;;
+  esac
+}
+
 while read -r local_ref local_sha remote_ref remote_sha; do
+  # (1) main / master block
   case "$remote_ref" in
     refs/heads/main|refs/heads/master)
       echo "" >&2
       echo "BLOCKED: прямой push в '$remote_ref' запрещён." >&2
-      echo "" >&2
       echo "Создай ветку, открой PR через 'gh pr create', merge через PR UI." >&2
       echo "См. development-protocol.md § 14." >&2
       echo "" >&2
       exit 1
+      ;;
+  esac
+
+  # (2) review-trail для feature/feat/chore/docs/fix push'ей
+  case "$remote_ref" in
+    refs/heads/feature/*|refs/heads/feat/*|refs/heads/chore/*|refs/heads/docs/*|refs/heads/fix/*)
+      branch="${remote_ref#refs/heads/}"
+      check_review_trail "$branch" || exit 1
       ;;
   esac
 done
