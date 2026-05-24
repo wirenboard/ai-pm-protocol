@@ -1,6 +1,6 @@
 # ai-pm-protocol
 
-Универсальный protocol для разработки в связке **соло-PM + AI-агент**, оформленный как репо-шаблон + init-агент.
+Универсальный protocol для разработки в связке **соло-оператор + AI-агент**, оформленный как репо-шаблон + init-агент. Оператор — это PM (Trust profile A) или developer (Trust profile B/C), который ведёт продукт один, а AI выступает второй парой рук.
 
 ## Кому это и зачем
 
@@ -13,16 +13,33 @@ Template **симметрично закрывает обе** через cross-s
 
 | Сторона | Что получает | Pain закрывается |
 |---|---|---|
-| **PM** (Persona A) | AI как personal developer + automation/reviewer = peer-review team | «писать код» |
-| **Developer** (B/C) | Template как PM-discipline (Stages A-D, enforced spec linkage) | «что делать полезного» |
+| **PM** (Trust profile A) | AI как personal developer + automation/reviewer = peer-review team | «писать код» |
+| **Developer** (Trust profile B/C) | Template как PM-discipline (Stages A-D, enforced spec linkage, formalized review) | «что делать полезного» |
 
-**Bidirectional learning:** PM по ходу осваивает архитектуру, Developer — соседний стек (B) и продуктовое мышление (B/C). Template — **усилитель компетенций**, не **замена навыков**.
+**Bidirectional learning:** PM по ходу осваивает архитектуру (через learning-oriented review-выходы, см. `reviewer.md`), developer — продуктовое мышление и соседние стеки (через Stage A-C foundational artefacts). Template — **усилитель компетенций**, не **замена навыков**.
 
-**Чем это не является:** не методология для команд > 1 PM. Не code generator. Не AI hype. Не vibecoding tool.
+**Чем это не является:** не методология для команд > 1 человека. Не code generator. Не AI hype. Не vibecoding tool.
 
-## Идея в одном абзаце
+## Как это работает: шесть стадий
 
-Любой продуктовый проект проходит шесть стадий: **A. Discovery → B. Constraints → C. Solution shape → D. Process → E. Bootstrap → F. Production**. На каждой — конкретные artifacts, которые AI **драфтит**, PM **маркирует «ОК / поменять X»**. Между стадиями — PM-gate. В Production каждая фича проходит микро-цикл `spec → plan → PM-review → tests-first code → CI gates → acceptance → reviewer-agent`. ADR пишутся **реактивно**. Защита протокола — через **5-layer enforcement** (CLAUDE.md briefing → settings.json hooks → subagent routine → git hooks → CI gates), две из них — **hard блокировки**, которые AI не может обойти.
+Любой продуктовый проект проходит шесть стадий — **последовательность layered constraints**, где каждая следующая опирается на предыдущую и **не может** начаться, пока предыдущая не закрыта оператором («operator-gate», AP-3). Возврат назад допустим, если обнаружили пробел — фиксируется в `.bootstrap-state.md`. На каждой стадии **AI драфтит** артефакты, **оператор маркирует** «ОК / поменять X»; в неоднозначных местах AI задаёт вопросы через `AskUserQuestion`. Оператор владеет **решением**, AI — **исполнением**: оператор не пишет ни кода, ни artifact'ов руками.
+
+| # | Stage | Что закрываем | Ключевые артефакты | Mode 1 (greenfield) | Mode 2/3 (existing) |
+|---|---|---|---|---|---|
+| **A** | **Discovery** | Кто / для кого / в каких сценариях / как звучим / как выглядим | vision, personas, user-journeys, competitive-analysis, positioning, brand-voice, `ui-style-guide-base.md` + per-kind | WRITE | READ + WRITE дельт |
+| **B** | **Constraints** | Что должно работать (SLO), что не должно сломаться (threats / legal / incidents), что отрезаем (scope) | strategic-frame, threat-model, legal-frame / legal-brief, customer-interview-script, incident-runbook-draft, mvp-scope | WRITE | READ + WRITE дельт |
+| **C** | **Solution shape** | Из каких компонентов и потоков состоит продукт + foundational forks (если есть) | topology, foundational ADRs (только при реальном архитектурном выборе) | WRITE | READ |
+| **D** | **Process** | На чём строим / как храним данные / как ведём разработку | stack, `database-design-base.md` + per-kind, `dev-environment.md`, optional `dependency-policy.md` / `refactor-playbook.md`, development-protocol overlay, ai-linting-rules, subagent configs | WRITE | SKIP |
+| **E** | **Bootstrap** | Concrete infrastructure — **выводится** из A-D, не упреждающе (AP-2) | `.github/workflows/ci.yml`, configs линтеров, semgrep rulesets, git hooks, branch protection, `Makefile` / `.editorconfig` / `.vscode/` | WRITE | SKIP (verify) |
+| **F** | **Production** | Реальные фичи. Каждая фича — микро-цикл `spec → plan → operator-review → tests-first code → CI gates → acceptance → reviewer-agent`. ADR пишутся **реактивно** при архитектурном fork'е (AP-1) | `doc/features/<topic>_{spec,plan,review}.md` + код + тесты | WRITE | WRITE |
+
+**Порядок не произвольный.** A до B — нельзя сформулировать SLO / threats без понимания пользователя. B до C — нельзя нарисовать топологию, не зная границ MVP и threat surface'а. C до D — выбор стека и схемы БД зависит от компонентов. D до E — infrastructure выводится из стека и capabilities, упреждающе создавать запрещено (AP-2). E до F — без CI / hooks / branch protection первая фича лишена защитной сетки.
+
+**Composition matrices** (multi-value capabilities для composite продуктов):
+- `ui_kind` — например `web, backend` для full-stack web; `cli, backend` для CLI с server-side. Для каждого значения пишется отдельный `ui-style-guide-<kind>.md`.
+- `db_kind` — например `embedded, external` для mobile с local cache + central API; `none` для stateless services. Для каждого — отдельный `database-design-<kind>.md`.
+
+Подробности — `doc/development-protocol.md` § 4-5.
 
 ## Структура репо template'а
 
@@ -142,30 +159,6 @@ Bootstrap-agent **сам**:
 3. Спросит Mode + Trust profile (integration mode — детектируется automatically).
 4. Поведёт через Stage A-E.
 
-## Как использовать (v0 vision)
-
-**Mode `new-product` (greenfield):**
-
-1. Setup (4 шага выше) — клон template + symlink.
-2. `cd new-product-repo && claude` — bootstrap-agent активируется.
-3. Bootstrap-agent: «Mode? `new-product` / `new-feature` / `rework-feature`».
-3. Bootstrap-agent: «Integration mode? gitignore / submodule / vendor». Default — gitignore.
-4. Создаётся `.ai-pm/` skeleton; tooling подключается по выбранному mode.
-5. Stage A → B → C → D (content) — bootstrap-agent проводит, PM маркирует.
-6. Stage E — bootstrap-agent генерирует concrete infrastructure (CI, линтеры, security) **на основе** Stage A-D content. Не упреждающе.
-7. Stage F — обычная feature work.
-
-**Mode `new-feature` / `rework-feature` (existing project):**
-
-1. `cd existing-repo && claude` — bootstrap-agent активируется в существующей репе.
-2. Mode + integration выбраны.
-3. Bootstrap-agent **сканит** существующий проект (стек по `package.json` / `pyproject.toml` / etc.), читает existing docs (если есть).
-4. READ-pass по Stage A-C; опционально WRITE дельт (например, если фича вводит новую persona).
-5. Stage E — добавляет ai-pm-specific jobs **в существующий `ci.yml`** (не overwrites). Линтеры, что user уже имеет — отмечает «covered, skip».
-6. Stage F — фича / rework по standard workflow.
-
-**Статус:** v0 draft. Шаблон обкатывается параллельно с первым реальным prod-run'ом (private); правила и templates уточняются по мере того, как реальный проект сталкивается с реальностью.
-
 ## Multi-layer enforcement (5 слоёв)
 
 Template enforce'ит протокол через 5 защитных слоёв (см. `doc/development-protocol.md` § 5.5):
@@ -178,7 +171,7 @@ Template enforce'ит протокол через 5 защитных слоёв 
 | 4 | Git hooks (pre-commit, commit-msg, pre-push) | **Hard** |
 | 5 | CI gates + branch protection | **Hardest** |
 
-Слои 2, 4, 5 **физически блокируют** нарушения протокола (например, попытку Write в `apps/` без spec'а). PM может игнорировать Layer 1 (briefing), но Layer 2 hook не пропустит tool call.
+Слои 2, 4, 5 **физически блокируют** нарушения протокола (например, попытку Write в `apps/` без spec'а). Оператор может игнорировать Layer 1 (briefing), но Layer 2 hook не пропустит tool call.
 
 ## Anti-patterns, явно запрещённые
 
@@ -186,7 +179,7 @@ Template enforce'ит протокол через 5 защитных слоёв 
 
 - **AP-1:** ADR upfront (без plan'а фичи, который этого требует)
 - **AP-2:** Premature Stage E (`apps/`, `packages/` до первого `<topic>_spec.md`)
-- **AP-3:** Документы без PM-gate между стадиями
+- **AP-3:** Документы без operator-gate между стадиями
 - **AP-6:** AI отклоняется от plan'а без объявления и без обсуждения
 - **AP-13:** Пропуск operational / legal / validation артефактов
 - **AP-14:** Пропуск структурного read-pass'а перед feature spec
@@ -214,17 +207,9 @@ Template enforce'ит протокол через 5 защитных слоёв 
 
 Worst-case 2 spawns per atomic PR (protocol-compliance + 1 domain). См. AP-19 + AP-20.
 
-## Foundational artefacts (Stage A-D)
+## Статус
 
-**Stage A — Discovery:** vision / personas / user-journeys / competitive-analysis / positioning / brand-voice / `ui-style-guide-base.md` + per-kind `ui-style-guide-<kind>.md` (web / native-mobile / native-desktop / tui / cli / embedded / backend) per `ui_kind`.
-
-**Stage B — Constraints:** strategic-frame (SLO + validation method) / threat-model / legal-frame / legal-brief / customer-interview-script / incident-runbook-draft / mvp-scope.
-
-**Stage C — Solution shape:** topology / foundational ADRs (если есть).
-
-**Stage D — Process:** stack chosen / `db_kind` chosen + `database-design-base.md` + per-kind `database-design-<kind>.md` (embedded / external) / `dev-environment.md` / optional `dependency-policy.md` + `refactor-playbook.md` / development-protocol overlay / ai-linting-rules / subagent configs verified.
-
-Composition matrices: `ui_kind` multi-value для composite UIs (например `web, backend` для full-stack web; `cli, backend` для CLI с server-side). `db_kind` multi-value (`embedded, external` для mobile с local cache + central API).
+v0 draft. Шаблон обкатывается параллельно с первым реальным prod-run'ом (private); правила и templates уточняются по мере того, как реальный проект сталкивается с реальностью.
 
 ## Contributing
 
