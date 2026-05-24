@@ -46,15 +46,22 @@
 
 Шаблон строгий, но не тупой. У вас нет фронтенда — зачем требовать `ui-style-guide.md`? Нет платежей и логина — зачем `threat-model.md`?
 
-На старте `discipline-advisor` сканирует код и говорит:
+Защита — в два слоя:
 
-- **обязательно** — нашёл `stripe` в зависимостях, threat-model придётся написать. Skip недоступен.
-- **рекомендую** — серая зона, по умолчанию пишем
-- **можно пропустить** — фронтенда нет, ui-style-guide не нужен
+**Жёсткий слой — скрипт `scripts/check-security-floor.sh`.** Детерминированно grep'ает `package.json` / `pyproject.toml` / `go.mod` / `Cargo.toml` и т.д. на конкретные триггеры:
 
-Вы выбираете через `[Skip]` / `[Keep]`. Решение записывается с причиной и датой, через 90 дней advisor вернётся: «всё ещё актуально? Зависимости-то поменялись».
+- `stripe`/`paypal`/`braintree` → нужны `threat-model.md` + `legal.md`
+- `bcrypt`/`argon2`/`passport`/`jsonwebtoken`/`next-auth` → нужен `threat-model.md`
+- `crypto.createCipheriv`/`AES-GCM`/`libsodium`/`cryptography` → нужен `threat-model.md`
+- Колонки `email VARCHAR`/`phone`/`dob`/`ssn` в schema-файлах → `threat-model.md` + `legal.md` + `database-design-base.md`
 
-AI сам ничего не пропускает. Решение всегда за вами. Но если в коде реально появился `bcrypt` или `aes-gcm` — advisor не даст skip'нуть, как ни кликай.
+Это **не LLM-решение**. Найдено `stripe` в зависимостях — skip недоступен, точка. Можно только явно overridе'ить через `adoption_overrides:` с указанной причиной (AP-22), это попадёт в state-файл и в git log.
+
+**Мягкий слой — `discipline-advisor`.** На bootstrap'е читает output жёсткого скрипта как факт, плюс смотрит сам на остальное (что не покрыто статикой) и предлагает: `mandatory` / `recommended` / `skip-safe`. Может только **усилить** жёсткий слой (добавить mandatory), не **ослабить** его.
+
+Вы выбираете через `[Skip]` / `[Keep]` для рекомендаций advisor'а. Решение записывается с причиной и датой в `.ai-pm/.bootstrap-state.md`. Через 90 дней `scripts/check-skip-reprompts.sh` (вызывается на старте каждой сессии + перед commit'ом) напомнит: «next_reprompt истёк, пересмотри». Не зависит от того что advisor вспомнит.
+
+**Честно про текущее состояние advisor'а:** soft 5-axis анализ (понятность / поддерживаемость / технические качество / UI / UX / learning) пока **opt-in PoC** — требует accuracy gate ≥80% per axis на 10-15 синтетических проектах перед тем как станет mandatory. Жёсткий слой работает всегда независимо от этого.
 
 ## Установка
 
@@ -129,10 +136,12 @@ Foundation растёт постепенно: `minimal → partial → complete`
 ## Что под капотом (коротко)
 
 - **5 защитных слоёв:** CLAUDE.md (soft) → settings.json hooks физически блокируют Write/Edit (hard) → subagent промпты (soft) → git hooks (hard) → CI + branch protection (hardest)
-- **Router ревьюеров:** всегда запускается `protocol-compliance` (спека vs план vs код) + один профильный (backend / frontend / design / database). В худшем — 2 запуска на PR, не 5
+- **Router ревьюеров (по дизайну):** всегда запускается `protocol-compliance` (спека vs план vs код) + один профильный (backend / frontend / design / database). По дизайну — 2 запуска на PR, не 5. На уровне промпта reviewer-агента, не статически вынуждено
 - **Composition matrices:** для гибридов вроде «web + backend + external БД» правила фильтруются по реальным capabilities, не копипастятся
 - **Реактивные ADR:** пишутся, когда planner находит развилку в плане. Не upfront, не «для галочки»
 - **Линтер дисциплины:** `check-spec-discipline.sh` — 15 проверок на типичные AI-косяки (ослабление assertion'ов, забытый regression test, fork без ADR)
+- **Статический security floor:** `check-security-floor.sh` — детерминированный grep по манифестам/коду/схемам на stripe/bcrypt/aes-gcm/PII. Output — ground truth для advisor'а
+- **Reprompt auto-trigger:** `check-skip-reprompts.sh` парсит state-файл на старте каждой сессии и перед commit'ом, печатает истёкшие skip-решения
 
 Подробности по каждому — `doc/development-protocol.md` и `doc/anti-patterns.md` (AP-1..AP-24).
 
@@ -185,7 +194,7 @@ git config core.hooksPath .githooks
 | [claude-sub-agent](https://github.com/zhsama/claude-sub-agent) | Workflow на subagents Claude Code | Меньше масштаб, без stage-gates и advisor-skip |
 | [ChatPRD](https://www.chatprd.ai/) | AI-помощник для PM (PRD, ревью) | Закрывает Stage A/B для PM, но без кодовой части и без enforcement'а |
 
-Что почти не встречается у других: ревью, прибитое и к pre-push, и к CI; советник, который сам возвращается через 90 дней пересмотреть пропущенное и не даёт пропустить security-вещи; хуки, физически не позволяющие AI писать код в обход спеки; гибкая настройка под продукты, у которых одновременно и web, и backend, и mobile.
+Что почти не встречается у других: ревью, прибитое и к pre-push, и к CI; статический детектор security-зависимостей, который AI не может «убедить» не сработать; автоматический напоминатель через 90 дней про пропущенное; хуки, физически не позволяющие AI писать код в обход спеки; гибкая настройка под продукты, у которых одновременно и web, и backend, и mobile.
 
 ## Лицензия
 
