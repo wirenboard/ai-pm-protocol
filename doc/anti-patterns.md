@@ -164,7 +164,7 @@
 
 **Use case override:** редко — например, при rework критической security фичи, где iteration is genuine refinement, а не stuck-in-loop. Override **требует обоснования от оператора**, не от AI.
 
-См. также AP-16 (review-override mechanic — schema похожая) и audit finding [H-2] (`doc/audits/2026-05-24_logic-fitness.md`).
+См. также AP-16 (review-override mechanic — schema похожая) и audit finding [H-2] (`meta/audits/2026-05-24_logic-fitness.md`).
 
 ---
 
