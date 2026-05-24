@@ -401,6 +401,78 @@ check_security_spec_cites_standard() {
   log_ok "security-spec-cites-standard"
 }
 
+# === Gap 1 (v0.2.0): spec→test mapping — каждый Gherkin Scenario имеет matching test ===
+#
+# Парсит Gherkin `Scenario:` lines из feature spec'ов и ищет matching test name
+# в test directories. Multi-stack heuristic: ищет scenario name (case-insensitive,
+# normalized whitespace) в test files как substring (covers `describe('Scenario: ...')`,
+# `def test_scenario_*`, `func TestScenario*`, `@pytest.mark.scenario`, BDD framework
+# patterns и др.).
+#
+# Per-stack mapping convention'ы могут быть закреплены в `ai-linting-rules.md`
+# (Stage E генерирует под выбранный стек). Этот check работает best-effort при
+# отсутствии конвенции — если test не находится — fail.
+#
+# Skip patterns:
+# - `lite-mode: bugfix` — bugfix specs могут не иметь Gherkin (regression tests
+#   через failing-test-first AP-5)
+# - Spec без Gherkin блоков — silent skip (не security-touching spec'и часто нет
+#   Gherkin'а, только NFR)
+check_spec_test_mapping() {
+  local found_specs=0
+  local missing_count=0
+
+  for spec in "$DOC_ROOT/features/"*_spec.md "$DOC_ROOT/features/"*_spec.v*.md; do
+    [ -e "$spec" ] || continue
+    found_specs=$((found_specs + 1))
+
+    # Skip bugfix lite-mode (regression test policy через AP-5)
+    if grep -qE '^lite-mode:\s*bugfix' "$spec" 2>/dev/null; then
+      continue
+    fi
+
+    # Extract scenario names — Gherkin lines starting с `Scenario:` или `Scenario Outline:`
+    # Normalize: trim, single-space, lowercase для loose match
+    local scenarios
+    scenarios=$(grep -E '^\s*Scenario(\s+Outline)?:' "$spec" 2>/dev/null | \
+                sed -E 's/^\s*Scenario(\s+Outline)?:\s*//' | \
+                sed -E 's/[[:space:]]+/ /g' | \
+                sed 's/^ //;s/ $//' || true)
+
+    [ -z "$scenarios" ] && continue
+
+    while IFS= read -r scenario_name; do
+      [ -z "$scenario_name" ] && continue
+
+      # Search test directories для matching scenario name (case-insensitive substring)
+      # Common test paths multi-stack: test/ tests/ __tests__/ spec/ e2e/ + *_test.* / test_*.*
+      local found=""
+      # shellcheck disable=SC2086
+      found=$(find . \( -type d \( -name node_modules -o -name .git -o -name target -o -name dist -o -name build -o -name venv -o -name .venv \) -prune \) -o \
+              -type f \( -name '*_test.go' -o -name '*_test.py' -o -name 'test_*.py' -o \
+                         -name '*.test.js' -o -name '*.test.jsx' -o -name '*.test.ts' -o -name '*.test.tsx' -o \
+                         -name '*.spec.js' -o -name '*.spec.jsx' -o -name '*.spec.ts' -o -name '*.spec.tsx' -o \
+                         -name '*_spec.rb' -o -name '*Test.java' -o -name '*Test.kt' -o -name '*Tests.cs' -o \
+                         -name '*.feature' \) -print 2>/dev/null | \
+              xargs -I{} grep -lFi "$scenario_name" {} 2>/dev/null | head -1 || true)
+
+      if [ -z "$found" ]; then
+        log_fail "spec-test-mapping: '$scenario_name' (из $spec) — нет matching test"
+        missing_count=$((missing_count + 1))
+      fi
+    done <<< "$scenarios"
+  done
+
+  if [ "$found_specs" -eq 0 ]; then
+    log_ok "spec-test-mapping (no specs to check)"
+    return
+  fi
+
+  if [ "$missing_count" -eq 0 ]; then
+    log_ok "spec-test-mapping"
+  fi
+}
+
 # === Main ===
 case "${1:-all}" in
   --staged-only)
@@ -429,6 +501,7 @@ case "${1:-all}" in
     check_spec_impact_fields
     check_pr_ordering_for_multi_domain
     check_security_spec_cites_standard
+    check_spec_test_mapping
     check_test_assertion_weakening
     ;;
 esac
