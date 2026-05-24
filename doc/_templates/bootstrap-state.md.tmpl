@@ -136,6 +136,7 @@ project_capabilities:
 - [ ] .claude/settings.json + hooks (YYYY-MM-DD)
 - [ ] .gitignore: `.ai-pm/.reviews/` добавлено (YYYY-MM-DD) — local review-trace для не-Stage-F PR'ов (AP-16), не должен попадать в репу
 - [ ] auto-extract scripts generated (YYYY-MM-DD) — `scripts/auto-extract/{extract-stack.sh, extract-ui-kind.sh, extract-db-kind.sh, extract-topology.py, extract-ui-style.py, extract-database-design.py, extract-all.sh}` из `_templates/scripts/auto-extract/*.tmpl`. Используются project-bootstrap'ом для Tier 0 routine + architecture-overview keyword routing.
+- [ ] foundation maintenance scripts generated (YYYY-MM-DD) — `scripts/promote-foundation.py` (Tier 2 promotion: consolidates Mini-* sections в project-wide artifacts) + `scripts/template-sync-doc-migrate.py` (Documentation migration detection для template-sync Phase 3). Both из `_templates/scripts/*.tmpl`.
 - [ ] git hooks installed (YYYY-MM-DD) — включая pre-push hard-block на push в main / master
 - [ ] branch protection enabled (YYYY-MM-DD) — серверная (public / paid plan) **или** клиентская через pre-push hook (private free plan, см. development-protocol.md § 14.6)
 - [ ] **Developer ergonomics scaffold** generated (YYYY-MM-DD): `Makefile` (или `justfile` / npm scripts) с `setup` / `dev` / `test` / `lint` / `fmt` targets; `.editorconfig`; `.vscode/settings.json` shared baseline; `.vscode/extensions.json` recommendations per stack. Cross-ref dev-environment.md.

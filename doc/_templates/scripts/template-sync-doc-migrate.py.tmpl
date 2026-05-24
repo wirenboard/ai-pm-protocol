@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""
+.ai-pm/tooling/scripts/template-sync-doc-migrate.py
+
+Documentation migration helper для template-sync Phase 3 (см. project-
+bootstrap.md § Template-sync workflow).
+
+Detect categories migration needed после template bump:
+    1. Spec frontmatter additions (new fields)
+    2. Spec sections additions (new optional/mandatory sections)
+    3. Foundational artifact splits (e.g. ui-style-guide single → base + per-kind)
+    4. Mode/state field renames
+    5. AP discipline introduction (new APs с enforcement)
+
+Output: report в meta/template-sync-doc-migration-<date>.md с:
+    - Detected categories
+    - Affected files counts
+    - Preview diffs (sample 1-2 per category)
+    - Recommended actions
+
+Operator reviews report → AskUserQuestion per category → apply approved
+migrations через separate apply phase.
+
+This script is read-only — analysis only. Apply phase managed by
+project-bootstrap (interactive AskUserQuestion routine).
+
+Usage:
+    python3 template-sync-doc-migrate.py [--from <version>] [--to <version>] [--root <dir>]
+"""
+
+import argparse
+import re
+import sys
+from datetime import date
+from pathlib import Path
+
+
+def read_state_field(state_file: Path, field: str, default: str = '') -> str:
+    """Read frontmatter field from state file."""
+    if not state_file.exists():
+        return default
+    for line in state_file.read_text(encoding='utf-8').splitlines():
+        if line.startswith(f'{field}:'):
+            return line.split(':', 1)[1].strip()
+    return default
+
+
+def find_spec_files(doc_root: Path):
+    """Find all feature spec files (current + rework versions)."""
+    features_dir = doc_root / 'features'
+    if not features_dir.exists():
+        return []
+    return sorted(features_dir.glob('*_spec.md')) + sorted(features_dir.glob('*_spec.v*.md'))
+
+
+def extract_frontmatter(spec_path: Path) -> dict | None:
+    """Extract frontmatter dict from spec file."""
+    try:
+        text = spec_path.read_text(encoding='utf-8')
+        if not text.startswith('---'):
+            return None
+        end_match = re.search(r'\n---\n', text)
+        if not end_match:
+            return None
+        fm_block = text[3:end_match.start()].strip()
+        result = {}
+        for line in fm_block.splitlines():
+            if ':' in line and not line.startswith('#') and not line.startswith(' '):
+                key, value = line.split(':', 1)
+                result[key.strip()] = value.strip()
+        return result
+    except Exception:
+        return None
+
+
+def detect_frontmatter_additions(spec_files, expected_fields):
+    """Detect specs lacking expected frontmatter fields."""
+    affected = []
+    for spec in spec_files:
+        fm = extract_frontmatter(spec)
+        if fm is None:
+            affected.append({'file': spec, 'missing': expected_fields, 'reason': 'no frontmatter'})
+            continue
+        missing = [f for f in expected_fields if f not in fm]
+        if missing:
+            affected.append({'file': spec, 'missing': missing, 'reason': 'fields not present'})
+    return affected
+
+
+def detect_section_additions(spec_files, expected_sections):
+    """Detect specs lacking expected section headers."""
+    affected = []
+    for spec in spec_files:
+        try:
+            content = spec.read_text(encoding='utf-8')
+            missing = [s for s in expected_sections if s not in content]
+            if missing:
+                affected.append({'file': spec, 'missing': missing})
+        except Exception:
+            pass
+    return affected
+
+
+def detect_mode_aliases(spec_files):
+    """Detect spec'и с legacy mode names (new-feature / rework-feature)."""
+    affected = []
+    for spec in spec_files:
+        fm = extract_frontmatter(spec)
+        if fm and fm.get('mode') in ('new-feature', 'rework-feature'):
+            affected.append({'file': spec, 'current': fm['mode'], 'should_be': fm['mode'].replace('new-feature', 'feature').replace('rework-feature', 'rework')})
+    return affected
+
+
+def detect_artifact_splits(doc_root: Path):
+    """Detect monolithic artifacts which should be split."""
+    splits = []
+    # ui-style-guide.md → base + per-kind (current template uses split)
+    monolithic = doc_root / 'ui-style-guide.md'
+    base = doc_root / 'ui-style-guide-base.md'
+    if monolithic.exists() and not base.exists():
+        splits.append({
+            'monolithic': monolithic,
+            'should_be': 'ui-style-guide-base.md + ui-style-guide-<kind>.md per ui_kind',
+            'reason': 'template split single file на base + per-kind (per AP-15)',
+        })
+    return splits
+
+
+def detect_state_field_additions(state_file: Path, expected_fields):
+    """Detect state file lacking expected new fields."""
+    if not state_file.exists():
+        return ['(state file missing)']
+    missing = []
+    text = state_file.read_text(encoding='utf-8')
+    for field in expected_fields:
+        if not re.search(rf'^{re.escape(field)}:', text, re.MULTILINE):
+            missing.append(field)
+    return missing
+
+
+def generate_report(detections: dict, output_path: Path, today: str):
+    """Generate documentation migration report."""
+    lines = []
+    lines.append(f'# Template-sync documentation migration report ({today})')
+    lines.append('')
+    lines.append('Read-only analysis. Каждая category требует explicit operator approval перед apply (см. project-bootstrap.md § Template-sync workflow Phase 3).')
+    lines.append('')
+    lines.append('## Detected migration categories')
+    lines.append('')
+
+    total_affected = 0
+
+    # 1. Spec frontmatter additions
+    fm_adds = detections.get('frontmatter_additions', [])
+    if fm_adds:
+        total_affected += len(fm_adds)
+        lines.append(f'### Category 1: Spec frontmatter additions ({len(fm_adds)} files)')
+        lines.append('')
+        # Show first 3 examples
+        for item in fm_adds[:3]:
+            lines.append(f'- `{item["file"].name}` — missing: `{", ".join(item["missing"])}` ({item["reason"]})')
+        if len(fm_adds) > 3:
+            lines.append(f'- _… ещё {len(fm_adds) - 3} files_')
+        lines.append('')
+        lines.append('**Recommended action:** add new frontmatter fields с defaults per template schema.')
+        lines.append('')
+    else:
+        lines.append('### Category 1: Spec frontmatter additions — clean')
+        lines.append('')
+
+    # 2. Section additions
+    sec_adds = detections.get('section_additions', [])
+    if sec_adds:
+        total_affected += len(sec_adds)
+        lines.append(f'### Category 2: Spec sections additions ({len(sec_adds)} files)')
+        lines.append('')
+        for item in sec_adds[:3]:
+            lines.append(f'- `{item["file"].name}` — missing sections: `{", ".join(item["missing"])}`')
+        if len(sec_adds) > 3:
+            lines.append(f'- _… ещё {len(sec_adds) - 3} files_')
+        lines.append('')
+        lines.append('**Recommended action:** add new sections with placeholder content. Mandatory sections — flag operator для manual fill.')
+        lines.append('')
+    else:
+        lines.append('### Category 2: Spec sections additions — clean')
+        lines.append('')
+
+    # 3. Artifact splits
+    splits = detections.get('artifact_splits', [])
+    if splits:
+        total_affected += len(splits)
+        lines.append(f'### Category 3: Foundational artifact splits ({len(splits)} files)')
+        lines.append('')
+        for s in splits:
+            lines.append(f'- `{s["monolithic"].name}` → split на `{s["should_be"]}`')
+            lines.append(f'  - Reason: {s["reason"]}')
+        lines.append('')
+        lines.append('**Recommended action:** extract content по sections в new files. Backup monolithic file.')
+        lines.append('')
+    else:
+        lines.append('### Category 3: Foundational artifact splits — clean')
+        lines.append('')
+
+    # 4. Mode renames
+    mode_aliases = detections.get('mode_aliases', [])
+    if mode_aliases:
+        total_affected += len(mode_aliases)
+        lines.append(f'### Category 4: Mode renames ({len(mode_aliases)} files)')
+        lines.append('')
+        for item in mode_aliases[:5]:
+            lines.append(f'- `{item["file"].name}` — `mode: {item["current"]}` → `mode: {item["should_be"]}`')
+        if len(mode_aliases) > 5:
+            lines.append(f'- _… ещё {len(mode_aliases) - 5} files_')
+        lines.append('')
+        lines.append('**Recommended action:** rename mode values in frontmatter. Backwards-compat aliases supported automatically, но explicit rename — cleaner.')
+        lines.append('')
+    else:
+        lines.append('### Category 4: Mode renames — clean')
+        lines.append('')
+
+    # 5. State field additions
+    state_missing = detections.get('state_field_additions', [])
+    if state_missing:
+        total_affected += len(state_missing)
+        lines.append(f'### Category 5: State field additions ({len(state_missing)} fields)')
+        lines.append('')
+        for field in state_missing:
+            lines.append(f'- `{field}` missing в `.ai-pm/.bootstrap-state.md`')
+        lines.append('')
+        lines.append('**Recommended action:** add fields с defaults (foundation_completeness=complete, adoption_path=greenfield, etc. per template schema).')
+        lines.append('')
+    else:
+        lines.append('### Category 5: State field additions — clean')
+        lines.append('')
+
+    # Summary
+    lines.append('## Summary')
+    lines.append('')
+    lines.append(f'**Total affected items:** {total_affected}')
+    lines.append('')
+    if total_affected == 0:
+        lines.append('No documentation migrations needed. Template-sync Phase 3 can skip.')
+    else:
+        lines.append('Operator должен explicit approve per category. Каждая apply phase verify content preservation.')
+
+    lines.append('')
+    lines.append('## Verification baseline (для post-apply check)')
+    lines.append('')
+    lines.append('| Metric | Pre-apply value | Post-apply target |')
+    lines.append('|---|---|---|')
+    lines.append(f'| Total spec files | {len(detections.get("all_specs", []))} | unchanged |')
+    if fm_adds:
+        lines.append(f'| Specs missing frontmatter fields | {len(fm_adds)} | 0 |')
+    if sec_adds:
+        lines.append(f'| Specs missing sections | {len(sec_adds)} | 0 |')
+    if mode_aliases:
+        lines.append(f'| Specs с legacy mode names | {len(mode_aliases)} | 0 |')
+    if splits:
+        lines.append(f'| Monolithic artifacts needing split | {len(splits)} | 0 |')
+    if state_missing:
+        lines.append(f'| Missing state fields | {len(state_missing)} | 0 |')
+
+    output_path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', default='.')
+    parser.add_argument('--from', dest='from_version', help='Source template version (informational, e.g. v0.1.0)')
+    parser.add_argument('--to', dest='to_version', help='Target template version (informational, e.g. v0.2.0)')
+    args = parser.parse_args()
+
+    root = Path(args.root).resolve()
+    state_file = root / '.ai-pm' / '.bootstrap-state.md'
+    doc_root_name = read_state_field(state_file, 'doc_root', 'doc')
+    doc_root = root / doc_root_name
+
+    if not doc_root.exists():
+        print(f'Error: doc_root {doc_root} not found', file=sys.stderr)
+        sys.exit(1)
+
+    specs = find_spec_files(doc_root)
+    today = date.today().isoformat()
+
+    # Expected new fields (per current template version)
+    expected_frontmatter_fields = [
+        'topic', 'mode', 'created', 'version',  # version per AP-21
+    ]
+    expected_state_fields = [
+        'foundation_completeness',
+        'adoption_path',
+        'template_version_applied',
+        'adoption_overrides',
+    ]
+    expected_sections = []  # Add specific sections expected if template adds them
+
+    detections = {
+        'all_specs': specs,
+        'frontmatter_additions': detect_frontmatter_additions(specs, expected_frontmatter_fields),
+        'section_additions': detect_section_additions(specs, expected_sections),
+        'artifact_splits': detect_artifact_splits(doc_root),
+        'mode_aliases': detect_mode_aliases(specs),
+        'state_field_additions': detect_state_field_additions(state_file, expected_state_fields),
+    }
+
+    # Write report
+    meta_dir = root / 'meta'
+    meta_dir.mkdir(exist_ok=True)
+    report_path = meta_dir / f'template-sync-doc-migration-{today}.md'
+    generate_report(detections, report_path, today)
+
+    print(f'Documentation migration report: {report_path}', file=sys.stderr)
+    print('', file=sys.stderr)
+    print('Detected:', file=sys.stderr)
+    print(f'  Frontmatter additions: {len(detections["frontmatter_additions"])} specs', file=sys.stderr)
+    print(f'  Section additions: {len(detections["section_additions"])} specs', file=sys.stderr)
+    print(f'  Artifact splits: {len(detections["artifact_splits"])}', file=sys.stderr)
+    print(f'  Mode renames: {len(detections["mode_aliases"])} specs', file=sys.stderr)
+    print(f'  State field additions: {len(detections["state_field_additions"])} fields', file=sys.stderr)
+    print('', file=sys.stderr)
+    print('Operator должен review report и apply through project-bootstrap template-sync Phase 3 routine.', file=sys.stderr)
+
+
+if __name__ == '__main__':
+    main()
