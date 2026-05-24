@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# .ai-pm/tooling/scripts/install-git-hooks.sh
+# scripts/install-git-hooks.sh
 # Устанавливает git hooks для local enforcement (Layer 4).
 # Bootstrap-agent запускает на Stage E.
 
@@ -53,8 +53,8 @@ if command -v gitleaks >/dev/null; then
 fi
 
 # 4. Spec discipline check (если установлен)
-if [ -x ".ai-pm/tooling/scripts/check-spec-discipline" ]; then
-  .ai-pm/tooling/scripts/check-spec-discipline --staged-only
+if [ -x "scripts/check-spec-discipline" ]; then
+  scripts/check-spec-discipline --staged-only
 fi
 
 exit 0

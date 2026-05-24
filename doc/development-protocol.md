@@ -450,7 +450,7 @@ Custom rule (semgrep custom, eslint plugin, golangci-lint custom analyzer). Со
 
 ## 9. Spec / use-case linting
 
-**Новая категория линтеров** — проверяет дисциплину foundational docs и feature spec'ов. Реализована как single script в `.ai-pm/tooling/scripts/check-spec-discipline` (Python или Node, по стеку проекта). Запускается как CI gate.
+**Новая категория линтеров** — проверяет дисциплину foundational docs и feature spec'ов. Реализована как single script в `scripts/check-spec-discipline` (Python или Node, по стеку проекта) — в **product** репозитории, генерируется на Stage E из `_templates/scripts/check-spec-discipline.{sh,py,ts}.tmpl`. Запускается как CI gate.
 
 ### 9.1. Catalogue checks
 
@@ -474,7 +474,7 @@ Custom rule (semgrep custom, eslint plugin, golangci-lint custom analyzer). Со
 
 ### 9.2. Реализация
 
-Script `.ai-pm/tooling/scripts/check-spec-discipline.{py,ts}` парсит `doc/` через markdown AST или regex, выполняет checks из catalogue, выдаёт fail с указанием конкретных нарушений. Init-agent копирует его на Stage E из recipe.
+Script `scripts/check-spec-discipline.{py,ts}` (в product репозитории) парсит `doc/` через markdown AST или regex, выполняет checks из catalogue, выдаёт fail с указанием конкретных нарушений. Bootstrap-agent на Stage E генерирует его из `_templates/scripts/check-spec-discipline.{py,ts}.tmpl`, адаптируя под `doc_root` из state.
 
 ### 9.3. Когда что-то fail'ит при первом запуске после Stage E
 
