@@ -32,13 +32,17 @@
 
 **Файлы:** `.claude/agents/planner.md` (§ Trust profile awareness), `.claude/agents/coder.md` (§ Trust profile awareness), `.claude/agents/reviewer.md` (Step 1.5)
 
-**Описание:** Шаблон предусматривает 3 Trust profile (A / B / C) с дифференцированным output'ом (verbose A / mixed B / terse C). Но в agent prompt'ах **нет explicit инструкции читать `.bootstrap-state.md` → `trust_profile` в начале сессии**. В `project-bootstrap.md` Trust profile выбирается на Init, но нет routine «напомни Trust profile на каждом запуске».
+**Status (post-verification): INVALID — false positive.**
 
-**Следствие:** AI в новой сессии не знает текущий Trust profile, пишет усреднённый output. Profile A (PM не читает код) получает terse plan как profile C — это опасно для learning layer (PM теряет контекст).
+Audit заявил, что agents не читают state file. Verification grep'ом показал обратное:
 
-**Предлагаемая правка:**
-1. В `planner.md` / `coder.md` / `reviewer.md` добавить explicit routine: «Шаг 0: прочти `.ai-pm/.bootstrap-state.md` → `trust_profile`. Адаптируй output per профиль».
-2. В `CLAUDE.md.tmpl` (briefing) добавить session-start reminder о текущем Trust profile.
+- `.claude/agents/planner.md:90` — «Читай `.ai-pm/.bootstrap-state.md` → `trust_profile` setting (A/B/C, default A)» + concrete dual templates verbose A / mixed B / terse C.
+- `.claude/agents/coder.md:111` — «Читай `.ai-pm/.bootstrap-state.md` → `trust_profile` setting» + concrete differentiation full ceremony / mixed / terse.
+- `.claude/agents/reviewer.md:51` — «Читай `.ai-pm/.bootstrap-state.md` → `trust_profile`. Adapts: …» + lite-mode adaptation.
+
+**Корень ошибки:** audit делал Explore-agent с inline-сканом без deep verification. Inline-finding не подтвердился фактами.
+
+**Действие:** finding отменён. Trust profile auto-read **уже работает корректно**. CLAUDE.md.tmpl session-start reminder можно рассмотреть как опциональный Low-finding для лишней страховки, но не Blocking.
 
 ---
 
@@ -217,29 +221,69 @@
 
 ---
 
+#### [G-3] Legacy project без bootstrap — нет lightweight adoption-mode
+
+**Описание:** Текущие modes (Mode 1 new-product / Mode 2 new-feature / Mode 3 rework-feature / bug-fix вариация Mode 2) **все** предполагают что Stage A-E bootstrap уже сделан. Mode 1 — bootstrap делается **сейчас**. Mode 2/3/bug-fix — bootstrap **сделан раньше**.
+
+Что НЕ покрыто:
+- **Legacy product без bootstrap:** реальный продукт работает, есть код, возможно есть docs, но **никогда не делался через ai-pm-protocol**. Оператор хочет добавить фичу или починить bug по дисциплине шаблона, но не готов потратить недели на полный Stage A-E retrofit.
+
+Сейчас оператор оказывается в bind:
+- Mode 1 не подходит (продукт не greenfield)
+- Mode 2 требует «Stage A-D наполнены» (наполнены не по шаблону, в произвольной форме; шаблон не имеет инструкции «прочти legacy docs и map'и в свои поля»)
+- Mode 3 же требует existing `_spec.md` / `_plan.md` (которых нет, потому что фича не была сделана через шаблон)
+- bug-fix lite-mode требует hint что bug в Mode 2 stack, но всё равно ожидает foundation
+
+**Что нужно:** lightweight mode — **«local-only adoption»** — для atomic per-feature/per-bug адаптации шаблона на legacy проекте, без full bootstrap. Предлагаемый shape:
+
+- **Mode 5: `legacy-feature` / `legacy-bugfix`** (или один `legacy-partial` с lite-mode маркером).
+- Setup:
+  - `.ai-pm/.bootstrap-state.md` создаётся с `mode: legacy-partial`, frontmatter большинства Stage A-E полей `n/a (legacy)`.
+  - `trust_profile` — обязателен.
+  - `stack` — обязателен (детектируется или operator answers).
+  - Foundational artifacts (`personas.md`, `journeys`, `threat-model`, `mvp-scope`, `topology`) — **lazy**: создаются только если impact flag фичи = yes. Если фича не trogает journeys → personas.md не нужен.
+- Workflow per фичу/bug:
+  - Минимум: `<topic>_spec.md` + `_plan.md` + tests + review.
+  - AP-14 read-pass: только existing project docs (README, ADRs если есть, OpenAPI / schema), не template foundational docs.
+  - Reviewer: protocol-compliance + domain reviewer; checks adapted на «mode=legacy-partial» (не require foundational cross-refs где их нет).
+- Когда переходить на full Mode 2: когда количество lazy artifacts ≥ 3 → operator получает recommendation «promote to full Mode 2 (require Stage A-D backfill)».
+
+**Отличие от [G-1]:** G-1 = existing project **с** bootstrap done, template ушёл вперёд → apply diff. G-3 = existing project **без** bootstrap, нужно local atomic application. Это **разные mental models**:
+- G-1 — version mismatch, sync
+- G-3 — partial adoption, lazy foundation
+
+**Предлагаемая правка:** Отдельный design doc на Mode 5 `legacy-partial`. См. также task на G-3 implementation.
+
+---
+
 ## Trust profile дифференциация — реальная или cargo cult?
 
 **Наблюдение:** Trust profile A/B/C определены в 4 местах (project-bootstrap / planner / coder / reviewer) с дифференцированным dual templates (verbose A / mixed B / terse C). Дифференциация **реальна** — output ощутимо разный. Но:
 
 1. Profile B/C assume'ит «developer читает diff» — это верно только если developer постоянный (знает стек). Не работает для dynamic teams.
 2. Profile A (PM не читает код) — основной differentiator; B/C — variations.
-3. Нет default profile — если забыть set, AI угадывает. См. [B-2].
+3. Default profile = A (default из bootstrap state).
 
-**Вердикт:** Дифференциация **нужна и реальна**, но реализация неполна (нет automatic reading state file + reminder). High risk, не cargo cult — fix в [B-2].
+**Вердикт:** Дифференциация **нужна, реальна и работает**. Audit изначально заявил недостаток ([B-2]), но verification показал — это false positive. Реализация полная.
 
 ---
 
-## Summary
+## Summary (post-verification)
 
 **Полезность:** Шаблон **полезен для real-world разработки**. Покрывает lifecycle greenfield → multi-feature production. Cross-cutting изменения недели logically sound и интегрированы.
 
-**Дыры:** 2 blocking (AP-14 CI enforcement, Trust profile reading), 4 high (pr_ordering validation, Mode 3 infinite loop, Competitive UX redundancy, **README не объясняет modes**). Остальное — medium/low.
+**Дыры:** **1 blocking** (AP-14 CI enforcement), **4 high** (pr_ordering validation, Mode 3 infinite loop, Competitive UX redundancy, **README не объясняет modes**). [B-2] отменён как false positive. Остальное — medium/low.
 
 **Циклы:** Infinite loop не обнаружено, кроме потенциального Mode 3 rework v1→v2→v3→… без exit — высокий риск, fixable ([H-2]).
 
 **Бесполезная работа:** Competitive UX scan может дублировать Stage A ([H-3], нужны criteria). Остальное хорошо распределено по stages.
 
-**Дополнительно:** Template-apply mode ([G-1]) — **критический gap для existing projects** типа HeartVault. Не блокирует use as-is, но essential на месяц 2+.
+**Критические gap'ы для real-world adoption (3 mode'а отсутствует):**
+- **[G-1]** Template-apply mode — existing project **с** bootstrap, template ушёл вперёд (HeartVault).
+- **[G-3]** Legacy partial mode — existing project **без** bootstrap, atomic adoption на фичу/bug (тяжёлый retrofit неоправдан).
+- [G-2] Backlog tracking — отсутствует formal artifact для deferred features.
+
+G-1 и G-3 — **разные mental models** (sync vs partial adoption), требуют отдельных design'ов.
 
 ---
 
@@ -247,13 +291,14 @@
 
 Порядок by severity и зависимостям:
 
-1. **[H-4]** README mode discoverability (1 PR, ≈20 строк секции) — самое маленькое и видное
-2. **[B-2]** Trust profile automatic reading в agents (1 PR, edits в 3-4 agent prompts)
-3. **[B-1]** AP-14 CI enforcement в check-spec-discipline.sh (1 PR)
-4. **[H-1]** pr_ordering validation в planner / check-spec (1 PR, после B-1)
-5. **[H-2]** Spec versioning + exit condition (1 PR)
-6. **[G-1]** Template-apply mode (отдельный design + implement цикл, см. task #48)
+1. **[H-4]** README mode discoverability — закрыто PR #13
+2. **[B-1]** AP-14 CI enforcement в check-spec-discipline.sh
+3. **[H-1]** pr_ordering validation в planner / check-spec (после B-1)
+4. **[H-2]** Spec versioning + exit condition
+5. **[H-3]** Competitive UX scan criteria refinement
+6. **[G-1]** Template-apply mode (отдельный major design + implement цикл, task #48)
+7. **[G-3]** Legacy partial mode (отдельный major design + implement цикл, новая задача)
 
 [M-1..4] и [L-1..3] — параллельно или batch'ом после blocking/high.
 
-После 1-5 шаблон **production-ready** для multi-week real-world projects. [G-1] — отдельный major piece для существующих продуктов (HeartVault test case).
+После 1-5 шаблон **production-ready** для multi-week real-world projects на основе шаблона. [G-1] и [G-3] — отдельные major pieces для существующих продуктов (HeartVault test case для G-1; любой legacy adoption для G-3).
