@@ -471,6 +471,7 @@ Custom rule (semgrep custom, eslint plugin, golangci-lint custom analyzer). Со
 | `rework-has-migration-section` | Если plan — `<topic>_plan.v<N>.md` (N > 1), он обязан содержать секцию `## Migration` | rework mode plan без migration |
 | `spec-impact-fields-present` | Каждый `<topic>_spec.md` (кроме `lite-mode: bugfix`) содержит в frontmatter все 7 impact-полей с явным `yes`/`no`: 3 AP-13 (legal/validation/incident) + 4 AP-14 (journey/threat/scope/topology) | Spec без явных impact-полей — структурный read-pass пропущен (см. AP-14) |
 | `pr-ordering-for-multi-domain` | Если spec body содержит indicator'ы ≥ 2 domains (schema / API / UI), frontmatter обязан иметь `pr_ordering: [...]` с явным списком | Multi-domain фича без атомарного split'а (нарушает AP-19) |
+| `adr-auto-extraction` (v0.2.0+, AP-24) | Detect spec sections с keywords `инвариант`/`архитектура`/`trade-off`/`decision`. > 30 LOC → warn (suggest ADR extraction). > 50 LOC без ADR ref в spec'е → fail. Closes AP-1 dead letter pattern observed на live test'е | Architectural decisions buried в spec без ADR — invisible knowledge cost, через 6 месяцев новый dev не найдёт «почему так решили» |
 
 ### 9.2. Реализация
 

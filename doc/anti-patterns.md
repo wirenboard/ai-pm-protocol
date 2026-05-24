@@ -187,6 +187,47 @@
 
 ---
 
+## AP-24. Architectural decisions buried in spec без ADR
+
+**Что нельзя:**
+
+Содержать в feature spec'е блок архитектурных решений (sections с keywords `инвариант`, `архитектура`, `trade-off`, `decision`) длиной > 50 LOC без ADR reference. Архитектурные decisions должны жить в `architecture-decisions/NNNN-<topic>.md`, spec ссылается на ADR через короткое summary + явную ссылку.
+
+**Почему:** на первом live test'е template'а (2026-05-24) — в первой же feature spec заявленного нового продукта найдено 130+ LOC архитектурных решений (password architecture / E2E boundary trade-offs / KDF design / PII encryption strategy / ~5 architectural invariants). ADR файлы — пустая папка с template'ом. AP-1 declared (reactive ADR при architectural fork), но **не enforced** — proven dead letter на первой же работающей фиче. Через 6 месяцев новый developer / agent не найдёт «почему так решили» без чтения всех 500+ LOC spec'а. Это создаёт invisible knowledge cost — каждое refactoring / extension feature потребует deep-dive в полный spec вместо focused чтения 200-LOC ADR.
+
+**Relationship с AP-1** (proactive ADR):
+
+| Аспект | AP-1 (proactive) | AP-24 (retroactive) |
+|---|---|---|
+| Когда trigger | Planner Step 2 — detected architectural fork (выбор между альтернативами) | Reviewer Step 7 — spec section > 30/50 LOC architectural content |
+| Что enforce'ит | ADR должен быть создан **до** code в plan'е | ADR должен быть extracted **из** spec, либо spec ссылается на existing ADR |
+| Severity gate | Planner-agent obligation | Reviewer suggestion → 30-50 LOC; reviewer block → > 50 LOC без ADR ref |
+| Зона | Forks (выбор архитектуры) | Documentation (фиксация constraints / invariants / trade-off'ов) |
+
+**Precedence:** если AP-1 fired и ADR создан + spec содержит short summary + явную ссылку (например `см. ADR-NNNN.md`) → AP-24 принимает spec section как OK даже > 50 LOC (summary в spec'е + детали в ADR — legit pattern).
+
+**Решение:** spec-linter check `adr-auto-extraction` в `_templates/scripts/check-spec-discipline.sh.tmpl`:
+
+- Detect sections с architectural keywords + count LOC между `## <heading>` и следующим `## ` или EOF
+- > 30 LOC architectural content → log_warn «suggest ADR extraction»
+- > 50 LOC architectural content **без** ADR ref в spec'е → log_fail «AP-24: extract в `architecture-decisions/`»
+- Skip `lite-mode: bugfix`
+
+**Применение** — все modes (`new-product`, `feature`, `rework`), кроме `bug-fix` с `lite-mode: bugfix`.
+
+**Как поступать вместо:**
+
+При detected pattern (> 50 LOC arch content в spec'е):
+
+1. Create ADR file: `<doc_root>/architecture-decisions/NNNN-<descriptive-topic>.md`. NNNN — sequential номер (см. existing ADRs).
+2. Структура ADR: **Status** (Accepted / Deprecated / Superseded) + **Context** (фон, constraints) + **Decision** (что решили) + **Consequences** (positive + negative + risks).
+3. Spec'у оставить **short summary** (5-15 LOC) + явную ссылку: `**Architectural context:** см. [ADR-NNNN](../architecture-decisions/NNNN-topic.md) — <one-line summary>`.
+4. Re-run reviewer Step 7 → check `adr-auto-extraction` clears.
+
+См. также AP-1 (proactive reactive ADR at fork) и `meta/audits/2026-05-24_first-prod-run-feedback.md` § P0-A.
+
+---
+
 ## AP-21. Бесконечный rework без exit condition
 
 **Что нельзя:**
