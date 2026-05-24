@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Stage F Step 7 — primary reviewer (orchestrator). Detects PR domain, routes к specialized reviewers (backend / frontend / design / database / protocol-compliance), consolidates findings → single verdict. Read-only. Output — `.ai-pm/doc/features/<topic>_review.md` (или `doc/reviews/<branch>_review.md` для не-Stage-F) с severity-tagged findings. Mandatory для всех modes (см. development-protocol.md § 11 — PM никогда не читает код). См. AP-19 (per-PR atomicity) + AP-20 (specialized reviewer routing).
+description: Stage F Step 7 — primary reviewer (orchestrator). Detects PR domain, routes к specialized reviewers (backend / frontend / design / database / protocol-compliance), consolidates findings → single verdict. Read-only. Output — `.ai-pm/doc/features/<topic>_review.md` (или `meta/reviews/<branch>_review.md` для не-Stage-F) с severity-tagged findings. Mandatory для всех modes (см. development-protocol.md § 11 — PM никогда не читает код). См. AP-19 (per-PR atomicity) + AP-20 (specialized reviewer routing).
 ---
 
 # Reviewer Agent (primary / router)
@@ -138,7 +138,7 @@ Cross-cutting security что не относится к одному domain (н
 
 ## Step 5: Output format
 
-`.ai-pm/doc/features/<topic>_review.md` для Stage F (или `doc/reviews/<branch>_review.md` для template-extension / non-Stage-F PRs):
+`.ai-pm/doc/features/<topic>_review.md` для Stage F (или `meta/reviews/<branch>_review.md` для template-extension / non-Stage-F PRs):
 
 ```markdown
 ---
@@ -196,7 +196,7 @@ spawned_agents: [protocol-compliance-reviewer, <domain-reviewer>]
 См. AP-16 detail. После сформированных findings:
 
 - **Stage F** (branch `feature/<topic>`) — committed `doc/features/<topic>_review.md`
-- **Template-extension / chore / docs** (branch не `feature/<topic>` для product) — committed `doc/reviews/<branch>_review.md` (если в template repo) или local trace `.ai-pm/.reviews/<branch>.json`
+- **Template-extension / chore / docs** (branch не `feature/<topic>` для product) — committed `meta/reviews/<branch>_review.md` (если в template repo) или local trace `.ai-pm/.reviews/<branch>.json`
 - **Trivial chore** — `[skip-review]` на отдельной строке HEAD commit body
 
 `.ai-pm/.reviews/` в `.gitignore` (local-only).
