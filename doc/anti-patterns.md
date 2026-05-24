@@ -652,6 +652,21 @@ topology_impact: yes|no      # фича вводит новый компонен
 
 **Дополнительно — отличие от существующего лёгкого упоминания в lifecycle routing:** в `project-bootstrap.md` уже была фраза «Если фича требует новой persona/journey/threat — предложи отдельный PR docs/<topic>». Это **suggestion**, не **routine**. AP-14 превращает это в обязательный читаемый шаг с frontmatter-маркером, который reviewer-agent физически проверяет.
 
+**Regression coverage discipline (v0.2.0+, silent-break gap 3 extension):**
+
+При `topology_impact: yes` (или явное изменение shared modules — `*shared*`, `lib/`, `common/`, `core/` paths) feature spec **обязан** содержать секцию `## Regression coverage plan` (см. шаблон `_templates/feature-spec.md.tmpl`). Секция перечисляет:
+
+1. Shared modules, трогаемые фичей + features которые их используют
+2. Existing tests, покрывающие affected behaviour — проверка что они пройдут на новом коде
+3. New regression tests — если existing coverage gap
+4. Coverage delta verification — coverage shared modules не уменьшился после implementation
+
+**Why:** на первом live test'е template'а observed pattern — Feature B трогает shared module, Feature A использует тот же module, broken часть Feature A не имеет existing теста (или test обходит affected branch), ломается, ловится только в production. Per-diff coverage ≥ 80% gate видит «new code 80%», existing tests all pass — silent break на legacy / untested code paths.
+
+**Enforcement:** CI gate `regression-coverage-for-shared-modules` в `check-spec-discipline` — detect specs с `topology_impact: yes`, require `## Regression coverage plan` секцию. Skip: `lite-mode: bugfix` (regression через failing-test-first AP-5), standalone новые фичи без shared dependencies (явная пометка `N/A — standalone`).
+
+**Mode legacy adoption** (foundation_completeness=minimal/none): первый раз touched shared module → minimum 60% coverage growth required (новые regression tests должны существенно увеличить coverage).
+
 ---
 
 ## AP-12. Избыточные англицизмы в project artifacts

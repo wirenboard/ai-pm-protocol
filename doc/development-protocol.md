@@ -473,6 +473,7 @@ Custom rule (semgrep custom, eslint plugin, golangci-lint custom analyzer). Со
 | `pr-ordering-for-multi-domain` | Если spec body содержит indicator'ы ≥ 2 domains (schema / API / UI), frontmatter обязан иметь `pr_ordering: [...]` с явным списком | Multi-domain фича без атомарного split'а (нарушает AP-19) |
 | `spec-test-mapping` (v0.2.0+, gap 1) | Каждый Gherkin `Scenario:` из spec'а имеет matching test (case-insensitive substring match в test files: `*_test.{go,py}`, `test_*.py`, `*.{test,spec}.{js,jsx,ts,tsx}`, `*_spec.rb`, `*Test.{java,kt}`, `*Tests.cs`, `*.feature`). Per-stack mapping convention'ы — в `ai-linting-rules.md`. Skip: `lite-mode: bugfix` | Coder agent написал spec scenario но не implement'нул matching test — silent break risk |
 | `test-assertion-weakening` *(v0.2.0+, gap 2)* | Detect модифицированные test-файлы в commit'е без `ADR-NNNN` reference или `[test-modify-override: <reason>]` marker. Pure additions и новые test-файлы — пропускаются | AP-23 violation — agent ослабляет существующий assertion под свои выдумки (test было `toBe(100)` → стало `toBeGreaterThan(50)` без declared behaviour change) |
+| `regression-coverage-for-shared-modules` (v0.2.0+, gap 3 / AP-14 ext.) | Spec с `topology_impact: yes` обязан содержать секцию `## Regression coverage plan` с shared modules list + existing tests check + new regression tests. Skip: `lite-mode: bugfix`, явная пометка `N/A — standalone` | Shared module modification без regression planning — silent break existing features |
 
 ### 9.2. Реализация
 

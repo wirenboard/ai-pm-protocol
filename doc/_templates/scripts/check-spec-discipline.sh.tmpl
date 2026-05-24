@@ -473,6 +473,37 @@ check_spec_test_mapping() {
   fi
 }
 
+# === Gap 3 (v0.2.0): regression-coverage-for-shared-modules ===
+# AP-14 extension: spec с topology_impact: yes обязан содержать секцию
+# `## Regression coverage plan`. Detect через frontmatter + body grep.
+# Skip: lite-mode:bugfix, явная пометка `N/A — standalone`.
+check_regression_coverage_for_shared_modules() {
+  local missing_count=0
+  for spec in "$DOC_ROOT/features/"*_spec.md "$DOC_ROOT/features/"*_spec.v*.md; do
+    [ -e "$spec" ] || continue
+
+    # Skip lite-mode:bugfix
+    if grep -qE '^lite-mode:\s*bugfix' "$spec" 2>/dev/null; then
+      continue
+    fi
+
+    # Trigger condition: topology_impact: yes в frontmatter (первые 30 lines)
+    if ! head -30 "$spec" | grep -qE '^topology_impact:\s*yes' 2>/dev/null; then
+      continue
+    fi
+
+    # Require секция `## Regression coverage plan`
+    if ! grep -qF '## Regression coverage plan' "$spec"; then
+      log_fail "regression-coverage-for-shared-modules: $spec — topology_impact:yes, но нет секции '## Regression coverage plan' (AP-14 extension)"
+      missing_count=$((missing_count + 1))
+    fi
+  done
+
+  if [ "$missing_count" -eq 0 ]; then
+    log_ok "regression-coverage-for-shared-modules"
+  fi
+}
+
 # === Main ===
 case "${1:-all}" in
   --staged-only)
@@ -503,6 +534,7 @@ case "${1:-all}" in
     check_security_spec_cites_standard
     check_spec_test_mapping
     check_test_assertion_weakening
+    check_regression_coverage_for_shared_modules
     ;;
 esac
 
