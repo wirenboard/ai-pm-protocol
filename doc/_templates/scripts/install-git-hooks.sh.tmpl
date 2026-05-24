@@ -61,6 +61,11 @@ for candidate in scripts/check-spec-discipline scripts/check-spec-discipline.sh 
   fi
 done
 
+# 5. Skip-reprompts warning (non-blocking) — печатает expired skip'ы для напоминания
+if [ -x "scripts/check-skip-reprompts.sh" ]; then
+  scripts/check-skip-reprompts.sh || true
+fi
+
 exit 0
 HOOK
 chmod +x "$HOOK_DIR/pre-commit"

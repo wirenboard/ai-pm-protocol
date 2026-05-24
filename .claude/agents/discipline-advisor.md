@@ -131,7 +131,11 @@ Operator может skip артефакт, потом 90 дней назад →
 **Mechanism:**
 
 - `skip_decisions[].next_reprompt` field — default 90 days from `declared_at`
-- На Stage E entry — check expired re-prompts: если `next_reprompt < today` для active skip → trigger advisor «время re-validate skip <artifact>: ситуация изменилась?»
+- **Deterministic check via `scripts/check-skip-reprompts.sh`** — парсит state file, выдаёт expired list. Не зависит от того что advisor вспомнит проверить. Wired в:
+  - `SessionStart` hook (Claude Code settings.json) — каждая новая сессия видит warning
+  - pre-commit hook — non-blocking warning при каждом commit
+  - CI workflow (опционально, `--strict` режим)
+- На Stage E entry advisor читает output script'а как ground truth и предлагает оператору re-validate per expired entry.
 - Severity escalates: 1st re-prompt — friendly suggestion; 2nd (180d) — warning; 3rd (270d) — finding в review trail
 - Operator может extend `next_reprompt` после re-validation («всё ok, продолжаем skip, next check 90d again»)
 
