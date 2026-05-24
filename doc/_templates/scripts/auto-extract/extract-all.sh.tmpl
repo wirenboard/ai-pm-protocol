@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# .ai-pm/tooling/scripts/auto-extract/extract-all.sh
+# Orchestrator — runs все Tier 0 auto-extract scripts.
+#
+# Invoked by project-bootstrap при:
+#   - Legacy adoption Quick path
+#   - «Architecture overview» keyword routing (с --read-only флагом, не пишет state)
+#
+# Usage:
+#   ./extract-all.sh                — full extract, write artifacts в doc_root
+#   ./extract-all.sh --read-only    — extract в meta/architecture-extract-<date>.md, не trigger adoption
+#   ./extract-all.sh --output <dir> — override output directory
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+READ_ONLY=0
+OUTPUT_OVERRIDE=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --read-only)
+      READ_ONLY=1
+      shift
+      ;;
+    --output)
+      OUTPUT_OVERRIDE="$2"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+# Determine doc_root from state file
+DOC_ROOT="doc"
+if [ -f .ai-pm/.bootstrap-state.md ]; then
+  DETECTED=$(awk -F': ' '/^doc_root:/ {print $2; exit}' .ai-pm/.bootstrap-state.md 2>/dev/null | tr -d ' ')
+  [ -n "$DETECTED" ] && DOC_ROOT="$DETECTED"
+fi
+
+if [ "$READ_ONLY" = "1" ]; then
+  TODAY=$(date +%Y-%m-%d)
+  COMBINED_OUTPUT="meta/architecture-extract-${TODAY}.md"
+  mkdir -p meta
+fi
+
+echo "=== Tier 0 auto-extract starting ===" >&2
+echo "doc_root: $DOC_ROOT" >&2
+echo "read_only: $READ_ONLY" >&2
+echo "" >&2
+
+# 1. Stack
+echo "[1/5] Detecting stack..." >&2
+STACK=$("$SCRIPT_DIR/extract-stack.sh")
+echo "  → $STACK" >&2
+
+# 2. ui_kind
+echo "[2/5] Detecting ui_kind..." >&2
+UI_KIND=$("$SCRIPT_DIR/extract-ui-kind.sh")
+echo "  → $UI_KIND" >&2
+
+# 3. db_kind
+echo "[3/5] Detecting db_kind..." >&2
+DB_KIND=$("$SCRIPT_DIR/extract-db-kind.sh")
+echo "  → $DB_KIND" >&2
+
+# 4. topology.md
+echo "[4/5] Extracting topology..." >&2
+if [ "$READ_ONLY" = "1" ]; then
+  TOPO_OUT=$(mktemp /tmp/topology-XXXXXX.md)
+  python3 "$SCRIPT_DIR/extract-topology.py" --output "$TOPO_OUT" 2>/dev/null
+else
+  python3 "$SCRIPT_DIR/extract-topology.py" 2>/dev/null
+fi
+
+# 5. ui-style-guide-base.md
+echo "[5/6] Extracting UI style guide..." >&2
+if echo "$UI_KIND" | grep -qE 'web|native-mobile|native-desktop|tui'; then
+  if [ "$READ_ONLY" = "1" ]; then
+    UI_OUT=$(mktemp /tmp/ui-style-XXXXXX.md)
+    python3 "$SCRIPT_DIR/extract-ui-style.py" --output "$UI_OUT" 2>/dev/null
+  else
+    python3 "$SCRIPT_DIR/extract-ui-style.py" 2>/dev/null
+  fi
+else
+  echo "  → skipped (no UI ui_kind detected)" >&2
+fi
+
+# 6. database-design-*.md
+echo "[6/6] Extracting database design..." >&2
+if echo "$DB_KIND" | grep -qE 'embedded|external'; then
+  if [ "$READ_ONLY" = "1" ]; then
+    DB_OUT_DIR=$(mktemp -d /tmp/db-design-XXXXXX)
+    python3 "$SCRIPT_DIR/extract-database-design.py" --output-dir "$DB_OUT_DIR" 2>/dev/null
+  else
+    python3 "$SCRIPT_DIR/extract-database-design.py" 2>/dev/null
+  fi
+else
+  echo "  → skipped (db_kind=none или unknown)" >&2
+fi
+
+# In read-only mode — aggregate в combined output
+if [ "$READ_ONLY" = "1" ]; then
+  {
+    echo "# Architecture extract — $TODAY"
+    echo ""
+    echo "<!-- Read-only Tier 0 auto-extract. State unchanged. -->"
+    echo ""
+    echo "## Tier 0 detected"
+    echo ""
+    echo "- **Stack:** \`$STACK\`"
+    echo "- **ui_kind:** \`$UI_KIND\`"
+    echo "- **db_kind:** \`$DB_KIND\`"
+    echo ""
+    echo "## Topology"
+    echo ""
+    [ -f "$TOPO_OUT" ] && cat "$TOPO_OUT" | tail -n +3
+    echo ""
+    if [ -n "${UI_OUT:-}" ] && [ -f "$UI_OUT" ]; then
+      echo "## UI style guide (extracted)"
+      echo ""
+      cat "$UI_OUT" | tail -n +3
+      echo ""
+    fi
+    if [ -n "${DB_OUT_DIR:-}" ] && [ -d "$DB_OUT_DIR" ]; then
+      echo "## Database design (extracted)"
+      echo ""
+      for f in "$DB_OUT_DIR"/database-design-*.md; do
+        [ -f "$f" ] || continue
+        cat "$f" | tail -n +3
+        echo ""
+      done
+    fi
+    echo "## Next steps (operator)"
+    echo ""
+    echo "Это **read-only** Tier 0 extract — state file не изменён, adoption не запущен. Возможные действия:"
+    echo "- **Запустить Legacy adoption Quick** — apply этот extract как foundation (\`foundation_completeness: minimal\`)"
+    echo "- **Запустить Legacy adoption Staged** — выбрать какие Stage A-E artifacts адаптировать вручную"
+    echo "- **Использовать как onboarding doc** — share с командой / новыми разработчиками"
+    echo "- **Refine manually** — extract служит starting point для project-wide foundation docs"
+  } > "$COMBINED_OUTPUT"
+
+  # Cleanup temp files
+  [ -n "${TOPO_OUT:-}" ] && rm -f "$TOPO_OUT"
+  [ -n "${UI_OUT:-}" ] && rm -f "$UI_OUT"
+  [ -n "${DB_OUT_DIR:-}" ] && rm -rf "$DB_OUT_DIR"
+
+  echo "" >&2
+  echo "=== Architecture extract complete ===" >&2
+  echo "Output: $COMBINED_OUTPUT" >&2
+fi
+
+echo "" >&2
+echo "=== Tier 0 auto-extract complete ===" >&2
+echo "" >&2
+echo "Detected values для .bootstrap-state.md:" >&2
+echo "  stack: $STACK" >&2
+echo "  ui_kind: $UI_KIND" >&2
+echo "  db_kind: $DB_KIND" >&2

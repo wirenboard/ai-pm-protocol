@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""
+.ai-pm/tooling/scripts/auto-extract/extract-ui-style.py
+
+Tier 0 auto-extract — generates ui-style-guide-base.md sketch from existing UI code.
+
+Sources:
+    - Tailwind config (tailwind.config.{js,ts,cjs,mjs})
+    - CSS custom properties (:root { --color-* })
+    - Design tokens packages в package.json deps (style-dictionary, theo)
+    - Theme files (src/styles/, src/theme/)
+
+Heuristic, not perfect. Operator должен refine.
+"""
+
+import argparse
+import json
+import re
+import sys
+from datetime import date
+from pathlib import Path
+
+
+def find_tailwind_config(root: Path):
+    """Returns path to tailwind config if exists."""
+    for name in ('tailwind.config.js', 'tailwind.config.ts', 'tailwind.config.cjs', 'tailwind.config.mjs'):
+        path = root / name
+        if path.exists():
+            return path
+    return None
+
+
+def extract_tailwind_tokens(config_path: Path) -> dict:
+    """Best-effort extract colors/spacing/screens from Tailwind config."""
+    tokens = {'colors': [], 'spacing': [], 'screens': [], 'fontFamily': []}
+    try:
+        text = config_path.read_text(encoding='utf-8')
+
+        # Extract theme.extend.colors keys (heuristic)
+        colors_match = re.search(r'colors\s*:\s*\{([^}]+)\}', text, re.DOTALL)
+        if colors_match:
+            color_block = colors_match.group(1)
+            for line in color_block.split('\n'):
+                key_match = re.search(r"['\"]?(\w+)['\"]?\s*:", line)
+                if key_match:
+                    tokens['colors'].append(key_match.group(1))
+
+        # screens
+        screens_match = re.search(r'screens\s*:\s*\{([^}]+)\}', text, re.DOTALL)
+        if screens_match:
+            for line in screens_match.group(1).split('\n'):
+                key_match = re.search(r"['\"]?(\w+)['\"]?\s*:", line)
+                if key_match:
+                    tokens['screens'].append(key_match.group(1))
+
+        # fontFamily
+        font_match = re.search(r'fontFamily\s*:\s*\{([^}]+)\}', text, re.DOTALL)
+        if font_match:
+            for line in font_match.group(1).split('\n'):
+                key_match = re.search(r"['\"]?(\w+)['\"]?\s*:", line)
+                if key_match:
+                    tokens['fontFamily'].append(key_match.group(1))
+
+    except Exception:
+        pass
+    return tokens
+
+
+def extract_css_variables(root: Path) -> dict:
+    """Extract :root { --* } CSS custom properties."""
+    variables = {'colors': [], 'spacing': [], 'typography': [], 'other': []}
+
+    css_files = []
+    for ext in ('.css', '.scss', '.sass', '.less'):
+        css_files.extend(root.rglob(f'*{ext}'))
+
+    # Filter out node_modules, build, etc.
+    css_files = [f for f in css_files if not any(
+        part in {'node_modules', '.git', 'dist', 'build', 'out', '.next', '.nuxt'}
+        for part in f.parts
+    )]
+
+    pattern = re.compile(r'--([a-zA-Z][a-zA-Z0-9_-]*)\s*:')
+    for css_file in css_files:
+        try:
+            text = css_file.read_text(encoding='utf-8', errors='ignore')
+            for match in pattern.finditer(text):
+                var_name = match.group(1)
+                if 'color' in var_name.lower() or var_name.startswith(('red-', 'blue-', 'green-')):
+                    variables['colors'].append(var_name)
+                elif any(s in var_name.lower() for s in ('space', 'gap', 'padding', 'margin', 'size')):
+                    variables['spacing'].append(var_name)
+                elif any(s in var_name.lower() for s in ('font', 'text', 'line-height', 'tracking', 'leading')):
+                    variables['typography'].append(var_name)
+                else:
+                    variables['other'].append(var_name)
+        except Exception:
+            continue
+
+    # Dedupe + sort
+    for key in variables:
+        variables[key] = sorted(set(variables[key]))
+    return variables
+
+
+def detect_design_token_deps(root: Path) -> list:
+    """Check package.json для design token packages."""
+    pkg_path = root / 'package.json'
+    if not pkg_path.exists():
+        return []
+    try:
+        pkg = json.loads(pkg_path.read_text(encoding='utf-8'))
+        deps = {**pkg.get('dependencies', {}), **pkg.get('devDependencies', {})}
+        known = ['style-dictionary', 'theo', '@radix-ui/colors', '@vanilla-extract/css',
+                 'panda-css', '@pandacss/dev', 'stitches', '@stitches/react']
+        return [d for d in known if d in deps]
+    except Exception:
+        return []
+
+
+def generate_markdown(tailwind_tokens, css_vars, token_deps, root: Path):
+    """Generates ui-style-guide-base.md draft."""
+    today = date.today().isoformat()
+    lines = []
+    lines.append('# UI style guide — base (auto-extracted)')
+    lines.append('')
+    lines.append(f'<!-- Auto-extracted {today} via scripts/auto-extract/extract-ui-style.py. Operator may refine. -->')
+    lines.append('')
+    lines.append('## Источники extract')
+    lines.append('')
+
+    tw_config = find_tailwind_config(root)
+    if tw_config:
+        lines.append(f'- Tailwind config: `{tw_config.relative_to(root)}`')
+    if css_vars and any(css_vars.values()):
+        lines.append(f'- CSS custom properties (`:root {{ --* }}`): detected в CSS/SCSS/SASS файлах')
+    if token_deps:
+        lines.append(f'- Design tokens packages в deps: {", ".join(f"`{d}`" for d in token_deps)}')
+    if not tw_config and not any(css_vars.values()) and not token_deps:
+        lines.append('- _Нет formal design tokens обнаружено. Operator должен build foundation manually._')
+
+    lines.append('')
+    lines.append('## Цветовая палитра')
+    lines.append('')
+    color_tokens = list(set(tailwind_tokens.get('colors', []) + css_vars.get('colors', [])))
+    if color_tokens:
+        lines.append('Обнаруженные токены:')
+        for c in sorted(color_tokens)[:50]:  # cap at 50
+            lines.append(f'- `{c}`')
+        if len(color_tokens) > 50:
+            lines.append(f'- _и ещё {len(color_tokens) - 50} токенов..._')
+    else:
+        lines.append('_Color tokens не обнаружены. Operator должен define palette._')
+
+    lines.append('')
+    lines.append('## Типографика')
+    lines.append('')
+    font_tokens = list(set(tailwind_tokens.get('fontFamily', []) + css_vars.get('typography', [])))
+    if font_tokens:
+        lines.append('Обнаруженные токены:')
+        for f in sorted(font_tokens)[:20]:
+            lines.append(f'- `{f}`')
+    else:
+        lines.append('_Typography tokens не обнаружены._')
+
+    lines.append('')
+    lines.append('## Spacing scale')
+    lines.append('')
+    spacing_tokens = list(set(tailwind_tokens.get('spacing', []) + css_vars.get('spacing', [])))
+    if spacing_tokens:
+        lines.append('Обнаруженные токены:')
+        for s in sorted(spacing_tokens)[:20]:
+            lines.append(f'- `{s}`')
+    else:
+        lines.append('_Spacing tokens не обнаружены._')
+
+    lines.append('')
+    lines.append('## Breakpoints')
+    lines.append('')
+    screens = tailwind_tokens.get('screens', [])
+    if screens:
+        for s in sorted(screens):
+            lines.append(f'- `{s}`')
+    else:
+        lines.append('_Breakpoints не обнаружены._')
+
+    lines.append('')
+    lines.append('## Что НЕ извлечено (operator must add)')
+    lines.append('')
+    lines.append('- **Brand voice** — tone, register, что НЕ хотим в copy')
+    lines.append('- **Accessibility baseline** — WCAG level, focus management, contrast targets')
+    lines.append('- **i18n discipline** — supported locales, translation keys conventions')
+    lines.append('- **Component library** — какая используется (если есть)')
+    lines.append('- **Dark mode** — supported / нет')
+    lines.append('- **Motion / animation principles**')
+
+    lines.append('')
+    lines.append('См. `ui-style-guide-<kind>.md` per `ui_kind` для kind-specific rules (web / native-mobile / native-desktop / tui / cli / embedded / backend).')
+
+    return '\n'.join(lines) + '\n'
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', default='.')
+    parser.add_argument('--output', help='Default: <doc_root>/ui-style-guide-base.md')
+    args = parser.parse_args()
+
+    root = Path(args.root).resolve()
+
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        state_file = root / '.ai-pm' / '.bootstrap-state.md'
+        doc_root = 'doc'
+        if state_file.exists():
+            for line in state_file.read_text(encoding='utf-8').splitlines():
+                if line.startswith('doc_root:'):
+                    doc_root = line.split(':', 1)[1].strip()
+                    break
+        output_path = root / doc_root / 'ui-style-guide-base.md'
+
+    tw_config = find_tailwind_config(root)
+    tailwind_tokens = extract_tailwind_tokens(tw_config) if tw_config else {}
+    css_vars = extract_css_variables(root)
+    token_deps = detect_design_token_deps(root)
+
+    content = generate_markdown(tailwind_tokens, css_vars, token_deps, root)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(content, encoding='utf-8')
+
+    print(f'UI style guide extracted: {output_path}', file=sys.stderr)
+    total_tokens = (
+        len(tailwind_tokens.get('colors', [])) +
+        sum(len(v) for v in css_vars.values())
+    )
+    print(f'  Tokens detected: ~{total_tokens}', file=sys.stderr)
+    print(f'  Design token deps: {len(token_deps)}', file=sys.stderr)
+
+
+if __name__ == '__main__':
+    main()

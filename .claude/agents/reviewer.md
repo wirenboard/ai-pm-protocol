@@ -46,6 +46,25 @@ PR должен touchать **один** domain (per-PR atomicity). Detection ч
 - `docs:` — pure documentation updates
 - Hotfix для critical incident — задокументированный exception в commit body
 
+## Step 1.4: Foundation state detection — adapt cross-checks
+
+Читай `.ai-pm/.bootstrap-state.md`:
+- `foundation_completeness` (`complete | partial | minimal | none`)
+- `adoption_overrides` (list of declared trade-offs per AP-22)
+
+**Cross-cutting checks adapt** per foundation state:
+
+| `foundation_completeness` | AP-14 structural read-pass | AP-15 ui-style-guide | Spec sources |
+|---|---|---|---|
+| `complete` | Standard — verify cross-refs против Stage A-C docs | Standard | Project-wide docs + spec |
+| `partial` | Verify existing docs cross-refs; для missing → verify Tier 1 mini sections в spec'е | Standard если ui-style-guide-base.md есть; tolerate если extract sketch | Mixed |
+| `minimal` | Mini-* sections в spec'е — primary foundation source | Tolerate extract-based ui-style-guide-base.md (auto-extracted marker preserved) | Primarily spec mini sections |
+| `none` | Только mini-* sections; hard floor — Mini-threat-list для security path обязателен | Tolerate missing UI guides (downgrade AP-15 finding) | Только spec |
+
+**`adoption_overrides` handling:** для каждого finding attributable к overridden component — downgrade severity к `[question]` с tag `adoption-trade-off accepted by operator`. Surface override list в review summary («3 active overrides — expires 2026-09-01»).
+
+См. AP-22 (adoption-override discipline).
+
 ## Step 1.5: Trust profile detection — adapt review depth
 
 Читай `.ai-pm/.bootstrap-state.md` → `trust_profile`. Adapts:

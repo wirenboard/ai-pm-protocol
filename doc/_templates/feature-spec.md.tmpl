@@ -10,9 +10,58 @@
 
 ---
 
+## Mini-foundation sections *(только при `foundation_completeness: minimal | none | partial` если соответствующий project-wide doc отсутствует)*
+
+При legacy adoption (`adoption_path: legacy-quick` / `legacy-skip`) часть foundation документов отсутствует. Tier 1 mini-research заполняет foundation **per-feature** inline в этом spec'е (Tier framework — см. development-protocol.md § 3.11).
+
+Эти секции **не нужны** если:
+- `foundation_completeness: complete` (есть полные Stage A artifacts)
+- Project-wide `personas.md` / `user-journeys.md` / `threat-model.md` существует и covers фичу
+
+Эти секции **обязательны** если:
+- Соответствующий project-wide doc отсутствует
+- Hard floor (security path) — `Mini-threat-list` обязателен даже в `none` state
+
+### Mini-persona *(если нет `personas.md`)*
+
+Кто пользователь **этой конкретной фичи** (не всего продукта). 5-минутный mini-research:
+
+- **Имя / роль:** <конкретная персона для этой фичи>
+- **Контекст использования:** <когда / где / в каком состоянии пользуется>
+- **Цели / мотивация:** <что хочет достичь>
+- **Pain points:** <что мешает сейчас, почему фича нужна>
+
+Эта mini-persona — кандидат для consolidation в project-wide `personas.md` при Tier 2 promotion routine.
+
+### Journey context *(если нет `user-journeys.md`)*
+
+Где встаёт эта фича в existing user flow:
+
+- **Existing flow before:** <шаг N → шаг N+1, в какой context вставляется фича>
+- **С этой фичей:** <шаг N → новый шаг (эта фича) → шаг N+1>
+- **Triggers:** <что приводит пользователя к этому шагу>
+- **Success outcome:** <как пользователь понимает что фича отработала>
+
+Кандидат для consolidation в `user-journeys.md` при Tier 2 promotion.
+
+### Mini-threat-list *(если нет `threat-model.md` И security path)*
+
+**Hard floor:** обязательна для security path features даже при `foundation_completeness: none`. Security path = auth / crypto / PII / payments / sessions / public endpoints.
+
+- **Threat T-mini-1:** <конкретная угроза для этой фичи>
+  - **Mitigation:** <конкретная мера защиты в коде>
+  - **Standard:** <OWASP / CWE / ASVS ссылка>
+- **Threat T-mini-2:** <…>
+
+Кандидат для consolidation в `threat-model.md` при Tier 2 promotion.
+
+**Если фича НЕ в security path** и нет `threat-model.md` — эта секция может быть пропущена (declared в `adoption_overrides` если нужно formal trail).
+
+---
+
 ## User stories
 
-Список user stories формата «As a <persona>, I want <action>, so that <outcome>». Каждая ссылается на конкретную persona из `.ai-pm/doc/personas.md`.
+Список user stories формата «As a <persona>, I want <action>, so that <outcome>». Каждая ссылается на конкретную persona — из project-wide `.ai-pm/doc/personas.md` (если `foundation_completeness: complete`) или из секции `## Mini-persona` выше (если minimal/none).
 
 ---
 

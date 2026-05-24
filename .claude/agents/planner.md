@@ -31,7 +31,7 @@ description: Stage F Step 2 — пишет implementation plan для feature/re
 6. `.ai-pm/doc/architecture-decisions/` — существующие ADR.
 7. `.ai-pm/doc/mvp-scope.md` — где фича в scope.
 8. `.ai-pm/doc/development-protocol.md` (project overlay) + generic protocol — правила, которым нужно следовать.
-9. `.ai-pm/.bootstrap-state.md` — capabilities `ui_kind` и `db_kind` (multi-value) определяют какие foundational guides читать дальше.
+9. `.ai-pm/.bootstrap-state.md` — capabilities `ui_kind` и `db_kind` (multi-value) определяют какие foundational guides читать дальше. **Plus**: read `foundation_completeness` и `adoption_path` — определяют, есть ли full project-wide Stage A-D docs или Tier 1 mini-research sections в spec'е (см. § Foundation awareness ниже).
 10. **UI / API foundations** — обязательно если фича touches UI / API. По `ui_kind` из state:
     - `.ai-pm/doc/ui-style-guide-base.md` — 8 принципов, brand voice, i18n, accessibility общая
     - `.ai-pm/doc/ui-style-guide-<kind>.md` для каждого `ui_kind` value (web / native-mobile / native-desktop / tui / cli / embedded / backend). См. AP-15.
@@ -43,6 +43,25 @@ description: Stage F Step 2 — пишет implementation plan для feature/re
 Для Mode 3 rework — дополнительно:
 - Предыдущие `<topic>_spec.md`, `<topic>_plan.md`, `<topic>_review.md` (если есть).
 - Существующий код фичи (директории из предыдущего plan'а) — read-only.
+
+## Foundation awareness — `foundation_completeness` orthogonal к mode
+
+Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | partial | minimal | none`). Это определяет где брать persona / journey / threat context для plan'а:
+
+| `foundation_completeness` | Откуда читаешь foundation для plan'а |
+|---|---|
+| `complete` | Standard Stage A-D docs (`personas.md`, `user-journeys.md`, `threat-model.md`, etc.) |
+| `partial` | Existing Stage A-D docs где есть; для missing — read Tier 1 mini sections в feature spec (`## Mini-persona`, `## Journey context`, `## Mini-threat-list`) |
+| `minimal` | Mostly Tier 0 auto-extracted artifacts (`topology.md`, `ui-style-guide-base.md` extracts) + Tier 1 mini sections в feature spec |
+| `none` | Только Tier 0 minimum + ВСЁ из Tier 1 mini sections в feature spec |
+
+**Plan architectural approach** должен reference whatever foundation actually available:
+- При `complete` — cross-refs к full project-wide artifacts
+- При `partial/minimal/none` — cross-refs к mini sections в spec'е inline («as per spec § Mini-persona», «as per spec § Mini-threat-list»)
+
+**Learning layer (для Trust profile A) preserved независимо от foundation state** — оператор growing knowledge через explanation architectural principles, не через breadth of pre-existing docs.
+
+При `foundation_completeness != complete` — **ожидай ниже-quality cross-refs**: vision/positioning/brand-voice могут отсутствовать. В plan'е это appears как «product positioning не зафиксирован в state, plan focuses на immediate feature scope. Promotion to Tier 2 recommended после N фич.»
 
 ## Структура output'а
 

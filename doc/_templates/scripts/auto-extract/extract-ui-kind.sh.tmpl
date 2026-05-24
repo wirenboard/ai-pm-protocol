@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# .ai-pm/tooling/scripts/auto-extract/extract-ui-kind.sh
+# Tier 0 auto-extract — detects ui_kind(s) via package deps heuristic.
+#
+# Output: comma-separated list (e.g., "web, backend") или "unknown"
+#
+# Heuristic table (см. project-bootstrap.md § Tier 0 routine):
+#   web                 — react, vue, svelte, angular, next, nuxt, sveltekit
+#   native-mobile       — react-native, expo, flutter
+#   native-desktop      — electron, tauri
+#   tui                 — blessed, urwid, textual
+#   cli                 — commander/yargs/click/typer/cobra без UI deps
+#   backend             — express/fastify/fastapi/gin/actix/rails/django без UI deps
+
+set -e
+
+declare -a KINDS
+
+# Read package.json deps (Node ecosystem)
+if [ -f package.json ]; then
+  DEPS=$(grep -oE '"[a-zA-Z0-9@/_-]+"\s*:\s*"' package.json | grep -oE '"[a-zA-Z0-9@/_-]+"' | tr -d '"' || true)
+
+  echo "$DEPS" | grep -qE '^(react|vue|svelte|@angular/core|next|nuxt|@sveltejs/kit)$' && KINDS+=("web")
+  echo "$DEPS" | grep -qE '^(react-native|expo)$' && KINDS+=("native-mobile")
+  echo "$DEPS" | grep -qE '^(electron|@tauri-apps/api|tauri)$' && KINDS+=("native-desktop")
+  echo "$DEPS" | grep -qE '^(blessed|@types/blessed|ink|terminal-kit)$' && KINDS+=("tui")
+  echo "$DEPS" | grep -qE '^(commander|yargs|oclif|@oclif/core)$' && KINDS+=("cli")
+  echo "$DEPS" | grep -qE '^(express|fastify|koa|hapi|nestjs|@nestjs/core|hono)$' && KINDS+=("backend")
+fi
+
+# Read Python deps (pyproject.toml / requirements.txt)
+if [ -f pyproject.toml ] || [ -f requirements.txt ]; then
+  PY_DEPS=$(cat pyproject.toml requirements.txt 2>/dev/null | grep -oE '^[a-zA-Z0-9_-]+' | tr '[:upper:]' '[:lower:]' || true)
+
+  echo "$PY_DEPS" | grep -qE '^(textual|urwid|blessed)$' && KINDS+=("tui")
+  echo "$PY_DEPS" | grep -qE '^(click|typer)$' && KINDS+=("cli")
+  echo "$PY_DEPS" | grep -qE '^(fastapi|flask|django|sanic|starlette|aiohttp|bottle)$' && KINDS+=("backend")
+fi
+
+# Read Go deps (go.mod)
+if [ -f go.mod ]; then
+  GO_DEPS=$(grep -oE '[a-zA-Z0-9./_-]+' go.mod || true)
+
+  echo "$GO_DEPS" | grep -qE 'cobra|urfave/cli|kingpin' && KINDS+=("cli")
+  echo "$GO_DEPS" | grep -qE 'gin-gonic/gin|labstack/echo|fiber|chi|gorilla/mux' && KINDS+=("backend")
+fi
+
+# Read pubspec.yaml (Flutter)
+if [ -f pubspec.yaml ]; then
+  grep -qE '^\s*flutter:' pubspec.yaml && KINDS+=("native-mobile")
+fi
+
+# Rust — Cargo.toml
+if [ -f Cargo.toml ]; then
+  CARGO_DEPS=$(grep -oE '^[a-zA-Z0-9_-]+\s*=' Cargo.toml | grep -oE '^[a-zA-Z0-9_-]+' || true)
+
+  echo "$CARGO_DEPS" | grep -qE '^(clap|structopt|argh)$' && KINDS+=("cli")
+  echo "$CARGO_DEPS" | grep -qE '^(actix-web|rocket|axum|warp|tide)$' && KINDS+=("backend")
+  echo "$CARGO_DEPS" | grep -qE '^(tauri)$' && KINDS+=("native-desktop")
+fi
+
+# Dedupe
+declare -a UNIQ
+for k in "${KINDS[@]:-}"; do
+  [ -z "$k" ] && continue
+  found=0
+  for u in "${UNIQ[@]:-}"; do
+    [ "$k" = "$u" ] && found=1 && break
+  done
+  [ "$found" = "0" ] && UNIQ+=("$k")
+done
+
+if [ "${#UNIQ[@]}" -eq 0 ]; then
+  echo "unknown"
+else
+  (IFS=,; echo "${UNIQ[*]}")
+fi

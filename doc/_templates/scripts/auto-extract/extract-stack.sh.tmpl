@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# .ai-pm/tooling/scripts/auto-extract/extract-stack.sh
+# Tier 0 auto-extract — detects primary stack(s) by manifest files.
+#
+# Usage:
+#   ./extract-stack.sh           — outputs comma-separated stacks (primary first)
+#   ./extract-stack.sh --json    — outputs JSON object
+#
+# Used by project-bootstrap Tier 0 routine (legacy adoption Quick path
+# + architecture-overview keyword routing).
+
+set -e
+
+OUTPUT_JSON=0
+if [ "${1:-}" = "--json" ]; then
+  OUTPUT_JSON=1
+fi
+
+declare -a STACKS
+
+# Detection order — primary stack heuristic (more specific manifest wins).
+[ -f package.json ] && STACKS+=("typescript")
+[ -f tsconfig.json ] && [ ! -f package.json ] && STACKS+=("typescript")
+
+[ -f pyproject.toml ] && STACKS+=("python")
+[ -f setup.py ] && [ ! -f pyproject.toml ] && STACKS+=("python")
+[ -f requirements.txt ] && [ ! -f pyproject.toml ] && [ ! -f setup.py ] && STACKS+=("python")
+
+[ -f Cargo.toml ] && STACKS+=("rust")
+[ -f go.mod ] && STACKS+=("go")
+[ -f Gemfile ] && STACKS+=("ruby")
+[ -f composer.json ] && STACKS+=("php")
+[ -f mix.exs ] && STACKS+=("elixir")
+[ -f build.gradle ] && STACKS+=("kotlin")
+[ -f pom.xml ] && STACKS+=("java")
+
+# Dedupe (typescript could match package.json + tsconfig.json)
+declare -a UNIQ
+for s in "${STACKS[@]}"; do
+  found=0
+  for u in "${UNIQ[@]:-}"; do
+    [ "$s" = "$u" ] && found=1 && break
+  done
+  [ "$found" = "0" ] && UNIQ+=("$s")
+done
+
+if [ "${#UNIQ[@]}" -eq 0 ]; then
+  if [ "$OUTPUT_JSON" = "1" ]; then
+    echo '{"primary": "unknown", "all": []}'
+  else
+    echo "unknown"
+  fi
+  exit 0
+fi
+
+if [ "$OUTPUT_JSON" = "1" ]; then
+  primary="${UNIQ[0]}"
+  all_json=$(printf '"%s",' "${UNIQ[@]}")
+  all_json="[${all_json%,}]"
+  echo "{\"primary\": \"$primary\", \"all\": $all_json}"
+else
+  (IFS=,; echo "${UNIQ[*]}")
+fi
