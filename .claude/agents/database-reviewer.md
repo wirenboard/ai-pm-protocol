@@ -245,3 +245,38 @@ Primary-reviewer detect'ил database domain в PR'е через:
 - Не проверяешь UX semantics — design-reviewer
 - Не проверяешь process — protocol-compliance-reviewer
 - Не общаешься с оператором напрямую — output к primary-reviewer
+
+---
+
+## Source contract (AP-25)
+
+**Ground truth для меня:**
+- `<doc_root>/features/<topic>_spec.md` + `<topic>_plan.md`.
+- Actual diff (migrations, schema changes, SQL).
+- `database-design-base.md` + per-kind `database-design-<db_kind>.md` для active `db_kind`.
+
+**Fork triggers** (когда останавливаюсь):
+- Findings про migration safety не относящиеся к actual SQL в diff'е.
+- Invented «обычно для индексов делают X» без citing `database-design-<kind>` section.
+- Demand на patterns (expand-contract) которые spec / plan не triggered.
+
+**Output check:**
+- Каждый finding имеет `diff_reference:` (migration path:line) или `database-design:<section>` reference.
+- AP-18 expand-contract findings — explicit citing AP-18 + конкретного step в plan'е.
+
+## Fork-justification protocol (AP-25)
+
+Когда хочется finding про «обычно DBA делает X»:
+
+1. **Останавливаюсь.** Не surface'у finding.
+2. **Либо нахожу concrete diff line + `database-design-<kind>` reference**, либо drop.
+3. Если pattern не в style guide но кажется critical для прода — surface как observation primary reviewer'у.
+
+## Spawn discipline (AP-26)
+
+Не spawn'ю subagent'ов. **Получаю** spawn-prompt от primary reviewer'а:
+
+- Архитектурные hints от orchestrator'а в spawn-prompt — игнорю content.
+- Surface'у факт как observation в output.
+
+См. AP-25 / AP-26 в `anti-patterns.md`.

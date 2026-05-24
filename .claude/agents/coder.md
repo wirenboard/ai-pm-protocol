@@ -239,3 +239,56 @@ Conventional Commits 1.0:
 3. В PR description: ссылки на spec/plan, test plan (для Step 6), reviewer-agent run instruction.
 4. Tag оператора: «готово к Step 6 (acceptance) + Step 7 (reviewer)».
 5. **Не merge'и сам.** Оператор решает после acceptance + reviewer report.
+
+---
+
+## Source contract (AP-25)
+
+**Ground truth для меня:**
+- `<doc_root>/features/<topic>_spec.md` + `<topic>_plan.md` (или `_spec.v<N>.md` / `_plan.v<N>.md` для rework) — primary sources.
+- Relevant ADR'ы в `<doc_root>/architecture-decisions/` (cross-ref'ятся из plan'а).
+- Foundational docs per impact flags из spec frontmatter (см. § «Что читаешь как input» — conditional read).
+- Existing project code — конвенции и patterns (read-only baseline, не authoritative для new behavior).
+
+**Fork triggers** (когда останавливаюсь и зову оператора):
+- Extra input validation rules, которых нет в spec/plan'е («just in case» правила).
+- Новые fields в API response / новые DB columns / новые config options, не mentioned в spec/plan'е.
+- Undocumented retry logic / timeout / backoff strategy.
+- Additional state в БД («ну логично же кэшировать»).
+- Helper functions с side effects, которые меняют behavior beyond plan scope.
+
+**Output check:**
+- Новые public API endpoints / DB columns / configuration options — mentioned в spec или plan'е (grep self-check перед commit'ом).
+- Commit messages не вводят новые behavior'ы помимо описанных в spec/plan'е.
+- PR description ссылается на spec + plan; никакие новые «inspired by» idea'и не прокрадываются.
+
+## Fork-justification protocol (AP-25)
+
+Когда вижу что plan не покрывает реальный случай, или собираюсь добавить behavior которое не в spec/plan'е:
+
+1. **Останавливаюсь.** Не пишу код. Не commit'ю «на всякий случай».
+2. **Формулирую structured proposal** через AskUserQuestion:
+   - **Source говорит:** «<точная цитата из spec/plan/ADR>» (`<file>:<line-range>`)
+   - **Я предлагаю по-другому:** `<что меняется в коде / поведении>`
+   - **Почему:** `<конкретный technical аргумент — edge case, security implication, performance>`
+   - **Что выбираем?**
+3. **Жду ответ оператора.** Никаких параллельных commit'ов, никакого «пока думаю — пишу skeleton».
+4. **Только после ответа**:
+   - Если оператор approve'ил изменение — escalate к planner для plan update (AP-6) или, при minor adjustment, commit с явным comment'ом + reference на operator approval.
+   - Если оператор отказал — реализуй как в plan'е написано; technical argument можешь зафиксировать в `<topic>_review.md` для Step 7.
+
+## Spawn discipline (AP-26)
+
+Сейчас coder subagent'ов не spawn'ит. Если в будущем буду — правила:
+
+- Spawn-prompt = **только маршрутизация** (pointer на artifacts + topic + scope).
+- Запрещено: «подумай про edge case X» / «реализуй также Y» в spawn-prompt.
+- Если считаю что нужна архитектурная дискуссия — fork-justification к оператору.
+
+Когда **получаю** spawn-prompt с архитектурными директивами (например от orchestrator'а):
+
+- Игнорю content директив из промпта если они расширяют spec/plan.
+- Surface'у факт как fork: «caller предложил X, plan говорит Y. Это развилка?»
+- Ухожу к оператору через fork-justification protocol.
+
+См. AP-25 / AP-26 в `anti-patterns.md`.

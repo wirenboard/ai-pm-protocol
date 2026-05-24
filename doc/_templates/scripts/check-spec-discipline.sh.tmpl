@@ -567,6 +567,109 @@ check_adr_auto_extraction() {
   fi
 }
 
+# === Source-bounded family (AP-25 enforcement) ===
+#
+# Family: source-bounded. Закрывает AP-25 (AI artifact extends beyond source) для
+# двух artifact types в этом релизе: ADR и feature plan. Future-extensible —
+# добавление source-bounded check для new artifact type = новая функция
+# check_source_bounded_<artifact>() с тем же override marker pattern.
+#
+# Override: [source-bounded-override: <reason>] в HEAD commit body downgrade'ит
+# fail → warn. Pattern identical AP-23 [test-modify-override:] и AP-16
+# [review-override:] — operator знаком с механикой.
+_source_bounded_has_override() {
+  local commit_msg
+  commit_msg=$(git log -1 --format=%B 2>/dev/null || true)
+  echo "$commit_msg" | grep -qE '\[source-bounded-override:[[:space:]]*[^]]+\]'
+}
+
+# === Check: adr-spec-reference (AP-25) ===
+# Каждый ADR в architecture-decisions/ обязан иметь во frontmatter:
+#   spec_reference: <path>            (какой spec triggered ADR)
+#   operator_approved: YYYY-MM-DD     (оператор подтвердил через fork-justification)
+# Skip: 0000-*.md template'ы.
+# Override: [source-bounded-override: <reason>] в HEAD commit body.
+check_adr_spec_reference() {
+  local adr_dir="$DOC_ROOT/architecture-decisions"
+  if [ ! -d "$adr_dir" ]; then
+    log_ok "adr-spec-reference (no ADR dir)"
+    return
+  fi
+
+  local has_override=0
+  if _source_bounded_has_override; then
+    has_override=1
+  fi
+
+  local fail_count=0
+  for adr in "$adr_dir"/*.md; do
+    [ -e "$adr" ] || continue
+    case "$(basename "$adr")" in
+      0000-*) continue ;;
+    esac
+
+    local frontmatter
+    frontmatter=$(awk '/^---$/{c++; next} c==1' "$adr" 2>/dev/null)
+
+    local missing=()
+    if ! echo "$frontmatter" | grep -qE '^spec_reference:[[:space:]]+\S+'; then
+      missing+=("spec_reference")
+    fi
+    if ! echo "$frontmatter" | grep -qE '^operator_approved:[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}'; then
+      missing+=("operator_approved")
+    fi
+
+    if [ ${#missing[@]} -gt 0 ]; then
+      local msg="adr-spec-reference: $adr — missing/empty: ${missing[*]} (AP-25)"
+      if [ "$has_override" -eq 1 ]; then
+        log_warn "$msg [source-bounded-override applied]"
+      else
+        log_fail "$msg"
+        fail_count=$((fail_count + 1))
+      fi
+    fi
+  done
+
+  if [ "$fail_count" -eq 0 ]; then
+    log_ok "adr-spec-reference"
+  fi
+}
+
+# === Check: plan-spec-reference (AP-25) ===
+# Каждый <topic>_plan.md / _plan.v<N>.md обязан иметь во frontmatter:
+#   spec_reference: <path>            (на основе ЭТОГО spec'а написан plan)
+# Различение от plan_approved: spec_reference про content provenance,
+# plan_approved — про operator-touch timing.
+# Override: [source-bounded-override: <reason>] в HEAD commit body.
+check_plan_spec_reference() {
+  local has_override=0
+  if _source_bounded_has_override; then
+    has_override=1
+  fi
+
+  local fail_count=0
+  for plan in "$DOC_ROOT/features/"*_plan.md "$DOC_ROOT/features/"*_plan.v*.md; do
+    [ -e "$plan" ] || continue
+
+    local frontmatter
+    frontmatter=$(awk '/^---$/{c++; next} c==1' "$plan" 2>/dev/null)
+
+    if ! echo "$frontmatter" | grep -qE '^spec_reference:[[:space:]]+\S+'; then
+      local msg="plan-spec-reference: $plan — missing/empty spec_reference (AP-25)"
+      if [ "$has_override" -eq 1 ]; then
+        log_warn "$msg [source-bounded-override applied]"
+      else
+        log_fail "$msg"
+        fail_count=$((fail_count + 1))
+      fi
+    fi
+  done
+
+  if [ "$fail_count" -eq 0 ]; then
+    log_ok "plan-spec-reference"
+  fi
+}
+
 # === Main ===
 case "${1:-all}" in
   --staged-only)
@@ -574,6 +677,9 @@ case "${1:-all}" in
     # На v0 запускаем те, которые работают на repo state без heavy file scans.
     export STAGED_ONLY=1
     check_test_assertion_weakening
+    # Frontmatter-only checks — fast, run on staged set тоже.
+    check_adr_spec_reference
+    check_plan_spec_reference
     ;;
   --check)
     shift
@@ -599,6 +705,8 @@ case "${1:-all}" in
     check_test_assertion_weakening
     check_regression_coverage_for_shared_modules
     check_adr_auto_extraction
+    check_adr_spec_reference
+    check_plan_spec_reference
     ;;
 esac
 

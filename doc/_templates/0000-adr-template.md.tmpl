@@ -1,9 +1,25 @@
+---
+adr_id: NNNN
+title: <Title>
+status: Proposed  # Proposed | Accepted | Rejected | Deferred | Superseded
+date: YYYY-MM-DD
+deciders: оператор
+spec_reference:    # обязательно (AP-25): какой spec triggered этот ADR, напр. doc/features/<topic>_spec.md
+operator_approved: # обязательно (AP-25): YYYY-MM-DD — оператор подтвердил через fork-justification protocol
+supersedes:        # ADR-MMMM, если применимо
+superseded_by:     # ADR-LLLL, если применимо
+---
+
 # ADR-NNNN: <Title>
 
 **Status:** Proposed | Accepted | Rejected | Deferred | Superseded by ADR-MMMM
 **Date:** YYYY-MM-DD
 **Deciders:** оператор
 **Triggered by:** `.ai-pm/doc/features/<topic>_plan.md` Step 2 — встретили архитектурный fork.
+
+> **AP-25 reminder:** ADR пишется только после fork-justification protocol с оператором.
+> Frontmatter `spec_reference` + `operator_approved` обязательны — проверяет `check-spec-discipline.sh`
+> (check `adr-spec-reference`). См. AP-25 в `anti-patterns.md`.
 
 ---
 

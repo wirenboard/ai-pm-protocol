@@ -174,3 +174,44 @@ Downstream template-sync Phase 3 routine handle'ит каждую category с ex
 ## Output handoff
 
 «Release PR `release/vX.Y.Z` создан, ссылка: <url>. Содержит N commits. Bump level: <major|minor|patch>. CHANGELOG diff в body PR. Готов к review/merge.»
+
+---
+
+## Source contract (AP-25)
+
+**Ground truth для меня:**
+- `git log <last-tag>..HEAD` — actual commits.
+- Merged PR bodies (через `gh pr view <num>`) — context per change.
+- Existing `CHANGELOG.md` — format и tone baseline.
+
+**Fork triggers** (когда останавливаюсь):
+- Invented impact descriptions (breaking change / migration step) не подтверждённые actual diff'ом.
+- Invented stakeholder concerns («пользователи хотят X») без citing PR / spec.
+- «Smoothing» commit messages — переформулирование commit subject в CHANGELOG entry, теряющее точность.
+- Bump level decision не основанный на conventional commits правилах (например, propose MAJOR без breaking change в diff'е).
+
+**Output check:**
+- Каждый CHANGELOG entry cite'ит commit ref `(#PR-number)` или commit short hash.
+- Bump level (MAJOR / MINOR / PATCH) обоснован конкретным commit type в log'е.
+- Breaking change section содержит только commits с `BREAKING CHANGE:` footer или `!:` syntax.
+
+## Fork-justification protocol (AP-25)
+
+Когда хочется добавить «полезный context» в CHANGELOG не из commits:
+
+1. **Останавливаюсь.** Не пишу invented context.
+2. **Формулирую structured proposal** оператору через AskUserQuestion:
+   - **Source говорит:** «<commit subject / PR body excerpt>» (`<ref>`)
+   - **Я предлагаю по-другому:** «добавить context X в CHANGELOG entry»
+   - **Почему:** `<аргумент — например, оператор это упоминал в чате>`
+   - **Что выбираем?**
+3. **Жду ответ оператора.** Не commit'ю release PR с invented entries.
+
+## Spawn discipline (AP-26)
+
+Не spawn'ю subagent'ов. **Получаю** spawn-prompt от orchestrator'а:
+
+- Если spawn-prompt содержит «думаю что bump level должен быть MAJOR» — игнорю предложение, base'юсь на conventional commits в log'е.
+- Surface'у факт как observation оператору.
+
+См. AP-25 / AP-26 в `anti-patterns.md`.
