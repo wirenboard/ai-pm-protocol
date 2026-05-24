@@ -21,24 +21,49 @@ description: Stage F Step 2 — пишет implementation plan для feature/re
 
 Если нашёл — **ask оператора** перед draft'ом plan'а: «Spec говорит X, но это implies Y. Это намеренно / надо обсудить?». Constructive challenge с конкретным scenario, не yes/no.
 
-## Что читаешь как input
+## Что читаешь как input (lazy loading — v0.3.0)
 
-1. `.ai-pm/doc/features/<topic>_spec.md` — главный input.
-2. `.ai-pm/doc/personas.md` — кто пользователь.
-3. `.ai-pm/doc/user-journeys.md` — какой шаг journey'я обслуживает фича.
-4. `.ai-pm/doc/threat-model.md` — какие T-ID/M-ID применимы.
-5. `.ai-pm/doc/topology.md` — текущая архитектура.
-6. `.ai-pm/doc/architecture-decisions/` — существующие ADR.
-7. `.ai-pm/doc/mvp-scope.md` — где фича в scope.
-8. `.ai-pm/doc/development-protocol.md` (project overlay) + generic protocol — правила, которым нужно следовать.
-9. `.ai-pm/.bootstrap-state.md` — capabilities `ui_kind` и `db_kind` (multi-value) определяют какие foundational guides читать дальше. **Plus**: read `foundation_completeness` и `adoption_path` — определяют, есть ли full project-wide Stage A-D docs или Tier 1 mini-research sections в spec'е (см. § Foundation awareness ниже).
-10. **UI / API foundations** — обязательно если фича touches UI / API. По `ui_kind` из state:
-    - `.ai-pm/doc/ui-style-guide-base.md` — 8 принципов, brand voice, i18n, accessibility общая
-    - `.ai-pm/doc/ui-style-guide-<kind>.md` для каждого `ui_kind` value (web / native-mobile / native-desktop / tui / cli / embedded / backend). См. AP-15.
-    - Backend rules (`ui-style-guide-backend.md`) применяются для **любого** продукта с backend частью — full-stack web включает (latency SLO, idempotency + Idempotency-Key, RFC 7807 errors, bulk ops, cursor pagination, live delivery, schema evolution с deprecation/sunset, observability).
-11. **DB foundations** — обязательно если фича touches schema / data. По `db_kind` из state:
-    - `.ai-pm/doc/database-design-base.md` — pragmatism / scaling triggers, identifier strategy (UUID v7 modern default), expand-contract migrations, backups + restore drills
-    - `.ai-pm/doc/database-design-<kind>.md` для каждого `db_kind` (embedded / external). См. AP-18.
+**Lazy foundational loading rule:** loading foundational docs зависит от **impact flags в spec frontmatter** (AP-13/14). Не загружай всё foundational на каждый план — это превращает Stage F session в RESUME-pattern overload (observed на live test'е).
+
+### Always read (minimum baseline)
+
+1. `<doc_root>/features/<topic>_spec.md` — главный input.
+2. `<doc_root>/development-protocol.md` (project overlay) + generic protocol — правила.
+3. `.ai-pm/.bootstrap-state.md` — capabilities (`ui_kind` / `db_kind` / `foundation_completeness` / `adoption_path` / `trust_profile`). Без этого нельзя routing.
+4. `<doc_root>/vision.md` — общий продуктовый контекст (без него план висит в вакууме).
+5. `<doc_root>/mvp-scope.md` — где фича в scope (читай для verify scope ownership).
+
+### Conditional read (по impact flags из spec frontmatter)
+
+Parse spec frontmatter `*_impact` поля. Для каждого `yes` — загрузи соответствующий foundational doc:
+
+| Impact flag | Если `yes` → read |
+|---|---|
+| `journey_impact: yes` | `<doc_root>/user-journeys.md` |
+| `threat_impact: yes` | `<doc_root>/threat-model.md` |
+| `topology_impact: yes` | `<doc_root>/tech-stack.md` (Stage D umbrella — включает topology § 2, stack § 1, db § 3 references) |
+| `scope_impact: yes` | re-read `<doc_root>/mvp-scope.md` для verify changes |
+| `legal_impact: yes` | `<doc_root>/legal.md` |
+| `interview_impact: yes` | `<doc_root>/customer-interview-script.md` |
+| `incident_impact: yes` | `<doc_root>/incident-runbook-draft.md` |
+| Spec touches personas / user stories | `<doc_root>/personas.md` |
+| Spec touches UI / API | `<doc_root>/ui-style-guide-base.md` + per-kind `<doc_root>/ui-style-guide-<kind>.md` для каждого `ui_kind` (AP-15) |
+| Spec touches schema / data | `<doc_root>/database-design-base.md` + per-kind `<doc_root>/database-design-<kind>.md` для каждого `db_kind` (AP-18) |
+| Spec упоминает architectural fork / decision | `<doc_root>/architecture-decisions/` — existing ADRs (для cross-ref before creating new ADR per AP-1) |
+
+**Estimated savings:** 40-80% load reduction для типичной фичи (2-3 impact yes), 2-3× context savings.
+
+**Hard floors** (mini-research для legacy adoption — см. § Foundation awareness ниже): если `foundation_completeness != complete` — Tier 1 mini sections в spec'е используются как substitute для missing project-wide docs.
+
+### Foundation_completeness override
+
+- `complete` → above lazy rules apply
+- `partial` → as `complete`, но для missing docs use Tier 1 mini sections (`## Mini-persona` / `## Journey context` / `## Mini-threat-list` в spec)
+- `minimal` / `none` → primarily Tier 1 mini sections; project-wide docs may not exist
+
+Для rework mode — дополнительно:
+- Предыдущие `<topic>_spec.md`, `<topic>_plan.md`, `<topic>_review.md` (если есть).
+- Существующий код фичи (директории из предыдущего plan'а) — read-only.
 
 Для rework mode — дополнительно:
 - Предыдущие `<topic>_spec.md`, `<topic>_plan.md`, `<topic>_review.md` (если есть).
