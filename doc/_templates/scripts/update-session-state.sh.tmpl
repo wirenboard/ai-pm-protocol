@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# scripts/update-session-state.sh
+# PostToolUse hook (Write|Edit matcher) — обновляет .ai-pm/.session-state.md
+# по факту записи feature-related файла. Цель — дать новой Claude session'и
+# lightweight hint «где мы во флоу» (см. feature spec session-resume-state).
+#
+# Hook input: JSON через stdin (Claude Code hook API):
+#   { "tool_name": "Write|Edit", "tool_input": { "file_path": "..." } }
+#
+# Контракт:
+#   - PostToolUse non-blocking by Claude Code API. Скрипт ВСЕГДА exit 0,
+#     даже на parse failures / git absent / invalid stdin. Failed PostToolUse
+#     на каждом Write раздражает warning'ами без полезного эффекта.
+#   - Hook перезаписывает ТОЛЬКО mechanical поля (current_topic / current_branch
+#     / current_step / last_update). Semantic поля (pending_agents / blocker /
+#     active_pr_series / notes) — operator/main-agent-driven, hook их не трогает.
+#   - Если file_path не matches feature/code pattern → skip silently (state untouched).
+#
+# Эвристика → step (см. _plan.md § «Эвристика определения step'а»):
+#   *_spec.v<N>.md / *_plan.v<N>.md         → 6 (rework)         (checked first)
+#   doc/features/*_spec.md                  → 1 (spec)
+#   doc/features/*_plan.md                  → 2 (plan)
+#   doc/features/*_review.md                → 7 (review)
+#   .ai-pm/.reviews/*.json                  → 7 (review trail)
+#   doc/architecture-decisions/*.md         → 2 (ADR в Step 2 per AP-1)
+#   apps/|packages/|src/|lib/|services/|cmd/|internal/ → 4 (coder)
+#   otherwise                               → skip update (state unchanged)
+#
+# Smoke-test:
+#   echo '{"tool_name":"Write","tool_input":{"file_path":"doc/features/foo_spec.md"}}' \
+#     | bash scripts/update-session-state.sh
+#
+# Full test suite: bash scripts/tests/session-state-smoke.sh
+
+# NB: НЕ используем `set -e` — мы хотим продолжить обработку даже если
+# отдельные команды (jq, git, grep) вернули non-zero. Финальный exit — всегда 0.
+set -u
+
+STATE=".ai-pm/.session-state.md"
+STATE_DIR=".ai-pm"
+
+# === 1. Parse stdin ===
+INPUT=""
+# `cat` без stdin висит — read с timeout 1s. На пустой/missing stdin → skip.
+if ! IFS= read -r -t 1 -d '' INPUT 2>/dev/null; then
+  # read с -d '' читает до EOF; на timeout возвращает non-zero но INPUT уже может быть заполнен
+  :
+fi
+[ -z "${INPUT:-}" ] && exit 0
+
+if command -v jq >/dev/null 2>&1; then
+  FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")
+else
+  FILE=$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]+"' 2>/dev/null \
+    | sed -E 's/.*:[[:space:]]*"([^"]+)"/\1/' | head -1)
+fi
+
+[ -z "${FILE:-}" ] && exit 0
+
+# === 2. Эвристика — step / topic из file_path ===
+STEP=""
+TOPIC=""
+
+# Strip optional .ai-pm/ prefix для unified matching
+NORM="${FILE#.ai-pm/}"
+
+# Versioned rework artifacts (_spec.v<N>.md / _plan.v<N>.md) — checked FIRST
+# чтобы не упасть в общий _spec.md / _plan.md pattern.
+if [[ "$NORM" =~ ^doc/features/([^/]+)_(spec|plan)\.v[0-9]+\.md$ ]]; then
+  STEP="6 (rework)"
+  TOPIC="${BASH_REMATCH[1]}"
+elif [[ "$NORM" =~ ^doc/features/([^/]+)_spec\.md$ ]]; then
+  STEP="1 (spec)"
+  TOPIC="${BASH_REMATCH[1]}"
+elif [[ "$NORM" =~ ^doc/features/([^/]+)_plan\.md$ ]]; then
+  STEP="2 (plan)"
+  TOPIC="${BASH_REMATCH[1]}"
+elif [[ "$NORM" =~ ^doc/features/([^/]+)_review(\.v[0-9]+)?\.md$ ]]; then
+  STEP="7 (review)"
+  TOPIC="${BASH_REMATCH[1]}"
+elif [[ "$NORM" =~ ^\.ai-pm/\.reviews/.+\.json$ ]] || [[ "$FILE" =~ ^\.ai-pm/\.reviews/.+\.json$ ]]; then
+  STEP="7 (review)"
+  # topic не извлекаем — review trail files именуются по branch, не topic
+elif [[ "$NORM" =~ ^doc/architecture-decisions/.+\.md$ ]]; then
+  STEP="2 (plan)"
+elif [[ "$FILE" =~ ^(apps|packages|src|lib|services|cmd|internal)/ ]]; then
+  STEP="4 (coder)"
+else
+  # Не feature-related write — skip, не трогаем state
+  exit 0
+fi
+
+# === 3. Branch (best-effort) ===
+BRANCH=""
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  BRANCH=$(git branch --show-current 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+fi
+
+# Если topic не извлечён из path — попробуем из ветки (feature/<topic> или feat/<topic>)
+if [ -z "$TOPIC" ] && [ -n "$BRANCH" ]; then
+  case "$BRANCH" in
+    feature/*) TOPIC="${BRANCH#feature/}" ;;
+    feat/*)    TOPIC="${BRANCH#feat/}" ;;
+  esac
+fi
+
+# === 4. Если есть existing state — preserve TOPIC (для code writes), preserve semantic fields ===
+EXISTING_TOPIC=""
+EXISTING_SEMANTIC=""
+if [ -f "$STATE" ]; then
+  EXISTING_TOPIC=$(grep -E '^current_topic:' "$STATE" 2>/dev/null | head -1 | sed -E 's/^current_topic:[[:space:]]*//; s/[[:space:]]+$//')
+  # Semantic блок = всё после первой пустой строки которая идёт после mechanical header.
+  # Простая эвристика: всё начиная с первой строки, которая matches semantic-marker
+  # (pending_agents: / blocker: / active_pr_series: / # === Опциональные)
+  EXISTING_SEMANTIC=$(awk '
+    /^(pending_agents:|blocker:|active_pr_series:|# === Опциональные)/ { capture = 1 }
+    capture { print }
+  ' "$STATE")
+fi
+
+# Для code writes (Step 4) — topic из path не извлекли, берём existing
+if [ -z "$TOPIC" ]; then
+  TOPIC="${EXISTING_TOPIC:-(unknown)}"
+fi
+
+# === 5. Atomic write через temp file + mv ===
+mkdir -p "$STATE_DIR" 2>/dev/null || exit 0
+
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)
+TMP=$(mktemp "$STATE.tmp.XXXXXX" 2>/dev/null) || exit 0
+
+{
+  echo "# Session state (local, gitignored)"
+  echo ""
+  echo "_Auto-managed by scripts/update-session-state.sh (PostToolUse hook)._"
+  echo "_Mechanical поля (current_topic / current_branch / current_step / last_update) перезаписываются hook'ом на каждом feature-related Write._"
+  echo "_Semantic поля (pending_agents / blocker / active_pr_series) — manual / main-agent driven, hook их не трогает._"
+  echo ""
+  echo "current_topic: ${TOPIC}"
+  echo "current_branch: ${BRANCH:-(none)}"
+  echo "current_step: ${STEP}"
+  echo "last_update: ${TIMESTAMP}"
+  if [ -n "$EXISTING_SEMANTIC" ]; then
+    echo ""
+    printf '%s\n' "$EXISTING_SEMANTIC"
+  fi
+} > "$TMP" 2>/dev/null
+
+# Atomic rename. На POSIX FS — single syscall, no partial state.
+mv -f "$TMP" "$STATE" 2>/dev/null || rm -f "$TMP" 2>/dev/null
+
+exit 0
