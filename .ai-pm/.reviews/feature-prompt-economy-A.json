@@ -1,0 +1,35 @@
+{
+  "verdict": "approve-with-comments",
+  "domain": "feat-template",
+  "branch": "feature/prompt-economy-A",
+  "agent_type": "inline-roleplay",
+  "agent_note": "Self-review by coder role in same context (Bug #4 honest frontmatter — not a true independent reviewer subagent invocation). Full Stage E reviewer flow per development-protocol.md § 11 ожидается на operator side при merge decision. Local trace для AP-16 Layer 4 review-trail enforcement.",
+  "summary": "PR-2 of prompt-economy 6-PR sequence (Option A). 11 agent files содержали duplicated Source contract / Fork-justification / Spawn discipline (~30-50 LOC each). Заменено на per-agent specifics (ground truth + fork triggers + output check) + mandatory pre-output read cross-reference к development-protocol.md § 9.5 (universal blueprint, added в PR #60). LOC: -121 net (250 inline boilerplate removed, 129 per-agent specifics + cross-ref добавлено). Reviewer.md и project-bootstrap.md сохранили развёрнутую spawn discipline subsection — они actually spawn subagents.",
+  "findings": [
+    {
+      "severity": "info",
+      "note": "LOC delta (-121) ниже исходного estimate в spec'е (-200..-400). Причина: per-agent specifics (ground truth list + fork triggers + output check) требуют 15-22 LOC чтобы remain meaningful — не pure boilerplate. Optimistic estimate в spec'е переоценил сжимаемость без потери discipline semantics. 250 LOC pure inline blueprint removed — это реальный win; добавлено 129 LOC per-agent context который раньше был размыт по inline blueprint duplication."
+    },
+    {
+      "severity": "info",
+      "note": "Risk «AI may skip read § 9.5» — основная mitigation: MANDATORY pre-output read directive в первой строке каждой Source-bounded contract секции. Empirical verification (что AI действительно читает) — невозможна в этом PR; будет visible через linter (adr-spec-reference / plan-spec-reference) на real workflow'ах. Если drift detected на реальных features — escalate как architectural revisit."
+    },
+    {
+      "severity": "info",
+      "note": "Linter ground truth: check-spec-discipline.sh.tmpl checks для adr-spec-reference / plan-spec-reference валидируют frontmatter `spec_reference:` field в plan/ADR файлах — это отдельная concern от agent file structure. Этот PR не trogает linter logic. Spec-discipline gates продолжают работать как раньше."
+    },
+    {
+      "severity": "info",
+      "note": "Per-agent specifics intentionally vary per agent role: reviewer (primary/router) и project-bootstrap (init-agent/orchestrator) сохранили развёрнутую Spawn discipline subsection как ### подзаголовок — they have genuinely different spawn behavior. 9 остальных agents используют short inline 'Spawn discipline: не spawn'ю / получаю — detail в § 9.5'."
+    },
+    {
+      "severity": "info",
+      "note": "Cache-friendly ordering из PR-1 (Option D) сохранён во всех 11 файлах — HTML-comment block в начале файла указывает на static-blocks-first structure. Optionsы D и A складываются: cache benefits на static prefix + token-count reduction на blueprint extraction."
+    },
+    {
+      "severity": "info",
+      "note": "Smoke check: все 11 agent files валидный markdown (frontmatter intact, no broken section anchors). Grep verification: 0 lingering inline ## Source contract / ## Fork-justification protocol / ## Spawn discipline top-level headers (только 2 ### Spawn discipline subsections в reviewer.md и project-bootstrap.md by design)."
+    }
+  ],
+  "trail_format_note": "Template self-repo PR. Local trace JSON. Honest agent_type per Bug #4 — coder self-review, not independent reviewer subagent. Operator решает acceptance + может invoke full reviewer chain если хочет deeper check."
+}
