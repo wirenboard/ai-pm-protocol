@@ -114,29 +114,18 @@
 - **`project-bootstrap`** — Stage A-D setup + resume + lifecycle routing. Mode + integration + trust profile aware.
 - **`planner`** — Step 2 plan writer. Read-only по коду. Trust-profile-aware.
 - **`coder`** — Step 4 implementation. Tests-first. No silent deviation.
-- **`reviewer`** — Step 7 review primary (orchestrator / router). Detect domain PR'а → spawn **always** `protocol-compliance-reviewer` + **ONE** domain-specific (`backend-reviewer` / `frontend-reviewer` / `design-reviewer` / `database-reviewer`). Consolidates findings → single verdict. Mandatory all modes. См. AP-19 + AP-20.
-- **`protocol-compliance-reviewer`** — always spawned. Spec↔plan↔code consistency, frontmatter, AP discipline.
-- **`backend-reviewer`** — spawned для `feat(backend)`/`feat(api)`/`feat(server)`. API contracts, idempotency, RFC 7807, latency SLO, security серверной стороны.
-- **`frontend-reviewer`** — spawned для `feat(frontend)`/`feat(ui)`/`feat(web)`/`feat(mobile)`/etc. Tokens, accessibility per-kind, frameworks-first, i18n, responsive.
-- **`design-reviewer`** — spawned для `feat(design)`/`feat(ux)`/`feat(copy)` или significant UX flows. 8 принципов, brand voice, эффективность пути, confirm vs undo.
-- **`database-reviewer`** — spawned для `feat(db)`/`feat(schema)`/`feat(migration)`. Schema design, expand-contract migrations, indexing, identifier strategy.
+- **`reviewer`** — Step 7 review primary (consolidated, v0.7.0+). Detect domain PR'а → apply inline sections sequentially: **always** «Mandatory baseline» (process check — spec↔plan↔code consistency, frontmatter, AP discipline) + **ONE** Domain-specific section (`Backend domain` / `Frontend domain` / `Design domain` / `Database domain`). Consolidates findings → single verdict. Mandatory all modes. См. AP-19 + AP-20.
 - **`release-helper`** — release PR при накоплении merged feature-PR'ов. SemVer bump + CHANGELOG.
 
 Запуск: `claude --agent <name>`. Или ты в main session приглашаешь оператора: «invoke <agent>?», ждёшь approval, и сам передаёшь управление (через Agent tool с appropriate subagent_type).
 
-### Известный workaround: project-level agent enum gap (Claude Code limitation)
+### Известный context: project-level agent enum gap (Claude Code limitation)
 
-**Симптом:** В running session project-level agent'ы из `.claude/agents/*.md` могут не появляться в Agent tool'а `subagent_type` enum. `claude /agents` CLI их видит, но из main session через Task tool — нет enum entry. Source unclear (Claude Code bug / missing documentation / intended behavior).
+**Симптом (Bug #3 protocol-minors-2026-05-25):** В running session project-level agent'ы из `.claude/agents/*.md` могут не появляться в Agent tool'а `subagent_type` enum. Source unclear (Claude Code bug / missing documentation / intended behavior).
 
-**Workaround (только когда реально требуется specialized subagent):**
+**v0.7.0 consolidation response:** reviewer.md теперь монолит — все 5 reviewer ролей (protocol-compliance + 4 domains) inlined как sections в один файл, sequential self-pass. Никакого nested spawn'а не требуется. См. `.claude/agents/reviewer.md` § Mandatory baseline + § Domain-specific checks.
 
-1. Spawn `subagent_type: general-purpose` с **inline role spec** в prompt'е: копируешь relevant excerpt из `.claude/agents/<role>.md` в spawn-prompt как `You are <role>. Your contract:` preamble + указываешь pointer на файл.
-2. В review/audit artifact'ах **честно** записывай frontmatter — `agent_type: general-purpose-with-role-spec`, `spawned_agents: []`, `inline_roles: [<role>, ...]`. См. detail в `.claude/agents/reviewer.md` Step 5.2-5.3.
-3. Если даже general-purpose spawn недоступен — main session делает работу inline; `agent_type: inline-roleplay`.
-
-**Запрещено:** ложно заполнять `spawned_agents:` именами specialized reviewers если spawn'а не было — audit trail должен буквально отражать что произошло (Bug #4 из protocol-minors-2026-05-25).
-
-**Status:** workaround documented; verify reproducer в clean session — отдельная operator-task; file issue в `anthropics/claude-code` если persists.
+**Legacy review trail'ы** (pre-v0.7.0) могут содержать frontmatter с `agent_type: specialized-reviewer` / `general-purpose-with-role-spec` / `inline-roleplay` — accepted backward-compat в existing committed `_review.md`. Новые review'и используют `agent_type: inline-sections` + `applied_sections: [...]` (см. reviewer.md Step 5.2).
 
 ---
 

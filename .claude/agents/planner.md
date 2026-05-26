@@ -170,20 +170,22 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 
 **Backward compat:** existing spec'и с `lite-mode: c-fast` (deprecated) — treat as `small-fix`. Existing spec'и с `trust_profile: B/C` в frontmatter — treat as `A`.
 
-## Discipline-advisor invocation (v0.4.0+, opt-in)
+## Discipline checks через scripts (v0.7.0+, post discipline-advisor retirement)
 
-После черновика plan'а — опциональный invocation `discipline-advisor` subagent для **scope-proportionality check + 6-axis quality challenge**. Advisor:
+С v0.7.0 `discipline-advisor` subagent retired (см. CHANGELOG / agent-consolidation feature). Soft 5-axis анализ никогда не был validated через required accuracy gate ≥80% per axis (ARCH-8 в architectural-backlog.md).
 
-- Cross-checks architecture proportionate к spec (e.g., single-screen UI → не «microservices с очередями»)
-- Flags missing ADRs для architectural forks (AP-1 prevention; AP-24 will catch retroactively, но AP-1 proactive cleaner)
-- Suggests test plan additions для invariants / property-based coverage
-- Verifies UI-style-guide consistency для каждого active `ui_kind`
+**Что осталось работающим:**
 
-**Trigger:** end of Step 2 plan draft, before operator approval.
+- **Hard security floor:** `scripts/check-security-floor.sh` — детерминированный детектор stripe / bcrypt / aes-gcm / PII columns в коде / манифестах / схемах. На bootstrap entry автоматически запускается через bootstrap-agent; planner reads его output как ground truth для security path decisions.
+- **Skip reprompt:** `scripts/check-skip-reprompts.sh` — парсит `skip_decisions:` в bootstrap-state, выдаёт expired list. Wired в SessionStart + pre-commit hooks.
+- **Spec discipline gates** (`check-spec-discipline.sh`): scope-proportionality / ADR extraction (AP-24) / test-mapping / regression coverage — детерминированные checks.
 
-**Operator action:** read advisor findings → apply (add ADR / split plan / scope down) или declare adoption_override per AP-22.
+**Что planner делает сам (без advisor):**
 
-**Не mandatory в v0.4.0** — opt-in пока PoC accuracy gate не достигнут ≥80% per axis. После PoC validation → mandatory в Step 2.
+- Cross-check architecture proportionate к spec — judgement call в plan'е (mention если over-engineering risk)
+- Flag missing ADRs для architectural forks — AP-1 / AP-24 enforced через `check-spec-discipline.sh adr-auto-extraction` rule
+- Suggest test plan additions для invariants — standard part of plan'а
+- Verify UI-style-guide consistency для каждого active `ui_kind` — read foundational docs per impact flags
 
 ## Когда писать новый ADR
 

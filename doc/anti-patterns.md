@@ -19,7 +19,7 @@ AP-инварианты — **opinionated defaults**, не engineering laws. К�
 
 **Что нельзя:**
 
-- AI agent (любой из 11 subagent'ов + main session AI / orchestrator) пишет artifact с поведением / decision / behavior, не подтверждённым source artifact'ами этого agent'а (см. per-agent specifics в `.claude/agents/*.md` § «Source contract»).
+- AI agent (любой из 5 subagent'ов после v0.7.0 consolidation: project-bootstrap / planner / coder / reviewer / release-helper + main session AI / orchestrator) пишет artifact с поведением / decision / behavior, не подтверждённым source artifact'ами этого agent'а (см. per-agent specifics в `.claude/agents/*.md` § «Source contract»).
 - Planner создаёт ADR с alternatives, которых нет в spec'е («для полноты»).
 - Coder добавляет input validation rules / API fields / DB columns / retry logic, не упомянутые в spec/plan'е («just in case»).
 - Reviewer surface'ит findings без `diff_reference:` / `spec_reference:` («код выглядит подозрительно где-то ещё»).
@@ -60,7 +60,7 @@ AP-инварианты — **opinionated defaults**, не engineering laws. К�
 **Use case examples:**
 
 - *Legitimate fork:* planner драфтит plan, видит что spec не упоминает rate limiting на endpoint, но domain (payment processing) делает это critical. Stop'ается, AskUserQuestion: «Source говорит: endpoints в spec'е без rate-limit constraints. Я предлагаю: добавить rate-limit invariant в plan. Почему: payment-touching, AP-15 backend guide рекомендует. Что выбираем?» Operator approve'ит — plan extended с reference на operator-touch.
-- *Silent drift (что блокируется):* planner драфтит ADR с 4 alternatives, последняя — invented «middle-ground» (retention window не упомянут в spec'е) добавлен «для thoroughness». Frontmatter `spec_reference:` присутствует, но содержимое ADR содержит alternative не traceable к spec'е. Linter не catches содержание (это design intent, не frontmatter check), но reviewer Step 7 при `protocol-compliance-reviewer` находит ADR alternative без spec citation и flag'ует. Coder при follow-up implementing должен detect mismatch и trigger fork-justification на свою сторону.
+- *Silent drift (что блокируется):* planner драфтит ADR с 4 alternatives, последняя — invented «middle-ground» (retention window не упомянут в spec'е) добавлен «для thoroughness». Frontmatter `spec_reference:` присутствует, но содержимое ADR содержит alternative не traceable к spec'е. Linter не catches содержание (это design intent, не frontmatter check), но reviewer Step 7 в Mandatory baseline section находит ADR alternative без spec citation и flag'ует. Coder при follow-up implementing должен detect mismatch и trigger fork-justification на свою сторону.
 - *Trivial override:* legacy product repo адаптируется на template v0.6, existing ADRs не имеют frontmatter полей. Migration commit body: `chore: backfill ADR frontmatter [source-bounded-override: template-v0.6-legacy-migration]`. Linter downgrade'ит fail → warn, audit trail preserved.
 
 **Relationship:**
@@ -412,41 +412,42 @@ AP-инварианты — **opinionated defaults**, не engineering laws. К�
 
 ---
 
-## AP-20. Specialized reviewer routing — единый orchestrator, ограниченный spawn
+## AP-20. Domain section routing — единый reviewer, inline sequential pass
 
 **Что нельзя:**
 
-- Spawn'ить **все** specialized reviewer'ы (backend / frontend / design / database / protocol-compliance) для каждого PR независимо от scope — overhead (cost / время / шум).
-- Использовать domain-specific reviewer (backend-reviewer, frontend-reviewer, etc.) **напрямую**, минуя primary reviewer — теряется consolidation logic + cross-cutting checks.
-- Полагаться на naive «один agent читает всё» для multi-domain PRs — prompt разрастается, focus теряется.
+- Apply'ить **все** 4 Domain sections (Backend / Frontend / Design / Database) reviewer'а для каждого PR независимо от scope — overhead (cost / время / шум).
+- Полагаться на naive «один agent читает всё без domain labels» для multi-domain PRs — focus теряется, output не traceable.
 - Запускать reviewer на mixed-domain PR без recommendation split per AP-19.
 
-**Почему:** оператор на одном из ранних prod-run'ов template'а expressed concern «зачем гонять 5 reviewer'ов на каждый коммит». Naive «all-specialized always» multiplies cost × N (worst case 5 agent spawns per PR). Smart routing reduces это к ровно 2 spawns per typical atomic PR (protocol-compliance always + 1 domain), что соответствует AP-19 per-PR atomicity.
+**Почему:** оператор на одном из ранних prod-run'ов template'а expressed concern «зачем гонять 5 reviewer'ов на каждый коммит». Naive «all-domains always» multiplies overhead × N. Smart inline routing reduces это к ровно baseline + 1 domain section per typical atomic PR, что соответствует AP-19 per-PR atomicity.
 
-**Решение:**
+**Историческая нота (v0.7.0 consolidation):** до v0.7.0 описывался **specialized reviewer routing** pattern с separate agent файлами (`protocol-compliance-reviewer.md` + 4 domain reviewer files), которые primary reviewer должен был spawn'ить через Task tool. Per Bug #3 (Claude Code subagent enum gap) — nested spawn не работал reliably. С v0.7.0 эти 5 файлов inlined в `reviewer.md` как sections («## Mandatory baseline» + 4 «### Domain» subsections); primary reviewer применяет relevant sections inline sequentially с explicit domain labels в output. См. ARCH-1 в `architectural-backlog.md`.
 
-`reviewer.md` — **primary reviewer (orchestrator)**, единый entry point для всех PR'ов. Detection logic:
+**Решение (v0.7.0+):**
+
+`reviewer.md` — **single primary reviewer file** с consolidated sections, единый entry point для всех PR'ов. Detection logic:
 
 1. **Detect PR scope** через Conventional Commits scope + diff paths + diff content
-2. **Always spawn** `protocol-compliance-reviewer` (cross-cutting baseline: spec↔plan↔code, frontmatter, AP discipline)
-3. **Spawn ONE** domain-specific reviewer based on detected scope:
-   - `backend-reviewer` — `feat(backend)` / `feat(api)` / `feat(server)` + paths
-   - `frontend-reviewer` — `feat(frontend)` / `feat(ui)` / `feat(web)` / `feat(mobile)` / etc + paths
-   - `design-reviewer` — `feat(design)` / `feat(ux)` / `feat(copy)` + design assets paths
-   - `database-reviewer` — `feat(db)` / `feat(schema)` / `feat(migration)` + migrations paths
+2. **Always apply** «## Mandatory baseline» section (cross-cutting baseline: spec↔plan↔code, frontmatter, AP discipline)
+3. **Apply ONE** Domain section based on detected scope:
+   - `Backend domain` — `feat(backend)` / `feat(api)` / `feat(server)` + paths
+   - `Frontend domain` — `feat(frontend)` / `feat(ui)` / `feat(web)` / `feat(mobile)` / etc + paths
+   - `Design domain` — `feat(design)` / `feat(ux)` / `feat(copy)` + design assets paths
+   - `Database domain` — `feat(db)` / `feat(schema)` / `feat(migration)` + migrations paths
 4. **Cross-cutting checks** primary делает сам: structural consistency (AP-14), spec coverage, plan adherence, test discipline, generic security/architecture, code hygiene
-5. **Consolidate** sub-reports + primary findings → single verdict + architectural summary
+5. **Consolidate** all section findings → single verdict + architectural summary
 
-**Worst case spawn count per PR**: 2 (protocol-compliance + 1 domain) для atomic PR. Edge cases (PR touches multiple domains в exception scenarios) → 3 spawns. Никогда не 5 при atomic discipline (AP-19).
+**Worst case** per PR: baseline + 1 domain section для atomic PR. Edge cases (PR touches multiple domains в exception scenarios) → baseline + 2 domain sections. Никогда не all 4 при atomic discipline (AP-19).
 
 **Применение** — все Stage E PRs + template-extension PRs. Mode-agnostic.
 
 **Как поступать вместо:**
 
-- `reviewer.md` — primary entry point (router role)
-- `protocol-compliance-reviewer.md` — always spawned, focused process check
-- `backend-reviewer.md` / `frontend-reviewer.md` / `design-reviewer.md` / `database-reviewer.md` — domain-specific, focused
-- Primary consolidates findings; specialized agents не общаются между собой и не персистят свои reports сами
+- `reviewer.md` — single primary entry point с inline sections
+- «## Mandatory baseline» section — always applied, focused process check (spec↔plan↔code, frontmatter, AP discipline)
+- «### Backend domain» / «### Frontend domain» / «### Design domain» / «### Database domain» — applied per detected scope
+- Primary consolidates findings inline; никакого nested spawn'а
 - AP-19 (per-PR atomicity) enforced concurrently — если PR mixes domains, reviewer returns request-changes recommendation «split per AP-19»
 
 ---

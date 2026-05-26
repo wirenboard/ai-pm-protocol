@@ -415,20 +415,20 @@ Complex refactor. Approach:
 
 ## B.5. Reviewer expectations (cross-ref AP-20)
 
-Refactor PR triggers same review chain как любой PR:
+Refactor PR triggers same review chain как любой PR (v0.7.0+: single reviewer.md с inline sections):
 
-- **protocol-compliance-reviewer** verifies:
+- **Mandatory baseline section** verifies:
   - Commit message `refactor:` (Conventional Commits)
   - No behavior changes documented
   - Tests continue passing (per-diff coverage не decrease)
   - Scope атомарный per AP-19
 
-- **Domain-specific reviewer** (backend / frontend / database / etc) verifies:
-  - Refactor доменно-appropriate (e.g. backend refactor проходит backend-reviewer checks)
+- **Relevant Domain section** (Backend / Frontend / Database) applied per detected scope:
+  - Refactor доменно-appropriate (e.g. backend refactor проходит Backend domain section checks)
   - No subtle behavior changes
   - Performance не deteriorated
 
-- **design-reviewer NOT spawned** для pure refactor (нет UX semantics changes)
+- **Design section NOT applied** для pure refactor (нет UX semantics changes)
 
 **Verdict expectations:**
 - `approve` если everything clean

@@ -78,7 +78,7 @@ audience: AI agent driving template-sync для downstream продукта
 - `skip_decisions: []`
 - `advisor_log: []`
 
-**New subagent:** `discipline-advisor.md` (read-only 5-axis quality challenger)
+**New subagent:** `discipline-advisor.md` (read-only 5-axis quality challenger) — **DEPRECATED / retired в v0.7.0** (agent-consolidation feature): hard floor functionality перенесена в `scripts/check-security-floor.sh`, reprompt — в `scripts/check-skip-reprompts.sh`, soft 5-axis recommendations dropped as never-validated (accuracy gate ≥80% per axis никогда не measured).
 
 **`skip_eligibility` metadata** в 31 templates (`default` / `skip_if` / `hard_floor`)
 
@@ -156,6 +156,42 @@ Template убрал `meta/` целиком (был sandbox для audits / revie
 - Регенерировать эти 3 скрипта из template (теперь корректные)
 - При наличии в product custom-написанных версий с JSON stdin parsing — оставить (они уже корректные)
 - **Inspection-before-regenerate discipline:** перед regen — сравни новый .tmpl со старым в product. Если product использует JSON stdin + jq pattern (правильный) — keep. Если env vars (broken) — regenerate.
+
+---
+
+## v0.7.0 (unreleased, в main HEAD — будет v0.7 при release) — `agent-consolidation`
+
+**Agent count reduction 11 → 5.** MINOR-additive (no schema breaks; legacy review trail values accepted backward-compat).
+
+**Deleted agent files** (6):
+- `.claude/agents/protocol-compliance-reviewer.md`
+- `.claude/agents/backend-reviewer.md`
+- `.claude/agents/frontend-reviewer.md`
+- `.claude/agents/design-reviewer.md`
+- `.claude/agents/database-reviewer.md`
+- `.claude/agents/discipline-advisor.md`
+
+**Consolidated в `.claude/agents/reviewer.md`** как inline sections:
+- «## Mandatory baseline» (always applied; was protocol-compliance-reviewer)
+- «### Backend domain» / «### Frontend domain» / «### Design domain» / «### Database domain» (applied per detected PR scope; was 4 specialized reviewer files)
+
+**Reviewer behavior change:** sequentially applies relevant sections inline (no nested spawn). Output frontmatter: `agent_type: inline-sections` + `applied_sections: [mandatory-baseline, <domain>]`. Legacy `agent_type: specialized-reviewer` / `general-purpose-with-role-spec` / `inline-roleplay` values accepted в existing committed `_review.md` files (backward-compat).
+
+**Discipline-advisor retired:** functionality перенесена в deterministic scripts:
+- Hard floor → `scripts/check-security-floor.sh` (была уже в v0.6.0)
+- Skip reprompt → `scripts/check-skip-reprompts.sh` (была уже в v0.6.0)
+- Soft 5-axis recommendations — dropped (never validated через required PoC accuracy gate ≥80% per axis)
+
+**State schema:** `advisor_preset:` / `advisor_log:` поля сохранены, marked DEPRECATED в template. Existing values принимаются без break'а; agents игнорируют. `skip_decisions:` остаётся authoritative — works через scripts.
+
+**Action в product (template-sync):**
+- Удалить product-side `.claude/agents/{protocol-compliance,backend,frontend,design,database}-reviewer.md` и `discipline-advisor.md` (если эти файлы были скопированы из template)
+- Регенерировать `.claude/agents/reviewer.md` из template (содержит inline sections)
+- Регенерировать `CLAUDE.md` из template (subagents list 9 → 5 entries)
+- Updated cross-refs: `feature-review.md.tmpl` / `maintenance-playbook.md.tmpl` / `tech-stack.md.tmpl` / `database-design-base.md.tmpl` / scripts comments
+- Bootstrap-state.md.tmpl — `advisor_preset:` / `advisor_log:` marked DEPRECATED, можно оставить existing values
+
+**Подробнее:** CHANGELOG.md § Unreleased / 0.7.0.
 
 ---
 

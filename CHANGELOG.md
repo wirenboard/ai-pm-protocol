@@ -17,6 +17,25 @@
 
 ### Changed
 
+- **Agent consolidation 11 → 5** (feature `agent-consolidation`):
+  - **Decision:** template сужает количество agent файлов с 11 до 5. Definite keepers: `project-bootstrap` / `planner` / `coder` / `reviewer` / `release-helper`.
+  - **Rationale (Bug #3 — Claude Code subagent enum gap):** project-level agent'ы из `.claude/agents/*.md` не появляются reliably в Agent tool's `subagent_type` enum в running session. Primary reviewer'у было нужно spawn'ить 5 specialized reviewer'ов (protocol-compliance + 4 domains), но фактически делал sequential self-pass (с фейковым `agent_type: specialized-reviewer` в frontmatter). Отдельные файлы только маскировали это как «patterns reviewer reads». Inline sections — honest и одинаково функциональны.
+  - **Consolidated в `reviewer.md`** как inline sections (5 файлов deleted):
+    - `protocol-compliance-reviewer.md` → «## Mandatory baseline» section (always applied, process check — spec↔plan↔code consistency, frontmatter, AP discipline)
+    - `backend-reviewer.md` → «### Backend domain» subsection
+    - `frontend-reviewer.md` → «### Frontend domain» subsection
+    - `design-reviewer.md` → «### Design domain» subsection
+    - `database-reviewer.md` → «### Database domain» subsection
+  - **Reviewer behaviour:** detect PR scope → apply Mandatory baseline + ONE Domain section sequentially in self-pass. Output frontmatter: `agent_type: inline-sections` + `applied_sections: [mandatory-baseline, <domain>]`. Legacy `agent_type: specialized-reviewer` / `general-purpose-with-role-spec` / `inline-roleplay` values accepted в existing committed `_review.md` files (backward-compat).
+  - **AP-20 rewritten** под honest pattern «inline sequential pass with explicit domain labels» (closes ARCH-1 в architectural-backlog).
+  - **`discipline-advisor.md` retired** (1 файл deleted): opt-in PoC with required accuracy gate ≥80% per axis **never validated**. Hard floor functionality перенесена в `scripts/check-security-floor.sh` (deterministic detector — не LLM heuristic). Skip reprompt mechanism — в `scripts/check-skip-reprompts.sh`. Soft 5-axis recommendations dropped as never-validated speculation (closes ARCH-8).
+  - **Backward compat:**
+    - `bootstrap-state.md` `advisor_preset:` / `advisor_log:` поля сохранены (marked DEPRECATED v0.7.0) — existing state files читаются без break'а; новые projects могут оставить defaults; agents игнорируют эти поля.
+    - `skip_decisions:` mechanism preserved — operator-driven с deterministic reprompt через `check-skip-reprompts.sh`.
+    - Legacy review trail frontmatter values accepted в `check-review-trail.sh` (parser agnostic to `agent_type:`, парсит только `**Verdict:**`).
+  - **Estimated savings:** ~1200 LOC removed (5 reviewer files × ~220 each + discipline-advisor ~220), `reviewer.md` grew ~700 LOC. Net: ~500 LOC reduction + 6 fewer agent files. CLAUDE.md.tmpl subagents list 9 entries → 5 entries.
+  - **References updated:** `CLAUDE.md.tmpl`, `bootstrap-state.md.tmpl`, `development-protocol.md`, `anti-patterns.md` (AP-19 / AP-20 / AP-25), `architectural-backlog.md` (ARCH-1 / ARCH-4 / ARCH-8 marked resolved or updated), `README.md`, `feature-review.md.tmpl`, `maintenance-playbook.md.tmpl`, `tech-stack.md.tmpl`, `database-design-base.md.tmpl`, `check-review-trail-smoke.sh.tmpl`, `check-security-floor.sh.tmpl`, `check-skip-reprompts.sh.tmpl`.
+
 - **PM-only ЦА в v0** (feature `remove-developer-from-template`):
   - **Decision:** template сужает поддерживаемую ЦА с 3 personas (PM Trust profile A, cross-stack senior B, full-stack pro C) до **одной** (PM Trust profile A, не читает AI-код). Developer-as-operator кейс — backlog item после empirical validation PM-кейса.
   - **Rationale:** real-world signal — «двусторонняя ниша PM↔dev» дилютирует focus. Conditional branches «if Trust profile B... if Trust profile C...» в agent prompts увеличивают maintenance overhead без proven value (никаких empirical users в B/C на момент refactor'а).

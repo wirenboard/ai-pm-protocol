@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # scripts/check-skip-reprompts.sh
 #
-# Layer-climbing escalation для skip_decisions (см. discipline-advisor.md § Layer-climbing
-# escalation). Парсит skip_decisions block в .ai-pm/.bootstrap-state.md, сверяет
-# next_reprompt с today, печатает expired skip'ы для оператора.
+# Layer-climbing escalation для skip_decisions. Парсит skip_decisions block в
+# .ai-pm/.bootstrap-state.md, сверяет next_reprompt с today, печатает expired
+# skip'ы для оператора.
 #
-# Раньше "advisor возвращается через 90 дней пересмотреть skip" описывалось только в
-# advisor промпте — полагались на то что advisor invoke'нется и вспомнит. Теперь
-# deterministic check: можно вызывать из SessionStart hook / pre-commit warning /
-# bootstrap entry / CI.
+# Раньше (pre-v0.7.0) "advisor возвращается через 90 дней пересмотреть skip"
+# описывалось только в discipline-advisor.md промпте — полагались на то что
+# advisor invoke'нется и вспомнит. С v0.7.0 (advisor retired в agent-consolidation
+# feature) — этот deterministic check единственный mechanism. Вызывается из
+# SessionStart hook / pre-commit warning / bootstrap entry / CI.
 #
 # Usage:
 #   ./check-skip-reprompts.sh           — human warning на stderr, exit 0 (non-blocking)

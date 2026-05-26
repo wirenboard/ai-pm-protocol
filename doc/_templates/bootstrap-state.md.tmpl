@@ -85,21 +85,25 @@ project_capabilities:
   # Заполняется на Stage C вместе со stack choice. См. AP-18.
   - db_kind: tbd | none | <comma-separated list>
 
-# === v0.4.0 additions: discipline-advisor + conditional skip framework ===
+# === v0.4.0 additions (DEPRECATED v0.7.0): discipline-advisor + conditional skip framework ===
+#
+# discipline-advisor subagent retired в v0.7.0 (agent-consolidation feature).
+# Hard floor functionality перенесена в scripts/check-security-floor.sh
+# (deterministic detector, не LLM heuristic). Skip-reprompt mechanism сохранён
+# через scripts/check-skip-reprompts.sh.
+#
+# Поля ниже сохранены для backward-compat existing state files. Новые projects
+# могут оставить defaults — advisor агент больше не invoke'ится, поля игнорируются
+# agent'ами. Skip decisions всё ещё работают через deterministic scripts.
 
-# Advisor preset — определяет how aggressive advisor рекомендует skip артефактов.
-# Per-artifact override через adoption_overrides выше.
-# - full (default для existing projects) — keep all artifacts. Backwards compat.
-# - standard (default для новых проектов в v0.4.0+) — skip только conditional-no
-#   (e.g., threat-model если все security capabilities = no)
-# - minimal — агрессивно рекомендует skip всё что не hard floor (для weekend
-#   projects / personal utilities)
+# DEPRECATED v0.7.0 — поле не enforce'ится, agent retired. Сохранено для
+# backward-compat schema. Можно ставить любое значение (default `full`).
 advisor_preset: full | standard | minimal
 
-# Skip decisions — log per-artifact decisions от advisor + operator confirmation.
-# Расширяет adoption_overrides для finer granularity (per-artifact, не just stage).
-# next_reprompt — для layer-climbing escalation (дыра 4 critique audit):
-# operator подтвердил skip 90 дней назад → re-validate.
+# Skip decisions — log per-artifact decisions от operator (раньше — advisor +
+# operator confirmation; в v0.7.0+ — operator-driven, advisor retired).
+# Layer-climbing escalation работает через scripts/check-skip-reprompts.sh
+# (deterministic, не зависит от advisor invocation).
 skip_decisions: []
 # Example:
 # skip_decisions:
@@ -108,7 +112,7 @@ skip_decisions: []
 #     reason: «no security surface detected (uses-auth=no, processes-pii=no, ...)»
 #     declared_at: YYYY-MM-DD
 #     next_reprompt: YYYY-MM-DD  # default 90 days from declared_at
-#     promoted_by: advisor-floor | quiz | operator
+#     promoted_by: security-floor-script | operator   # advisor-floor legacy accepted
 #   - artifact: customer-interview-script.md
 #     state: skipped
 #     reason: «internal tool, no external validation needed»
@@ -116,10 +120,10 @@ skip_decisions: []
 #     next_reprompt: YYYY-MM-DD
 #     promoted_by: operator
 
-# Advisor log — read-only trace of advisory triggers + findings + outcomes.
-# Append-only, для audit trail.
+# DEPRECATED v0.7.0 — advisor retired, log больше не пополняется. Existing entries
+# preserved для audit trail.
 advisor_log: []
-# Example:
+# Example (legacy):
 # advisor_log:
 #   - timestamp: 2026-05-25T14:30:00Z
 #     trigger: bootstrap-entry | preset-change | stage-f-entry | spec-draft | plan-draft | code-diff | review

@@ -343,7 +343,7 @@ Multi-value possible (`web, backend` для full-stack TypeScript / Next.js).
 | **«починим баг X»** | `bug-fix` variant с `lite-mode: bugfix`. Structural read-pass пропускается, кроме security path (fail-safe). |
 | **«переработать фичу X»** | Mode = `rework`. Read existing spec/plan/code/tests. `<topic>_spec.v<N>.md` + `<topic>_plan.v<N>.md`. AP-21 exit condition при v3+. |
 | **«продолжай фичу X»** | Resume per-feature. Прочитай frontmatter `<topic>_spec.md`: `spec_approved` empty → Step 1; `plan_approved` empty → planner; `merged: no` → coder. |
-| **«ревью PR / проверь код»** | Invoke `reviewer` subagent (primary router). Spawn `protocol-compliance-reviewer` + ONE domain reviewer. AP-19/AP-20. AP-16 verdict-gate. |
+| **«ревью PR / проверь код»** | Invoke `reviewer` subagent. Apply «Mandatory baseline» section + ONE Domain section inline (Backend / Frontend / Design / Database). AP-19/AP-20. AP-16 verdict-gate. См. v0.7.0 consolidation. |
 | **«релиз»** | Invoke `release-helper`. Для MAJOR breaking — AP-18 deployment safety pre-flight. |
 | **«обнови template» / «template-sync» / «bump template»** | Mode = `template-sync`. См. § Template-sync workflow ниже. |
 | **«составь архитектуру» / «architecture overview» / «extract topology» / «опиши проект»** | Architecture overview keyword routing — Tier 0 read-only pass. См. § Architecture overview ниже. |

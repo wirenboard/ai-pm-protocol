@@ -1,17 +1,18 @@
 ---
 pr: <PR-URL или TBD>
 branch: <branch-name>
-reviewer: <primary-reviewer agent name>
+reviewer: primary-reviewer (inline sections)
 reviewed_at: YYYY-MM-DD
 trail_type: committed-review
-spawned_agents: <list specialized reviewers spawned, либо N/A>
+agent_type: inline-sections
+applied_sections: [mandatory-baseline, <domain-or-empty>]
 ---
 
 **Verdict:** approve | request-changes | block
 
 # <Feature> — Review Report
 
-**Stage E artifact, Step 7.** Mandatory all modes (см. development-protocol § 11). Создаётся primary reviewer'ом (`reviewer.md`), который spawn'ит specialized sub-reviewer'ов по domain (AP-20).
+**Stage E artifact, Step 7.** Mandatory all modes (см. development-protocol § 11). Создаётся single primary reviewer'ом (`reviewer.md`), который применяет relevant inline sections sequentially (Mandatory baseline + 0-N Domain sections per AP-20).
 
 Reviewer работает **в чистом контексте** — не знает, как и почему AI принимал конкретные решения; читает только spec, plan, code, tests.
 
@@ -22,8 +23,8 @@ Reviewer работает **в чистом контексте** — не зна
 ## Scope of review
 
 - **Reviewed:** <files / modules>
-- **Primary reviewer:** `reviewer` (orchestrator)
-- **Spawned specialized reviewers:** `protocol-compliance-reviewer` (always) + ONE-of: `backend-reviewer` / `frontend-reviewer` / `database-reviewer` / `design-reviewer` (per AP-20 domain routing)
+- **Primary reviewer:** `reviewer` (single agent, inline sections — v0.7.0+)
+- **Applied sections:** `mandatory-baseline` (always) + ONE-of: `backend` / `frontend` / `database` / `design` (per AP-20 domain routing)
 - **Date:** <…>
 
 ---

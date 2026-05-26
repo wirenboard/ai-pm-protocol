@@ -11,19 +11,11 @@
 
 ---
 
-## 🔴 ARCH-1: AP-20 описывает routing pattern которого Claude Code не поддерживает
+## ✅ ARCH-1: AP-20 описывает routing pattern которого Claude Code не поддерживает — RESOLVED v0.7.0
 
-**Симптом:** `reviewer.md` (через protocol-minors fix) теперь prescribe'ит честный «sequential self-pass with explicit domain labels». **Но `anti-patterns.md` AP-20 текст** всё ещё описывает «primary reviewer spawn'ит protocol-compliance + ОДИН domain-reviewer». Это aspirational lie — environment не supports nested spawn.
+**Resolution:** `agent-consolidation` feature (v0.7.0) — 5 specialized reviewer файлов inlined в `reviewer.md` как sections («## Mandatory baseline» + 4 «### Domain» subsections). AP-20 text rewritten под honest «inline sequential pass with explicit domain labels» pattern. Никакого nested spawn'а не требуется — single agent applies relevant sections inline.
 
-**Что нужно:** rewrite AP-20 text under one из 3 directions:
-- (a) Honest description «sequential self-pass» — admit current reality
-- (b) Future-proof «когда Claude Code support'нёт nested — это будет правильным pattern'ом» — explicit aspiration
-- (c) External mechanism — operator manually invoke'ит specialized via CLI
-
-**Recommended:** (a) + (b) — описать current honest pattern + note про future capability.
-
-**Effort:** small, doc-only. ~30 LOC change.
-**Priority:** делать после merge'а protocol-minors (избежать review trail conflict).
+**Closed by:** PR feature/agent-consolidation, 2026-05-26.
 
 ---
 
@@ -60,7 +52,7 @@
 **Симптом:** Operator-gate at every transition → operator = critical path bottleneck. Если PM unavailable — workflow stalls. Multiplied burden vs «PM doesn't read code» promise.
 
 **Что нужно:** auto-promotion paths для specific cases:
-- Stage A → B: если discipline-advisor confirmed all artifacts pass quality threshold → auto-promote (operator can revert)
+- Stage A → B: если deterministic scripts (security-floor + spec-discipline) confirm all artifacts pass quality threshold → auto-promote (operator can revert). Раньше предлагался discipline-advisor для этого checkpoint'а, но advisor retired в v0.7.0.
 - spec → plan: если `lite-mode: small-fix` + spec passes linter → planner auto-invoke
 - merge non-critical: docs/chore PR с green CI → auto-merge (opt-in per domain)
 
@@ -112,7 +104,7 @@
 
 - **ARCH-7:** Spec template lite-mode разные уровни — для bugfix / small-fix / new-foundational-feature должны быть **разные** spec skeletons, не один на все. Сейчас feature-spec.md.tmpl универсальный → overhead для маленьких fix'ов. (Note: `c-fast` lite-mode variant removed в v0.7.0 — был для Trust profile C, теперь deprecated.)
 
-- **ARCH-8:** `discipline-advisor` opt-in PoC promotion → mandatory. PoC accuracy gate ≥80% per axis. Сейчас нет evidence что мы измеряли — promote через formal validation pass или признать что never measured (and decide whether to drop gate).
+- ~~**ARCH-8:** `discipline-advisor` opt-in PoC promotion → mandatory.~~ **RESOLVED v0.7.0:** advisor retired в `agent-consolidation` feature. Accuracy gate ≥80% per axis never measured (никаких empirical data). Hard floor функциональность перенесена в `scripts/check-security-floor.sh` (deterministic, не LLM heuristic); reprompt mechanism — в `scripts/check-skip-reprompts.sh`. Soft 5-axis recommendations dropped as never-validated speculation.
 
 - **ARCH-9:** Adoption_overrides expiry mechanism. Operator declares trade-off (AP-22), но override никогда не reviewed после. Аналогично skip_decisions — 90 day reprompt, но для overrides.
 

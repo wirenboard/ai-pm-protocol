@@ -60,11 +60,9 @@
 
 Это **не LLM-решение**. Найдено `stripe` в зависимостях — skip недоступен, точка. Можно только явно overridе'ить через `adoption_overrides:` с указанной причиной (AP-22), это попадёт в state-файл и в git log.
 
-**Мягкий слой — `discipline-advisor`.** На bootstrap'е читает output жёсткого скрипта как факт, плюс смотрит сам на остальное (что не покрыто статикой) и предлагает: `mandatory` / `recommended` / `skip-safe`. Может только **усилить** жёсткий слой (добавить mandatory), не **ослабить** его.
+**Мягкий слой (operator-driven, v0.7.0+).** Раньше был `discipline-advisor` агент с 5-axis анализом. Retired в v0.7.0 — soft layer никогда не был validated через required accuracy gate ≥80% per axis (см. ARCH-8 в `doc/architectural-backlog.md`). Hard floor функциональность перенесена в `scripts/check-security-floor.sh` (детерминированный детектор stripe/bcrypt/aes-gcm/PII — не LLM heuristic), reprompt mechanism — в `scripts/check-skip-reprompts.sh`.
 
-Вы выбираете через `[Skip]` / `[Keep]` для рекомендаций advisor'а. Решение записывается с причиной и датой в `.ai-pm/.bootstrap-state.md`. Через 90 дней `scripts/check-skip-reprompts.sh` (вызывается на старте каждой сессии + перед commit'ом) напомнит: «next_reprompt истёк, пересмотри». Не зависит от того что advisor вспомнит.
-
-**Честно про текущее состояние advisor'а:** soft 5-axis анализ (понятность / поддерживаемость / технические качество / UI / UX / learning) пока **opt-in PoC** — требует accuracy gate ≥80% per axis на 10-15 синтетических проектах перед тем как станет mandatory. Жёсткий слой работает всегда независимо от этого.
+Вы выбираете `[Skip]` / `[Keep]` для не-hard-floor артефактов прямо в bootstrap-агенте. Решение записывается с причиной и датой в `.ai-pm/.bootstrap-state.md` `skip_decisions:`. Через 90 дней `check-skip-reprompts.sh` (вызывается на старте каждой сессии + перед commit'ом) напомнит: «next_reprompt истёк, пересмотри». Hard floor от security-floor.sh — не override'ится оператором без `adoption_overrides:` с явной причиной (AP-22).
 
 ## Установка
 
@@ -83,7 +81,7 @@ cd my-product
 claude
 ```
 
-Bootstrap-агент сам подготовит файлы, спросит пару вопросов (новый проект или legacy? режим? язык артефактов?), запустит advisor и поведёт через начальные шаги. Trust profile auto-set `A` (PM-only ЦА в v0) — не спрашивается.
+Bootstrap-агент сам подготовит файлы, спросит пару вопросов (новый проект или legacy? режим? язык артефактов?), запустит security-floor скрипт и поведёт через начальные шаги. Trust profile auto-set `A` (PM-only ЦА в v0) — не спрашивается.
 
 Обновление шаблона:
 
@@ -135,7 +133,7 @@ Profile auto-set на init — bootstrap-agent не спрашивает. Пол
 ## Что под капотом (коротко)
 
 - **5 защитных слоёв:** CLAUDE.md (soft) → settings.json hooks физически блокируют Write/Edit (hard) → subagent промпты (soft) → git hooks (hard) → CI + branch protection (hardest)
-- **Router ревьюеров (по дизайну):** всегда запускается `protocol-compliance` (спека vs план vs код) + один профильный (backend / frontend / design / database). По дизайну — 2 запуска на PR, не 5. На уровне промпта reviewer-агента, не статически вынуждено
+- **Inline-sections ревьюер (v0.7.0+):** один `reviewer.md` файл с Mandatory baseline section (always-on — спека vs план vs код) + 4 Domain sections (backend / frontend / design / database). Reviewer определяет scope PR'а и применяет baseline + одну domain section sequentially. Никакого fake-spawn'а nested subagent'ов (раньше pre-v0.7.0 был router pattern, fail'ил из-за Claude Code limitation — см. Bug #3 в spec'е consolidation)
 - **Composition matrices:** для гибридов вроде «web + backend + external БД» правила фильтруются по реальным capabilities, не копипастятся
 - **Реактивные ADR:** пишутся, когда planner находит развилку в плане. Не upfront, не «для галочки»
 - **Линтер дисциплины:** `check-spec-discipline.sh` — 15 проверок на типичные AI-косяки (ослабление assertion'ов, забытый regression test, fork без ADR)
@@ -164,11 +162,10 @@ ai-pm-protocol/
 | `project-bootstrap` | Запуск, resume сессии, routing между режимами |
 | `planner` | Пишет план фичи. Код не трогает |
 | `coder` | Пишет код. Тесты впереди реализации |
-| `reviewer` | Главный ревьюер. Определяет домен, зовёт нужных |
-| `protocol-compliance-reviewer` | Запускается всегда. Спека↔план↔код |
-| `backend-/frontend-/design-/database-reviewer` | Профильные. Один на PR |
-| `discipline-advisor` | Сканирует стек, советует что писать / пропустить |
+| `reviewer` | Главный ревьюер. Определяет домен, применяет Mandatory baseline + одну Domain section (backend / frontend / design / database) inline. Sequential self-pass в одном файле |
 | `release-helper` | Релизный PR с CHANGELOG и bump'ом версии |
+
+С v0.7.0 consolidation: раньше было 11 агентов (включая 5 specialized reviewers + discipline-advisor). 5 reviewers inlined в `reviewer.md` как sections (per Bug #3 — Claude Code subagent enum gap делал nested spawn ненадёжным). `discipline-advisor` retired — hard floor functionality перенесена в `scripts/check-security-floor.sh` (детерминированный детектор, не LLM heuristic), reprompt mechanism — в `scripts/check-skip-reprompts.sh`.
 
 ## Если вы контрибьютите в сам шаблон
 
@@ -190,7 +187,7 @@ git config core.hooksPath .githooks
 | [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) | «Виртуальная команда» из 9 ролей (Analyst, PM, Architect, Dev…), agile-цикл | Метафора — команда внутри AI. Здесь — наоборот, оператор + усилитель. Нет advisor-skip и hard-блокировок |
 | [GSA-TTS devCrew_s1](https://github.com/GSA-TTS/devCrew_s1) | Использует те же термины «operator gates», halt-and-escalate | Это спецификация для других платформ, не готовый submodule с hooks / CI / агентами |
 | [wshobson/agents](https://github.com/wshobson/agents), [awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) | Каталоги специализированных агентов | Просто наборы агентов, без обвязки протоколом. Ортогонально — можно встроить как источник |
-| [claude-sub-agent](https://github.com/zhsama/claude-sub-agent) | Workflow на subagents Claude Code | Меньше масштаб, без stage-gates и advisor-skip |
+| [claude-sub-agent](https://github.com/zhsama/claude-sub-agent) | Workflow на subagents Claude Code | Меньше масштаб, без stage-gates и conditional skip framework |
 | [ChatPRD](https://www.chatprd.ai/) | AI-помощник для PM (PRD, ревью) | Закрывает Stage A/B для PM, но без кодовой части и без enforcement'а |
 
 Что почти не встречается у других: ревью, прибитое и к pre-push, и к CI; статический детектор security-зависимостей, который AI не может «убедить» не сработать; автоматический напоминатель через 90 дней про пропущенное; хуки, физически не позволяющие AI писать код в обход спеки; гибкая настройка под продукты, у которых одновременно и web, и backend, и mobile.

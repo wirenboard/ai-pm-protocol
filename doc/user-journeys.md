@@ -4,7 +4,7 @@
 
 Без UI-деталей; только последовательность точек принятия решения и эмоциональный регистр.
 
-**Контекст:** v0.4.0 framework state. После v0.3.0 — 5 stages (Stage C упразднён, fold в Stage C). После v0.4.0 — conditional skip framework + discipline-advisor (opt-in до PoC validation).
+**Контекст:** v0.4.0 framework state baseline. После v0.3.0 — 5 stages (Stage C упразднён, fold в Stage C). После v0.4.0 — conditional skip framework + discipline-advisor (opt-in до PoC validation). С v0.7.0 (`agent-consolidation`) — `discipline-advisor` retired (никогда не validated через required accuracy gate ≥80% per axis); 5 specialized reviewer файлов inlined в `reviewer.md` как sections (Mandatory baseline + 4 Domain subsections). Conditional skip framework работает через deterministic scripts (`check-security-floor.sh` + `check-skip-reprompts.sh`).
 
 **Persona aspect:** v0 supports одна persona — PM, не читает AI-код (Trust profile A auto-set). Developer-as-operator (cross-stack senior / full-stack pro) — backlog после empirical validation PM-кейса. Это значит «friction per persona» секции в каждом journey содержат **только PM aspect**; old B/C friction notes удалены до возрождения developer-кейса.
 
@@ -72,7 +72,7 @@
 | 4 | Bootstrap-agent: «Draft spec? Or PM пишет?» | Дилемма time-cost vs ownership |
 | 5 | Создаётся `<doc_root>/features/<topic>_spec.md` с frontmatter (mode: feature, 7 impact полей, lite-mode, etc.) | — |
 | 6 | Step 1 (spec draft): planner-agent проверяет lazy foundational loading — читает только relevant к impact flags artifacts. Operator маркирует ОК | — |
-| 7 | Step 2 (plan): planner draft'ит `<topic>_plan.md`. **Опционально (v0.4.0+):** invoke `discipline-advisor` для scope-proportionality check. Operator approve | — |
+| 7 | Step 2 (plan): planner draft'ит `<topic>_plan.md`. **С v0.7.0:** discipline-advisor retired — scope-proportionality / ADR extraction checks через deterministic scripts (`check-spec-discipline.sh adr-auto-extraction`). Operator approve | — |
 | 8 | Step 3-4 (tests + code): coder-agent. AP-5 tests first; AP-23 — нельзя ослаблять existing assertions без ADR ref; AP-24 — > 50 LOC arch decisions в spec → fail | Standard implementation |
 | 9 | CI gates: spec-test-mapping (gap 1), test-assertion-weakening (gap 2), regression-coverage-for-shared-modules (gap 3), adr-auto-extraction (AP-24), per-diff coverage ≥ 80% | Validation |
 | 10 | Step 7: reviewer-agent **mandatory all modes**. Size gate (PR < 100 LOC → baseline only). Content-aware override для auth/payments/crypto paths → full domain fan-out независимо от LOC | — |

@@ -108,18 +108,18 @@ CI gates (§ 6 generic protocol) **все блокируют merge**. Ты до�
 
 **`--no-verify` и `eslint-disable` без `// reason:` — запрещены** (см. § 14, AP-6 + linter rules).
 
-## Discipline-advisor invocation (v0.4.0+, opt-in)
+## Discipline checks через scripts (v0.7.0+, post discipline-advisor retirement)
 
-После значительного diff'а — опциональный invocation `discipline-advisor` для **gap closure pre-check**:
+С v0.7.0 `discipline-advisor` subagent retired (см. CHANGELOG / agent-consolidation feature). Gap closure pre-check теперь через deterministic scripts, не LLM advisor.
 
-- Gap 1 (spec→test mapping): каждый Gherkin Scenario из spec'а имеет matching test?
-- Gap 2 (test fudging): existing tests modified — есть ADR ref / `[test-modify-override:]` marker?
-- Gap 3 (regression coverage): shared modules touched — Regression coverage plan section present + new tests added?
-- AP-24: arch content в spec > 50 LOC без ADR ref — suggest extract before review
+**Pre-commit / pre-push self-check:**
 
-Advisor read-only — returns findings, ты apply'ишь. **Не replaces CI gates** — это pre-check, чтобы reviewer не получил load of findings.
+- **Gap 1 (spec→test mapping):** `check-spec-discipline.sh spec-test-mapping` — каждый Gherkin Scenario из spec'а имеет matching test. CI gate.
+- **Gap 2 (test fudging / AP-23):** `check-spec-discipline.sh test-assertion-weakening` — existing tests modified без ADR ref / `[test-modify-override:]` marker. CI gate.
+- **Gap 3 (regression coverage):** `check-spec-discipline.sh regression-coverage-for-shared-modules` — shared modules touched требуют Regression coverage plan section + new tests. CI gate.
+- **AP-24 (ADR extraction):** `check-spec-discipline.sh adr-auto-extraction` — arch content в spec > 50 LOC без ADR ref → fail. CI gate.
 
-**Не mandatory в v0.4.0** — opt-in до PoC accuracy gate. После validation → mandatory pre-commit.
+Запускай `scripts/check-spec-discipline.sh --staged-only` локально перед commit'ом для self-check'а — reviewer не получит load of findings из CI surprise'ом.
 
 ## Foundations-aware implementation discipline
 
