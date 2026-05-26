@@ -1,10 +1,12 @@
 # User Journeys — ai-pm-protocol
 
-**Stage A artifact.** Что делает оператор по шагам, проходя через template. Журнализированы по **mode'у** (5 в v0.4.0+) + по **точке входа** (greenfield / legacy adoption / architecture overview).
+**Stage A artifact.** Что делает оператор (PM, ЦА в v0 — см. personas.md) по шагам, проходя через template. Журнализированы по **mode'у** (5 в v0.4.0+) + по **точке входа** (greenfield / legacy adoption / architecture overview).
 
 Без UI-деталей; только последовательность точек принятия решения и эмоциональный регистр.
 
 **Контекст:** v0.4.0 framework state. После v0.3.0 — 5 stages (Stage C упразднён, fold в Stage C). После v0.4.0 — conditional skip framework + discipline-advisor (opt-in до PoC validation).
+
+**Persona aspect:** v0 supports одна persona — PM, не читает AI-код (Trust profile A auto-set). Developer-as-operator (cross-stack senior / full-stack pro) — backlog после empirical validation PM-кейса. Это значит «friction per persona» секции в каждом journey содержат **только PM aspect**; old B/C friction notes удалены до возрождения developer-кейса.
 
 ---
 
@@ -21,34 +23,22 @@
 | 3 | Клонирует/устанавливает template в новый репо проекта | Деловой режим |
 | 4 | Запускает `claude` в новом репо; bootstrap-agent активируется | Ожидание |
 | 5 | Bootstrap-agent: «Mode? `new-product` / `feature` / `rework` / `bug-fix` / `template-sync`» (через AskUserQuestion) | Понимает что сам выбирает направление |
-| 6 | Bootstrap-agent: «Integration mode? gitignore / submodule / vendor» (default gitignore) | — |
-| 7 | Bootstrap-agent: «Trust profile? A / B / C» (default A) | — |
-| 8 | Bootstrap-agent: «Advisor preset? full / standard / minimal» (v0.4.0+, default standard для new-product) | — |
-| 9 | Bootstrap-agent создаёт `.ai-pm/doc/` skeleton с placeholder'ами | Втягивается |
-| 10 | **Stage A — Discovery.** vision → personas → user-journeys → positioning (включает competitive landscape § 1) → ui-style-guide-base (включает brand voice § 2) + per-kind ui-style-guide-<kind>. По 2-3 вопроса per artifact, draft → operator-marker → ОК | Растёт ощущение «эта штука думает за меня правильно» |
-| 11 | Закрывает Stage A. **Сессия 1 done** (60-90 минут). | Усталость + удовлетворённость |
-| 12 | **Stage B — Constraints.** strategic-frame → threat-model → mvp-scope → legal (если applicable) → customer-interview-script → incident-runbook-draft (если runtime). Сессия 2 (60-90 минут). | — |
-| 13 | **Stage C — Process.** tech-stack (включает topology § 2 + stack § 1 + db_kind references § 3 + deployment § 4) → dev-environment → ai-linting-rules → subagent configs verified → maintenance-playbook (опц.) → development-protocol-overlay. **Stage C упразднён в v0.3.0** — topology fold в tech-stack. | Зависит от persona (см. friction ниже) |
-| 14 | **Stage D — Bootstrap.** Bootstrap-agent генерирует CI workflow, конфиги линтеров, security tools, pre-commit, branch protection rules — всё из catalogue + стек. Output: 1 checkpoint `bootstrap-verify.sh passed` (script внутри проверяет 12 granular items). | Радость: «я ничего не настраивал руками» |
-| 15 | Initial CI run проходит (foundational docs готовы). | Validation |
-| 16 | **Stage E — Production.** Первая `<topic>_spec.md`. Бутстрап завершён. | Standard mode |
+| 6 | Bootstrap-agent: «Primary language?» (default ru). **Trust profile auto-set `A`** (PM-only ЦА в v0) — не спрашивается. Integration auto-detected. | — |
+| 7 | Bootstrap-agent: «Advisor preset? full / standard / minimal» (v0.4.0+, default standard для new-product) | — |
+| 8 | Bootstrap-agent создаёт `.ai-pm/doc/` skeleton с placeholder'ами | Втягивается |
+| 9 | **Stage A — Discovery.** vision → personas → user-journeys → positioning (включает competitive landscape § 1) → ui-style-guide-base (включает brand voice § 2) + per-kind ui-style-guide-<kind>. По 2-3 вопроса per artifact, draft → operator-marker → ОК | Растёт ощущение «эта штука думает за меня правильно» |
+| 10 | Закрывает Stage A. **Сессия 1 done** (60-90 минут). | Усталость + удовлетворённость |
+| 11 | **Stage B — Constraints.** strategic-frame → threat-model → mvp-scope → legal (если applicable) → customer-interview-script → incident-runbook-draft (если runtime). Сессия 2 (60-90 минут). | — |
+| 12 | **Stage C — Process.** tech-stack (включает topology § 2 + stack § 1 + db_kind references § 3 + deployment § 4) → dev-environment → ai-linting-rules → subagent configs verified → maintenance-playbook (опц.) → development-protocol-overlay. **Stage C упразднён в v0.3.0** — topology fold в tech-stack. | — |
+| 13 | **Stage D — Bootstrap.** Bootstrap-agent генерирует CI workflow, конфиги линтеров, security tools, pre-commit, branch protection rules — всё из catalogue + стек. Output: 1 checkpoint `bootstrap-verify.sh passed` (script внутри проверяет 12 granular items). | Радость: «я ничего не настраивал руками» |
+| 14 | Initial CI run проходит (foundational docs готовы). | Validation |
+| 15 | **Stage E — Production.** Первая `<topic>_spec.md`. Бутстрап завершён. | Standard mode |
 
-### Friction points per persona
+### Friction points (PM persona — единственная ЦА в v0)
 
-**Persona A (PM-manager, не читает код):**
-- Шаги 6, 8, 13: developer-specific термины (integration mode, advisor preset, capabilities) могут потребовать дополнительных объяснений. Bootstrap-agent должен пояснять на уровне «что это значит для тебя как PM», не на уровне «как это работает».
-- Шаг 15: если CI fail'ит на чём-то, что Persona A не понимает — нужно понятное error message, не stack trace.
-- Шаг 16: spec template требует Security invariants для security-touching фич. Persona A нужны guided questions от bootstrap-agent'а («твоя фича трогает auth? PII? Crypto?»), чтобы не пропустить.
-
-**Persona B (cross-stack senior):**
-- Шаги 10-12: проходит быстро, потому что понимает зачем нужны personas / threat-model / topology. Может frustration'иться, если agent over-explain'ит.
-- Шаг 13: выбор стека прост в родном — проблематичен в чужом. Bootstrap-agent должен предложить recipe per stack или draft'ить с extra guidance в out-of-domain.
-- Шаг 15: security-related fails в out-of-domain stack'е воспринимаются как critical — Persona B доверяет template'у больше, чем себе в этом контексте.
-
-**Persona C (full-stack pro, читает всё):**
-- Шаги 5-9: возможно раздражение от questions, которые «слишком elementary». Bootstrap-agent должен предлагать «advanced mode» с меньшим hand-holding'ом.
-- Шаги 10-12: skipping темпа — Persona C хочет минимум вопросов per artifact (1-2, не 3).
-- Шаг 16: проходит spec ceremony с лёгкой усталостью; в идеале — может tag'нуть фичу `lite-mode: c-fast` для small changes.
+- Шаги 6-7, 12: developer-specific термины (integration mode, advisor preset, capabilities) могут потребовать дополнительных объяснений. Bootstrap-agent должен пояснять на уровне «что это значит для тебя как PM», не на уровне «как это работает».
+- Шаг 14: если CI fail'ит на чём-то, что PM не понимает — нужно понятное error message, не stack trace.
+- Шаг 15: spec template требует Security invariants для security-touching фич. PM нужны guided questions от bootstrap-agent'а («твоя фича трогает auth? PII? Crypto?»), чтобы не пропустить.
 
 ### Критические точки оттока
 
@@ -90,22 +80,16 @@
 | 12 | Operator acceptance (Step 6) | Sanity check |
 | 13 | PR squash & merge в main | — |
 
-### Friction points per persona
+### Friction points (PM persona)
 
-**Persona A:** primary user template'а. Mature workflow — без сюрпризов. Учится из verbose reviewer findings (Trust profile A adaptation).
-
-**Persona B (cross-stack senior):**
-- Шаг 8: в чужом стеке доверяет CI gates + reviewer больше, чем себе.
-- Шаг 10: domain reviewer (backend / frontend / database / design) — критичный safety net в out-of-domain.
-
-**Persona C (full-stack pro):**
-- Шаг 10: может frustration'иться если reviewer выдаёт обширные findings там где сам бы проверил. Mitigation: Trust profile C → terse sub-reports; `lite-mode: c-fast` skip protocol-compliance.
+- Mature workflow — без сюрпризов. PM учится из verbose reviewer findings (learning layer on by default — единственный mode в v0).
+- Lite-mode (`bugfix` / `small-fix`) — PM-driven self-declaration в spec frontmatter. Не для security path.
 
 ### Критические точки оттока
 
-- Шаг 7: если planner выдаёт plan без architecturalного обоснования (Trust profile A нужен learning layer) — оператор теряет ownership.
-- Шаг 9: если CI gates fail'ят без actionable error message — frustration для всех.
-- Шаг 10: если reviewer пропускает critical finding в out-of-domain — Persona B уйдёт от template'а.
+- Шаг 7: если planner выдаёт plan без architecturalного обоснования (learning layer broken) — оператор теряет ownership.
+- Шаг 9: если CI gates fail'ят без actionable error message — frustration.
+- Шаг 10: если reviewer пропускает critical finding — PM не видит проблему (не читает код).
 
 ### Success metric
 
@@ -135,15 +119,9 @@
 
 **AP-21 (бесконечный rework exit condition):** version count > 3 — required explicit «final version» marker в spec frontmatter, либо declared adoption_override per AP-22.
 
-### Friction points per persona
+### Friction points (PM persona)
 
-**Все personas:** обязательность reviewer-agent в rework mode — разумная цена за migration risk. Friction только если reviewer findings противоречивы и блокируют (что нормально, надо разрешить, не bypass).
-
-**Persona A:** для неё rework mode особенно стрессовый, потому что migration-related ошибки PM не поймает inspection'ом. Полагается на тесты + reviewer + acceptance. Spec.v<N> Diff-секция должна быть исчерпывающей.
-
-**Persona B (cross-stack):** если rework в родном стеке — comfortable; в чужом — boost'ы reviewer-агенту.
-
-**Persona C (full-stack pro):** ревьюит spec.v<N> diff и migration plan, и затем код. Reviewer-agent — secondary check.
+Rework mode особенно стрессовый, потому что migration-related ошибки PM не поймает inspection'ом — полагается на тесты + reviewer + acceptance. Spec.v<N> Diff-секция должна быть исчерпывающей. Обязательность reviewer-agent в rework mode — разумная цена за migration risk. Friction только если reviewer findings противоречивы и блокируют (что нормально, надо разрешить, не bypass).
 
 ### Success metric
 
@@ -169,13 +147,9 @@
 
 **Hard floor:** lite-mode `bugfix` **запрещён** для security-touching фич (auth/crypto/PII/payments/sessions). Bug в security path → full ceremony.
 
-### Friction points per persona
+### Friction points (PM persona)
 
-**Persona A:** comfortable — minimal ceremony, mandatory reviewer всё ещё guarantees correctness.
-
-**Persona B:** в out-of-domain — reviewer особенно полезен (Persona B не уверена что fix не вводит new bug).
-
-**Persona C:** ideal flow для small fixes — это её primary use case для `bug-fix` mode.
+Comfortable — minimal ceremony, mandatory reviewer всё ещё guarantees correctness. Bug-fix mode — primary lite-flow для PM на мелких правках.
 
 ### Success metric
 
@@ -201,11 +175,9 @@
 | 8 | Verification report: содержимое preserved? (через verification baseline table из migrate.py) | Sanity check |
 | 9 | PR squash & merge | — |
 
-### Friction points per persona
+### Friction points (PM persona)
 
-**Persona A:** template-sync — стресс, потому что меняется foundation. Verification report (Phase 4 step 8) — critical для doверия.
-
-**Persona B / C:** comfortable — process структурирован.
+Template-sync — стресс, потому что меняется foundation. Verification report (Phase 4 step 8) — critical для доверия.
 
 ### Критические точки оттока
 
@@ -238,23 +210,18 @@
 | 8 | Stage E: первая `<topic>_spec.md` в feature/<topic> branch. Для `foundation_completeness: minimal/none` — spec включает Tier 1 mini sections (Mini-persona / Journey context / Mini-threat-list) inline | Standard workflow |
 | 9 | После 2-3 фич: возможно Tier 2 promotion routine — consolidate Mini-* sections в project-wide foundational docs (`promote-foundation.py`) | Растёт ощущение control'а |
 
-### Friction points per persona
+### Friction points (PM persona)
 
-**Persona A:** unlikely в legacy adoption (Persona A обычно строит новые продукты с нуля).
-
-**Persona B (cross-stack senior):**
-- Шаг 3: agent определяет стек автоматически — критично для Persona B в out-of-domain.
+Legacy adoption — менее frequent кейс для PM (PM обычно строит новые продукты с нуля). Но возможен — например PM подключается к existing продукту, который раньше вёл developer без template'а. В этом случае:
+- Шаг 3: agent определяет стек автоматически — критично, PM не знает manifest details.
 - Шаг 4: 3-choice — нужен default recommendation (Quick auto) с явным trade-off explanation.
-
-**Persona C (full-stack pro):**
-- Шаги 4-5: Quick auto — exactly то, что нужно. Не хочет писать full Stage A для существующего проекта.
-- Шаг 6: incremental adoption — minimal disruption. Если template переписывает существующий `ci.yml` — Persona C просто не adoptит template.
+- Шаг 7: hard floors (security path) enforce'ятся mandatory даже в legacy-skip — PM полагается на это, не может catch security gaps сам.
 
 ### Критические точки оттока
 
-- Шаг 4: если 3-choice не поддерживает Skip — отвалится Persona C (она ж не хочет писать full Stage A для bug-fix'а в legacy).
-- Шаг 6: если template переписывает существующий `ci.yml` — отвалится сразу.
-- Шаг 7: если hard floors не enforce'ятся в Quick auto — security risk; Persona B особенно sensitive.
+- Шаг 4: если 3-choice не поддерживает Skip — отвалится use case quick adoption.
+- Шаг 6: если template переписывает существующий `ci.yml` — отвалится сразу (existing CI invariants ломаются).
+- Шаг 7: если hard floors не enforce'ятся в Quick auto — silent security risk.
 
 ### Success metrics
 
@@ -280,13 +247,9 @@
 | 6 | Agent presents summary в чате (high-level overview без diff dump) | Insight |
 | 7 | **State unchanged.** Не trigger'ит adoption. Operator может decide потом adopt template (Journey 6) или нет | — |
 
-### Friction points per persona
+### Friction points (PM persona)
 
-**Persona A:** rarely uses этот journey — она строит с нуля.
-
-**Persona B (cross-stack senior):** **primary use case** — quick architecture snapshot в чужом проекте перед adoption decision.
-
-**Persona C (full-stack pro):** used для onboarding в новый клиентский проект или audit чужого кода.
+PM rarely uses этот journey — она строит с нуля. Но useful когда PM приходит в existing продукт (например, наследует от выпавшего из проекта developer'а) и хочет получить snapshot before deciding на adoption path.
 
 ### Success metric
 
@@ -299,8 +262,8 @@
 Все 7 journeys ломаются, если:
 
 1. **Bootstrap не recover'ится через сессии.** `.bootstrap-state.md` поддерживает spaced sessions; agent при каждом запуске первым делом читает state и говорит «мы на Stage X, продолжаем?».
-2. **Agent задаёт > 3 вопроса per artifact.** Cognitive load → drop-off для всех personas (особенно Persona C).
-3. **Artifacts разрастаются.** Каждый > 2 страниц — риск для Persona A и C. Soft cap warnings в merged docs (v0.3.0+) mitigate.
+2. **Agent задаёт > 3 вопроса per artifact.** Cognitive load → drop-off для PM-оператора.
+3. **Artifacts разрастаются.** Каждый > 2 страниц — риск для PM-оператора (нет attention budget). Soft cap warnings в merged docs (v0.3.0+) mitigate.
 4. **Линтеры fail'ят без понятной diagnostics.** Universal kill switch.
 5. **Template требует переписать существующий repo.** Особенно критично для feature / rework / legacy adoption journeys.
 6. **CI gates не блокируют реальные риски** (например, миграция без rollback strategy не fails'ит). Подрывает доверие.
@@ -326,7 +289,7 @@
 
 1. **Quick-draft Stage A для feature mode** — реализовано через `foundation_completeness: minimal` + Tier 1 mini sections в feature spec'е (Mini-persona / Journey context / Mini-threat-list). Promotion в full project-wide artifacts — через Tier 2 routine (`promote-foundation.py`).
 
-2. **Lite-mode для small changes** — реализовано через `lite-mode: bugfix | small-fix | c-fast` в feature-spec frontmatter (см. `personas.md` resolved decision 2 для деталей).
+2. **Lite-mode для small changes** — реализовано через `lite-mode: bugfix | small-fix` в feature-spec frontmatter (см. `personas.md` resolved decision 2 для деталей). `c-fast` variant deprecated в v0.7.0 (PM-only ЦА, был для Trust profile C).
 
 3. **Spaced sessions: формат `.bootstrap-state.md`** — markdown с обязательным frontmatter (mode / integration / trust_profile / advisor_preset / started / last_update / template_version / stack / project_capabilities / foundation_completeness / adoption_path / adoption_overrides / skip_decisions / advisor_log). Update'ы через `update-bootstrap-state.sh` hook.
 

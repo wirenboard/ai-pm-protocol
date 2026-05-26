@@ -67,7 +67,7 @@ Cache-friendly ordering (prompt-economy Option D):
 
 1. `<doc_root>/features/<topic>_spec.md` — главный input.
 2. `<doc_root>/development-protocol.md` (project overlay) + generic protocol — правила.
-3. `.ai-pm/.bootstrap-state.md` — capabilities (`ui_kind` / `db_kind` / `foundation_completeness` / `adoption_path` / `trust_profile`). Без этого нельзя routing.
+3. `.ai-pm/.bootstrap-state.md` — capabilities (`ui_kind` / `db_kind` / `foundation_completeness` / `adoption_path`). Без этого нельзя routing.
 4. `<doc_root>/vision.md` — общий продуктовый контекст (без него план висит в вакууме).
 5. `<doc_root>/mvp-scope.md` — где фича в scope (читай для verify scope ownership).
 
@@ -122,7 +122,7 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 - При `complete` — cross-refs к full project-wide artifacts
 - При `partial/minimal/none` — cross-refs к mini sections в spec'е inline («as per spec § Mini-persona», «as per spec § Mini-threat-list»)
 
-**Learning layer (для Trust profile A) preserved независимо от foundation state** — оператор growing knowledge через explanation architectural principles, не через breadth of pre-existing docs.
+**Learning layer preserved независимо от foundation state** — оператор growing knowledge через explanation architectural principles, не через breadth of pre-existing docs.
 
 При `foundation_completeness != complete` — **ожидай ниже-quality cross-refs**: vision/positioning/brand-voice могут отсутствовать. В plan'е это appears как «product positioning не зафиксирован в state, plan focuses на immediate feature scope. Promotion to Tier 2 recommended после N фич.»
 
@@ -131,7 +131,7 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 `.ai-pm/doc/_templates/feature-plan.md.tmpl` — следуй ему. Обязательные секции:
 
 - **Соответствие spec'у** — каждый scenario из spec'а → его реализация.
-- **Архитектурный подход** — **substantive**, не one-liner. Должен объяснить: какие модули затронуты, **почему именно эта декомпозиция, какие альтернативы рассматривались и были отвергнуты, и какие trade-offs принятого подхода**. Это для оператора при Trust profile A (не читает код), но хочет **(а) разобраться в текущем решении и (b) наращивать general knowledge** через использование template'а. Reference на personas/journeys/threat-model где уместно. Когда упоминаешь нетривиальный архитектурный принцип впервые в проекте — **briefly explain general principle**, не только специфику этого случая. Это **learning layer**.
+- **Архитектурный подход** — **substantive**, не one-liner. Должен объяснить: какие модули затронуты, **почему именно эта декомпозиция, какие альтернативы рассматривались и были отвергнуты, и какие trade-offs принятого подхода**. Это для оператора (PM, не читает код), но хочет **(а) разобраться в текущем решении и (b) наращивать general knowledge** через использование template'а. Reference на personas/journeys/threat-model где уместно. Когда упоминаешь нетривиальный архитектурный принцип впервые в проекте — **briefly explain general principle**, не только специфику этого случая. Это **learning layer**.
 - **Tests plan** — property-based / BDD / unit / integration.
 - **Migration / Schema changes / Deploy safety (AP-18)** — если применимо. Для **любого** breaking change (schema / API contract / config format) обязательно multi-step expand-contract sequence:
   1. **Expand** этап — add new structure (column / endpoint / field), keep old работающим
@@ -173,13 +173,9 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 
 Для rework mode — добавь обязательную секцию **Migration** (backward compatibility / data migration / deprecation timeline / rollback).
 
-## Trust profile awareness — concrete dual templates
+## Plan output template — verbose (PM-only ЦА)
 
-Читай `.ai-pm/.bootstrap-state.md` → `trust_profile` setting (A/B/C, default A). Это определяет **plan output template**, не просто verbosity tuning:
-
-### Trust profile A (оператор-менеджер, не читает код)
-
-**Verbose template:**
+Оператор не читает код, полагается на план как primary способ understand что AI собирается делать. Поэтому plan — verbose с learning layer:
 
 - **Архитектурный подход** — full prose: какие модули затронуты, **почему именно эта декомпозиция**, какие alternatives рассматривались + отвергнуты + причины, какие trade-offs accepted, какие foundational documents (personas / threat-model / journey) поддерживают decision. Cross-refs к ADRs / catalogue rules. **Learning layer:** когда упоминается нетривиальный архитектурный принцип впервые — briefly explain general principle (e.g. «AEAD-режимы предотвращают tampering; CBC без MAC недостаточно»).
 - **Tests plan** — substantive: что тестируется, тип, edge cases out of spec'а, property-based invariants documented, mock strategy
@@ -187,34 +183,12 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 - **Risks** — substantive analysis: likelihood, impact, mitigation (или explicit «mitigation deferred because Y»)
 - **PR ordering** (если multi-domain) — explicit reasoning почему такой order, dependencies
 
-### Trust profile B (cross-stack senior dev)
-
-**Mixed template per scope:**
-
-- **Архитектурный подход** — substantive **если** фича в **out-of-domain** стеке (например, dev знает Go, фича — Python). Terser **если** в native стеке (dev читает diff, не нужны obvious explanations).
-- **Tests plan** — pointers («property-based для invariant X, BDD из spec scenarios, integration для DB layer») — без detailed exposition
-- **Migration / Schema changes** — full sequence (AP-18 critical), не сокращается
-- **Risks** — top 3 с mitigation, без learning-layer
-- **PR ordering** — brief if obvious
-
-### Trust profile C (full-stack pro, читает весь diff)
-
-**Terse template:**
-
-- **Архитектурный подход** — high-level only: 2-3 предложения main approach + cross-ref к alternatives ADR (если has fork). Skip explanations что dev узнает через diff (декомпозиция модулей, file structure).
-- **Tests plan** — references («tests follow Tests First § 21 generic», custom additions listed)
-- **Migration / Schema changes** — full sequence (AP-18 critical, никогда не skipped)
-- **Risks** — top 3 short bullets
-- **PR ordering** — explicit list только
-
-**Lite-mode для С:** если frontmatter `lite-mode: small-fix` + Trust profile C + (< 200 lines diff estimated + single domain + no security path) — minimal plan acceptable (3-5 bullets total).
-
-### Hard discipline — все profiles
-
-Независимо от profile:
+**Lite-mode послабления:** если frontmatter `lite-mode: small-fix` (< 200 lines diff + single domain + no security path) — план can be terser (3-5 bullets total). Hard floor остаётся:
 - **AP-18 expand-contract** для breaking changes — full sequence (никогда не terser)
-- **Security invariants** — explicit (Trust profile C не excuses security shortcuts)
+- **Security invariants** — explicit (никаких security shortcuts)
 - **PR ordering** для multi-domain — explicit (atomicity discipline AP-19)
+
+**Backward compat:** existing spec'и с `lite-mode: c-fast` (deprecated) — treat as `small-fix`. Existing spec'и с `trust_profile: B/C` в frontmatter — treat as `A`.
 
 ## Discipline-advisor invocation (v0.4.0+, opt-in)
 

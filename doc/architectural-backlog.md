@@ -110,7 +110,7 @@
 
 ## Прочее (TODO captured here)
 
-- **ARCH-7:** Spec template lite-mode разные уровни — для bugfix / small-fix / c-fast / new-foundational-feature должны быть **разные** spec skeletons, не один на все. Сейчас feature-spec.md.tmpl универсальный → overhead для маленьких fix'ов.
+- **ARCH-7:** Spec template lite-mode разные уровни — для bugfix / small-fix / new-foundational-feature должны быть **разные** spec skeletons, не один на все. Сейчас feature-spec.md.tmpl универсальный → overhead для маленьких fix'ов. (Note: `c-fast` lite-mode variant removed в v0.7.0 — был для Trust profile C, теперь deprecated.)
 
 - **ARCH-8:** `discipline-advisor` opt-in PoC promotion → mandatory. PoC accuracy gate ≥80% per axis. Сейчас нет evidence что мы измеряли — promote через formal validation pass или признать что never measured (and decide whether to drop gate).
 

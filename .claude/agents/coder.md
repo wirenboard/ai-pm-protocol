@@ -73,7 +73,7 @@ Cache-friendly ordering (prompt-economy Option D):
 2. `<doc_root>/features/<topic>_spec.md` — для верификации поведения.
 3. `<doc_root>/development-protocol.md` (overlay) + generic — правила.
 4. `<doc_root>/ai-linting-rules.md` — какие правила enforce'ятся.
-5. `.ai-pm/.bootstrap-state.md` — capabilities `ui_kind`/`db_kind`/`foundation_completeness`/`trust_profile`.
+5. `.ai-pm/.bootstrap-state.md` — capabilities `ui_kind`/`db_kind`/`foundation_completeness`.
 6. Существующий код проекта — конвенции, паттерны, structure.
 
 ### Conditional read (по impact flags из spec frontmatter)
@@ -192,13 +192,10 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness`. При `partial
 
 При `foundation_completeness: none` reviewer downgrades certain checks (AP-22 adoption-overrides). Coder это не меняет — ты пишешь код per plan as usual.
 
-## Trust profile awareness — concrete differentiation
+## Implementation discipline — full ceremony (PM-only ЦА)
 
-Читай `.ai-pm/.bootstrap-state.md` → `trust_profile` setting.
+Оператор не читает код — полагается на тесты + reviewer. Поэтому:
 
-### Trust profile A (оператор-менеджер, не читает код)
-
-**Full ceremony:**
 - Comprehensive testing — все edge cases в tests, не в comments
 - Defensive coding — type guards, runtime validations, explicit error handling
 - Comments объясняют **почему**, не **что** (оператор не читает diff, но AI читает potentially years later)
@@ -206,40 +203,13 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness`. При `partial
 - Reviewer-friendly code structure — clear naming, no clever tricks
 - Никаких shortcuts даже для «obvious» cases — оператор полностью полагается на тесты + reviewer
 
-### Trust profile B (cross-stack senior dev)
+### Lite-mode — допустимые послабления (AP-19 atomicity)
 
-**Mixed:**
-- **Native stack** (dev читает diff fluent): стандартное усердие, без excessive defensive coding для obvious cases. Dev сам catches issues при review
-- **Out-of-domain stack** (dev читает diff superficially): extra тесты + extra comments + extra reviewer-friendly код, как profile A — потому что dev relies на тесты для verification
-- Detect через project stack metadata (multi-stack projects) — fallback на native в случае ambiguity
-
-### Trust profile C (full-stack pro, читает весь diff)
-
-**Terse with hard floor:**
-- Minimal defensive coding для obvious cases — dev catches при review
-- Comments только для **non-obvious** — почему этот approach vs alternatives, hidden invariants
-- Skip redundant tests для trivial CRUD — but keep core scenarios + edge cases + property-based для invariants
-- **Lite-mode opt-in** для small changes (см. ниже)
-- **Hard floor:**
-  - Никаких shortcuts в security path (auth / crypto / PII / payments / regulatory)
-  - Никаких shortcuts в test coverage для NFR critical paths (latency / data integrity)
-  - AP-18 expand-contract — full discipline (никогда не сокращается)
-  - AP-15 ui-style-guide / accessibility compliance — full discipline (доступность не negotiable)
-
-### Lite-mode — расширенные criteria (AP-19 atomicity + Trust profile aware)
-
-| Lite-mode variant | Criteria | Trust profile eligibility |
-|---|---|---|
-| `lite-mode: no` (default) | Full ceremony | A / B / C |
-| `lite-mode: bugfix` | Failing test + minimal fix + no scope expansion | A / B / C |
-| `lite-mode: small-fix` | < 200 lines diff + single domain + no security path | A / B / C |
-| `lite-mode: c-fast` (NEW) | < 200 lines diff + single domain + no security path + no NFR critical path + Trust profile C explicit opt-in | C only |
-
-`lite-mode: c-fast` — explicitly для Trust profile C на small features (не bugfix). Plan/coder may skip:
-- Extensive comments
-- Redundant tests for trivial paths
-- Defensive validations для internal APIs
-- Architectural exposition в plan'е
+| Lite-mode variant | Criteria |
+|---|---|
+| `lite-mode: no` (default) | Full ceremony |
+| `lite-mode: bugfix` | Failing test + minimal fix + no scope expansion |
+| `lite-mode: small-fix` | < 200 lines diff + single domain + no security path |
 
 **Hard floor сохраняется:**
 - Security path → full ceremony независимо от lite-mode (см. AP-14 «Критерий security path»)
@@ -248,6 +218,8 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness`. При `partial
 - Reviewer chain runs as normal — но terser output (см. reviewer.md)
 
 Если в процессе обнаружил, что fix требует более широкого refactor'а — стоп, эскалируй оператору, переходим в full-mode.
+
+**Backward compat:** existing spec'и с `lite-mode: c-fast` (deprecated) — treat as `small-fix`. Existing spec'и с `trust_profile: B` / `trust_profile: C` в frontmatter — treat as `A` (single supported profile в v0).
 
 ## Per-PR atomicity (AP-19)
 

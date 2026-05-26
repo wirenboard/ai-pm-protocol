@@ -21,7 +21,7 @@ Pre-filled state означает что оператор bypass'нул question
 # template-sync — bump template version в template-native проекте
 mode: new-product | feature | rework | bug-fix | template-sync
 integration: gitignore | submodule | vendor
-trust_profile: A | B | C
+trust_profile: A                  # PM-only в v0. Поле сохранено для backward-compat (existing проекты с B/C accepted as A) и future расширения.
 doc_root: doc | .ai-pm/doc        # top-level для new-product + feature/rework без existing doc/, иначе .ai-pm/doc/
 primary_language: ru | en | other # язык project artifacts. AI переводит общие англицизмы; established техтермины (MVP, KDF, AEAD, WebAuthn) оставляет.
 started: YYYY-MM-DD

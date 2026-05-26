@@ -89,7 +89,7 @@ Spawn'ю specialized routines (rework setup, legacy adoption tier'ы). Disciplin
 
 ## Greenfield Init
 
-В новой репке без `.ai-pm/.bootstrap-state.md` и без existing кода задаёшь **через AskUserQuestion** **3 вопроса** (Mode, primary language, Trust profile).
+В новой репке без `.ai-pm/.bootstrap-state.md` и без existing кода задаёшь **через AskUserQuestion** **2 вопроса** (Mode + primary language). **Trust profile auto-set `A`** (PM-only ЦА в v0 — см. personas.md).
 
 **Integration mode НЕ спрашивается.** К моменту запуска bootstrap-agent'а template уже подключён в `.ai-pm/tooling/` (symlink / submodule / vendor — выбрано в pre-bootstrap setup). Bootstrap-agent **detects**:
 
@@ -115,11 +115,11 @@ fi
 
 При `primary_language: ru` AI переводит общие англицизмы; established техтермины (MVP, KDF, AEAD) оставляет (AP-12).
 
-### Вопрос 3: Trust profile
+### Trust profile auto-set A
 
-- `A` (default, recommended) — оператор-менеджер, не читает AI-код
-- `B` — cross-stack senior dev
-- `C` — full-stack pro
+В v0 template'а единственная supported ЦА — PM (Trust profile A, не читает AI-код). Bootstrap-agent **не спрашивает** Trust profile; автоматически записывает `trust_profile: A` в state. Developer-aware behaviour (Trust profile B/C) — backlog item, добавим после empirical validation PM-кейса.
+
+**Backward compat:** если existing state содержит `trust_profile: B` / `trust_profile: C` — agents treat as `A` без normalization (не переписываем чужой state без operator approval). При template-sync routine оператор может явно migrate value на `A`.
 
 ### Verify git config + determine doc_root
 
@@ -130,6 +130,7 @@ fi
 Записываешь:
 ```yaml
 mode: new-product
+trust_profile: A  # PM-only ЦА в v0; auto-set, не спрашиваем
 adoption_path: greenfield
 foundation_completeness: complete  # будет true после Stage D closed; вначале — null
 template_version_applied: <current template version>
@@ -160,14 +161,14 @@ adoption_overrides: []
    - Git hooks через `install-git-hooks.sh`
    - Branch protection (через `gh api` если GitHub, или подсказать manual для других SCM)
 3. Verify git config (как в Greenfield Init)
-4. AskUserQuestion: Mode (по умолчанию первая работа будет `feature`) + primary_language + trust_profile
+4. AskUserQuestion: Mode (по умолчанию первая работа будет `feature`) + primary_language. **Trust profile auto-set `A`** (PM-only ЦА в v0).
 5. Создать `.ai-pm/.bootstrap-state.md`:
    ```yaml
    mode: feature  # default first session mode after adoption
+   trust_profile: A  # PM-only ЦА в v0
    adoption_path: legacy-quick
    foundation_completeness: minimal
    template_version_applied: <current template version>
-   trust_profile: <answered>
    primary_language: <answered>
    stack: <auto-extracted>
    project_capabilities:
@@ -191,10 +192,11 @@ adoption_overrides: []
    - Stage D: infrastructure (mandatory — pre-checked)
 2. Для каждого выбранного artifact — extract baseline (Tier 0 где возможно, операторские вопросы где нет) + standard Stage process через AskUserQuestion + draft + approve
 3. Stage D infrastructure (всегда mandatory)
-4. Verify git config + 3 questions (Mode default = `feature`, primary_language, trust_profile)
+4. Verify git config + 2 questions (Mode default = `feature`, primary_language). **Trust profile auto-set `A`**.
 5. Создать state:
    ```yaml
    mode: feature
+   trust_profile: A
    adoption_path: legacy-staged
    foundation_completeness: partial | complete  # complete если оператор выбрал все Stage A-C
    template_version_applied: <current>
@@ -208,10 +210,11 @@ adoption_overrides: []
 
 1. Tier 0 auto-extract **только** stack (manifest detection)
 2. Stage D hooks setup (это hard floor — нельзя skip даже здесь)
-3. AskUserQuestion: trust_profile (Mode default = `feature`, primary_language default = `ru`)
+3. **Trust profile auto-set `A`** (PM-only ЦА в v0; agents не спрашивают). Mode default = `feature`, primary_language default = `ru`.
 4. Создать state:
    ```yaml
    mode: feature
+   trust_profile: A
    adoption_path: legacy-skip
    foundation_completeness: none
    template_version_applied: <current>
@@ -220,8 +223,8 @@ adoption_overrides: []
 
 **Hard floor — что нельзя skip даже в Choice 3:**
 - Stage D infrastructure hooks (AP-16 enforcement)
-- `trust_profile` (agents не знают как общаться)
 - `stack` (auto-detected, не skip явно)
+- `trust_profile: A` записывается auto (PM-only ЦА в v0; не configurable)
 
 Если оператор настаивает на skip даже этих — это сигнал re-discussion adoption approach, не для override. AI отказывает и эскалирует. См. AP-22.
 

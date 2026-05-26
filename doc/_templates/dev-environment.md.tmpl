@@ -14,7 +14,7 @@ skip_eligibility:
 
 **Stage C artifact.** Foundational dev ergonomics — local setup, IDE configuration, debug entry points, hot reload, dependency management. Закрывает «from `git clone` до working state» — single document.
 
-Применяется к **любому** продукту независимо от Trust profile. Trust profile A (оператор не читает код) тоже needed: AI читает этот документ при работе в проекте и use cases когда оператору нужно local action (e.g., setup новой развертки, debugging).
+Применяется к **любому** продукту независимо от размера команды. AI читает этот документ при работе в проекте; оператор использует для случаев когда нужно local action (e.g., setup новой развертки, debugging).
 
 ---
 
@@ -304,12 +304,11 @@ Update это section по мере накопления opyta. Living document.
 
 ---
 
-## 10. Trust profile differentiation
+## 10. Кто этим документом пользуется
 
-Этот документ нужен **обоим** profiles:
-
-- **Trust profile A** (оператор не читает код): AI читает dev-environment.md при работе. оператор использует для setup'а локальной среды (rare, но happens — например, demo для investor / personal experimentation).
-- **Trust profile B/C** (developer): primary user. Document covers всё для daily work. CONTRIBUTING.md equivalent.
+- **AI** читает dev-environment.md при работе в проекте — нужно для понимания tooling / commands.
+- **Оператор** использует для setup'а локальной среды (rare, но happens — например, demo для investor / personal experimentation).
+- **Внешние contributors** (если open-source) — primary user через CONTRIBUTING.md, который references этот документ.
 
 Если **CONTRIBUTING.md** существует в repo (для open-source) — он references этот документ для setup details, добавляет open-source-specific guidance (issue templates, PR conventions for external contributors, CLA / DCO если applicable).
 

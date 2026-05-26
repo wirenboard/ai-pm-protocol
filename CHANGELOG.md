@@ -15,6 +15,21 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **PM-only ЦА в v0** (feature `remove-developer-from-template`):
+  - **Decision:** template сужает поддерживаемую ЦА с 3 personas (PM Trust profile A, cross-stack senior B, full-stack pro C) до **одной** (PM Trust profile A, не читает AI-код). Developer-as-operator кейс — backlog item после empirical validation PM-кейса.
+  - **Rationale:** real-world signal — «двусторонняя ниша PM↔dev» дилютирует focus. Conditional branches «if Trust profile B... if Trust profile C...» в agent prompts увеличивают maintenance overhead без proven value (никаких empirical users в B/C на момент refactor'а).
+  - **Removed conditional branches** в 4 agent files (`coder.md`, `planner.md`, `reviewer.md`, `project-bootstrap.md`): «if Trust profile A then verbose with learning layer; if B then mixed; if C then terse» свернуто до verbose-only (A default).
+  - **`lite-mode: c-fast` deprecated** — был для Trust profile C, удалён из templates / agent prompts. Existing spec'и с `lite-mode: c-fast` accepted as `small-fix` (backward compat).
+  - **Bootstrap interview сократился** — bootstrap-agent больше не спрашивает Trust profile (auto-set `A`). Greenfield Init: 3 questions → 2 questions. Legacy adoption Quick/Staged/Skip — то же.
+  - **`personas.md`** rewritten: single PM persona expanded с explicit «Что НЕ persona в v0» секцией (developer-as-operator в backlog).
+  - **`user-journeys.md`** — «Friction points per persona» секции сжаты до PM aspect; B/C friction notes удалены.
+  - **`README.md`** — single «PM (не код) — единственная supported persona» с honest «Developer support coming after PM case validates» disclaimer; убрана «двусторонняя ниша PM↔dev» messaging.
+  - **`development-protocol.md`** + **`anti-patterns.md`** — формулировки «оператор при Trust profile A» → «PM-оператор» / «оператор (PM, не читает код)».
+  - **Backward compat (`.bootstrap-state.md` schema):** поле `trust_profile:` сохранено в template (значение `A` default; existing values `B`/`C` принимаются agents as `A` без normalization чужого state). Это позволит позже re-add B/C без schema break.
+  - **No functional regression** для PM workflow — все CI gates / AP catalogue / 5-layer enforcement / 5 stages workflow / spec/plan/review files остаются те же.
+
 ### Fixed
 
 - **Protocol minor fixes — accumulated session 2026-05-25** (feature `protocol-minors-2026-05-25`, lite-mode bugfix bundle):
