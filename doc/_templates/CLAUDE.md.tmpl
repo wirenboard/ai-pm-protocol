@@ -60,7 +60,11 @@
 
 В `.ai-pm/tooling/agents/`:
 
-- **`project-bootstrap`** — Stage A-D setup + resume + lifecycle routing. Mode/integration/trust-profile aware.
+- **`project-bootstrap`** — router (mode + state detection). Делегирует одному из specialized bootstrap subagents:
+  - **`bootstrap-greenfield`** — Stage A-D для нового продукта (`new-product` mode).
+  - **`bootstrap-legacy`** — 3-choice adoption (Quick / Manual staged / Skip) + Tier 0 auto-extract + Tier 2 promotion + Tier 3 overrides.
+  - **`bootstrap-resume`** — session resume когда Stage A-D не closed.
+  - **`bootstrap-template-sync`** — template version bump workflow + architecture overview read-only extract.
 - **`planner`** — Step 2 plan writer. Read-only по коду. Trust-profile-aware.
 - **`coder`** — Step 4 implementation. Tests-first. No silent deviation.
 - **`reviewer`** — Step 7 review primary (consolidated v0.7.0+). Mandatory baseline + ONE domain section sequentially. AP-19 + AP-20.

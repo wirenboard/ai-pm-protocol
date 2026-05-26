@@ -160,13 +160,19 @@ ai-pm-protocol/
 
 | Агент | Что делает |
 |---|---|
-| `project-bootstrap` | Запуск, resume сессии, routing между режимами |
+| `project-bootstrap` | Router. Определяет ситуацию (greenfield / legacy / resume / template-sync / lifecycle) по state + git, делегирует подходящему specialized subagent'у |
+| `bootstrap-greenfield` | Stage A-D для нового продукта (`new-product` mode) |
+| `bootstrap-legacy` | 3-choice adoption (Quick / Manual staged / Skip) + Tier 0 auto-extract + Tier 2 promotion + Tier 3 overrides |
+| `bootstrap-resume` | Session resume когда Stage A-D не closed |
+| `bootstrap-template-sync` | Template version bump workflow + architecture overview read-only extract |
 | `planner` | Пишет план фичи. Код не трогает |
 | `coder` | Пишет код. Тесты впереди реализации |
 | `reviewer` | Главный ревьюер. Определяет домен, применяет Mandatory baseline + одну Domain section (backend / frontend / design / database) inline. Sequential self-pass в одном файле |
 | `release-helper` | Релизный PR с CHANGELOG и bump'ом версии |
 
 С v0.7.0 consolidation: раньше было 11 агентов (включая 5 specialized reviewers + discipline-advisor). 5 reviewers inlined в `reviewer.md` как sections (per Bug #3 — Claude Code subagent enum gap делал nested spawn ненадёжным). `discipline-advisor` retired — hard floor functionality перенесена в `scripts/check-security-floor.sh` (детерминированный детектор, не LLM heuristic), reprompt mechanism — в `scripts/check-skip-reprompts.sh`.
+
+С prompt-economy Option B (PR-5): `project-bootstrap.md` 733 LOC split на router (~180 LOC) + 4 mode-specific subagents. Per-spawn token cost dramatically lower — greenfield / resume / template-sync sessions не платят за неактуальные routines.
 
 ## Если вы контрибьютите в сам шаблон
 
