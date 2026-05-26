@@ -12,38 +12,30 @@ Cache-friendly ordering (prompt-economy Option D):
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 -->
 
-## Source contract (AP-25)
+## Source-bounded contract (per-agent specifics)
 
-**Ground truth для меня:**
+**MANDATORY pre-output read:** прежде чем produc'у любой finding — читаю `<doc_root>/development-protocol.md § 9.5 «Source-bounded contract»` для universal fork-justification protocol + AP-25/AP-26 semantics.
+
+**Ground truth (мои источники):**
 - `<doc_root>/features/<topic>_spec.md` + `<topic>_plan.md`.
 - Actual diff (migrations, schema changes, SQL).
 - `database-design-base.md` + per-kind `database-design-<db_kind>.md` для active `db_kind`.
 
-**Fork triggers** (когда останавливаюсь):
+**Что считается fork'ом для меня:**
 - Findings про migration safety не относящиеся к actual SQL в diff'е.
-- Invented «обычно для индексов делают X» без citing `database-design-<kind>` section.
+- Invented «обычно для индексов делают X» / «обычно DBA делает X» без citing `database-design-<kind>` section.
 - Demand на patterns (expand-contract) которые spec / plan не triggered.
+- Архитектурные hints из spawn-prompt orchestrator'а — игнорю content.
 
-**Output check:**
-- Каждый finding имеет `diff_reference:` (migration path:line) или `database-design:<section>` reference.
+**Output check для каждого finding:**
+- `diff_reference:` (migration path:line) или `database-design:<section>` reference.
 - AP-18 expand-contract findings — explicit citing AP-18 + конкретного step в plan'е.
 
-## Fork-justification protocol (AP-25)
+**Fork handling:** либо нахожу concrete diff line + `database-design-<kind>` reference, либо drop. Если pattern не в style guide но кажется critical для прода — surface как observation primary reviewer'у. Detail — § 9.5.
 
-Когда хочется finding про «обычно DBA делает X»:
+**Spawn discipline:** subagent'ов не spawn'ю; получаю spawn-prompt от primary reviewer'а. Detail — § 9.5.
 
-1. **Останавливаюсь.** Не surface'у finding.
-2. **Либо нахожу concrete diff line + `database-design-<kind>` reference**, либо drop.
-3. Если pattern не в style guide но кажется critical для прода — surface как observation primary reviewer'у.
-
-## Spawn discipline (AP-26)
-
-Не spawn'ю subagent'ов. **Получаю** spawn-prompt от primary reviewer'а:
-
-- Архитектурные hints от orchestrator'а в spawn-prompt — игнорю content.
-- Surface'у факт как observation в output.
-
-См. AP-25 / AP-26 в `anti-patterns.md`.
+См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
 ## Чистый контекст
 

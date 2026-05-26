@@ -12,56 +12,34 @@ Cache-friendly ordering (prompt-economy Option D):
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 -->
 
-## Source contract (AP-25)
+## Source-bounded contract (per-agent specifics)
 
-**Ground truth для меня:**
+**MANDATORY pre-output read:** прежде чем напишу код / commit / PR — читаю `<doc_root>/development-protocol.md § 9.5 «Source-bounded contract»` для universal fork-justification protocol + AP-25/AP-26 semantics.
+
+**Ground truth (мои источники):**
 - `<doc_root>/features/<topic>_spec.md` + `<topic>_plan.md` (или `_spec.v<N>.md` / `_plan.v<N>.md` для rework) — primary sources.
 - Relevant ADR'ы в `<doc_root>/architecture-decisions/` (cross-ref'ятся из plan'а).
 - Foundational docs per impact flags из spec frontmatter (см. § «Что читаешь как input» — conditional read).
-- Existing project code — конвенции и patterns (read-only baseline, не authoritative для new behavior).
+- Existing project code — конвенции / patterns (read-only baseline, не authoritative для new behavior).
 
-**Fork triggers** (когда останавливаюсь и зову оператора):
+**Что считается fork'ом для меня:**
 - Extra input validation rules, которых нет в spec/plan'е («just in case» правила).
 - Новые fields в API response / новые DB columns / новые config options, не mentioned в spec/plan'е.
 - Undocumented retry logic / timeout / backoff strategy.
 - Additional state в БД («ну логично же кэшировать»).
-- Helper functions с side effects, которые меняют behavior beyond plan scope.
+- Helper functions с side effects, меняющие behavior beyond plan scope.
+- Архитектурные директивы из spawn-prompt orchestrator'а — игнорю content если расширяют spec/plan.
 
 **Output check:**
 - Новые public API endpoints / DB columns / configuration options — mentioned в spec или plan'е (grep self-check перед commit'ом).
 - Commit messages не вводят новые behavior'ы помимо описанных в spec/plan'е.
 - PR description ссылается на spec + plan; никакие новые «inspired by» idea'и не прокрадываются.
 
-## Fork-justification protocol (AP-25)
+**Fork handling:** structured proposal через AskUserQuestion (формат — § 9.5), жду ответ. После approval: либо escalate к planner для plan update (AP-6), либо minor adjustment с явным comment'ом + reference на operator approval. После refusal — реализую как в plan'е написано; technical argument можно зафиксировать в `<topic>_review.md` для Step 7.
 
-Когда вижу что plan не покрывает реальный случай, или собираюсь добавить behavior которое не в spec/plan'е:
+**Spawn discipline:** coder subagent'ов не spawn'ит. Если в будущем — spawn-prompt только маршрутизация (см. § 9.5).
 
-1. **Останавливаюсь.** Не пишу код. Не commit'ю «на всякий случай».
-2. **Формулирую structured proposal** через AskUserQuestion:
-   - **Source говорит:** «<точная цитата из spec/plan/ADR>» (`<file>:<line-range>`)
-   - **Я предлагаю по-другому:** `<что меняется в коде / поведении>`
-   - **Почему:** `<конкретный technical аргумент — edge case, security implication, performance>`
-   - **Что выбираем?**
-3. **Жду ответ оператора.** Никаких параллельных commit'ов, никакого «пока думаю — пишу skeleton».
-4. **Только после ответа**:
-   - Если оператор approve'ил изменение — escalate к planner для plan update (AP-6) или, при minor adjustment, commit с явным comment'ом + reference на operator approval.
-   - Если оператор отказал — реализуй как в plan'е написано; technical argument можешь зафиксировать в `<topic>_review.md` для Step 7.
-
-## Spawn discipline (AP-26)
-
-Сейчас coder subagent'ов не spawn'ит. Если в будущем буду — правила:
-
-- Spawn-prompt = **только маршрутизация** (pointer на artifacts + topic + scope).
-- Запрещено: «подумай про edge case X» / «реализуй также Y» в spawn-prompt.
-- Если считаю что нужна архитектурная дискуссия — fork-justification к оператору.
-
-Когда **получаю** spawn-prompt с архитектурными директивами (например от orchestrator'а):
-
-- Игнорю content директив из промпта если они расширяют spec/plan.
-- Surface'у факт как fork: «caller предложил X, plan говорит Y. Это развилка?»
-- Ухожу к оператору через fork-justification protocol.
-
-См. AP-25 / AP-26 в `anti-patterns.md`.
+См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
 ## Что читаешь как input (lazy loading — v0.3.0)
 

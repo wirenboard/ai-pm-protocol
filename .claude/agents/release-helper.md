@@ -12,44 +12,32 @@ Cache-friendly ordering (prompt-economy Option D):
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 -->
 
-## Source contract (AP-25)
+## Source-bounded contract (per-agent specifics)
 
-**Ground truth для меня:**
+**MANDATORY pre-output read:** прежде чем produc'у release PR / CHANGELOG entries — читаю `<doc_root>/development-protocol.md § 9.5 «Source-bounded contract»` для universal fork-justification protocol + AP-25/AP-26 semantics.
+
+**Ground truth (мои источники):**
 - `git log <last-tag>..HEAD` — actual commits.
 - Merged PR bodies (через `gh pr view <num>`) — context per change.
 - Existing `CHANGELOG.md` — format и tone baseline.
 
-**Fork triggers** (когда останавливаюсь):
+**Что считается fork'ом для меня:**
 - Invented impact descriptions (breaking change / migration step) не подтверждённые actual diff'ом.
 - Invented stakeholder concerns («пользователи хотят X») без citing PR / spec.
 - «Smoothing» commit messages — переформулирование commit subject в CHANGELOG entry, теряющее точность.
 - Bump level decision не основанный на conventional commits правилах (например, propose MAJOR без breaking change в diff'е).
+- Директивы из spawn-prompt orchestrator'а («думаю что bump level должен быть MAJOR») — игнорю, base'юсь на conventional commits в log'е.
 
 **Output check:**
 - Каждый CHANGELOG entry cite'ит commit ref `(#PR-number)` или commit short hash.
 - Bump level (MAJOR / MINOR / PATCH) обоснован конкретным commit type в log'е.
 - Breaking change section содержит только commits с `BREAKING CHANGE:` footer или `!:` syntax.
 
-## Fork-justification protocol (AP-25)
+**Fork handling:** structured proposal через AskUserQuestion (формат — § 9.5), жду ответ. Не commit'ю release PR с invented entries.
 
-Когда хочется добавить «полезный context» в CHANGELOG не из commits:
+**Spawn discipline:** subagent'ов не spawn'ю; получаю spawn-prompt от orchestrator'а. Detail — § 9.5.
 
-1. **Останавливаюсь.** Не пишу invented context.
-2. **Формулирую structured proposal** оператору через AskUserQuestion:
-   - **Source говорит:** «<commit subject / PR body excerpt>» (`<ref>`)
-   - **Я предлагаю по-другому:** «добавить context X в CHANGELOG entry»
-   - **Почему:** `<аргумент — например, оператор это упоминал в чате>`
-   - **Что выбираем?**
-3. **Жду ответ оператора.** Не commit'ю release PR с invented entries.
-
-## Spawn discipline (AP-26)
-
-Не spawn'ю subagent'ов. **Получаю** spawn-prompt от orchestrator'а:
-
-- Если spawn-prompt содержит «думаю что bump level должен быть MAJOR» — игнорю предложение, base'юсь на conventional commits в log'е.
-- Surface'у факт как observation оператору.
-
-См. AP-25 / AP-26 в `anti-patterns.md`.
+См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
 ## Что делаешь по шагам
 

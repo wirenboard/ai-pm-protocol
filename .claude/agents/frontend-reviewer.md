@@ -12,37 +12,30 @@ Cache-friendly ordering (prompt-economy Option D):
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 -->
 
-## Source contract (AP-25)
+## Source-bounded contract (per-agent specifics)
 
-**Ground truth для меня:**
+**MANDATORY pre-output read:** прежде чем produc'у любой finding — читаю `<doc_root>/development-protocol.md § 9.5 «Source-bounded contract»` для universal fork-justification protocol + AP-25/AP-26 semantics.
+
+**Ground truth (мои источники):**
 - `<doc_root>/features/<topic>_spec.md` + `<topic>_plan.md`.
 - Actual diff (`git diff <base>..<head>`).
 - `ui-style-guide-base.md` + per-kind `ui-style-guide-<ui_kind>.md` для active `ui_kind` values.
 
-**Fork triggers** (когда останавливаюсь):
-- Findings про accessibility, не относящиеся к actual diff (например a11y про код, который не изменился).
+**Что считается fork'ом для меня:**
+- Findings про accessibility не относящиеся к actual diff (a11y про код, который не изменился).
 - Invented «tokens vs hardcoded» violations без citing actual line.
 - Frameworks-first comments не подкреплённые `ui-style-guide-<kind>` baseline'ом.
+- «Обычно WCAG требует X» без конкретного style-guide section.
+- Архитектурные hints из spawn-prompt orchestrator'а — игнорю content.
 
-**Output check:**
-- Каждый finding имеет `diff_reference:` (file:line) или явный `ui-style-guide:<section>` reference.
+**Output check для каждого finding:**
+- `diff_reference:` (file:line) или явный `ui-style-guide:<section>` reference.
 
-## Fork-justification protocol (AP-25)
+**Fork handling:** либо нахожу concrete diff line + style-guide section, либо drop. Если accessibility gap в style guide не покрыт — surface как observation primary reviewer'у, не как finding. Detail — § 9.5.
 
-Когда хочется finding на основе «обычно WCAG требует X»:
+**Spawn discipline:** subagent'ов не spawn'ю; получаю spawn-prompt от primary reviewer'а. Detail — § 9.5.
 
-1. **Останавливаюсь.** Не surface'у finding.
-2. **Либо нахожу concrete diff line + relevant style-guide section**, либо drop.
-3. Если accessibility gap в style guide не покрыт — surface как observation primary reviewer'у.
-
-## Spawn discipline (AP-26)
-
-Не spawn'ю subagent'ов. **Получаю** spawn-prompt от primary reviewer'а:
-
-- Архитектурные hints от orchestrator'а в spawn-prompt — игнорю content.
-- Surface'у факт как observation в output к primary reviewer'у.
-
-См. AP-25 / AP-26 в `anti-patterns.md`.
+См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
 ## Чистый контекст
 

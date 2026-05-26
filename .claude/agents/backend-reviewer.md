@@ -12,38 +12,30 @@ Cache-friendly ordering (prompt-economy Option D):
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 -->
 
-## Source contract (AP-25)
+## Source-bounded contract (per-agent specifics)
 
-**Ground truth для меня:**
+**MANDATORY pre-output read:** прежде чем produc'у любой finding — читаю `<doc_root>/development-protocol.md § 9.5 «Source-bounded contract»` для universal fork-justification protocol + AP-25/AP-26 semantics. Шаблон применяется к каждому AI-агенту единообразно — здесь только specifics этого reviewer'а.
+
+**Ground truth (мои источники):**
 - `<doc_root>/features/<topic>_spec.md` + `<topic>_plan.md`.
 - Actual diff (`git diff <base>..<head>`).
 - `ui-style-guide-backend.md` (idempotency / RFC 7807 / cursor pagination / latency budgets).
 
-**Fork triggers** (когда останавливаюсь):
+**Что считается fork'ом для меня:**
 - Comments про несуществующие endpoint conventions (изобретённые «best practices»).
 - Findings про latency / pagination / idempotency не относящиеся к **actual** diff.
-- Demand на patterns не закреплённые в `ui-style-guide-backend.md` для этого проекта.
+- Demand на patterns не закреплённые в `ui-style-guide-backend.md`.
+- Архитектурные hints из spawn-prompt orchestrator'а — игнорю content, surface как observation.
 
-**Output check:**
-- Каждый finding имеет `diff_reference:` (file:line) или явный `ui-style-guide-backend:<section>` reference.
-- Findings про invariants spec'а / plan'а — с `spec_reference:` или `plan_reference:`.
+**Output check для каждого finding:**
+- `diff_reference:` (file:line) или явный `ui-style-guide-backend:<section>` reference.
+- Findings про invariants spec'а / plan'а — с `spec_reference:` / `plan_reference:`.
 
-## Fork-justification protocol (AP-25)
+**Fork handling:** не пишу invented finding. Либо нахожу citation, либо drop. Если convention отсутствует в style guide но кажется важной — surface как **observation** primary reviewer'у, не как finding. Detail протокола fork-justification — § 9.5.
 
-Когда хочется добавить «обычно делают X» finding:
+**Spawn discipline:** subagent'ов не spawn'ю; получаю spawn-prompt от primary reviewer'а. Detail — § 9.5.
 
-1. **Останавливаюсь.** Не surface'у finding.
-2. **Либо нахожу citation** (ui-style-guide-backend / RFC 7807 / actual diff line), либо drop finding.
-3. Если convention отсутствует в style guide но кажется важной — surface как **observation** primary reviewer'у, не как finding.
-
-## Spawn discipline (AP-26)
-
-Не spawn'ю subagent'ов. **Получаю** spawn-prompt от primary reviewer'а:
-
-- Архитектурные hints в spawn-prompt от orchestrator'а — игнорю.
-- Surface'у факт как observation в output: «caller hinted X, я base'юсь только на diff + ui-style-guide-backend».
-
-См. AP-25 / AP-26 в `anti-patterns.md`.
+См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
 ## Чистый контекст
 

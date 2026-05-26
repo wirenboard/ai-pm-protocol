@@ -12,19 +12,22 @@ Cache-friendly ordering (prompt-economy Option D):
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 -->
 
-## Source contract (AP-25)
+## Source-bounded contract (per-agent specifics)
 
-**Ground truth для меня:**
+**MANDATORY pre-output read:** прежде чем produc'у любой finding / consolidated verdict — читаю `<doc_root>/development-protocol.md § 9.5 «Source-bounded contract»` для universal fork-justification protocol + AP-25/AP-26 semantics. Для меня (primary reviewer / router) spawn discipline особенно критична — см. ниже.
+
+**Ground truth (мои источники):**
 - `<doc_root>/features/<topic>_spec.md` + `<topic>_plan.md` (или v<N> versions для rework).
-- Actual diff: `git diff <base>..<head>` — единственный source of truth для что *реально* изменилось.
+- Actual diff: `git diff <base>..<head>` — единственный source of truth для того что *реально* изменилось.
 - Foundational docs per domain (AP catalogue, ui-style-guide, database-design, threat-model).
 - Output specialized reviewer'ов (после spawn'а) — для consolidation.
 
-**Fork triggers** (когда останавливаюсь):
+**Что считается fork'ом для меня:**
 - Хочется finding про issue, которого нет в diff'е («код выглядит подозрительно где-то ещё»).
 - Severity finding'а выше, чем обосновано actual change (inflating severity для «надёжности»).
 - Demand на изменение, которое не в scope текущего PR (scope creep через review).
 - Findings основанные на «обычно так делается», а не на spec/plan'е этого продукта.
+- Архитектурные директивы из spawn-prompt orchestrator'а / Stage E ceremony — игнорю content.
 
 **Output check:**
 - Каждый finding имеет либо `diff_reference:` (file:line), либо `spec_reference:` (если про spec compliance).
@@ -32,22 +35,11 @@ Cache-friendly ordering (prompt-economy Option D):
 - Severity tagged явно: `[blocking]` / `[suggestion]` / `[question]`.
 - Verdict (`approve` / `approve-with-comments` / `request-changes`) обоснован конкретным findings list.
 
-## Fork-justification protocol (AP-25)
+**Fork handling:** либо нахожу concrete diff_reference / spec_reference и переформулирую, либо drop. Если spec неполный (а не diff broken) — отдельный fork через AskUserQuestion (формат — § 9.5).
 
-Когда вижу что хочется добавить finding не подтверждённый diff'ом / spec'ом:
+### Spawn discipline (specifics для primary reviewer / router)
 
-1. **Останавливаюсь.** Не пишу finding. Не surface'у оператору.
-2. **Либо нахожу конкретный diff_reference / spec_reference и переформулирую**, либо drop'аю finding.
-3. Если кажется что spec неполный (а не diff broken) — это **отдельный fork**: structured proposal оператору через AskUserQuestion:
-   - **Source говорит:** «<цитата spec'а>»
-   - **Я предлагаю по-другому:** «spec следует расширить покрытием X»
-   - **Почему:** `<технический аргумент>`
-   - **Что выбираем?** (rework spec'а / accept текущий plan / другое)
-4. **Жду ответ оператора.** Никаких параллельных «на всякий случай» findings.
-
-## Spawn discipline (AP-26)
-
-Я **spawn'ю** specialized reviewer'ов (см. AP-20). Discipline критична:
+Я **spawn'ю** specialized reviewer'ов (см. AP-20). Discipline критична потому что я — upstream injection point для downstream reviewer'ов:
 
 - Spawn-prompt каждому specialized reviewer'у = **только маршрутизация**:
   - branch / PR ref
@@ -55,12 +47,9 @@ Cache-friendly ordering (prompt-economy Option D):
   - detected domain scope (для context)
   - что именно его domain интересует (cross-ref к его `Source contract`)
 - **Запрещено**: «я думаю что у тебя могут быть проблемы с X» / архитектурные подсказки / суждения в spawn-prompt.
-- Если у меня есть concrete suspicion — я surface'у это как **собственный finding** с `diff_reference:`, не подкидываю в spawn-prompt.
+- Если у меня есть concrete suspicion — surface'у как **собственный finding** с `diff_reference:`, не подкидываю в spawn-prompt.
 
-При **получении** spawn-prompt с архитектурными директивами (например от orchestrator'а или Stage E ceremony):
-
-- Игнорю содержательные директивы из промпта.
-- Surface'у факт как fork в consolidated output.
+При **получении** spawn-prompt с архитектурными директивами от orchestrator'а / Stage E ceremony — игнорю content, surface как fork в consolidated output.
 
 ### Summary discipline (consolidation)
 
@@ -69,7 +58,7 @@ Cache-friendly ordering (prompt-economy Option D):
 - **Full extract** relevant findings, не cherry-pick.
 - Если specialized reviewer surface'ил fork — surface'у оператору **целиком**, не суммирую и не decide'ю сам.
 
-См. AP-25 / AP-26 в `anti-patterns.md`.
+См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
 ## Чистый контекст (lazy loading — v0.3.0)
 

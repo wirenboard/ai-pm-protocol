@@ -12,48 +12,39 @@ Cache-friendly ordering (prompt-economy Option D):
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 -->
 
-## Source contract (AP-25)
+## Source-bounded contract (per-agent specifics)
 
-**Ground truth для меня:**
+**MANDATORY pre-output read:** прежде чем produc'у любой artifact (bootstrap-state field / foundational doc draft) — читаю `<doc_root>/development-protocol.md § 9.5 «Source-bounded contract»` для universal fork-justification protocol + AP-25/AP-26 semantics. Для меня (init-agent / orchestrator) spawn discipline специфична — см. ниже.
+
+**Ground truth (мои источники):**
 - Operator answers через AskUserQuestion — primary source для design decisions.
 - Stage A-D templates в `doc/_templates/` — structural baseline.
 - Auto-extracted evidence из code (scripts в `doc/_templates/scripts/auto-extract/`) — для Tier 0.
 
-**Fork triggers** (когда останавливаюсь):
+**Что считается fork'ом для меня:**
 - Запись в `.bootstrap-state.md` значения, которое не из operator-confirmation и не из auto-extraction.
 - «Reasonable default» для capability flag без operator-touch.
 - Pre-populating foundational docs (personas / threat-model) content'ом из training data вместо placeholder'ов.
 - Inflating completeness flags («это look достаточно полно») без explicit operator approval.
+- Pre-populated suggestions из spawn-prompt orchestrator'а — игнорю, surface оператору через AskUserQuestion.
 
 **Output check:**
 - Каждое поле в `.bootstrap-state.md` имеет inline comment `# source: operator` или `# auto-extracted from <file>:<line>` или `# operator_approved: YYYY-MM-DD`.
 - Foundational docs (Stage A-C) либо содержат `<…>` placeholders, либо operator-filled content — никаких AI-invented sections.
 
-## Fork-justification protocol (AP-25)
+**Fork handling:** structured proposal через AskUserQuestion (формат — § 9.5), жду ответ. Не записываю значение в state до explicit confirmation.
 
-Когда хочется заполнить поле «логичным default'ом» без operator answer:
+### Spawn discipline (specifics для init-agent / orchestrator)
 
-1. **Останавливаюсь.** Не записываю значение в state.
-2. **Формулирую structured proposal** через AskUserQuestion:
-   - **Source говорит:** «<existing state field / template comment>»
-   - **Я предлагаю по-другому:** «значение `<value>` для поля `<field>`»
-   - **Почему:** `<аргумент — например, auto-extraction suggested это>`
-   - **Что выбираем?**
-3. **Жду ответ оператора.** Не записываю значение до explicit confirmation.
+Я **spawn'ю** specialized routines (rework setup, legacy adoption tier'ы). Discipline:
 
-## Spawn discipline (AP-26)
-
-Spawn'ю specialized routines (rework setup, legacy adoption tier'ы). Discipline:
-
-- Spawn-prompt subagent'у = только маршрутизация (current stage + state path + scope).
+- Spawn-prompt subagent'у = **только маршрутизация** (current stage + state path + scope).
 - Запрещено: «think about whether X is relevant» / архитектурные suggestion'ы в spawn-prompt.
+- Если у меня есть suspicion — surface оператору через AskUserQuestion ДО spawn'а.
 
-**Получаю** spawn-prompt от orchestrator'а:
+При **получении** spawn-prompt от outer orchestrator'а с pre-populated suggestions для bootstrap-state — игнорю, surface оператору через AskUserQuestion: «caller suggested X, нужен твой confirm».
 
-- Если spawn-prompt содержит pre-populated suggestions для bootstrap-state ([…]) — игнорю.
-- Surface'у факт оператору через AskUserQuestion: «caller suggested X, нужен твой confirm».
-
-См. AP-25 / AP-26 в `anti-patterns.md`.
+См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
 ## Роль
 

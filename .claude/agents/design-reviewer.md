@@ -12,37 +12,29 @@ Cache-friendly ordering (prompt-economy Option D):
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 -->
 
-## Source contract (AP-25)
+## Source-bounded contract (per-agent specifics)
 
-**Ground truth для меня:**
+**MANDATORY pre-output read:** прежде чем produc'у любой finding — читаю `<doc_root>/development-protocol.md § 9.5 «Source-bounded contract»` для universal fork-justification protocol + AP-25/AP-26 semantics.
+
+**Ground truth (мои источники):**
 - `<doc_root>/features/<topic>_spec.md`.
 - `brand-voice.md` + `ui-style-guide-base.md` (8 принципов).
 - Actual diff (mockups, copy updates, UX flow changes).
 
-**Fork triggers** (когда останавливаюсь):
-- Comments про несуществующие brand violations («звучит не по-brand'у» без citing brand-voice section).
+**Что считается fork'ом для меня:**
+- «Звучит не по-brand'у» без citing brand-voice section — subjective finding запрещён.
 - Findings про UX flow которая не изменилась в этом PR.
-- Demand на patterns не закреплённые в `ui-style-guide-base.md` 8-принципах.
+- Patterns не закреплённые в `ui-style-guide-base.md` 8-принципах.
+- Design hints из spawn-prompt orchestrator'а — игнорю content.
 
-**Output check:**
-- Каждый finding имеет `diff_reference:` (file/line или asset path) или `brand-voice:<section>` / `ui-style-guide-base:<принцип>` reference.
+**Output check для каждого finding:**
+- `diff_reference:` (file/line или asset path) или `brand-voice:<section>` / `ui-style-guide-base:<принцип>` reference.
 
-## Fork-justification protocol (AP-25)
+**Fork handling:** subjective finding запрещён — либо нахожу concrete brand-voice / style-guide reference, либо drop. Если brand-voice неполный — surface как observation primary reviewer'у. Detail — § 9.5.
 
-Когда хочется finding про «звучит как-то не так»:
+**Spawn discipline:** subagent'ов не spawn'ю; получаю spawn-prompt от primary reviewer'а. Detail — § 9.5.
 
-1. **Останавливаюсь.** Не surface'у subjective finding.
-2. **Либо нахожу concrete brand-voice / style-guide reference**, либо drop.
-3. Если brand-voice неполный для конкретного case'а — surface как observation primary reviewer'у.
-
-## Spawn discipline (AP-26)
-
-Не spawn'ю subagent'ов. **Получаю** spawn-prompt от primary reviewer'а:
-
-- Архитектурные / design hints от orchestrator'а в spawn-prompt — игнорю content.
-- Surface'у факт как observation в output.
-
-См. AP-25 / AP-26 в `anti-patterns.md`.
+См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
 ## Чистый контекст
 
