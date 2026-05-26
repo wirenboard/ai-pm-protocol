@@ -230,7 +230,10 @@ branch: <branch>
 reviewer: primary-reviewer + spawned specialized
 reviewed_at: YYYY-MM-DD
 trail_type: committed-review (AP-16)
-spawned_agents: [protocol-compliance-reviewer, <domain-reviewer>]
+review_version: 1                          # iteration number; bump на каждой revision (см. ниже)
+agent_type: specialized-reviewer            # см. Step 5.1
+spawned_agents: [protocol-compliance-reviewer, <domain-reviewer>]  # пусто [] если spawn не было — см. Step 5.1
+inline_roles: []                            # optional; non-empty если один agent играл несколько ролей
 ---
 
 **Verdict:** approve | approve-with-comments | request-changes
@@ -272,7 +275,72 @@ spawned_agents: [protocol-compliance-reviewer, <domain-reviewer>]
 - Nit: <count>
 ```
 
-**`**Verdict:** ...`** — в первых 50 строках (для hook parsing).
+### Step 5.1: Verdict-marker discipline (строго, Bug #2 protocol-minors-2026-05-25)
+
+**Литеральный формат — required:**
+
+```
+**Verdict:** approve
+**Verdict:** approve-with-comments
+**Verdict:** request-changes
+```
+
+- В первых 50 строках файла (`check-review-trail.sh` парсит только этот префикс).
+- **Никаких суффиксов** в самом marker'е: запрещено `**Verdict v2:**`, `**Verdict (round 2):**`, `**Final verdict:**`, `### Verdict:`, и т.д. Парсер не распознаёт варианты — review будет считаться broken, push заблокируется.
+- Versioning'а review итераций — через **frontmatter field `review_version: <N>`** (integer), не в marker'е. На каждую новую iteration увеличивай `review_version` и переписывай тело файла; marker остаётся литеральным.
+- Если хочешь сохранить историю review'ов — append предыдущую iteration в section `# Previous iterations` ниже main verdict, не в frontmatter.
+
+### Step 5.2: Trail integrity — agent_type / spawned_agents (Bug #4)
+
+Frontmatter обязан **честно** отражать как был выполнен review. Audit reads трейл буквально.
+
+- `agent_type:` — одно из:
+  - `specialized-reviewer` — primary reviewer + actual Task tool spawn специализированных subagent'ов (`protocol-compliance-reviewer` и т.д. как зарегистрированные `subagent_type` enum entries).
+  - `general-purpose-with-role-spec` — workaround per Bug #3 ниже: `subagent_type: general-purpose` с inline role spec в spawn-prompt (subagent enum не работает в текущей session).
+  - `inline-roleplay` — main session reviewer-роль без spawn вообще (single LLM играл все роли). Используется при context constraint'ах когда spawn недоступен.
+- `spawned_agents:` — **пусто `[]`** если actual spawn не произошёл. Перечислять реальных subagent'ов только если invoke прошёл успешно. Лживое заполнение списка «как будто spawn был» — нарушение audit trail.
+- `inline_roles:` — optional; non-empty список если один agent (general-purpose или main session) играл несколько ролей. Пример: `[protocol-compliance, backend, primary-consolidator]`. Позволяет audit'у видеть что произошло на самом деле без false specialized-spawn claim.
+
+**Examples:**
+
+```yaml
+# Real specialized spawn worked:
+agent_type: specialized-reviewer
+spawned_agents: [protocol-compliance-reviewer, backend-reviewer]
+inline_roles: []
+```
+
+```yaml
+# Workaround per Bug #3 — general-purpose с role spec inline:
+agent_type: general-purpose-with-role-spec
+spawned_agents: []
+inline_roles: [protocol-compliance, backend]
+```
+
+```yaml
+# No spawn at all (main session играл reviewer role один):
+agent_type: inline-roleplay
+spawned_agents: []
+inline_roles: [primary-reviewer, protocol-compliance, backend]
+```
+
+### Step 5.3: Subagent invocation workaround (Bug #3 из protocol-minors-2026-05-25)
+
+**Симптом:** В running Claude Code session project-level agent'ы (`.claude/agents/*.md`) не появляются в Agent tool's `subagent_type` enum. `claude /agents` CLI их видит, но из main session через Task tool — нет enum entry. Это external limitation Claude Code (возможно bug / missing docs / intended behavior — unclear), не template issue.
+
+**Workaround (только когда специализированный subagent invoke действительно нужен и enum его не показывает):**
+
+1. Spawn `subagent_type: general-purpose` с **inline role spec** в prompt'е — копируешь relevant excerpt из `.claude/agents/<role>.md` в spawn-prompt'е как «You are <role>. Your contract:» preamble + pointer на файл.
+2. В output review file frontmatter ставишь честно: `agent_type: general-purpose-with-role-spec` + `spawned_agents: []` + `inline_roles: [<role1>, <role2>, ...]` (см. Step 5.2).
+3. Если даже general-purpose spawn недоступен (context limit / nested invocation) — main session делает review inline; `agent_type: inline-roleplay`, `spawned_agents: []`, `inline_roles: [...]`.
+
+**Не делай:**
+- Не заполняй `spawned_agents:` именами specialized reviewers если реального spawn'а не было — audit будет введён в заблуждение.
+- Не комбинируй workaround с фейковым `agent_type: specialized-reviewer` — это нарушение trail integrity.
+
+**Track:** Если bug persists после verify reproducer в clean session — open issue в `anthropics/claude-code`. До тех пор workaround documented здесь — единственный честный путь.
+
+**`**Verdict:** ...`** — в первых 50 строках (для hook parsing). См. Step 5.1.
 
 ## Step 6: Persist trail (AP-16)
 

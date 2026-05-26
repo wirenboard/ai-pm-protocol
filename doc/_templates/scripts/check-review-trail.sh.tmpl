@@ -115,12 +115,35 @@ block_on_verdict() {
 
 # === Check 2: Committed _review.md для Stage E feature ===
 # Поддерживаются оба prefix'а: feature/<topic> (AP-canonical) и feat/<topic> (popular practice).
+#
+# Smart fallback (Bug #1 из protocol-minors-2026-05-25):
+#   (a) Сначала branch-suffix lookup — `<branch-suffix>_review.md` (current/canonical behavior).
+#   (b) Если не нашли — topic-based fallback: читаем `topic:` из spec frontmatter
+#       `<branch-suffix>_spec.md` и ищем `<topic>_review.md`. Покрывает случай переименования
+#       (branch остался под старым именем, spec topic — новое).
+# Invariant: branch-suffix всегда takes precedence над topic-based — чтобы предсказуемо
+# вело себя для типичного case'а (branch suffix = spec topic).
 TOPIC=""
 case "$BRANCH" in
   feature/*) TOPIC="${BRANCH#feature/}" ;;
   feat/*)    TOPIC="${BRANCH#feat/}" ;;
 esac
+
+# read_spec_topic: читает `topic:` field из YAML frontmatter spec'а (первый матч).
+# Возвращает значение topic'а на stdout (пустая строка если не нашёл).
+read_spec_topic() {
+  local spec="$1"
+  if [ ! -f "$spec" ]; then
+    return 0
+  fi
+  # Только первый match — frontmatter в начале файла. Trim trailing whitespace.
+  grep -E '^topic:[[:space:]]*' "$spec" 2>/dev/null \
+    | head -1 \
+    | sed -E 's/^topic:[[:space:]]*//; s/[[:space:]]+$//'
+}
+
 if [ -n "$TOPIC" ]; then
+  # (a) Branch-suffix lookup — primary path.
   for review_path in "$REPO_ROOT/doc/features/${TOPIC}_review.md" \
                      "$REPO_ROOT/.ai-pm/doc/features/${TOPIC}_review.md"; do
     if [ -f "$review_path" ]; then
@@ -129,6 +152,29 @@ if [ -n "$TOPIC" ]; then
       exit 0
     fi
   done
+
+  # (b) Topic-based fallback — если branch-suffix review не найден,
+  # пробуем извлечь `topic:` из spec frontmatter и искать review под этим именем.
+  SPEC_TOPIC=""
+  for spec_path in "$REPO_ROOT/doc/features/${TOPIC}_spec.md" \
+                   "$REPO_ROOT/.ai-pm/doc/features/${TOPIC}_spec.md"; do
+    if [ -f "$spec_path" ]; then
+      SPEC_TOPIC=$(read_spec_topic "$spec_path")
+      break
+    fi
+  done
+  if [ -n "$SPEC_TOPIC" ] && [ "$SPEC_TOPIC" != "$TOPIC" ]; then
+    for review_path in "$REPO_ROOT/doc/features/${SPEC_TOPIC}_review.md" \
+                       "$REPO_ROOT/.ai-pm/doc/features/${SPEC_TOPIC}_review.md"; do
+      if [ -f "$review_path" ]; then
+        echo "INFO: branch suffix '$TOPIC' не имеет review-файла; найден '${SPEC_TOPIC}_review.md' через spec frontmatter topic." >&2
+        echo "      Подсказка: при переименовании topic'а стоит переименовать и feature-branch." >&2
+        VERDICT=$(parse_verdict_md "$review_path")
+        block_on_verdict "$VERDICT" "$review_path"
+        exit 0
+      fi
+    done
+  fi
 fi
 
 # === Check 3: Local trace file ===

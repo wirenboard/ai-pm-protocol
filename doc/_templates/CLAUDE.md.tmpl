@@ -124,6 +124,20 @@
 
 Запуск: `claude --agent <name>`. Или ты в main session приглашаешь оператора: «invoke <agent>?», ждёшь approval, и сам передаёшь управление (через Agent tool с appropriate subagent_type).
 
+### Известный workaround: project-level agent enum gap (Claude Code limitation)
+
+**Симптом:** В running session project-level agent'ы из `.claude/agents/*.md` могут не появляться в Agent tool'а `subagent_type` enum. `claude /agents` CLI их видит, но из main session через Task tool — нет enum entry. Source unclear (Claude Code bug / missing documentation / intended behavior).
+
+**Workaround (только когда реально требуется specialized subagent):**
+
+1. Spawn `subagent_type: general-purpose` с **inline role spec** в prompt'е: копируешь relevant excerpt из `.claude/agents/<role>.md` в spawn-prompt как `You are <role>. Your contract:` preamble + указываешь pointer на файл.
+2. В review/audit artifact'ах **честно** записывай frontmatter — `agent_type: general-purpose-with-role-spec`, `spawned_agents: []`, `inline_roles: [<role>, ...]`. См. detail в `.claude/agents/reviewer.md` Step 5.2-5.3.
+3. Если даже general-purpose spawn недоступен — main session делает работу inline; `agent_type: inline-roleplay`.
+
+**Запрещено:** ложно заполнять `spawned_agents:` именами specialized reviewers если spawn'а не было — audit trail должен буквально отражать что произошло (Bug #4 из protocol-minors-2026-05-25).
+
+**Status:** workaround documented; verify reproducer в clean session — отдельная operator-task; file issue в `anthropics/claude-code` если persists.
+
 ---
 
 ## Lifecycle scenarios — что делать

@@ -1,0 +1,283 @@
+#!/usr/bin/env bash
+# scripts/tests/check-review-trail-smoke.sh
+#
+# Smoke tests для check-review-trail.sh — Bug #1 (smart fallback) +
+# Bug #2 (Verdict format strictness) из protocol-minors-2026-05-25.
+#
+# Запуск (из product repo root):
+#   bash scripts/tests/check-review-trail-smoke.sh
+#
+# Каждый test создаёт изолированный временный sandbox с фейковым git repo,
+# создаёт synthetic _review.md / spec.md / commit message, вызывает
+# check-review-trail.sh и проверяет exit code + stderr.
+#
+# Exit:
+#   0 — все cases прошли
+#   1 — хотя бы один fail
+
+set -u
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+CHECK="$SCRIPTS_DIR/check-review-trail.sh"
+
+PASS=0
+FAIL=0
+FAILED_TESTS=()
+
+run() {
+  local name="$1"; shift
+  local fn="$1"; shift
+  local sandbox
+  sandbox=$(mktemp -d -t check-review-trail-smoke.XXXXXX)
+  (
+    cd "$sandbox" || exit 99
+    git init -q
+    git config user.email "test@example.com"
+    git config user.name "Test"
+    mkdir -p doc/features
+    "$fn"
+  )
+  local rc=$?
+  rm -rf "$sandbox"
+  if [ $rc -eq 0 ]; then
+    PASS=$((PASS + 1))
+    printf '  [PASS] %s\n' "$name"
+  else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("$name")
+    printf '  [FAIL] %s\n' "$name" >&2
+  fi
+}
+
+# Helper: создать review file с указанным verdict + frontmatter.
+make_review() {
+  local path="$1"; local verdict="$2"
+  mkdir -p "$(dirname "$path")"
+  cat >"$path" <<EOF
+---
+pr: 1
+branch: feature/test
+reviewer: primary-reviewer
+reviewed_at: 2026-05-26
+trail_type: committed-review
+agent_type: specialized-reviewer
+spawned_agents: [protocol-compliance-reviewer]
+---
+
+**Verdict:** ${verdict}
+
+Synthetic review for smoke test.
+EOF
+}
+
+# Helper: создать spec с topic frontmatter.
+make_spec() {
+  local path="$1"; local topic="$2"
+  mkdir -p "$(dirname "$path")"
+  cat >"$path" <<EOF
+---
+topic: ${topic}
+mode: feature
+created: 2026-05-26
+---
+
+# Synthetic spec for smoke test.
+EOF
+}
+
+# Helper: создать initial commit (нужен чтобы HEAD existed).
+seed_commit() {
+  local msg="${1:-initial commit}"
+  echo "seed" > .seed
+  git add -A
+  git -c commit.gpgsign=false commit -q -m "$msg"
+}
+
+# === Test 1: branch-suffix match — current behavior preserved ===
+test_branch_suffix_match() {
+  git checkout -q -b feature/foo
+  make_review "doc/features/foo_review.md" "approve"
+  seed_commit "feat(foo): initial"
+  if ! bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 0 (verdict=approve), stderr:" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Test 2: branch-suffix mismatch, topic-based fallback finds file ===
+# Bug #1 scenario: branch=feature/old-name, spec topic=new-name, review under new-name.
+test_topic_fallback_finds_review() {
+  git checkout -q -b feature/old-name
+  make_spec "doc/features/old-name_spec.md" "new-name"
+  make_review "doc/features/new-name_review.md" "approve"
+  seed_commit "refactor(old-name): renamed via spec topic"
+  if ! bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 0 via topic-based fallback, stderr:" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Test 3: branch-suffix match takes precedence over topic ===
+# Если branch-suffix файл существует — используется он, не fallback.
+test_branch_suffix_precedence() {
+  git checkout -q -b feature/foo
+  make_spec "doc/features/foo_spec.md" "bar"
+  make_review "doc/features/foo_review.md" "approve"
+  make_review "doc/features/bar_review.md" "request-changes"
+  seed_commit "feat(foo): initial"
+  if ! bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 0 (branch-suffix file with approve wins), stderr:" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Test 4: no branch-suffix, no topic — fail ===
+test_no_review_blocks() {
+  git checkout -q -b feature/missing
+  seed_commit "feat(missing): no review"
+  if bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 1 (no review file), stderr:" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Test 5: Verdict literal format (Bug #2 prescribed) — accepted ===
+test_verdict_literal_accepted() {
+  git checkout -q -b feature/foo
+  make_review "doc/features/foo_review.md" "approve"
+  seed_commit "feat(foo): literal verdict"
+  if ! bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 0 for literal '**Verdict:** approve'" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Test 6: Verdict v2 / vN format (Bug #2) — NOT parsed → blocked ===
+# Это negative test: подтверждает, что format strictness в скрипте сохранён.
+# Reviewer prompt prescribes literal Verdict; v2 — нарушение prompt'а, парсер должен fail.
+test_verdict_v2_format_blocked() {
+  git checkout -q -b feature/foo
+  mkdir -p doc/features
+  cat >doc/features/foo_review.md <<EOF
+---
+pr: 1
+review_version: 2
+---
+
+**Verdict v2:** approve
+
+Synthetic review with v2 format.
+EOF
+  seed_commit "feat(foo): v2 verdict format"
+  if bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 1 — 'Verdict v2:' should not parse as valid verdict" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Test 7: review_version frontmatter field allowed (Bug #2 honest versioning) ===
+# Reviewer может version'ить через frontmatter `review_version:`, при условии что
+# Verdict marker сам остаётся литеральным.
+test_review_version_frontmatter_ok() {
+  git checkout -q -b feature/foo
+  mkdir -p doc/features
+  cat >doc/features/foo_review.md <<EOF
+---
+pr: 1
+review_version: 2
+reviewer: primary-reviewer
+---
+
+**Verdict:** approve
+
+Iteration 2 of review.
+EOF
+  seed_commit "feat(foo): review_version frontmatter"
+  if ! bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 0 — literal Verdict с review_version in frontmatter ok" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Test 8: request-changes → blocked unless override ===
+test_request_changes_blocks() {
+  git checkout -q -b feature/foo
+  make_review "doc/features/foo_review.md" "request-changes"
+  seed_commit "feat(foo): findings unresolved"
+  if bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 1 — request-changes without override" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Test 9: topic-based fallback NOT triggered when spec absent ===
+# Если spec'а нет — fallback не активируется, остаётся branch-suffix only.
+test_fallback_requires_spec() {
+  git checkout -q -b feature/no-spec
+  # No spec, no review either
+  seed_commit "feat(no-spec): nothing"
+  if bash "$CHECK" 2>/tmp/err.$$; then
+    echo "    expected exit 1 — no spec, no review → blocked" >&2
+    cat /tmp/err.$$ >&2
+    rm -f /tmp/err.$$
+    return 1
+  fi
+  rm -f /tmp/err.$$
+  return 0
+}
+
+# === Run all ===
+echo "Running check-review-trail.sh smoke tests..."
+run "branch-suffix match (current behavior)" test_branch_suffix_match
+run "topic-based fallback finds review (Bug #1)" test_topic_fallback_finds_review
+run "branch-suffix takes precedence over topic" test_branch_suffix_precedence
+run "no review at all → blocked" test_no_review_blocks
+run "literal Verdict accepted" test_verdict_literal_accepted
+run "Verdict v2 format not parsed → blocked (Bug #2)" test_verdict_v2_format_blocked
+run "review_version frontmatter allowed (Bug #2)" test_review_version_frontmatter_ok
+run "request-changes blocks without override" test_request_changes_blocks
+run "fallback inactive without spec" test_fallback_requires_spec
+
+echo
+echo "Results: $PASS passed, $FAIL failed"
+if [ "$FAIL" -gt 0 ]; then
+  echo "Failed tests:"
+  for t in "${FAILED_TESTS[@]}"; do
+    echo "  - $t"
+  done
+  exit 1
+fi
+exit 0

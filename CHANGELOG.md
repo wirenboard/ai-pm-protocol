@@ -15,6 +15,14 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Protocol minor fixes — accumulated session 2026-05-25** (feature `protocol-minors-2026-05-25`, lite-mode bugfix bundle):
+  - **Bug #1 — `check-review-trail.sh` smart fallback.** Скрипт сначала ищет `<branch-suffix>_review.md` (current behavior, primary path), затем при miss читает `topic:` из spec frontmatter `<branch-suffix>_spec.md` и пробует `<spec-topic>_review.md`. Покрывает случай переименования topic'а без переименования feature-branch'а. Branch-suffix takes precedence — invariant сохранён. 9 smoke tests в `scripts/tests/check-review-trail-smoke.sh.tmpl` (branch-suffix match / topic fallback / precedence / no-review / Verdict format / request-changes blocking).
+  - **Bug #2 — Verdict marker strict format prescribed.** `reviewer.md` Step 5.1 теперь явно запрещает суффиксы (`**Verdict v2:**`, `**Verdict (round 2):**`, `### Verdict:` и т.д.) — только литеральный `**Verdict:** approve|approve-with-comments|request-changes` в первых 50 строках. Versioning итераций — через frontmatter field `review_version: <N>` (integer). Parser в `check-review-trail.sh` уже strict — этот fix prescribes prompt'у соответствие parser'у.
+  - **Bug #3 — workaround documentation.** `CLAUDE.md.tmpl` и `reviewer.md` (Step 5.3) описывают workaround для Claude Code limitation: project-level agent'ы из `.claude/agents/*.md` могут не появляться в Agent tool's `subagent_type` enum. Workaround — `subagent_type: general-purpose` с inline role spec; в audit-артефактах честный `agent_type: general-purpose-with-role-spec`. Reproduce / file issue — отдельная operator-task.
+  - **Bug #4 — trail integrity для general-purpose workaround.** `reviewer.md` Step 5.2 prescribes frontmatter fields: `agent_type:` (`specialized-reviewer` | `general-purpose-with-role-spec` | `inline-roleplay`), `spawned_agents:` (пусто `[]` если реального spawn'а не было), optional `inline_roles:` (список ролей, которые один agent играл). Запрещено ложно заполнять `spawned_agents:` именами specialized reviewers — audit reads трейл буквально.
+
 ### Added
 
 - **`scripts/update-session-state.sh.tmpl` + `scripts/print-session-state.sh.tmpl` — session resume hint** (feature `session-resume-state`):
