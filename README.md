@@ -140,7 +140,7 @@ Profile auto-set на init — bootstrap-agent не спрашивает. Пол
 - **Статический security floor:** `check-security-floor.sh` — детерминированный grep по манифестам/коду/схемам на stripe/bcrypt/aes-gcm/PII. Output — ground truth для advisor'а
 - **Reprompt auto-trigger:** `check-skip-reprompts.sh` парсит state-файл на старте каждой сессии и перед commit'ом, печатает истёкшие skip-решения
 
-Подробности по каждому — `doc/development-protocol.md` и `doc/anti-patterns.md` (AP-1..AP-24).
+Подробности по каждому — `doc/development-protocol.md` и `doc/anti-patterns.md` (AP-1..AP-26, granular per-AP files в `doc/anti-patterns/`).
 
 ## Структура
 
@@ -148,7 +148,8 @@ Profile auto-set на init — bootstrap-agent не спрашивает. Пол
 ai-pm-protocol/
 ├── doc/
 │   ├── development-protocol.md   ← основной протокол
-│   ├── anti-patterns.md          ← AP-1..AP-24
+│   ├── anti-patterns.md          ← index AP-1..AP-26
+│   ├── anti-patterns/             ← per-AP files (AP-01.md..AP-26.md)
 │   ├── _templates/               ← скелеты артефактов
 │   └── _recipes/cache/           ← конфиги под разные стеки
 ├── .claude/agents/               ← все агенты

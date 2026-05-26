@@ -17,6 +17,14 @@
 
 ### Changed
 
+- **Anti-patterns granularization — Option C** (feature `prompt-economy`, PR-4):
+  - **Decision:** `doc/anti-patterns.md` (962 LOC) split на per-AP files в `doc/anti-patterns/AP-NN.md` (NN = 01..26). Master `doc/anti-patterns.md` → index/table-of-contents (~55 LOC).
+  - **Rationale:** агенты раньше Read'али весь 962-LOC файл если нужен был один AP (например AP-25). Теперь Read'ают только релевантный AP (~50-150 LOC). Экономия read scope variable, но существенная для frequent AP lookups.
+  - **Content preserved:** содержание каждого AP не урезано — только relocated в per-file structure. Cross-references между AP'ами (текстовые `AP-NN`) работают без изменений.
+  - **Frontmatter:** каждый AP-NN.md имеет `id`, `status` (active/deprecated/superseded), `severity` (critical/high/medium/low), `domain` (свободный tag).
+  - **References updated:** `README.md` — обновлена tree structure и каталог AP-1..AP-26.
+  - **No linter changes required:** `check-spec-discipline.sh` references AP'ы текстово (`AP-25`), не path-based.
+
 - **Agent consolidation 11 → 5** (feature `agent-consolidation`):
   - **Decision:** template сужает количество agent файлов с 11 до 5. Definite keepers: `project-bootstrap` / `planner` / `coder` / `reviewer` / `release-helper`.
   - **Rationale (Bug #3 — Claude Code subagent enum gap):** project-level agent'ы из `.claude/agents/*.md` не появляются reliably в Agent tool's `subagent_type` enum в running session. Primary reviewer'у было нужно spawn'ить 5 specialized reviewer'ов (protocol-compliance + 4 domains), но фактически делал sequential self-pass (с фейковым `agent_type: specialized-reviewer` в frontmatter). Отдельные файлы только маскировали это как «patterns reviewer reads». Inline sections — honest и одинаково функциональны.
