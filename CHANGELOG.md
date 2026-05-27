@@ -13,6 +13,22 @@
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **reviewer.md Step 0: pre-conditions + diff triage.** Reviewer теперь читает только `git diff --name-only` (~50 токенов) перед любым другим чтением и определяет tier (0/1/2/3). Tier 0 (CHANGELOG/README/gitignore) → reviewer не запускается, сообщает оркестратору что `[skip-review]` корректен. Tier 1/2 → baseline без foundational docs auto-load (~5-10k токенов сэкономлено per review). Tier 3 (feature code) → полный проход как раньше. Pre-condition: CI/линтеры должны быть green перед запуском reviewer; если нет — reviewer не запускается.
+- **reviewer.md: adversarial cases для Tier 1 scripts.** Для изменённых `.sh`/`.awk`/`.py` reviewer формулирует 3-5 граничных input cases (строка содержит паттерн поиска, пустой input, спецсимволы) и просит оркестратора прогнать их. Закрывает gap: статический анализ скриптов мог пропускать regex-коллизии (как awk-баг в PR C).
+- **reviewer.md: scope boundary в «Что ты НЕ делаешь».** Явно задокументировано что не входит в зону reviewer'а: стандарты кода (зона линтеров), полнота бизнес-логики в spec'е (зона planner + operator). Reviewer покрывает: deviation detection (spec→plan→code) + AP-compliance + cross-reference consistency.
+
+### Fixed
+
+- **CI review-trail: clarified `[skip-review]` vs `[review-override:]` semantics.** Раньше error message не разделял два маркера семантически — разработчики использовали `[review-override:]` для «review не нужен» (неверно). `[skip-review]` = review не проводился / не нужен; `[review-override:]` = review был, trace не committed. Обновлены error messages в CI workflow.
+- **CLAUDE.md.tmpl: content-based review decision rule.** Раньше не было явного правила когда `[skip-review]` корректен — AI решал ad-hoc. Теперь: инспектируй `git diff --name-only`; если diff содержит agent prompts / AP-*.md / CI+hooks / protocol docs / template scripts → reviewer обязателен; если только CHANGELOG / README-formatting / .gitignore без semantic impact / version bumps → `[skip-review]` уместен.
+- **release-helper.md: orchestrator fallback при blocked agent.** Если release-helper вернул «нет прав / blocked» — оркестратор выполняет шаги напрямую без делегирования.
+
+---
+
 ## [0.9.0] — 2026-05-27
 
 ### Added

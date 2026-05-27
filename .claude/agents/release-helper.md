@@ -100,6 +100,8 @@ Cache-friendly ordering (prompt-economy Option D):
 
 Тэг `vX.Y.Z` **не создаёшь сам** — оператор merge'ит release PR; **auto-tag workflow** (`.github/workflows/auto-tag-release.yml`) создаёт tag на merge commit автоматически. Manual fallback в § 7 если workflow упал.
 
+**Orchestrator fallback** (если этот агент вернул blocked / «нет прав»): orchestrator выполняет шаги напрямую без субагента — `git checkout -b release/vX.Y.Z`, правит CHANGELOG, `git commit`, `git push`, `gh pr create`. Те же шаги, без делегирования.
+
 ### 5. Deployment safety pre-flight (AP-18) — для MAJOR / breaking releases
 
 Если release включает breaking change (MAJOR bump или `BREAKING CHANGE:` в any commit footer), обязательно проверь и включи в PR body:

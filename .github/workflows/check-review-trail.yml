@@ -110,14 +110,17 @@ jobs:
             exit 0
           fi
 
-          # Для feature/chore/docs/fix branches — local trace gitignored,
-          # CI его не видит. Требуется [skip-review] или [review-override:] маркер.
           # Для release/* — committed JSON trace проверен выше; если упали сюда —
           # значит trace не лежит в .ai-pm/.reviews/<branch>.json.
+          # Для chore/docs/fix/* — review enforcement активен. Конвенция:
+          #   [skip-review]          — review не проводился (trivial change / explicit decision)
+          #   [review-override: why] — review проводился, trace не committed (bootstrap, deferred)
+          # Не путать: override = review был, skip = review не нужен/не проводился.
           echo "::error::Для ветки '$BRANCH' не найден committed review-trail в репе."
           echo "::error::Опции: (а) Stage E feature — committed doc/features/<topic>_review.md;"
           echo "::error::       (б) release/* — committed .ai-pm/.reviews/<branch>.json (gitignore exception);"
           echo "::error::       (в) chore/docs/fix — [skip-review] на отдельной строке HEAD commit body"
-          echo "::error::           (для trivial) или [review-override: reason] (для bootstrap/deferred)."
+          echo "::error::           (review не проводился / trivial) ИЛИ [review-override: reason]"
+          echo "::error::           (review проводился, trace не committed)."
           echo "::error::См. AP-16."
           exit 1
