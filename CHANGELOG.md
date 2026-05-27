@@ -17,6 +17,14 @@
 
 ---
 
+## [0.10.5] — 2026-05-27
+
+### Fixed
+
+- **bootstrap-greenfield + development-protocol: replace `.ai-pm/doc/` hardcodes with `<doc_root>/`.** В new-product mode `doc_root` равен `doc/` (top-level), а не `.ai-pm/doc/`. Добавлен `doc_root: doc` в YAML-сниппет инициализации state, явное правило «читай doc_root перед каждым Write», исправлены два hardcoded пути в handoff-сообщении. В `development-protocol.md` исправлены соответствующие hardcodes в checks personas-exist, mvp-scope-no-orphans, Stage E таблице, lifecycle scan, Stage D bootstrap list, branch-model. (82bb5ea)
+
+---
+
 ## [0.10.4] — 2026-05-27
 
 ### Documentation
