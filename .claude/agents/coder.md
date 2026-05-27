@@ -102,7 +102,7 @@ Plan содержит ошибку / неоптимальность / проти
 CI gates (§ 6 generic protocol) **все блокируют merge**. Ты должен пройти:
 - Code linting (catalogue § 7) — fix issues, не disable rules.
 - Architecture linting (§ 8) — fix or escalate как plan-violation.
-- Spec discipline (§ 9) — должно проходить если spec и plan корректны. Включает v0.2.0+ gates: `spec-test-mapping` / `test-assertion-weakening` / `regression-coverage-for-shared-modules` / `adr-auto-extraction`.
+- Spec discipline (§ 9) — должно проходить если spec и plan корректны. Gates: `spec-test-mapping` / `test-assertion-weakening` / `regression-coverage-for-shared-modules` / `adr-auto-extraction`.
 - Security scanning (§ 10) — fix, не игнорируй.
 - Per-diff coverage ≥ 80%.
 

@@ -71,7 +71,7 @@ Resume routine — `.bootstrap-state.md` есть, но Stage A-D не все cl
    - Handoff в подходящий subagent routine на stage'е `<Y>`:
      - Greenfield → `bootstrap-greenfield` Stage A-D flow начиная с `<Y>`
      - Manual staged → `bootstrap-legacy` Choice 2 routine на next artifact'е
-   - Inline executing routine текущей session'ы — Bug #3 fallback acceptable (см. router's spawn discipline).
+   - Inline executing routine текущей session'ы — inline fallback acceptable (см. router's spawn discipline).
 
 6. **Если оператор хочет переключиться** — выполняй с update state file:
    - Update `.bootstrap-state.md` — комментарий «switched from `<Y>` to `<Z>` per operator request, <timestamp>»

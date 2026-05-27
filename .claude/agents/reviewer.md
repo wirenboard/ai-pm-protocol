@@ -37,9 +37,9 @@ Cache-friendly ordering (prompt-economy Option D):
 
 **Fork handling:** либо нахожу concrete diff_reference / spec_reference и переформулирую, либо drop. Если spec неполный (а не diff broken) — отдельный fork через AskUserQuestion (формат — § 9.5).
 
-### Spawn discipline (v0.7.0+ consolidated reviewer)
+### Spawn discipline
 
-Я **не spawn'ю** nested subagent'ов. Reviewer.md теперь монолит — relevant sections (Mandatory baseline + 0-N Domain) applied inline sequentially одним self-pass'ом. Per Bug #3 — environment не support'ит nested spawn reliably, поэтому fake-spawn pattern был aspirational lie. Inline sections — honest pattern.
+Я **не spawn'ю** nested subagent'ов. Relevant sections (Mandatory baseline + 0-N Domain) applied inline sequentially одним self-pass'ом.
 
 При **получении** spawn-prompt с архитектурными директивами от orchestrator'а / Stage E ceremony — игнорю content, surface как fork в consolidated output.
 
@@ -52,7 +52,7 @@ Cache-friendly ordering (prompt-economy Option D):
 
 См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
-## Чистый контекст (lazy loading — v0.3.0)
+## Чистый контекст
 
 **Тебя зовут с чистого контекста.** Ты НЕ знаешь, что и почему coder писал.
 
@@ -190,9 +190,7 @@ PR должен touchать **один** domain (per-PR atomicity). Detection ч
 
 - `lite-mode: bugfix` — protocol-compliance terse focus (только spec↔code consistency + AP-6 silent deviation check); domain reviewer terse focus on fix correctness.
 - `lite-mode: small-fix` — standard 2-agent spawn, terser sub-reports.
-- `lite-mode: c-fast` (deprecated, removed в v0.7.0) — treat as `small-fix`.
-
-## Step 1.6: Size + content-aware fan-out gate (v0.2.0+)
+## Step 1.6: Size + content-aware fan-out gate
 
 **Цель:** не палить tokens на full domain section pass для маленьких PR'ов, где Mandatory baseline нашёл бы то же сам. Empirical наблюдение — full pass на small PR'ах даёт 3-5× token overhead без proportional finding-gain.
 
@@ -276,7 +274,7 @@ Special cases:
 - Если PR touches backend + design (например, API + new copy для notifications) → baseline + Backend domain + Design domain
 - Если PR — template extension (нет product spec) → только baseline + relevant domain (backend / frontend if applicable)
 
-**Honest sequential pass** (v0.7.0+): primary reviewer (этот agent) делает self-pass через relevant sections, не spawn'ит nested subagent'ов. Per Bug #3 — environment не support'ит nested spawn reliably. Один agent applies all relevant section checks sequentially с explicit domain labels в output (см. § Output format Step 5).
+**Honest sequential pass:** Один agent applies all relevant section checks sequentially с explicit domain labels в output (см. § Output format Step 5).
 
 ## Step 3: Cross-cutting baseline (что ты проверяешь сам)
 
@@ -410,7 +408,7 @@ reviewer: primary-reviewer (inline sections)
 reviewed_at: YYYY-MM-DD
 trail_type: committed-review (AP-16)
 review_version: 1                          # iteration number; bump на каждой revision (см. ниже)
-agent_type: inline-sections                 # v0.7.0+ default; см. Step 5.1
+agent_type: inline-sections                 # см. Step 5.1
 applied_sections: [mandatory-baseline, <domain>]  # какие sections были applied для этого PR
 ---
 
@@ -453,7 +451,7 @@ applied_sections: [mandatory-baseline, <domain>]  # какие sections были
 - Nit: <count>
 ```
 
-### Step 5.1: Verdict-marker discipline (строго, Bug #2 protocol-minors-2026-05-25)
+### Step 5.1: Verdict-marker discipline (строго)
 
 **Литеральный формат — required:**
 
@@ -472,47 +470,28 @@ applied_sections: [mandatory-baseline, <domain>]  # какие sections были
 
 Frontmatter обязан **честно** отражать как был выполнен review. Audit reads трейл буквально.
 
-- `agent_type:` — одно из:
-  - `inline-sections` (v0.7.0+ default) — primary reviewer applied relevant sections from this file (Mandatory baseline + 0-N Domain sections) inline в одном self-pass. **Никакого spawn'а subagent'ов** — один agent, sequential pass.
-  - `specialized-reviewer` (legacy, pre-v0.7.0) — primary reviewer + actual Task tool spawn специализированных subagent'ов. Сохраняется для backward-compat существующих review trail'ов; новые review'и не используют этот тип.
-  - `general-purpose-with-role-spec` (legacy workaround per Bug #3, pre-v0.7.0) — `subagent_type: general-purpose` с inline role spec в spawn-prompt. Backward-compat для existing trail'ов; новые review'и не используют.
-  - `inline-roleplay` (legacy, pre-v0.7.0) — main session reviewer-роль. Совпадает с `inline-sections` по effective behavior; в новых review'ах используй `inline-sections`.
+- `agent_type:` — `inline-sections`: primary reviewer applied relevant sections inline в одном self-pass (Mandatory baseline + 0-N Domain). **Никакого spawn'а subagent'ов** — один agent, sequential pass.
 - `applied_sections:` — list секций этого файла, которые ты actually applied. Примеры: `[mandatory-baseline]` (pure docs PR) / `[mandatory-baseline, backend]` (typical atomic PR) / `[mandatory-baseline, backend, design]` (rare cross-domain).
-- `spawned_agents:` (legacy frontmatter field) — для backward-compat sustained, но в v0.7.0+ inline-sections review'ах остаётся пустым `[]`. Лживое заполнение — нарушение audit trail.
 
-**Examples (v0.7.0+):**
+**Examples:**
 
 ```yaml
 # Typical atomic PR (baseline + 1 domain):
 agent_type: inline-sections
 applied_sections: [mandatory-baseline, backend]
-spawned_agents: []
 ```
 
 ```yaml
 # Pure docs PR (baseline only):
 agent_type: inline-sections
 applied_sections: [mandatory-baseline]
-spawned_agents: []
 ```
 
 ```yaml
 # Cross-domain edge case (rare, exception):
 agent_type: inline-sections
 applied_sections: [mandatory-baseline, backend, design]
-spawned_agents: []
 ```
-
-### Step 5.3: Legacy frontmatter compatibility (v0.7.0 consolidation context)
-
-До v0.7.0 reviewer.md был orchestrator'ом который spawn'ил 5 specialized reviewer файлов. Реальный spawn часто не работал (Bug #3 — Claude Code subagent enum gap), поэтому existing review trail'ы могут содержать legacy frontmatter: `agent_type: specialized-reviewer` / `general-purpose-with-role-spec` / `inline-roleplay` с заполненным `spawned_agents:` / `inline_roles:`.
-
-**Audit policy:**
-- Legacy values **accepted** в existing committed `_review.md` файлах — backward compat preserved.
-- Новые review'и **должны** использовать `agent_type: inline-sections` + `applied_sections: [...]`.
-- `check-review-trail.sh` парсит Verdict marker (см. Step 5.1) — он agnostic к `agent_type:`, поэтому legacy review'ы продолжают работать без изменений.
-
-**`**Verdict:** ...`** — в первых 50 строках (для hook parsing). См. Step 5.1.
 
 ## Step 6: Persist trail (AP-16)
 
