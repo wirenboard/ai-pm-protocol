@@ -15,7 +15,7 @@ on:
     branches: [main, master]
 
 permissions:
-  contents: write  # required для push tag
+  contents: write  # required для push tag + gh release create
 
 jobs:
   auto-tag:
@@ -56,18 +56,35 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create annotated tag
+      - name: Create annotated tag + GitHub Release
         if: steps.check.outputs.skip != 'true'
         env:
           VERSION: ${{ steps.version.outputs.version }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Annotated tag
           TAG_MSG=$(printf 'Release %s\n\n%s\n\nAuto-tagged по merge PR #%s (auto-tag-release.yml).\nManual fallback: git tag -a %s -m %s && git push origin %s\n' \
             "$VERSION" "$PR_TITLE" "$PR_NUMBER" "$VERSION" "'<one-line summary>'" "$VERSION")
           git tag -a "$VERSION" -m "$TAG_MSG"
           git push origin "$VERSION"
           echo "::notice::Tagged $VERSION on merge commit $(git rev-parse HEAD)"
+
+          # GitHub Release с CHANGELOG контентом для этой версии
+          # Формат секции: ## [X.Y.Z] или ## [X.Y.Z] — YYYY-MM-DD
+          VERSION_BARE="${VERSION#v}"
+          RELEASE_NOTES=$(awk "/^## \[${VERSION_BARE}\]/,/^## \[/" CHANGELOG.md \
+            | head -n -1 | tail -n +2 | sed '/^[[:space:]]*$/d' | head -100)
+          if [ -z "$RELEASE_NOTES" ]; then
+            RELEASE_NOTES="$PR_TITLE"
+          fi
+          gh release create "$VERSION" \
+            --title "Release $VERSION" \
+            --notes "$RELEASE_NOTES" \
+            --verify-tag
+          echo "::notice::GitHub Release $VERSION created"

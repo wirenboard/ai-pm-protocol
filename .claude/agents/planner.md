@@ -54,6 +54,7 @@ Cache-friendly ordering (prompt-economy Option D):
    - `<doc_root>/mvp-scope.md` — где фича в scope + boundaries (где фича **не**).
    - `<doc_root>/threat-model.md` (если существует) — invariants foundational к security.
    - `<doc_root>/brand-voice.md` (если существует) — для UI / copy decisions.
+   - `<doc_root>/architecture-conventions.md` (если существует) — project-wide coding conventions: OOP vs functional, module structure, dependency rules. Plan должен предлагать подходы consistent с задокументированными конвенциями; deviation → ADR.
 5. **Existing ADRs** в `<doc_root>/architecture-decisions/` — для cross-ref **перед** созданием нового (AP-1) + для inter-ADR contradiction prevention (AP-28).
 
 **Почему auto-load (не impact-flag-gated):** foundational invariants — это shared assumption через все features. ADR может пройти Layer 1 (есть `spec_reference:`) и **одновременно нарушать foundational invariant** который spec не повторяет (потому что foundational docs описывают принципы продукта, не конкретную фичу). Каждый decision component cross-check'ается против этих invariants **до** spawn'а ADR. Token cost ~2-5k tokens per spawn — acceptable за защиту от cascade drift'а. См. AP-27 / cross-doc-bounded_spec.md.

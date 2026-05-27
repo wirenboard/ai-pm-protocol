@@ -74,6 +74,7 @@ Cache-friendly ordering (prompt-economy Option D):
   - `<doc_root>/mvp-scope.md` — где фича в scope + boundaries
   - `<doc_root>/threat-model.md` (если существует) — foundational security invariants
   - `<doc_root>/brand-voice.md` (если существует) — для UI / copy decisions
+  - `<doc_root>/architecture-conventions.md` (если существует) — project-wide coding conventions: OOP vs functional, module structure, dependency rules, approved/forbidden patterns. Нарушение задокументированного convention → `[blocking]` finding (architectural drift)
 - **All ADRs touched в текущем PR** (`git diff main...HEAD --name-only -- '*architecture-decisions/*.md'`) — для inter-ADR pairwise contradiction check (AP-28)
 - **`<doc_root>/anti-patterns.md`** — для scope creep (AP-1 / AP-29) и plausibility bias (AP-30) detection
 

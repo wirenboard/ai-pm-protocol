@@ -32,16 +32,24 @@
 
 ### 1. Ревью до push'а
 
-Когда coder-агент закончил, в той же сессии вы запускаете reviewer-агента — отдельного, со своим промптом. Он читает diff и пишет файл `_review.md` с вердиктом: `approve` / `approve-with-comments` / `request-changes`.
+Когда coder-агент закончил, в той же сессии вы запускаете reviewer-агента — отдельного, со своим промптом.
 
-Файл коммитится в ветку. Дальше две проверки:
+Reviewer сначала смотрит что именно изменилось (50 токенов), и только потом решает насколько глубоко копать:
+
+- **CHANGELOG / README / .gitignore** — reviewer не запускается, `[skip-review]` по конвенции
+- **Scripts, CI-воркфлоу, agent prompts** — baseline pass + adversarial test cases для скриптов
+- **Feature code** — полный проход: spec → plan → code alignment, domain section (backend / frontend / design / database)
+
+Pre-condition: CI и линтеры должны быть зелёными до reviewer. Стандарты (форматирование, типы, синтаксис) — зона линтеров; reviewer проверяет отклонение от спеки и architectural conventions.
+
+Reviewer пишет файл `_review.md` с вердиктом: `approve` / `approve-with-comments` / `request-changes`. Дальше две проверки:
 
 - **Локально:** pre-push hook читает вердикт. Нет файла или `request-changes` — push не уходит.
-- **На сервере:** тот же скрипт в CI. Если локально как-то проскочило — merge заблокирован branch protection'ом.
+- **На сервере:** тот же скрипт в CI. Если локально как-то проскочило — merge заблокирован.
 
 Никаких «AI сказал, что всё ок» — есть машинно-читаемый вердикт и две независимые проверки.
 
-Обойти можно — но честно: маркером `[review-override: <причина>]` в коммите. Останется в истории.
+Обойти можно — но честно: маркером `[review-override: <причина>]` в коммите (review был, trace не committed) или `[skip-review]` (review не нужен для этого типа изменений). Остаётся в истории.
 
 Подробности — `doc/anti-patterns.md` § AP-16.
 
