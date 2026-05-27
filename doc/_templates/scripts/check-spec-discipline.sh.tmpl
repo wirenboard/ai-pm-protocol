@@ -753,14 +753,22 @@ check_adr_decision_component_bounded() {
         comp_body=$(awk '/^##[[:space:]]+Components/{flag=1; next} /^##[[:space:]]/{flag=0} flag' "$adr" 2>/dev/null)
       fi
 
-      # Heuristic: каждая строка с `` `identifier` `` должна иметь reference indicator
-      # (`<doc>.md` substring, `ADR-NNNN` ref, citation marker «»):
+      # Heuristic: каждая строка с `` `identifier` `` должна иметь reference indicator.
+      # Structured forms only — избегаем false-positive на plain prose substring'ах
+      # (e.g. слово «specification» не должно matches `spec`; «replanning» не matches `plan`).
+      # Accepted indicators:
+      #   - `<doc>.md` (markdown file reference, word-bounded)
+      #   - `ADR-NNNN` (ADR id ref, word-bounded)
+      #   - § anchor citation (Unicode section sign)
+      #   - citation markers `«...»` / `"..."` / `'...'` (quoted source phrase)
+      #   - whole-word foundational doc names (vision/positioning/mvp-scope/threat-model/brand-voice)
+      #     с границами \b — не substring match
       local missing_refs=0
       while IFS= read -r line; do
         # Только строки с backtick-named identifier (component candidate)
         if echo "$line" | grep -qE '`[^`]+`'; then
-          # Должна содержать reference indicator
-          if ! echo "$line" | grep -qE '(\.md|ADR-[0-9]+|spec|plan|vision|positioning|mvp-scope|threat-model|brand-voice|«[^»]+»|"[^"]+")'; then
+          # Должна содержать reference indicator (structured form)
+          if ! echo "$line" | grep -qE '(\.md\b|\bADR-[0-9]+\b|§|«[^»]+»|"[^"]+"|'\''[^'\'']+'\''|\b(vision|positioning|mvp-scope|threat-model|brand-voice)\b)'; then
             missing_refs=$((missing_refs + 1))
           fi
         fi
