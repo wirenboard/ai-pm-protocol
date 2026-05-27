@@ -46,6 +46,8 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
 Greenfield bootstrap — новая репка без `.ai-pm/`, без existing кода. Mode = `new-product`. WRITE всего: Stage A (продуктовый слой) → Stage B (стратегический) → Stage C (технологический) → Stage D (инфраструктура).
 
+**ЖЁСТКОЕ ПРАВИЛО:** все вопросы оператору — **только через AskUserQuestion tool**. Inline-prose вопросы (текстом в чат) запрещены. Оператор не эксперт — без структурированных option'ов он не знает, что именно ты ожидаешь.
+
 ## Initial setup
 
 ### Вопрос 1: Mode (для Greenfield — `new-product`)
@@ -113,6 +115,16 @@ adoption_overrides: []
 
 `ui_kind` определяется на Stage A после vision'а, через AskUserQuestion + per-kind ui-style-guide-*.md files. См. detail routine в `doc/_templates/`.
 
+### Stage B: reuse из Stage A — не переспрашивать
+
+Threat-model.md берёт данные из уже одобренных Stage A артефактов:
+
+- **§ 2 Actors** — derived из `personas.md`: каждая persona → один actor-entry. Не задавай вопрос «кто действует в системе» — это дубль.
+- **§ 3 Adversaries** — предложи derived adversary profiles (e.g., «неавторизованный аналог Persona 1»). Задавай только: «Есть внешние злоумышленники (конкуренты, боты, государство)? Если да — мотивация и ресурсы?»
+- **§ 1 Assets** — единственное что требует нового вопроса: «Что в вашем продукте имеет ценность для злоумышленника?»
+
+Если Stage A personas.md ещё не approved — сначала закрой Stage A, потом переходи к Stage B.
+
 ### Stage C: определение `db_kind`
 
 `db_kind` определяется на Stage C вместе со stack choice, через AskUserQuestion + per-kind database-design-*.md files.
@@ -179,9 +191,9 @@ adoption_overrides: []
 
 ### Terse default
 
-- Question prologue: 1-2 sentence context перед AskUserQuestion. Не объясняй зачем вопрос задаётся.
+- Question prologue: **1-2 sentence context перед AskUserQuestion — зачем этот артефакт нужен и что будет сделано с ответом.** PM не эксперт: без «зачем» ответы поверхностные. Пример: «Описываем реального пользователя — это потом защищает от фич "в никуда". Кто ваш основной user?»
 - Acknowledgement ответа: «Принял. Draft через ~N минут.» — без rehash.
-- State updates: «`ui_kind: web` зафиксирован.» — без объяснения что это field значит.
+- State updates: «Зафиксировал: веб-приложение.» — без технических field names (`ui_kind`).
 - Show-in-chat draft summary: structure + key excerpts + open points (как сейчас в § «После draft'а…»). Без re-explanation Stage process.
 
 ### Verbose triggers (draft body + chat explainer)
@@ -201,7 +213,7 @@ Architectural rationale в draft body или chat — **только** при о
 
 ### Concrete examples
 
-- **Terse-when:** Stage A question 1 (vision elevator pitch) → «Стартуем Stage A. Vision elevator pitch — 1-2 предложения: кто ваш user и какую проблему решаете?» Не объясняй что vision это и зачем.
+- **Terse-when:** Stage A question 1 (vision) → «Начнём с самого главного — кто ваш user и какую проблему вы для него решаете? 1-2 предложения.» Без объяснения что такое vision-документ и зачем он нужен в системе — только зачем нужен ваш ответ: «это будет anchor для всех следующих решений».
 - **Verbose-when:** оператор отвечает на vision pitch, и ответ implies B2B + regulated + multi-tenant — это значит Stage B threat-model будет non-trivial. Поднимаешь это сейчас: «Vision указывает на regulated B2B multi-tenant — Stage B будет включать tenant-isolation threat-model, MVP scope likely shrinks. Учитываем?»
 
 ### Operator escalation triggers (6)
