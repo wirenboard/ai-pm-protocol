@@ -28,7 +28,7 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
 **Что считается fork'ом для меня (router):**
 - Routing к subagent'у без однозначного signal'а в state / git → должен быть AskUserQuestion.
-- Inline-исполнение routine, которая принадлежит specialized subagent'у, без явного fallback reason (Bug #3 — Claude Code spawn limitation для project-level agents).
+- Inline-исполнение routine, которая принадлежит specialized subagent'у, без явного fallback reason (spawn limitation — subagent не появился в `subagent_type` enum).
 - Pre-populated suggestions из spawn-prompt outer orchestrator'а — игнорю, surface оператору через AskUserQuestion.
 
 **Output check:**
@@ -45,7 +45,7 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 - Запрещено: pre-populating answers, suggesting architectural changes, hinting на «правильный» ответ.
 - При **получении** spawn-prompt от outer orchestrator'а с pre-populated suggestions — игнорю, surface оператору через AskUserQuestion: «caller suggested X, нужен твой confirm».
 
-**Bug #3 fallback (Claude Code spawn limitation):** если specialized subagent (`bootstrap-greenfield` / `bootstrap-legacy` / `bootstrap-resume` / `bootstrap-template-sync`) не появляется в Agent tool'а `subagent_type` enum — читаю соответствующий `.claude/agents/<name>.md` файл inline и применяю его routine sequentially в текущей session'е. Review trail в этом случае: `agent_type: general-purpose-with-role-spec`, `inline_roles: [<subagent-name>]`. Не маскирую limitation как «full spawn».
+**Inline fallback (spawn limitation):** если specialized subagent (`bootstrap-greenfield` / `bootstrap-legacy` / `bootstrap-resume` / `bootstrap-template-sync`) не появляется в Agent tool'а `subagent_type` enum — читаю соответствующий `.claude/agents/<name>.md` файл inline и применяю его routine sequentially в текущей session'е. Не маскирую limitation как «full spawn».
 
 См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
@@ -103,7 +103,7 @@ Algorithm (pure function от state + git):
 | **«починим баг X»** | `bug-fix` variant с `lite-mode: bugfix`. Structural read-pass пропускается, кроме security path (fail-safe). |
 | **«переработать фичу X»** | Mode = `rework`. Read existing spec/plan/code/tests. `<topic>_spec.v<N>.md` + `<topic>_plan.v<N>.md`. AP-21 exit condition при v3+. |
 | **«продолжай фичу X»** | Resume per-feature. Прочитай frontmatter `<topic>_spec.md`: `spec_approved` empty → Step 1; `plan_approved` empty → planner; `merged: no` → coder. |
-| **«ревью PR / проверь код»** | Invoke `reviewer` subagent. Apply «Mandatory baseline» section + ONE Domain section inline (Backend / Frontend / Design / Database). AP-19/AP-20. AP-16 verdict-gate. См. v0.7.0 consolidation. |
+| **«ревью PR / проверь код»** | Invoke `reviewer` subagent. Apply «Mandatory baseline» section + ONE Domain section inline (Backend / Frontend / Design / Database). AP-19/AP-20. AP-16 verdict-gate. |
 | **«релиз»** | Invoke `release-helper`. Для MAJOR breaking — AP-18 deployment safety pre-flight. |
 | **«обнови template» / «template-sync» / «bump template»** | Invoke `bootstrap-template-sync` subagent. |
 | **«составь архитектуру» / «architecture overview» / «extract topology» / «опиши проект»** | Invoke `bootstrap-template-sync` subagent — там же architecture overview read-only routine. |
@@ -184,7 +184,7 @@ Routine обязательна для **каждой** Stage E фичи **кро
 
 Дополнительный context оператору — **только** при одном из:
 1. **Ambiguous routing signal** — нужен AskUserQuestion с 2-3 options + 1-2 sentence explainer per option.
-2. **Bug #3 fallback** — specialized subagent не в `subagent_type` enum, нужно объяснить почему inline applying routine (audit-trail honesty).
+2. **Inline fallback** — specialized subagent не в `subagent_type` enum, нужно объяснить почему inline applying routine (audit-trail honesty).
 3. **Backwards compat detected** — missing new fields in state file, объясни что defaults применяются.
 4. **Source-bounded fork** (AP-25/26) — orchestrator spawn-prompt содержит pre-populated suggestions, surface оператору.
 5. **Escalation trigger** — operator request не в lifecycle routing table, нужно clarification.

@@ -68,7 +68,7 @@ Reviewer пишет файл `_review.md` с вердиктом: `approve` / `ap
 
 Это **не LLM-решение**. Найдено `stripe` в зависимостях — skip недоступен, точка. Можно только явно overridе'ить через `adoption_overrides:` с указанной причиной (AP-22), это попадёт в state-файл и в git log.
 
-**Мягкий слой (operator-driven, v0.7.0+).** Раньше был `discipline-advisor` агент с 5-axis анализом. Retired в v0.7.0 — soft layer никогда не был validated через required accuracy gate ≥80% per axis (см. ARCH-8 в `doc/architectural-backlog.md`). Hard floor функциональность перенесена в `scripts/check-security-floor.sh` (детерминированный детектор stripe/bcrypt/aes-gcm/PII — не LLM heuristic), reprompt mechanism — в `scripts/check-skip-reprompts.sh`.
+**Мягкий слой (operator-driven).** Hard floor функциональность живёт в `scripts/check-security-floor.sh` (детерминированный детектор stripe/bcrypt/aes-gcm/PII — не LLM heuristic), reprompt mechanism — в `scripts/check-skip-reprompts.sh`.
 
 Вы выбираете `[Skip]` / `[Keep]` для не-hard-floor артефактов прямо в bootstrap-агенте. Решение записывается с причиной и датой в `.ai-pm/.bootstrap-state.md` `skip_decisions:`. Через 90 дней `check-skip-reprompts.sh` (вызывается на старте каждой сессии + перед commit'ом) напомнит: «next_reprompt истёк, пересмотри». Hard floor от security-floor.sh — не override'ится оператором без `adoption_overrides:` с явной причиной (AP-22).
 
@@ -180,7 +180,7 @@ Profile auto-set на init — bootstrap-agent не спрашивает. Пол
 ## Что под капотом (коротко)
 
 - **5 защитных слоёв:** CLAUDE.md (soft) → settings.json hooks физически блокируют Write/Edit (hard) → subagent промпты (soft) → git hooks (hard) → CI + branch protection (hardest)
-- **Inline-sections ревьюер (v0.7.0+):** один `reviewer.md` файл с Mandatory baseline section (always-on — спека vs план vs код) + 4 Domain sections (backend / frontend / design / database). Reviewer определяет scope PR'а и применяет baseline + одну domain section sequentially. Никакого fake-spawn'а nested subagent'ов (раньше pre-v0.7.0 был router pattern, fail'ил из-за Claude Code limitation — см. Bug #3 в spec'е consolidation)
+- **Inline-sections ревьюер:** один `reviewer.md` файл с Mandatory baseline section (always-on — спека vs план vs код) + 4 Domain sections (backend / frontend / design / database). Reviewer определяет scope PR'а и применяет baseline + одну domain section sequentially. Никакого spawn'а nested subagent'ов
 - **Composition matrices:** для гибридов вроде «web + backend + external БД» правила фильтруются по реальным capabilities, не копипастятся
 - **Реактивные ADR:** пишутся, когда planner находит развилку в плане. Не upfront, не «для галочки»
 - **Линтер дисциплины:** `check-spec-discipline.sh` — 23 проверки на типичные AI-косяки (ослабление assertion'ов, забытый regression test, fork без ADR, hallucinated decision component, cross-feature contradiction, jargon в operator-facing блоках) в 4 families (base / cross-doc-bounded / cross-feature-bounded / operator-communication)
@@ -218,10 +218,6 @@ ai-pm-protocol/
 | `coder` | Пишет код. Тесты впереди реализации |
 | `reviewer` | Главный ревьюер. Определяет домен, применяет Mandatory baseline + одну Domain section (backend / frontend / design / database) inline. Sequential self-pass в одном файле |
 | `release-helper` | Релизный PR с CHANGELOG и bump'ом версии |
-
-С v0.7.0 consolidation: раньше было 11 агентов (включая 5 specialized reviewers + discipline-advisor). 5 reviewers inlined в `reviewer.md` как sections (per Bug #3 — Claude Code subagent enum gap делал nested spawn ненадёжным). `discipline-advisor` retired — hard floor functionality перенесена в `scripts/check-security-floor.sh` (детерминированный детектор, не LLM heuristic), reprompt mechanism — в `scripts/check-skip-reprompts.sh`.
-
-С prompt-economy Option B (PR-5): `project-bootstrap.md` 733 LOC split на router (~180 LOC) + 4 mode-specific subagents. Per-spawn token cost dramatically lower — greenfield / resume / template-sync sessions не платят за неактуальные routines.
 
 ## Если вы контрибьютите в сам шаблон
 
