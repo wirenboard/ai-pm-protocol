@@ -40,6 +40,13 @@ template_version_applied: v0.X.Y
 # none — только trust_profile + stack + Stage D hooks (legacy-skip adoption)
 foundation_completeness: complete | partial | minimal | none
 
+# AP-31 spec-staleness threshold (Layer 3 cross-feature anti-drift).
+# Compared с git log timestamps на code paths fixture (implied из affects_features
+# или topic-name heuristic) vs spec `last_modified:` / `spec_approved:`.
+# Per-product tuning: daily-deploy → 7; quarterly cadence → 90+; default 30.
+# Fallback hardcoded 30 если поле отсутствует. См. AP-31.
+staleness_days: 30
+
 # Adoption path — как проект попал в текущее состояние foundation.
 # greenfield — Stage A-D formal с нуля (через new-product mode)
 # legacy-quick — Tier 0 auto-extract при legacy adoption (5-10 min)

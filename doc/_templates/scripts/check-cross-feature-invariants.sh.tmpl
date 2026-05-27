@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# scripts/check-cross-feature-invariants.sh
+#
+# Thin wrapper делегирующий к check-spec-discipline.sh family `cross-feature-bounded`.
+# Per spec acceptance criteria («check-cross-feature-invariants.sh существует»);
+# per Operator decision Q1 (plan.md): family inside check-spec-discipline.sh — single
+# CI invocation + reused override marker pattern + reused --regression infra.
+#
+# Запускает оба check'а Layer 3 (AP-31 spec-staleness + AP-33 cross-feature-invariant)
+# через единый entry point.
+
+set -e
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Support both `.sh` (product, after template-sync) and `.sh.tmpl` (template repo development).
+discipline_script="$script_dir/check-spec-discipline.sh"
+if [ ! -f "$discipline_script" ] && [ -f "$discipline_script.tmpl" ]; then
+  discipline_script="$discipline_script.tmpl"
+fi
+
+bash "$discipline_script" --check spec-staleness
+bash "$discipline_script" --check cross-feature-invariant
