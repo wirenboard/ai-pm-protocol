@@ -4,8 +4,12 @@
 .DS_Store
 
 # Reviewer local traces (AP-16 local-trace mode — never committed)
+# Exception: release-*.json traces ARE committed — release PR'ы видны другим
+# контрибьюторам, CI workflow читает trace из репы (см. § 9 finding в audit
+# 2026-05-27 — gitignored trace + CI check were inconsistent for release PR'ов).
 .reviews/
 .ai-pm/.reviews/
+!.ai-pm/.reviews/release-*.json
 
 # Claude Code worktree scratch dirs
 .claude/worktrees/

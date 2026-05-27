@@ -61,6 +61,15 @@ jobs:
             esac
           }
 
+          parse_verdict_json() {
+            if command -v jq >/dev/null 2>&1; then
+              jq -r '.verdict // "unknown"' "$1" 2>/dev/null || echo "unknown"
+            else
+              grep -oE '"verdict"[[:space:]]*:[[:space:]]*"[^"]+"' "$1" 2>/dev/null \
+                | sed -E 's/.*"([^"]+)"$/\1/' | head -1 || echo "unknown"
+            fi
+          }
+
           # Committed _review.md для Stage E feature (feature/<topic> или feat/<topic>)
           TOPIC=""
           case "$BRANCH" in
@@ -77,6 +86,23 @@ jobs:
             done
           fi
 
+          # Committed JSON trace для release/* branches (gitignore exception
+          # `!.ai-pm/.reviews/release-*.json` — release PR'ы видны другим
+          # контрибьюторам, trace в репе для CI visibility). Это Layer 5-only
+          # check: pre-push hook (Layer 4) НЕ покрывает release/* branches
+          # отдельным case-match, для них review-trail enforcement только
+          # здесь. Не для feature/chore/docs/fix — для них local-only режим,
+          # `[skip-review]` / `[review-override:]` marker'ы требуются.
+          if [[ "$BRANCH" == release/* ]]; then
+            TRACE_NAME=$(echo "$BRANCH" | tr '/' '-')
+            TRACE_FILE=".ai-pm/.reviews/${TRACE_NAME}.json"
+            if [ -f "$TRACE_FILE" ]; then
+              VERDICT=$(parse_verdict_json "$TRACE_FILE")
+              handle_verdict "$VERDICT" "$TRACE_FILE"
+              exit $?
+            fi
+          fi
+
           # Нет trail вообще — explicit operator-override (для bootstrap / chicken-egg)
           if echo "$HEAD_BODY" | grep -qE '^\[review-override:[[:space:]]*[^]]+\][[:space:]]*$'; then
             REASON=$(echo "$HEAD_BODY" | grep -oE '^\[review-override:[[:space:]]*[^]]+\]' | sed -E 's/^\[review-override:[[:space:]]*//; s/\]$//')
@@ -84,11 +110,14 @@ jobs:
             exit 0
           fi
 
-          # Для не-Stage-E (chore/docs/fix) — local trace gitignored, поэтому
+          # Для feature/chore/docs/fix branches — local trace gitignored,
           # CI его не видит. Требуется [skip-review] или [review-override:] маркер.
+          # Для release/* — committed JSON trace проверен выше; если упали сюда —
+          # значит trace не лежит в .ai-pm/.reviews/<branch>.json.
           echo "::error::Для ветки '$BRANCH' не найден committed review-trail в репе."
-          echo "::error::Опции: (а) Stage E фича — committed doc/features/<topic>_review.md;"
-          echo "::error::       (б) chore/docs/fix — [skip-review] на отдельной строке HEAD commit body"
+          echo "::error::Опции: (а) Stage E feature — committed doc/features/<topic>_review.md;"
+          echo "::error::       (б) release/* — committed .ai-pm/.reviews/<branch>.json (gitignore exception);"
+          echo "::error::       (в) chore/docs/fix — [skip-review] на отдельной строке HEAD commit body"
           echo "::error::           (для trivial) или [review-override: reason] (для bootstrap/deferred)."
           echo "::error::См. AP-16."
           exit 1

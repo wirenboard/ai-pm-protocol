@@ -54,6 +54,12 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
 1. **Read pinned version** — `.ai-pm/.bootstrap-state.md` → `template_version_applied` (или `template_version`)
 
+   **Pre-v0.8.0 baseline policy:** если pinned version < v0.8.0 (or absent) — **incremental migration не supported**. Schema bootstrap-state.md между v0.x и v0.8.0 эволюционировала без migration tool'инга; рисково. Скажи оператору:
+
+   > Pinned version (`<X.Y.Z>`) старше migration baseline (v0.8.0). Incremental template-sync не гарантирует correct state schema mapping. Опции: (а) **fresh re-bootstrap** — backup existing `.ai-pm/`, удали, `init.sh` + `project-bootstrap`, восстанови decisions из backup'а вручную; (б) **manual cherry-pick** — operator + AI читают template-evolution.md per-version, применяют изменения руками без routine; (в) **abort sync** — оставайся на pinned version, accept что новые template features недоступны. Recommended: (а) если product young (< 10 PR'ов с момента bootstrap'а), (б) если product mature и cost-of-rebootstrap высокий. AskUserQuestion с этими тремя options.
+
+   Если pinned >= v0.8.0 — продолжай routine.
+
 2. **Determine target version** — AskUserQuestion: «target = latest tag (stable) или main HEAD (bleeding edge, unreleased)?». Default — latest tag (более safe для production).
 
 3. **Bump submodule к target:**
@@ -89,10 +95,12 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
    - Сравни interface (stdin format, env vars, argv) — мог быть silent break #49
    - Если product version корректнее template version — flag, не replace
 
-10. **Group discrepancies в logical PR'ы:**
+10. **Group discrepancies в logical PR'ы + determine ORDER:**
     - **НЕ один мега-PR.** Split по concern'ам: infrastructure (scripts/hooks/CI) → schema (state + CLAUDE.md) → docs (Stage A-C artifacts) → features cleanup
     - Easier review, easier rollback при проблеме
     - Каждый PR — самодостаточный, может быть merged отдельно
+    - **MAJOR bumps (target major > pinned major, e.g., v0.8.0 → v1.0.0) — explicit order requirement.** Conformance report **обязан** содержать `## Migration order` section с rationale почему конкретный порядок (e.g., «schema rename A→B must precede product-code refactor → schema PR first; legacy compat shim TTL = N PR'ов»). Rationale: MAJOR per SemVer = breaking changes, без явного order'а operator не может safely interleave product feature PR'ы между migration PR'ами.
+    - **MINOR/PATCH bumps** — order обычно flexible, можно не документировать explicitly. Но если CHANGELOG entry конкретной version описывает inter-PR dependency (e.g., schema field added в PR-1 используется PR-2 hook'ом) — отметить.
 
 11. **Output conformance report** (перед PR'ами) — operator решает идти ли в migration:
    ```markdown
@@ -100,6 +108,7 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
    Project: <name>
    Pinned: v0.X.Y → Target: v0.Z (HEAD)
+   Bump type: <PATCH|MINOR|MAJOR>
 
    ## Discrepancies found (N)
 
@@ -118,11 +127,15 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
    ### Custom modifications (do not auto-overwrite)
    - ...
 
-   ## Proposed PR plan
+   ## Proposed PR plan + migration order
 
-   1. chore: ... (infrastructure)
-   2. chore: ... (schema)
+   1. chore: ... (infrastructure) — **must precede** schema PR'ы потому что <reason>
+   2. chore: ... (schema)         — **must precede** docs/features потому что <reason>
    3. chore: ... (docs)
+   4. chore: ... (features cleanup) — flexible position, может быть параллельно с #3
+
+   <!-- MAJOR bumps: order section mandatory. MINOR/PATCH: укажи inter-PR
+        dependencies или скажи «order flexible». -->
 
    Estimated effort: <N PR'ов, ориентировочно X commits each>
    ```

@@ -15,7 +15,16 @@
 
 ## [Unreleased]
 
-<!-- New entries go here. Move to a new ## [X.Y.Z] section at release time. -->
+### Added
+
+- **CLAUDE.md.tmpl Step 2 — explicit state-marker→step mapping table.** Закрывает gap: раньше Step 2 имел compressed paragraph «`_spec.md` без `_plan.md` → Step 2 pending; ...» — orchestrator восстанавливал lifecycle state по неявным паттернам, мог промахнуться. Теперь tabular mapping 8 rows покрывает все markers (spec/plan/branch/PR/review/acceptance/rework), explicit resume action per row, caveat про gitignored trace на fresh checkout для chore/docs branches.
+- **CLAUDE.md.tmpl — subagent-killed mid-flight recovery contract.** Закрывает gap: orchestrator не имел документированного contract'а что делать если subagent killed (user Ctrl-C / context truncation / sam orchestrator ошибся). Новая секция формализует 5-step recovery: git как ground truth (не agent's last message) → diff с expected work → relaunch с explicit context.
+- **bootstrap-template-sync.md step 1 — Pre-v0.8.0 baseline policy.** Закрывает gap: template schema эволюционировала между v0.x и v0.8.0 без migration tool'инга. Если downstream product на pinned < v0.8.0 пытается incremental sync — router может тихо использовать defaults или сломаться. Теперь agent offers 3 options оператору (fresh re-bootstrap / manual cherry-pick / abort) с recommendation criteria.
+- **bootstrap-template-sync.md step 10 — explicit Migration ORDER requirement для MAJOR bumps.** Закрывает gap: на MAJOR bump conformance report показывал discrepancies grouped by concern, но не диктовал ORDER применения PR'ов — operator не мог safely interleave product feature PR'ы между migration PR'ами. Теперь MAJOR (target major > pinned major) обязывает agent написать `## Migration order` section с rationale per inter-PR dependency.
+
+### Fixed
+
+- **CI review-trail visibility для release/* branches.** Closes gap discovered live in PR #79 review-trail handling: PR #77 сделал `.ai-pm/.reviews/*.json` полностью gitignored (local-trace mode), но CI workflow check-review-trail.yml для не-Stage-E branches требовал committed trace либо `[skip-review]` / `[review-override:]` marker. Release PR'ы могли пройти только через override marker, semantically стрейчя «override» beyond intent (review был сделан и approve'нул, но trace не visible CI). Исправление: gitignore exception `!.ai-pm/.reviews/release-*.json` + CI workflow читает JSON trace для `release/*` branches как third option (Layer 5-only check, pre-push hook release/* не покрывает). Feature/chore/docs/fix branches — local-only режим preserved, marker'ы по-прежнему требуются.
 
 ---
 
