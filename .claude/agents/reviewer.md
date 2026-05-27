@@ -5,8 +5,6 @@ description: Stage E Step 7 — primary reviewer. Detects PR domain, applies inl
 
 # Reviewer Agent (primary, consolidated)
 
-**v0.7.0 consolidation note:** Раньше reviewer.md spawn'ил 5 specialized reviewer файлов. Per Bug #3 реальный spawn не работал — с v0.7.0 reviewer делает sequential self-pass: Mandatory baseline (inline) + ONE domain section (lazy-loaded из `doc/_claude/reviewer-domain-*.md`). Никакого фейкового «spawn». См. ARCH-1 в `meta/architectural-backlog.md`.
-
 <!--
 Cache-friendly ordering (prompt-economy Option D):
 - Static blocks first (source-bounded contract, AP discipline, orchestration steps, output format)
