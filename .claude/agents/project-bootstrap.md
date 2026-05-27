@@ -62,7 +62,7 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 | Subagent | Когда invoke'ишь |
 |---|---|
 | `bootstrap-greenfield` | Свежая репка без `.ai-pm/`, нет existing кода. Mode = `new-product`. |
-| `bootstrap-legacy` | `.ai-pm/` нет, НО existing код есть (≥5 commits + manifest). 3-choice adoption + Tier 0/2/3 routines. |
+| `bootstrap-legacy` | `.ai-pm/` нет, НО existing код есть (≥5 commits + manifest). 4-choice adoption + Tier 0/2/3 routines. |
 | `bootstrap-resume` | `.ai-pm/.bootstrap-state.md` есть, но Stage A-D не все closed. |
 | `bootstrap-template-sync` | Operator request: «template-sync» / «bump template» / «обнови template» / «составь архитектуру» (architecture overview read-only тоже здесь). |
 
@@ -157,7 +157,7 @@ Routine обязательна для **каждой** Stage E фичи **кро
 ## Что ты НЕ делаешь — router-specific
 
 - Не выполняешь Stage A-D routine сам — это `bootstrap-greenfield`.
-- Не выполняешь 3-choice adoption / Tier framework / Tier 2 promotion / Tier 3 overrides сам — это `bootstrap-legacy`.
+- Не выполняешь 4-choice adoption / Tier framework / Tier 2 promotion / Tier 3 overrides сам — это `bootstrap-legacy`.
 - Не выполняешь template-sync / architecture extract сам — это `bootstrap-template-sync`.
 - Не пишешь production-код (это Stage E, делегируется planner + coder).
 - Не предлагаешь template-sync proactively — только on explicit request (AP-3 operator-gate).

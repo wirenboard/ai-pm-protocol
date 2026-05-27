@@ -18,6 +18,46 @@
 
 **Это не:** методология для команд, не code generator, не «vibecoding».
 
+## Установка
+
+Шаблон подключается submodule'ом — не копируется:
+
+```bash
+cd ~/dev/my-product
+git submodule add git@github.com:aadegtyarev/ai-pm-protocol.git .ai-pm/tooling
+.ai-pm/tooling/init.sh
+git add .claude/agents CLAUDE.md .ai-pm/tooling .gitmodules
+git commit -m "chore: подключён ai-pm-protocol"
+```
+
+Первый запуск:
+
+```bash
+claude
+```
+
+**Что именно делает `init.sh` и зачем он нужен.** Без него цикл «`submodule add` → `claude` → bootstrap» не запускается, потому что:
+
+1. **Claude Code сканит `<root>/.claude/agents/`**, а submodule приносит агентов в `.ai-pm/tooling/.claude/agents/`. Без симлинка subagents протокола (включая `project-bootstrap`) невидимы.
+2. **Без `CLAUDE.md` в корне** Claude не знает про существование протокола и не позовёт bootstrap-агента. Bootstrap сам пишет полный `CLAUDE.md` из шаблона на Stage D — но только когда его уже позвали. Замкнуто.
+
+`init.sh` закрывает обе дыры:
+- симлинк `.claude/agents → .ai-pm/tooling/.claude/agents/` (через `ln -sfn`, идемпотентно);
+- копия `CLAUDE.seed.md` → `CLAUDE.md` в корне (только если корневого ещё нет — не перезатирает bootstrap'нутый).
+
+Скрипт идемпотентный — повторный запуск ничего не сломает. Если Claude Code уже был открыт во время `init.sh` — **перезапусти сессию** (`/exit` + `claude` снова), Claude Code сканит `.claude/agents/` только на старте.
+
+Bootstrap-агент дальше сам подготовит файлы, спросит пару вопросов (новый проект или legacy? режим? язык артефактов?), запустит security-floor скрипт и поведёт через начальные шаги. Trust profile auto-set `A` (PM-only ЦА в v0) — не спрашивается. На Stage D bootstrap заменит seed `CLAUDE.md` на полную project-specific версию.
+
+Обновление шаблона:
+
+```bash
+cd .ai-pm/tooling && git fetch && git checkout <tag>
+cd ../.. && git add .ai-pm/tooling && git commit -m "chore: bump ai-pm-protocol"
+```
+
+После bump'а submodule'а симлинк `.claude/agents` продолжает работать (target — относительный путь). Если в новой версии шаблона добавились/переименовались агенты — перезапусти Claude Code сессию, чтобы они подтянулись.
+
 ## Как это работает в двух словах
 
 Каждая фича проходит маленький цикл:
@@ -109,46 +149,6 @@ PM — **дирижёр верхнего уровня**, утверждает т
 Всё остальное — план реализации, ADR alternatives, decomposition, refactoring choices — AI делает silently. Голову поднимает только при одном из **6 escalation triggers** (business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold).
 
 При escalation AI обязан задать вопрос по **6 plain-language rules**: concrete-first, no jargon без определения, никаких F-NN / AP-NN / Step X в формулировке. Если нарушит — AP-32 fire'нет.
-
-## Установка
-
-Шаблон подключается submodule'ом — не копируется:
-
-```bash
-cd ~/dev/my-product
-git submodule add git@github.com:aadegtyarev/ai-pm-protocol.git .ai-pm/tooling
-.ai-pm/tooling/init.sh
-git add .claude/agents CLAUDE.md .ai-pm/tooling .gitmodules
-git commit -m "chore: подключён ai-pm-protocol"
-```
-
-Первый запуск:
-
-```bash
-claude
-```
-
-**Что именно делает `init.sh` и зачем он нужен.** Без него цикл «`submodule add` → `claude` → bootstrap» не запускается, потому что:
-
-1. **Claude Code сканит `<root>/.claude/agents/`**, а submodule приносит агентов в `.ai-pm/tooling/.claude/agents/`. Без симлинка subagents протокола (включая `project-bootstrap`) невидимы.
-2. **Без `CLAUDE.md` в корне** Claude не знает про существование протокола и не позовёт bootstrap-агента. Bootstrap сам пишет полный `CLAUDE.md` из шаблона на Stage D — но только когда его уже позвали. Замкнуто.
-
-`init.sh` закрывает обе дыры:
-- симлинк `.claude/agents → .ai-pm/tooling/.claude/agents/` (через `ln -sfn`, идемпотентно);
-- копия `CLAUDE.seed.md` → `CLAUDE.md` в корне (только если корневого ещё нет — не перезатирает bootstrap'нутый).
-
-Скрипт идемпотентный — повторный запуск ничего не сломает. Если Claude Code уже был открыт во время `init.sh` — **перезапусти сессию** (`/exit` + `claude` снова), Claude Code сканит `.claude/agents/` только на старте.
-
-Bootstrap-агент дальше сам подготовит файлы, спросит пару вопросов (новый проект или legacy? режим? язык артефактов?), запустит security-floor скрипт и поведёт через начальные шаги. Trust profile auto-set `A` (PM-only ЦА в v0) — не спрашивается. На Stage D bootstrap заменит seed `CLAUDE.md` на полную project-specific версию.
-
-Обновление шаблона:
-
-```bash
-cd .ai-pm/tooling && git fetch && git checkout <tag>
-cd ../.. && git add .ai-pm/tooling && git commit -m "chore: bump ai-pm-protocol"
-```
-
-После bump'а submodule'а симлинк `.claude/agents` продолжает работать (target — относительный путь). Если в новой версии шаблона добавились/переименовались агенты — перезапусти Claude Code сессию, чтобы они подтянулись.
 
 ## Пять стадий
 

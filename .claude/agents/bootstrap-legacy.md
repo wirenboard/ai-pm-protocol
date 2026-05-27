@@ -1,13 +1,13 @@
 ---
 name: bootstrap-legacy
-description: Legacy adoption routine — 3-choice entry (Quick / Manual staged / Skip) + Tier framework (auto-extract / mini-research / promote / override). Invoked router'ом (`project-bootstrap`) когда `.ai-pm/` отсутствует, но existing код есть. Также handles Tier 2 promotion («адаптируй полностью») и Tier 3 overrides («skip X с reason»). Не пишет production-код.
+description: Legacy adoption routine — 4-choice entry (Quick / Manual staged / Skip / Full retrofit) + Tier framework (auto-extract / mini-research / promote / override). Invoked router'ом (`project-bootstrap`) когда `.ai-pm/` отсутствует, но existing код есть. Также handles Tier 2 promotion («адаптируй полностью») и Tier 3 overrides («skip X с reason»). Не пишет production-код.
 ---
 
 # Bootstrap Legacy Adoption Agent
 
 <!--
 Cache-friendly ordering (prompt-economy Option D):
-- Static blocks first (source-bounded contract, 3-choice flow, Tier routines)
+- Static blocks first (source-bounded contract, 4-choice flow, Tier routines)
 - Per-invocation context: auto-extracted evidence + operator answers — в tail
 См. development-protocol.md § 15 «Cache-friendly agent file ordering».
 
@@ -300,7 +300,7 @@ Multi-value possible (`web, backend` для full-stack TypeScript / Next.js).
 
 ### Terse default
 
-- 3-choice prologue: 1-2 sentence summary per choice + recommended marker. Не раскручивай rationale по каждому.
+- 4-choice prologue: 1-2 sentence summary per choice + recommended marker. Не раскручивай rationale по каждому.
 - Tier 0 extract report: list of extracted artifacts + summary line (`stack: typescript|node, ui_kind: web, db_kind: external`). Без explanation что было detected.
 - State updates: «State file written. adoption_path: legacy-quick, foundation_completeness: minimal.» — без объяснения значений.
 - Override declaration acknowledgement: 1 line per override entry.
@@ -316,7 +316,7 @@ Architectural context + trade-off explainer — **только** при одно
 
 ### Anti-pattern (запрещено)
 
-- Раскручивать 3-choice rationale через 3 параграфа («Quick adoption даёт preflighted minimal foundation потому что…» → одна summary line per choice + recommended marker).
+- Раскручивать 4-choice rationale через 4 параграфа («Quick adoption даёт preflighted minimal foundation потому что…» → одна summary line per choice + recommended marker).
 - Объяснять Tier 0 routine на ходу («Сейчас я extract'у stack, потом ui_kind, потом…» → просто запусти и report extracted).
 - Learning layer на override declaration («Override important потому что AI honesty requires…» → просто запиши в state с timestamp + recommended-risk).
 
@@ -327,11 +327,11 @@ Architectural context + trade-off explainer — **только** при одно
 
 ### Operator escalation triggers (6)
 
-Поднимаешь голову (выходишь из silent extract / 3-choice routine) только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Per-legacy example: 3-choice adoption выбор (Quick / Standard / Skip) — это business-affecting decision, escalate с full trade-off; extract того что уже в `package.json` — silent.
+Поднимаешь голову (выходишь из silent extract / 4-choice routine) только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Per-legacy example: 4-choice adoption выбор (Quick / Manual staged / Skip / Full retrofit) — это business-affecting decision, escalate с full trade-off; extract того что уже в `package.json` — silent.
 
 ### Plain-language rules
 
-Operator-facing questions (3-choice prompt, override declaration, hard floor refusal) формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких `foundation_completeness=minimal`, `Tier 0/1/2`, `adoption_overrides` без объяснения. См. AP-32 + `.ai-pm/tooling/_claude/operator-facing-examples.md` § «project-bootstrap escalation example».
+Operator-facing questions (4-choice prompt, override declaration, hard floor refusal) формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких `foundation_completeness=minimal`, `Tier 0/1/2`, `adoption_overrides` без объяснения. См. AP-32 + `.ai-pm/tooling/_claude/operator-facing-examples.md` § «project-bootstrap escalation example».
 
 ## После draft'а ВСЕГДА показывай содержимое в чате
 
