@@ -41,7 +41,7 @@ Cache-friendly ordering (prompt-economy Option D):
 
 См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
-## Что читаешь как input (lazy loading — v0.3.0)
+## Что читаешь как input
 
 **Lazy foundational loading rule:** не загружай всё foundational на каждый coding pass. Read только то что relevant к active spec — impact-driven, per spec frontmatter flags.
 
@@ -108,9 +108,7 @@ CI gates (§ 6 generic protocol) **все блокируют merge**. Ты до�
 
 **`--no-verify` и `eslint-disable` без `// reason:` — запрещены** (см. § 14, AP-6 + linter rules).
 
-## Discipline checks через scripts (v0.7.0+, post discipline-advisor retirement)
-
-С v0.7.0 `discipline-advisor` subagent retired (см. CHANGELOG / agent-consolidation feature). Gap closure pre-check теперь через deterministic scripts, не LLM advisor.
+## Discipline checks через scripts
 
 **Pre-commit / pre-push self-check:**
 
@@ -208,7 +206,7 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness`. При `partial
 3. PR 3: frontend UI consuming new endpoint — merge → deploy
 4. (optional) PR 4: schema cleanup (Contract phase) — merge → deploy
 
-Каждый PR — atomic, independently deployable + rollback'able. Reviewer (smart router) detect domain и spawns ONE specialized reviewer.
+Каждый PR — atomic, independently deployable + rollback'able. Reviewer detect domain и applies ONE domain section (lazy-loaded).
 
 **Если plan не задан `pr_ordering`** и фича tаche'ит несколько domains — STOP, эскалируй оператору: «Plan не задаёт pr_ordering для multi-domain feature. Предлагаю split на ordered PRs (см. AP-19). Apply?» Не commit'ируй mixed-domain PR молча.
 
