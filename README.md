@@ -197,9 +197,9 @@ Profile auto-set на init — bootstrap-agent не спрашивает. Пол
 - **Inline-sections ревьюер:** один `reviewer.md` файл с Mandatory baseline section (always-on — спека vs план vs код) + 4 Domain sections (backend / frontend / design / database). Reviewer определяет scope PR'а и применяет baseline + одну domain section sequentially. Никакого spawn'а nested subagent'ов
 - **Composition matrices:** для гибридов вроде «web + backend + external БД» правила фильтруются по реальным capabilities, не копипастятся
 - **Реактивные ADR:** пишутся, когда planner находит развилку в плане. Не upfront, не «для галочки»
-- **Линтер дисциплины:** `check-spec-discipline.sh` — 23 проверки на типичные AI-косяки (ослабление assertion'ов, забытый regression test, fork без ADR, hallucinated decision component, cross-feature contradiction, jargon в operator-facing блоках) в 4 families (base / cross-doc-bounded / cross-feature-bounded / operator-communication)
-- **Статический security floor:** `check-security-floor.sh` — детерминированный grep по манифестам/коду/схемам на stripe/bcrypt/aes-gcm/PII
-- **Reprompt auto-trigger:** `check-skip-reprompts.sh` парсит state-файл на старте каждой сессии и перед commit'ом, печатает истёкшие skip-решения
+- **Линтер дисциплины:** `check-spec-discipline.sh` — 23 проверки на типичные AI-косяки (ослабление assertion'ов, забытый regression test, fork без ADR, hallucinated decision component, cross-feature contradiction, jargon в operator-facing блоках) в 4 families (base / cross-doc-bounded / cross-feature-bounded / operator-communication). Генерируется bootstrap'ом на Stage D из `.tmpl`
+- **Статический security floor:** `check-security-floor.sh` — детерминированный grep по манифестам/коду/схемам на stripe/bcrypt/aes-gcm/PII. Генерируется на Stage D
+- **Reprompt auto-trigger:** `check-skip-reprompts.sh` парсит state-файл на старте каждой сессии и перед commit'ом, печатает истёкшие skip-решения. Генерируется на Stage D
 
 Подробности по каждому — `doc/development-protocol.md` и `doc/anti-patterns.md` (AP-1..AP-33, granular per-AP files в `doc/anti-patterns/`).
 
@@ -211,11 +211,10 @@ ai-pm-protocol/
 │   ├── development-protocol.md   ← основной протокол
 │   ├── anti-patterns.md          ← index AP-1..AP-33
 │   ├── anti-patterns/            ← per-AP files (AP-01.md..AP-33.md)
-│   ├── _templates/               ← скелеты артефактов для downstream проектов
+│   ├── _templates/               ← скелеты артефактов + scripts/*.tmpl для downstream проектов
 │   ├── _claude/                  ← lazy-loaded reviewer domain sections
 │   └── _recipes/cache/           ← конфиги под разные стеки
 ├── meta/                         ← догфудинг-артефакты самого шаблона
-├── scripts/                      ← check-*.sh, update-*.sh, auto-extract/
 ├── .claude/agents/               ← все агенты
 ├── .githooks/                    ← защита от прямого push в main
 ├── init.sh                       ← one-shot onboarding для downstream проекта
