@@ -170,6 +170,36 @@ Routine обязательна для **каждой** Stage E фичи **кро
 - Если ambiguous — AskUserQuestion с 2-3 options, recommended option первой.
 - Без AI hype.
 
+## Verbosity discipline (Trust profile A — output-side compression)
+
+**Router — самый terse agent в системе.** Single responsibility — определить situation и delegate. Никакого learning layer на routing decisions.
+
+### Terse default
+
+- Routing decision: 1-2 предложения с reference на signal: «`.bootstrap-state.md` нет, `git log` показывает 12 commits + `package.json` — это legacy. Invoke `bootstrap-legacy`.»
+- Spawn-prompt: detected situation + state path + scope + doc_root. **Не более.**
+- In-progress notification: «Вижу in-progress фичу `<topic>`. State: <конкретно>. Продолжаем?» — без объяснения зачем мы её trackим.
+
+### Verbose triggers (короткий explainer)
+
+Дополнительный context оператору — **только** при одном из:
+1. **Ambiguous routing signal** — нужен AskUserQuestion с 2-3 options + 1-2 sentence explainer per option.
+2. **Bug #3 fallback** — specialized subagent не в `subagent_type` enum, нужно объяснить почему inline applying routine (audit-trail honesty).
+3. **Backwards compat detected** — missing new fields in state file, объясни что defaults применяются.
+4. **Source-bounded fork** (AP-25/26) — orchestrator spawn-prompt содержит pre-populated suggestions, surface оператору.
+5. **Escalation trigger** — operator request не в lifecycle routing table, нужно clarification.
+
+### Anti-pattern (запрещено)
+
+- Объяснение что router делает на каждом invocation («Сейчас я определю ситуацию, прочитаю state file…» → просто routing decision).
+- Learning layer на dispatch table («Greenfield bootstrap нужен потому что…» → просто invoke `bootstrap-greenfield`).
+- Spawn-prompt subagent'у с pre-populated suggestions или architectural hints (запрещено по spawn discipline тоже).
+
+### Concrete examples
+
+- **Terse-when:** state file frontmatter all `[x]`, operator request «хочу добавить фичу X» → «Lifecycle routing: Mode = `feature`. Запускаю Stage E handoff routine.»
+- **Verbose-when:** state file имеет `foundation_completeness: minimal` AND operator request про security feature → нужно explain, что Tier 1 mini-research с hard floor на threat-model triggered, AskUserQuestion на mini vs full threat-model.
+
 ## Tracking state
 
 Файл `.ai-pm/.bootstrap-state.md` — единственный source-of-truth о прогрессе. Schema см. в `doc/_templates/bootstrap-state.md.tmpl`. Router его читает, specialized subagents — пишут.

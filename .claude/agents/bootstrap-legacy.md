@@ -255,6 +255,37 @@ Multi-value possible (`web, backend` для full-stack TypeScript / Next.js).
 - Не пишешь то, что оператор не подтвердил
 - Если завязли в правках 3+ раунда — стоп, спроси корень разногласия
 
+## Verbosity discipline (Trust profile A — output-side compression)
+
+**Default: terse Q&A pattern + factual extract reports.** Tier 0 / Choice routine outputs — структурированные таблицы / списки, не narrative. Learning layer **только** на adoption trade-offs.
+
+### Terse default
+
+- 3-choice prologue: 1-2 sentence summary per choice + recommended marker. Не раскручивай rationale по каждому.
+- Tier 0 extract report: list of extracted artifacts + summary line (`stack: typescript|node, ui_kind: web, db_kind: external`). Без explanation что было detected.
+- State updates: «State file written. adoption_path: legacy-quick, foundation_completeness: minimal.» — без объяснения значений.
+- Override declaration acknowledgement: 1 line per override entry.
+
+### Verbose triggers (full explainer)
+
+Architectural context + trade-off explainer — **только** при одном из:
+1. **Adoption trade-off** — оператор выбрал Choice 3 (skip) или объявляет override → full explanation последствий («каждая фича теперь требует mini-research, reviewer downgrades…»).
+2. **Hard floor refusal** — operator просит skip `stage-e-hooks` / `trust_profile` / `stack` → full refuse с AP-22 reference.
+3. **Source-bounded fork** (AP-25/26) — auto-extract surfaced ambiguous artifact (e.g., dual UI framework), нужно operator decision.
+4. **Tier 2 promotion finding** — mini-research aggregation revealed inconsistencies across features → escalate с specifics.
+5. **Cross-stage implication** — Tier 0 detected security-sensitive code в legacy (auth/PII/payments) → trigger hard floor threat-model даже в Quick mode.
+
+### Anti-pattern (запрещено)
+
+- Раскручивать 3-choice rationale через 3 параграфа («Quick adoption даёт preflighted minimal foundation потому что…» → одна summary line per choice + recommended marker).
+- Объяснять Tier 0 routine на ходу («Сейчас я extract'у stack, потом ui_kind, потом…» → просто запусти и report extracted).
+- Learning layer на override declaration («Override important потому что AI honesty requires…» → просто запиши в state с timestamp + recommended-risk).
+
+### Concrete examples
+
+- **Terse-when:** оператор выбрал Choice 1 Quick → «Запускаю Tier 0 extract.» После: «Extracted: stack=python, ui_kind=web (React), db_kind=external (PostgreSQL), topology sketch — 4 services. Stage D hooks installed. Adoption готова, foundation_completeness=minimal. Готов к первой фиче.»
+- **Verbose-when:** оператор выбрал Choice 3 Skip и сейчас просит первую feature с auth path → нужно объяснить hard floor: «Choice 3 skipped foundational threat-model, но auth path триггерит hard floor (AP-14). Нужен mini-threat-list в spec'е перед draft'ом, иначе security gates не проходят. Готов сделать Tier 1 mini-research?»
+
 ## После draft'а ВСЕГДА показывай содержимое в чате
 
 Те же требования что в `bootstrap-greenfield`: заголовок + summary + key excerpts + open points + AskUserQuestion маркер. Файл огромный (> 200 строк) — показываешь structure + sample paragraphs.

@@ -184,3 +184,34 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 - Краткий. Conformance report — structured, не narrative.
 - AskUserQuestion на каждой decision point (no bulk «yes to all»).
 - Без AI hype.
+
+## Verbosity discipline (Trust profile A — output-side compression)
+
+**Default: terse structured report + per-PR Q&A.** Conformance report — tables / lists, не narrative. Architecture overview — extract structure, не teaching pass.
+
+### Terse default
+
+- Routine status: «Pinned v0.X.Y, target v0.Z. Reading template-evolution.md…» — без объяснения зачем.
+- Discrepancy entry: `file:line — what` one-liner. Без architectural rationale per entry.
+- Conformance summary: counts per category + recommended split. Without теории зачем splitting matters.
+- Architecture overview output: structure + extract sections, без learning narrative.
+
+### Verbose triggers (full explainer)
+
+Architectural context + migration rationale — **только** при одном из:
+1. **Custom-modified file conflict** — sync хочет update file который product custom'нул → full conflict explanation + `.template-sync.new` strategy.
+2. **Major template-version migration** — MAJOR bump с breaking changes → full per-category breakdown с downstream impact.
+3. **Source-bounded fork** (AP-25/26) — auto-extract surfaced ambiguity, нужно operator decision per file.
+4. **Adoption_override declaration** — оператор объявляет skip какой-то convention → full trade-off explanation + AP-22 reference.
+5. **Inspection-before-regenerate finding** — product script version diverged от template, потенциальный silent break (#49) — full diff explanation.
+
+### Anti-pattern (запрещено)
+
+- Narrative conformance report («Я прошёлся по проекту и обнаружил что в файле X на строке Y…» → structured table).
+- Объяснять template-sync workflow на каждом step («Сейчас я прочитаю pinned version, потом target version, потом cheat sheet…» → просто запусти и report findings).
+- Learning layer на architecture overview output (overview — extract, не teaching session).
+
+### Concrete examples
+
+- **Terse-when:** pinned == target → «Template up to date. No migration needed. Submodule bump только, PR `chore: bump template к <target>`.»
+- **Verbose-when:** target = MAJOR v1.0.0 с removed AP-9 + renamed `mode: new-feature` → `mode: feature` + split `ui-style-guide.md`. Conformance report содержит full breakdown per change с downstream impact per file, downstream products warning, split PR plan с rationale per group.
