@@ -39,7 +39,7 @@ Cache-friendly ordering (prompt-economy Option D):
 
 См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
-## Что читаешь как input (lazy loading — v0.3.0)
+## Что читаешь как input
 
 **Lazy foundational loading rule:** loading foundational docs зависит от **impact flags в spec frontmatter** (AP-13/14). Не загружай всё foundational на каждый план — это превращает Stage E session в RESUME-pattern overload (observed на live test'е).
 
@@ -88,10 +88,6 @@ Parse spec frontmatter `*_impact` поля. Для каждого `yes` — за
 - `complete` → above lazy rules apply
 - `partial` → as `complete`, но для missing docs use Tier 1 mini sections (`## Mini-persona` / `## Journey context` / `## Mini-threat-list` в spec)
 - `minimal` / `none` → primarily Tier 1 mini sections; project-wide docs may not exist
-
-Для rework mode — дополнительно:
-- Предыдущие `<topic>_spec.md`, `<topic>_plan.md`, `<topic>_review.md` (если есть).
-- Существующий код фичи (директории из предыдущего plan'а) — read-only.
 
 Для rework mode — дополнительно:
 - Предыдущие `<topic>_spec.md`, `<topic>_plan.md`, `<topic>_review.md` (если есть).
@@ -180,11 +176,9 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness` (`complete | par
 
 **Backward compat:** existing spec'и с `lite-mode: c-fast` (deprecated) — treat as `small-fix`. Existing spec'и с `trust_profile: B/C` в frontmatter — treat as `A`.
 
-## Discipline checks через scripts (v0.7.0+, post discipline-advisor retirement)
+## Discipline checks через scripts
 
-С v0.7.0 `discipline-advisor` subagent retired (см. CHANGELOG / agent-consolidation feature). Soft 5-axis анализ никогда не был validated через required accuracy gate ≥80% per axis (ARCH-8 в architectural-backlog.md).
-
-**Что осталось работающим:**
+**Что работает:**
 
 - **Hard security floor:** `scripts/check-security-floor.sh` — детерминированный детектор stripe / bcrypt / aes-gcm / PII columns в коде / манифестах / схемах. На bootstrap entry автоматически запускается через bootstrap-agent; planner reads его output как ground truth для security path decisions.
 - **Skip reprompt:** `scripts/check-skip-reprompts.sh` — парсит `skip_decisions:` в bootstrap-state, выдаёт expired list. Wired в SessionStart + pre-commit hooks.
