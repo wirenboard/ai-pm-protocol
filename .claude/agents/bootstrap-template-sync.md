@@ -62,13 +62,49 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
 2. **Determine target version** — AskUserQuestion: «target = latest tag (stable) или main HEAD (bleeding edge, unreleased)?». Default — latest tag (более safe для production).
 
-3. **Bump submodule к target:**
-   ```
-   cd .ai-pm/tooling && git fetch
-   git checkout <target>  # tag или HEAD commit
-   cd ../.. && git add .ai-pm/tooling
-   ```
-   (Commit отложен — будет частью первого PR'а после audit)
+3. **Bump tooling к target — ОБЯЗАТЕЛЬНО ДО любого чтения из `.ai-pm/tooling/`:**
+
+   Per integration mode (читаю из `.ai-pm/.bootstrap-state.md` → `integration:`):
+
+   - **`submodule`:**
+     ```
+     # 1. Refresh index (fixes NFS/FUSE/timestamp false-dirty)
+     git -C .ai-pm/tooling update-index --refresh 2>/dev/null || true
+     # 2. Check for dirty state
+     git -C .ai-pm/tooling status --porcelain
+     ```
+     Если после `update-index --refresh` dirty файлы остались — проверяю реальный diff:
+     ```
+     git -C .ai-pm/tooling diff
+     ```
+     - **Нет реального diff'а** (пустой вывод — whitespace/line-endings/smudge noise, или `--refresh` не помог с timestamp'ами) → сбрасываю:
+       ```
+       git -C .ai-pm/tooling restore .
+       ```
+     - **Есть реальный diff** (кто-то менял файлы в субмодуле) → **не сбрасываю**, говорю оператору: «В `.ai-pm/tooling` есть несохранённые изменения: `<список файлов>`. Сохрани или откати их вручную перед template-sync.» Жду.
+
+     После чистого состояния:
+     ```
+     git -C .ai-pm/tooling fetch
+     git -C .ai-pm/tooling checkout <target>
+     git add .ai-pm/tooling
+     ```
+   - **`gitignore`** (symlink на отдельный клон):
+     ```
+     TOOLING=$(readlink -f .ai-pm/tooling)
+     git -C "$TOOLING" status --porcelain
+     git -C "$TOOLING" diff
+     ```
+     Та же логика dirty-check: пустой diff → `git -C "$TOOLING" restore .`; реальный diff → стоп, скажи оператору.
+     ```
+     git -C "$TOOLING" fetch
+     git -C "$TOOLING" checkout <target>
+     ```
+     Если `readlink` не даёт путь — скажи оператору: «Tooling — symlink, но не могу определить путь к клону. Обнови вручную: `cd <path-to-template-clone> && git fetch && git checkout <target>`, потом продолжим.»
+   - **`vendor`** (скопированные файлы):
+     Скажи оператору: «Tooling — vendor copy. Автоматический bump невозможен. Нужно скопировать файлы из template repo вручную или через `rsync`. После обновления `.ai-pm/tooling/` — продолжим audit.» AskUserQuestion: «Хочешь перейти на submodule integration (проще обновлять)?»
+
+   (Commit submodule bump отложен — будет частью первого PR'а после audit)
 
 4. **No-op check:** если pinned == target → «template up to date, ничего мигрировать не нужно», просто commit submodule bump + update `.ai-pm/.bootstrap-state.md` → PR `chore: bump template к <target> (no migration)`. Routine завершена.
 
