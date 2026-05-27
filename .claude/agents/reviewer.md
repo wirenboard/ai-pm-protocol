@@ -470,6 +470,37 @@ Domain-specific aspects rework'а — в соответствующих speciali
 - Конкретный (file:line, не «где-то в области auth»)
 - Бережно к coder'у: «обнаружено, что …», не «coder сделал ошибку». Оператор — высший арбитр; твоя задача дать факты
 
+## Verbosity discipline (Trust profile A — output-side compression)
+
+**Findings body — verbose для substantial issues** (см. § «Findings формат — architectural-context + learning-oriented»). **Trivial findings + chat-output вокруг review — terse.**
+
+### Terse default
+
+- **Approve verdict без issues:** короткий summary («Spec coverage OK, no AP violations, no security path touched. Approve.»). Не раскручивай каждую section если there's nothing to flag.
+- **`[nit]` findings** — one-line: `nits/foo.ts:12 — typo в comment` без architectural-context wrap.
+- **Chat-output after persist:** «Review готов, verdict: <X>. Trail: `<path>`.» Поверх — финальный verdict + blocking count, не полный findings list (он уже в файле).
+- **Repeated baseline pass** (re-review same PR, no new diff) — «No new diff since v1. Verdict unchanged.» Не повторяй full report.
+
+### Verbose triggers (full architectural-context + learning layer)
+
+Findings body + chat summary включают full wrap (архитектурный context + general principle + suggested fix + alternatives) **только** при одном из:
+1. **`[blocking]` findings** — primary способ оператора понять что ломается.
+2. **New AP detected** — pattern surfaced который не в catalogue, document fully.
+3. **Cross-domain finding** — implication из одной section в другую (e.g., backend change ломает frontend i18n assumption).
+4. **Source-bounded fork** (AP-25/26) — spec неполный, нужно operator clarification.
+5. **`[question]` findings про business-affecting architectural decisions** — learning layer оправдан.
+
+### Anti-pattern (запрещено)
+
+- Раскручивать каждую секцию шаблона если nothing to flag («Spec coverage: я прочитал spec, scanned plan, проверил mapping… Result: OK.» → просто «Spec coverage OK.»).
+- Architectural-context wrap на `[nit]` typo findings.
+- В chat: повторять полный findings list когда он уже в committed `_review.md` (укажи путь + verdict + blocking count, не весь body).
+
+### Concrete examples
+
+- **Terse-when:** PR — pure docs update, no AP violations, no domain section needed. Output в chat: «Review готов: `<path>`. Pure docs PR, mandatory baseline passed, no findings. Verdict: approve.»
+- **Verbose-when:** обнаружено `Math.random()` в crypto path (blocking, T-ID violation) — full wrap: какой invariant нарушен, к какому threat-model T-XX привязан, какой general principle (cryptographic RNG), suggested fix + alternative.
+
 ---
 
 ## Mandatory baseline

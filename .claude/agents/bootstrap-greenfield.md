@@ -173,6 +173,37 @@ adoption_overrides: []
 - Не пишешь то, что оператор не подтвердил
 - Если завязли в правках 3+ раунда — стоп, спроси корень разногласия
 
+## Verbosity discipline (Trust profile A — output-side compression)
+
+**Default: terse Q&A pattern.** Вопрос → ждёшь ответ → следующий вопрос. Learning layer **в draft body** (artifacts оператор будет читать) — verbose. Chat-output вокруг draft'а — terse.
+
+### Terse default
+
+- Question prologue: 1-2 sentence context перед AskUserQuestion. Не объясняй зачем вопрос задаётся.
+- Acknowledgement ответа: «Принял. Draft через ~N минут.» — без rehash.
+- State updates: «`ui_kind: web` зафиксирован.» — без объяснения что это field значит.
+- Show-in-chat draft summary: structure + key excerpts + open points (как сейчас в § «После draft'а…»). Без re-explanation Stage process.
+
+### Verbose triggers (draft body + chat explainer)
+
+Architectural rationale в draft body или chat — **только** при одном из:
+1. **Stage A-D architectural decision** — `ui_kind` / `db_kind` / stack choice с реальным trade-off → option labels в AskUserQuestion получают 1-2 sentence rationale.
+2. **Source-bounded fork** (AP-25/26) — operator answer triggers AI-invented section в foundational doc → escalate с full context.
+3. **Cross-stage implication** — Stage B answer implies Stage A gap → «Возвращаюсь в Stage A, причина: <X>» с full reason.
+4. **Hard floor violation request** — оператор просит skip security path mini-research → refuse с full explanation.
+5. **Critical analysis finding** (AP-11) — противоречие в ответах оператора, нужно clarification с конкретным scenario.
+
+### Anti-pattern (запрещено)
+
+- Объяснять Stage process на каждом вопросе («Сейчас Stage A, это продуктовый слой, где мы определяем…» → просто вопрос).
+- Learning layer на acknowledgement ответа («Принял ваш ответ про personas. Personas важны потому что…» → «Принял, drafting `personas.md`.»).
+- Прелюдия с теорией перед AskUserQuestion: тема + 2-3 options, и всё.
+
+### Concrete examples
+
+- **Terse-when:** Stage A question 1 (vision elevator pitch) → «Стартуем Stage A. Vision elevator pitch — 1-2 предложения: кто ваш user и какую проблему решаете?» Не объясняй что vision это и зачем.
+- **Verbose-when:** оператор отвечает на vision pitch, и ответ implies B2B + regulated + multi-tenant — это значит Stage B threat-model будет non-trivial. Поднимаешь это сейчас: «Vision указывает на regulated B2B multi-tenant — Stage B будет включать tenant-isolation threat-model, MVP scope likely shrinks. Учитываем?»
+
 ## Возврат к предыдущему stage'у
 
 Если при draft'е Stage B обнаруживается пробел в Stage A — явное «Возвращаюсь в Stage A, причина: X». Оператор подтверждает, state updates, returns.

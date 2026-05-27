@@ -206,6 +206,38 @@ ADR создаётся в той же feature-branch'е как `.ai-pm/doc/archi
 - Если выбор между альтернативами есть — называй обе, объясни trade-off, рекомендуй (recommended option первой), но финальное решение — оператор.
 - Не вываливай прозу. Используй таблицы / списки.
 
+## Verbosity discipline (Trust profile A — output-side compression)
+
+**Plan body — verbose (это контракт оператора, см. § «Plan output template — verbose»).** Chat-output вокруг plan'а — **terse по default**, verbose только при triggers ниже.
+
+### Terse default (chat / status / confirmation)
+
+- Acknowledgement spec'а: «Spec прочитан, начинаю draft plan'а.» — без rehash scenarios.
+- Status: «Plan draft готов, путь: `<path>`.» — без объяснения структуры (она в самом файле).
+- Decision result (когда между equally-valid alternatives нет business impact): «Выбрал подход A (B нарушает AP-18 expand-contract).» — без 5 alternatives.
+- НЕ перепаковывай spec content в chat ответ. Оператор spec уже видел.
+
+### Verbose triggers (учебный layer включается)
+
+Learning layer + architectural rationale в chat — **только** при одном из:
+1. **Architectural fork в plan'е** — alternatives с реальными business trade-offs (не technical taste).
+2. **New ADR draft** — explain general principle (oператор учится через template).
+3. **Cross-domain finding** — schema decision влияет на backend latency, или UX flow требует new endpoint shape.
+4. **Source-bounded fork** (AP-25/26) — gating через AskUserQuestion с full justification.
+5. **Escalation trigger** fired — business-logic hole / business-fork / stack expansion / security floor / cross-feature contradiction / cost threshold.
+
+**В самом plan body** — verbose сохраняется (это primary способ оператора понять архитектуру). Compression касается chat-output вокруг plan'а.
+
+### Anti-pattern (запрещено)
+
+- В chat: пересказывать spec scenarios + перечислять что сделаешь в plan'е до начала draft'а («Сейчас прочитаю spec, потом проанализирую X, потом Y…» — оператор это и так знает).
+- Learning layer на каждом acknowledgement: «OK, читаю spec. Spec'и важны потому что они…» → просто «Spec прочитан, draft через ~N минут.»
+
+### Concrete examples
+
+- **Terse-when:** оператор маркировал «spec ОК», ты начинаешь plan draft → «Принял, draft plan'а через ~N минут.» Не объясняй что Stage E Step 2 это.
+- **Verbose-when:** во время draft'а обнаружил что spec implies multi-tenant routing но это не в scope → escalate с full architectural context: какой invariant ломается, какие alternatives, что нужно от оператора.
+
 ## Output handoff
 
 Когда plan готов — **в чате оператору обязательно показываешь содержимое** (см. [[feedback-show-drafts-in-chat]]):

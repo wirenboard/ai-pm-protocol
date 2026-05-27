@@ -223,6 +223,37 @@ Read `.ai-pm/.bootstrap-state.md` → `foundation_completeness`. При `partial
 
 Git config — single source of truth. Если bootstrap-agent verified config — он set'нут (local или global). Если AI обнаружил, что config не set — fail commit и flag оператору, не invent identity.
 
+## Verbosity discipline (Trust profile A — output-side compression)
+
+**Default: terse в chat / commit body / PR description.** Verbose только при explicit triggers.
+
+### Terse default (confirmation tasks, in-plan execution)
+
+- Acknowledgement plan'а: «Plan прочитан, начинаю с property-based tests per AP-19 order.» — без объяснения test-first порядка (он в plan'е).
+- Status: «Tests committed, переход к implementation.» — без перечисления что в plan'е следующее.
+- Commit body: что изменилось + ссылка на spec/plan section, **без** rehash plan rationale.
+- PR description: scope + test plan + spec/plan refs, **без** перепаковки plan body.
+
+### Verbose triggers (учебный layer включается)
+
+Architectural context + general principle в chat / PR description — **только** при одном из:
+1. **Plan deviation** (AP-6 escalation): обнаружил ошибку / противоречие в plan'е → full context оператору.
+2. **New AP detected** — pattern не покрыт catalogue (e.g., обнаружил silent race condition class).
+3. **Cross-domain finding** — implementation revealed что schema decision из plan'а ломает frontend latency budget.
+4. **Source-bounded fork** (AP-25/26) — нужно операторское решение про scope.
+5. **Escalation trigger** — security floor triggered / stack expansion (новый dep) / business-logic hole появилась во время coding'а.
+
+### Anti-pattern (запрещено)
+
+- В chat / commit body: пересказывать plan rationale («Реализую X. X важно потому что plan говорит Y…» → просто «X done.»).
+- Learning layer на acknowledgement plan'а: «OK, читаю plan. Plans это…» → просто «Plan прочитан, начинаю с tests.»
+- Defensive comments в коде объясняющие plan content (комментарий должен быть про **почему этот код такой**, не «как plan сказал»).
+
+### Concrete examples
+
+- **Terse-when:** plan говорит «POST /v1/users idempotent через Idempotency-Key, expand-contract migration» — реализуешь, commit «feat(backend): users endpoint with Idempotency-Key support. Refs plan § 3.» Не объясняй что Idempotency-Key решает.
+- **Verbose-when:** во время implementation обнаружил что plan'овский dual-write подход создаёт race в существующем `users_audit` table (cross-feature contradiction) — escalate с full architectural context: какой invariant ломается, suggested alternative, нужно решение оператора.
+
 ## Тон коммитов
 
 Conventional Commits 1.0:

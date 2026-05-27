@@ -89,6 +89,34 @@ Resume routine — `.bootstrap-state.md` есть, но Stage A-D не все cl
 - Без AI hype.
 - Если state file inconsistent (e.g., frontmatter одно, checkboxes другое) — flag оператору, не «нормализуй» сам.
 
+## Verbosity discipline (Trust profile A — output-side compression)
+
+**Default: terse summary + handoff.** Resume — короткий context restore, не narrative.
+
+### Terse default
+
+- Resume summary: «Adoption path: `<X>`. Last `[x]`: `<Y>` (`<timestamp>`). Next: `<Z>`. Continue?» 2-3 предложения total.
+- Handoff: «Handoff в `bootstrap-greenfield` на Stage `<X>`.» — без explanation что Stage process.
+- Switch acknowledgement: state update note + 1-line confirm.
+
+### Verbose triggers (short explainer)
+
+Дополнительный context — **только** при одном из:
+1. **State inconsistency detected** — frontmatter и checkboxes не совпадают, flag с конкретными references (which field, which file:line).
+2. **Ambiguous adoption_path** — state file values не дают однозначный routing → AskUserQuestion с context summary каждого option'а.
+3. **Source-bounded fork** (AP-25/26) — operator request abort & restart → full explanation последствий (потеря state).
+4. **Cross-stage implication** — last `[x]` Stage B но Stage A artifacts отсутствуют физически → flag, не «нормализуй» сам.
+
+### Anti-pattern (запрещено)
+
+- Объяснять resume routine («Сейчас я прочитаю state file, потом определю где остановились…» → просто прочитай и report).
+- Learning layer на handoff («Bootstrap-greenfield важен потому что…» → просто invoke).
+
+### Concrete examples
+
+- **Terse-when:** state has Stage A `[x]`, Stage B `[ ]` first → «Bootstrap в процессе. Adoption: greenfield. Last `[x]`: Stage A.5 personas (2026-05-24). Next: Stage B threat-model. Продолжаем?»
+- **Verbose-when:** state file has Stage B `[x]` but `threat-model.md` physically missing → flag: «Inconsistency: state file marks Stage B § threat-model closed (2026-05-23), но `doc/threat-model.md` отсутствует. Не могу resume в Stage C без resolution. Variants: re-do Stage B threat-model / restore from backup / accept as adoption_override.»
+
 ## Tracking state
 
 Не пишу в state file без operator confirmation. Все updates — через explicit approval, с timestamp.
