@@ -1,0 +1,73 @@
+name: Auto-tag release PR
+
+# Closes audit-finding #2 (2026-05-27 pipeline audit):
+# release-helper.md § 7 раньше требовал manual `git tag -a vX.Y.Z` после
+# merge release PR'а. Manual step = легко забыть → silent потеря release
+# (template merged, downstream template-sync не видит новую версию).
+#
+# Этот workflow auto-tag'ит на merge release/vX.Y.Z PR'а в main.
+# Manual fallback: если workflow упал — оператор делает `git tag -a` сам.
+# Workflow idempotent: tag уже существует → skip + warning, не error.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, master]
+
+permissions:
+  contents: write  # required для push tag
+
+jobs:
+  auto-tag:
+    # Run только если PR merged (не closed-without-merge) и head branch — release/v*
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0  # fetch tags для existence check
+
+      - name: Extract version from branch name
+        id: version
+        run: |
+          set -e
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          # release/v0.8.0 → v0.8.0
+          VERSION="${BRANCH#release/}"
+          # Validate format: vMAJOR.MINOR.PATCH (SemVer 2.0)
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Branch name '$BRANCH' не matches release/vMAJOR.MINOR.PATCH format. Skip auto-tag, требуется manual investigation."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Extracted version: $VERSION"
+
+      - name: Check tag не существует
+        id: check
+        run: |
+          set -e
+          VERSION="${{ steps.version.outputs.version }}"
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "::warning::Tag $VERSION уже существует — skip (idempotent). Возможно, manual tag был создан до merge'а или workflow re-run."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create annotated tag
+        if: steps.check.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          TAG_MSG=$(printf 'Release %s\n\n%s\n\nAuto-tagged по merge PR #%s (auto-tag-release.yml).\nManual fallback: git tag -a %s -m %s && git push origin %s\n' \
+            "$VERSION" "$PR_TITLE" "$PR_NUMBER" "$VERSION" "'<one-line summary>'" "$VERSION")
+          git tag -a "$VERSION" -m "$TAG_MSG"
+          git push origin "$VERSION"
+          echo "::notice::Tagged $VERSION on merge commit $(git rev-parse HEAD)"
