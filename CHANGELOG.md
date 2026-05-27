@@ -15,21 +15,26 @@
 
 ## [Unreleased]
 
+---
+
+## [0.10.0] — 2026-05-27
+
 ### Added
 
-- **`doc/_templates/architecture-conventions.md.tmpl`** — опциональный foundational артефакт для project-wide coding conventions (OOP vs functional, module structure, naming, dependency rules, approved/forbidden patterns). Reviewer читает в Tier 3 auto-load: нарушение задокументированной конвенции → `[blocking]` finding (architectural drift). Planner читает при написании плана: deviation от конвенции → ADR.
-- **reviewer.md Step 0: pre-conditions + diff triage.** Reviewer теперь читает только `git diff --name-only` (~50 токенов) перед любым другим чтением и определяет tier (0/1/2/3). Tier 0 (CHANGELOG/README/gitignore) → reviewer не запускается, сообщает оркестратору что `[skip-review]` корректен. Tier 1/2 → baseline без foundational docs auto-load (~5-10k токенов сэкономлено per review). Tier 3 (feature code) → полный проход как раньше. Pre-condition: CI/линтеры должны быть green перед запуском reviewer; если нет — reviewer не запускается.
-- **reviewer.md: adversarial cases для Tier 1 scripts.** Для изменённых `.sh`/`.awk`/`.py` reviewer формулирует 3-5 граничных input cases (строка содержит паттерн поиска, пустой input, спецсимволы) и просит оркестратора прогнать их. Закрывает gap: статический анализ скриптов мог пропускать regex-коллизии (как awk-баг в PR C).
-- **reviewer.md: scope boundary в «Что ты НЕ делаешь».** Явно задокументировано что не входит в зону reviewer'а: стандарты кода (зона линтеров), полнота бизнес-логики в spec'е (зона planner + operator). Reviewer покрывает: deviation detection (spec→plan→code) + AP-compliance + cross-reference consistency.
+- **`doc/_templates/architecture-conventions.md.tmpl`** — опциональный foundational артефакт для project-wide coding conventions (OOP vs functional, module structure, naming, dependency rules, approved/forbidden patterns). Reviewer читает в Tier 3 auto-load: нарушение задокументированной конвенции → `[blocking]` finding (architectural drift). Planner читает при написании плана: deviation от конвенции → ADR. (#85)
+- **reviewer.md Step 0: pre-conditions + diff triage.** Reviewer теперь читает только `git diff --name-only` (~50 токенов) перед любым другим чтением и определяет tier (0/1/2/3). Tier 0 (CHANGELOG/README/gitignore) → reviewer не запускается, сообщает оркестратору что `[skip-review]` корректен. Tier 1/2 → baseline без foundational docs auto-load (~5-10k токенов сэкономлено per review). Tier 3 (feature code) → полный проход как раньше. Pre-condition: CI/линтеры должны быть green перед запуском reviewer; если нет — reviewer не запускается. (#84)
+- **reviewer.md: adversarial cases для Tier 1 scripts.** Для изменённых `.sh`/`.awk`/`.py` reviewer формулирует 3-5 граничных input cases (строка содержит паттерн поиска, пустой input, спецсимволы) и просит оркестратора прогнать их. (#84)
+- **reviewer.md: scope boundary в «Что ты НЕ делаешь».** Явно задокументировано что не входит в зону reviewer'а: стандарты кода (зона линтеров), полнота бизнес-логики в spec'е (зона planner + operator). (#84)
+- **feat(reviewer): lazy-load domain sections — 1358 → 787 строк.** 4 domain-секции (backend / frontend / design / database, 590 строк) вынесены в `doc/_claude/reviewer-domain-*.md`. Reviewer читает только нужный файл по Tier 3 routing. Экономия ~400–475 строк per review (68–80% domain-секций не загружаются). (#88)
 
 ### Fixed
 
-- **GitHub Releases не создавались при merge release/* PR.** auto-tag workflow создавал только annotated git tag, но не GitHub Release с release notes. Теперь после push tag'а workflow запускает `gh release create` с CHANGELOG-контентом для этой версии (извлекается awk из `## [X.Y.Z]` секции).
-- **`doc/template-evolution.md` очищен.** Исторические записи v0.2.0–v0.7.0 удалены (pre-baseline history). Tracking стартует с v0.9.0. Downstream products pinned < v0.9.0 → re-bootstrap (bootstrap-template-sync предложит как опцию).
-- **README.md: reviewer section обновлён.** Описание reviewer'а обновлено под Tier 0/1/2/3 triage и content-based review decision. Семантика `[skip-review]` vs `[review-override:]` задокументирована.
-- **CI review-trail: clarified `[skip-review]` vs `[review-override:]` semantics.** Раньше error message не разделял два маркера семантически — разработчики использовали `[review-override:]` для «review не нужен» (неверно). `[skip-review]` = review не проводился / не нужен; `[review-override:]` = review был, trace не committed. Обновлены error messages в CI workflow.
-- **CLAUDE.md.tmpl: content-based review decision rule.** Раньше не было явного правила когда `[skip-review]` корректен — AI решал ad-hoc. Теперь: инспектируй `git diff --name-only`; если diff содержит agent prompts / AP-*.md / CI+hooks / protocol docs / template scripts → reviewer обязателен; если только CHANGELOG / README-formatting / .gitignore без semantic impact / version bumps → `[skip-review]` уместен.
-- **release-helper.md: orchestrator fallback при blocked agent.** Если release-helper вернул «нет прав / blocked» — оркестратор выполняет шаги напрямую без делегирования.
+- **GitHub Releases не создавались при merge release/* PR.** auto-tag workflow создавал только annotated git tag, но не GitHub Release с release notes. Теперь после push tag'а workflow запускает `gh release create` с CHANGELOG-контентом для этой версии. (#85)
+- **`doc/template-evolution.md` очищен.** Исторические записи v0.2.0–v0.7.0 удалены (pre-baseline history). Tracking стартует с v0.9.0. (#85)
+- **README.md: reviewer section обновлён** под Tier 0/1/2/3 triage и content-based review decision. (#85)
+- **CI review-trail: `[skip-review]` vs `[review-override:]` semantics.** Error messages разделены семантически: `[skip-review]` = review не проводился / не нужен; `[review-override:]` = review был, trace не committed. (#84)
+- **CLAUDE.md.tmpl: content-based review decision rule.** Явное правило когда `[skip-review]` корректен: инспектируй `git diff --name-only`; agent prompts / AP-*.md / CI+hooks → reviewer обязателен; только CHANGELOG / README-formatting / version bumps → `[skip-review]` уместен. (#84)
+- **release-helper.md: orchestrator fallback при blocked agent.** (#84)
 
 ---
 
