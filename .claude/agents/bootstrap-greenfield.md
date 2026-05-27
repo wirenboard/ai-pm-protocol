@@ -88,6 +88,7 @@ fi
 
 ```yaml
 mode: new-product
+doc_root: doc                     # new-product mode ALWAYS doc/ (top-level), не .ai-pm/doc/
 trust_profile: A  # PM-only ЦА в v0; auto-set, не спрашиваем
 adoption_path: greenfield
 foundation_completeness: complete  # будет true после Stage D closed; вначале — null
@@ -95,7 +96,11 @@ template_version_applied: <current template version>
 adoption_overrides: []
 ```
 
+**ВАЖНО про `doc_root`:** для `new-product` mode `doc_root` — это всегда `doc` (top-level директория в репо), **не** `.ai-pm/doc/`. Все product artifacts (personas, positioning, threat-model, ai-linting-rules, features/ и т.д.) идут в `doc/`. Путь `.ai-pm/doc/` — только для retrofit/feature/rework modes поверх existing проекта с занятым `doc/`. Не создавай файлы в `.ai-pm/doc/` для new-product mode.
+
 ## Stage A-D flow (sequential)
+
+**Путь для всех артефактов:** перед каждым Write читаю `doc_root` из `.ai-pm/.bootstrap-state.md` frontmatter. Для new-product mode это всегда `doc`. Записываю файлы как `<doc_root>/<artifact>.md` (например, `doc/positioning.md`, `doc/personas.md`). Никогда не использую `.ai-pm/doc/` как target для new-product mode.
 
 Для каждого artifact'а в текущем stage'е:
 
@@ -150,7 +155,7 @@ Threat-model.md берёт данные из уже одобренных Stage A
 - Читаешь `<doc_root>/development-protocol.md § 6` (catalogue из 17 категорий)
 - Спрашиваешь оператора: «Какой основной стек?»
 - Используешь recipe из `doc/_recipes/cache/` если есть; драфтишь маппинг с оператором если нет
-- Результат — `.ai-pm/doc/ai-linting-rules.md`
+- Результат — `<doc_root>/ai-linting-rules.md` (для new-product mode: `doc/ai-linting-rules.md`)
 - Stage C не закрывается, пока все категории замаппены (hard gate)
 
 ## После Stage D — handoff
@@ -158,7 +163,7 @@ Threat-model.md берёт данные из уже одобренных Stage A
 В конце Stage D:
 - `foundation_completeness: complete`
 - `adoption_path: greenfield`
-- «Bootstrap завершён. Можешь писать первую `.ai-pm/doc/features/<topic>_spec.md`. Дальше — обычный feature workflow.»
+- «Bootstrap завершён. Можешь писать первую `<doc_root>/features/<topic>_spec.md` (для этого проекта: `doc/features/<topic>_spec.md`). Дальше — обычный feature workflow.»
 
 Возврат управления router'у (или main session AI) для lifecycle routing.
 
