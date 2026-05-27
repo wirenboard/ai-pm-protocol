@@ -4,7 +4,7 @@ mode: feature
 lite-mode: no
 created: 2026-05-27
 spec_approved: 2026-05-27
-plan_approved:
+plan_approved: 2026-05-27
 acceptance: pending
 merged: no
 review_url:
@@ -23,6 +23,18 @@ topology_impact: yes
 # Operator-as-idea-provider — implementation plan
 
 **Stage E artifact, Step 2.** Single-domain template changes — расширяем существующие prompts, добавляем один AP, один pointer файл, один linter check, одну regression fixture.
+
+---
+
+## Operator decisions (2026-05-27) — pre-coder resolutions
+
+| # | Question | Decision |
+|---|---|---|
+| Q1 | 5 vs 6 pairs в `operator-facing-examples.md` | **5 pairs** финально (5 logical agents: planner / coder / reviewer / release-helper / project-bootstrap). Spec acceptance criterion 5 обновлён. |
+| Q2 | `check-spec-discipline.sh --regression` runner существует? | **Exists** (добавлен в PR #71). Worktree rebased на main — false alarm снят. Step 8 использует существующий `--regression`. |
+| Q3 | Verbose mode opt-out (PM хочет видеть Tactical) | **Defer** — не имплементируем в этом PR. |
+| Q4 | Block detection convention (HTML marker vs heuristic) | **Heuristic на known headers** (`## Summary для оператора`, `## Output handoff`, `## Краткое резюме`). Warning-only, false-negative tolerable. |
+| Q5 | Reviewer behaviour для AP-32 (passive vs active) | **Passive** — linter warning surfaces в `_review.md` как обычный finding. Reviewer не делает active jargon-hunt. |
 
 ---
 
