@@ -19,6 +19,28 @@
 
 ---
 
+## [0.8.0] — 2026-05-27
+
+v0.8.0 — onboarding init routine закрывает chicken-and-egg между `git submodule add` и первой `claude`-сессией. **MINOR-additive** — новая template capability (root-level `init.sh` + seed CLAUDE), zero impact на existing downstream products до template-sync.
+
+### Added
+
+- `init.sh` (root, +x) — idempotent onboarding скрипт. Создаёт symlink `.claude/agents` → `.ai-pm/tooling/.claude/agents` (subagents видимы Claude Code) + копирует `CLAUDE.seed.md` → `./CLAUDE.md` если корневого нет (#79).
+- `CLAUDE.seed.md` — минимальный pre-bootstrap briefing. Инструктирует Claude invoke `project-bootstrap` при отсутствии `.ai-pm/.bootstrap-state.md`. Перезаписывается на Stage D bootstrap полной project-specific версией (#79).
+
+### Changed
+
+- `README.md` секция «Установка» — добавлен шаг `init.sh` между `submodule add` и `claude` + explicit rationale «зачем нужен» (anti-regression комментарий для будущих правок) (#79).
+
+### Documentation migration impact (для downstream template-sync)
+
+Downstream projects при template-sync v0.7.0 → v0.8.0:
+
+- [Root-level files] Optionally run `bash .ai-pm/tooling/init.sh` after sync — refreshes `.claude/agents` symlink. Не destructive если файлы уже на месте.
+- [Spec frontmatter / sections / mode renames / AP introductions] None.
+
+---
+
 ## [0.7.0] — 2026-05-27
 
 v0.7.0 — anti-drift layers complete + agent consolidation + prompt-economy wave + operator interface model. **MINOR-additive** — все additions backward-compat (legacy state values accepted, legacy review trail values parsed, deprecated fields marked но preserved).
