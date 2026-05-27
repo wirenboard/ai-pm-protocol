@@ -2,7 +2,7 @@
 
 Шаблон для тех, кто пилит свой продукт один, в паре с AI.
 
-Идея простая: AI пишет код быстро, но проверять его некому — вы один. Шаблон даёт двух «коллег» в виде AI-агентов: один пишет, второй проверяет. И ещё немного автоматики, чтобы не пропустить важное.
+Идея простая: AI пишет код быстро, но проверять его некому — вы один. Шаблон даёт трёх «коллег» в виде AI-агентов: планировщик, кодер и ревьюер. И немного автоматики, чтобы не пропустить важное.
 
 ## Для кого
 
@@ -10,7 +10,7 @@
 
 | Кто | Что мешает | Чем помогает |
 |---|---|---|
-| **PM** (не код) | Знаю, что хочу — не могу собрать сам в нужном темпе и качестве | AI-разработчик + AI-ревьюер. Вы остаётесь главным по «что делаем» |
+| **PM** (не код) | Знаю, что хочу — не могу собрать сам в нужном темпе и качестве | AI-планировщик + AI-кодер + AI-ревьюер. Вы остаётесь главным по «что делаем» |
 
 Шаблон не делает работу за вас. Он не позволит AI сделать что-то глупое за вашей спиной.
 
@@ -67,11 +67,9 @@ Reviewer пишет файл `_review.md` с вердиктом: `approve` / `ap
 - `crypto.createCipheriv`/`AES-GCM`/`libsodium`/`cryptography` → нужен `threat-model.md`
 - Колонки `email VARCHAR`/`phone`/`dob`/`ssn` в schema-файлах → `threat-model.md` + `legal.md` + `database-design-base.md`
 
-Это **не LLM-решение**. Найдено `stripe` в зависимостях — skip недоступен, точка. Можно только явно overridе'ить через `adoption_overrides:` с указанной причиной (AP-22), это попадёт в state-файл и в git log.
+Это **не LLM-решение**. Найдено `stripe` в зависимостях — skip недоступен, точка. Можно только явно override'ить через `adoption_overrides:` с указанной причиной (AP-22), это попадёт в state-файл и в git log.
 
-**Мягкий слой (operator-driven).** Hard floor функциональность живёт в `scripts/check-security-floor.sh` (детерминированный детектор stripe/bcrypt/aes-gcm/PII — не LLM heuristic), reprompt mechanism — в `scripts/check-skip-reprompts.sh`.
-
-Вы выбираете `[Skip]` / `[Keep]` для не-hard-floor артефактов прямо в bootstrap-агенте. Решение записывается с причиной и датой в `.ai-pm/.bootstrap-state.md` `skip_decisions:`. Через 90 дней `check-skip-reprompts.sh` (вызывается на старте каждой сессии + перед commit'ом) напомнит: «next_reprompt истёк, пересмотри». Hard floor от security-floor.sh — не override'ится оператором без `adoption_overrides:` с явной причиной (AP-22).
+**Мягкий слой** — ваш выбор при bootstrap'е. Вы решаете `[Skip]` / `[Keep]` для не-hard-floor артефактов прямо в диалоге с bootstrap-агентом. Решение записывается с причиной и датой в `.ai-pm/.bootstrap-state.md`. Через 90 дней `check-skip-reprompts.sh` (вызывается на старте каждой сессии + перед commit'ом) напомнит: «next_reprompt истёк, пересмотри». Hard floor от security-floor.sh — не override'ится без `adoption_overrides:` с явной причиной.
 
 ### 3. Защита от AI-дрейфа (3 слоя)
 
@@ -182,8 +180,8 @@ cd ../.. && git add .ai-pm/tooling && git commit -m "chore: bump ai-pm-protocol"
 
 - **Quick auto** (5-10 мин) — автоматически вытаскивает что может (стек, тип UI, тип БД), ставит hooks. Дальше первая фича каждого нового домена потребует короткого ресёрча
 - **Manual staged** (часы) — вы выбираете какие артефакты делать сейчас, AI ведёт через процесс
-- **Skip** (минута) — только trust profile, стек и Stage D hooks. Дальше каждая фича — отдельный ресёрч
-- **Full retrofit** (30-60 мин) — AI scan'ит код, группирует файлы по фичам, predict'ит N features, оператор подтверждает / переименовывает / split'ит / merge'ит. AI extract'ит spec skeleton per feature (`## Behaviour observed` + `## Invariants extracted` + `## Open questions`). Оператор fills open questions, approves. Дальше Layer 3 (cross-feature anti-drift) работает полноценно
+- **Skip** (минута) — только стек и Stage D hooks. Дальше каждая фича — отдельный ресёрч
+- **Full retrofit** (30-60 мин) — AI scan'ит код, группирует файлы по фичам, extract'ит spec skeleton per feature (`## Behaviour observed` + `## Invariants extracted` + `## Open questions`). Оператор fills open questions, approves. Дальше Layer 3 (cross-feature anti-drift) работает полноценно
 
 Foundation растёт постепенно: `minimal → partial → complete`.
 
@@ -191,7 +189,7 @@ Foundation растёт постепенно: `minimal → partial → complete`
 
 В v0 — **один profile, A** (PM, не читает код). Отчёты агентов подробные, с объяснением «почему так», ADR rationale, learning layer (раскрывают архитектурные принципы при первом упоминании).
 
-Profile auto-set на init — bootstrap-agent не спрашивает. Поле `trust_profile:` в `.ai-pm/.bootstrap-state.md` сохранено для backward-compat (existing проекты с B/C accepted as A) и future расширения, когда добавится developer-кейс.
+Profile auto-set на init — bootstrap-agent не спрашивает. Поле `trust_profile:` в `.ai-pm/.bootstrap-state.md` сохранено для future расширения, когда добавится developer-кейс.
 
 ## Что под капотом (коротко)
 
@@ -200,7 +198,7 @@ Profile auto-set на init — bootstrap-agent не спрашивает. Пол
 - **Composition matrices:** для гибридов вроде «web + backend + external БД» правила фильтруются по реальным capabilities, не копипастятся
 - **Реактивные ADR:** пишутся, когда planner находит развилку в плане. Не upfront, не «для галочки»
 - **Линтер дисциплины:** `check-spec-discipline.sh` — 23 проверки на типичные AI-косяки (ослабление assertion'ов, забытый regression test, fork без ADR, hallucinated decision component, cross-feature contradiction, jargon в operator-facing блоках) в 4 families (base / cross-doc-bounded / cross-feature-bounded / operator-communication)
-- **Статический security floor:** `check-security-floor.sh` — детерминированный grep по манифестам/коду/схемам на stripe/bcrypt/aes-gcm/PII. Output — ground truth для advisor'а
+- **Статический security floor:** `check-security-floor.sh` — детерминированный grep по манифестам/коду/схемам на stripe/bcrypt/aes-gcm/PII
 - **Reprompt auto-trigger:** `check-skip-reprompts.sh` парсит state-файл на старте каждой сессии и перед commit'ом, печатает истёкшие skip-решения
 
 Подробности по каждому — `doc/development-protocol.md` и `doc/anti-patterns.md` (AP-1..AP-33, granular per-AP files в `doc/anti-patterns/`).
@@ -212,9 +210,12 @@ ai-pm-protocol/
 ├── doc/
 │   ├── development-protocol.md   ← основной протокол
 │   ├── anti-patterns.md          ← index AP-1..AP-33
-│   ├── anti-patterns/             ← per-AP files (AP-01.md..AP-33.md)
-│   ├── _templates/               ← скелеты артефактов
+│   ├── anti-patterns/            ← per-AP files (AP-01.md..AP-33.md)
+│   ├── _templates/               ← скелеты артефактов для downstream проектов
+│   ├── _claude/                  ← lazy-loaded reviewer domain sections
 │   └── _recipes/cache/           ← конфиги под разные стеки
+├── meta/                         ← догфудинг-артефакты самого шаблона
+├── scripts/                      ← check-*.sh, update-*.sh, auto-extract/
 ├── .claude/agents/               ← все агенты
 ├── .githooks/                    ← защита от прямого push в main
 ├── init.sh                       ← one-shot onboarding для downstream проекта
@@ -227,7 +228,7 @@ ai-pm-protocol/
 |---|---|
 | `project-bootstrap` | Router. Определяет ситуацию (greenfield / legacy / resume / template-sync / lifecycle) по state + git, делегирует подходящему specialized subagent'у |
 | `bootstrap-greenfield` | Stage A-D для нового продукта (`new-product` mode) |
-| `bootstrap-legacy` | 3-choice adoption (Quick / Manual staged / Skip) + Tier 0 auto-extract + Tier 2 promotion + Tier 3 overrides |
+| `bootstrap-legacy` | 4-choice adoption (Quick / Manual staged / Skip / Full retrofit) + Tier 0 auto-extract + Tier 2 promotion + Tier 3 overrides |
 | `bootstrap-resume` | Session resume когда Stage A-D не closed |
 | `bootstrap-template-sync` | Template version bump workflow + architecture overview read-only extract |
 | `planner` | Пишет план фичи. Код не трогает |
@@ -251,8 +252,8 @@ git config core.hooksPath .githooks
 
 | Проект | Что общего | Чем отличается |
 |---|---|---|
-| [GitHub Spec Kit](https://github.com/github/spec-kit) | Спека → план → задачи → код, для Claude Code / Copilot / Gemini | Тулкит, а не протокол. Нет ревью-агента, прибитого к pre-push, нет advisor'а, нет ролей PM/dev |
-| [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) | «Виртуальная команда» из 9 ролей (Analyst, PM, Architect, Dev…), agile-цикл | Метафора — команда внутри AI. Здесь — наоборот, оператор + усилитель. Нет advisor-skip и hard-блокировок |
+| [GitHub Spec Kit](https://github.com/github/spec-kit) | Спека → план → задачи → код, для Claude Code / Copilot / Gemini | Тулкит, а не протокол. Нет ревью-агента, прибитого к pre-push, нет ролей PM/dev |
+| [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD) | «Виртуальная команда» из 9 ролей (Analyst, PM, Architect, Dev…), agile-цикл | Метафора — команда внутри AI. Здесь — наоборот, оператор + усилитель. Нет hard-блокировок на уровне git hooks / CI |
 | [GSA-TTS devCrew_s1](https://github.com/GSA-TTS/devCrew_s1) | Использует те же термины «operator gates», halt-and-escalate | Это спецификация для других платформ, не готовый submodule с hooks / CI / агентами |
 | [wshobson/agents](https://github.com/wshobson/agents), [awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) | Каталоги специализированных агентов | Просто наборы агентов, без обвязки протоколом. Ортогонально — можно встроить как источник |
 | [claude-sub-agent](https://github.com/zhsama/claude-sub-agent) | Workflow на subagents Claude Code | Меньше масштаб, без stage-gates и conditional skip framework |
