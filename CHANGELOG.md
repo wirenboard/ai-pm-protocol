@@ -15,6 +15,79 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Cross-doc-bounded — Layer 2 anti-drift** (feature `cross-doc-bounded`, PR #71):
+  - **Failure modes closed:** Layer 1 (AP-25/26 source-bounded) ловит spec-level drift в одном артефакте; live testing 2026-05-25 показал второй класс — **invisible** drift через ADR Decision components (hallucinated building blocks), cross-ADR contradictions в одной PR, scope creep между F-N и F-future. PM с Trust profile A не имеет mechanism это поймать post-hoc.
+  - **4 new AP** (`doc/anti-patterns/AP-{27,28,29,30}.md`):
+    - **AP-27** — Hallucinated decision component (ADR с новым building block без trace к source artifact)
+    - **AP-28** — Inter-ADR contradiction в одной PR (ADR-A rejects pattern, ADR-B implements same под другим именем)
+    - **AP-29** — ADR scope creep (component из F-future в ADR F-current под предлогом «logical completeness»)
+    - **AP-30** — Plausibility / structure bias (elegant symmetric naming triggers acceptance — `wrap_session` к `wrap_master`/`wrap_device`)
+  - **Reviewer mandatory Step 2.5** (`.claude/agents/reviewer.md`) — cross-doc check между planner и push'ем. Auto-loads foundational docs (`vision.md` / `positioning.md` / `mvp-scope.md` / `threat-model.md`) при `topology_impact: yes` / `threat_impact: yes`.
+  - **Linter family `cross-doc-bounded`** в `scripts/check-spec-discipline.sh.tmpl`:
+    - `adr-decision-component-bounded` (AP-27) — каждая entry в Components subsection требует structured reference indicator (`.md\b`, `ADR-NNNN\b`, citation marker)
+    - `inter-adr-contradiction` (AP-28) — pairwise scan ADRs в одной PR на rejected-pattern vs implemented mismatch
+    - `adr-feature-scope` (AP-29) — components в ADR должны быть в `feature_topic:` спеке, не в чужой
+  - **ADR template extension** (`doc/_templates/0000-adr-template.md.tmpl`):
+    - Mandatory `### Components` subsection (per-component source-ref)
+    - `feature_topic:` frontmatter field — binding к feature scope
+  - **Spec-structure backward-compat** (linter): legacy specs (created < 2026-05-27) — WARN, не FAIL. Avoid breaking historical artifacts.
+  - **Override marker** `[source-bounded-override: <reason>]` — fail → warn downgrade, identical pattern AP-25/26.
+  - **Regression fixture** `doc/_templates/regression-cases/cross-doc-drift-001/` — synthetic case с ADR-0014 (Three-tier envelope hallucinated component) + ADR-0013 (contradicting alternative). All 3 new checks fire as expected.
+
+- **Trust profile A verbosity audit — Option F** (feature `prompt-economy`, PR #72, last of 6):
+  - **What:** Trust profile A учил агентов писать verbose с learning layer на ВСЁ. Output tokens дороже input — compress learning layer для confirmation-only tasks, verbose остаётся для substantial findings.
+  - **9 agent files** получили unified `## Verbosity discipline` section (planner / coder / reviewer / release-helper / project-bootstrap + 4 bootstrap-mode):
+    - **Terse default** — confirmation acks, status updates, decision results без rationale rehash
+    - **5 verbose triggers** — architectural decision (fork в plan / new ADR draft), new AP detected, cross-domain finding, source-bounded fork (AP-25/26), escalation trigger fired
+    - **Anti-pattern** — rehashing plan/spec content в status updates; explaining что next step IS когда это просто executing approved plan
+    - **1 verbose + 1 terse example** per agent, role-specific (Idempotency-Key для coder, `Math.random()` crypto path для reviewer, MAJOR `feat!` для release-helper, etc.)
+  - **Reviewer exception:** findings body stays verbose для substantial issues (это primary operator output); trivial `[nit]`, no-issues approve verdicts, chat-output around persisted review get terse format.
+  - **Planner exception:** plan body verbose (operator contract); chat around plan compresses.
+  - +276 LOC across 9 files (~30 per agent).
+
+- **Operator-as-idea-provider — interface redesign под PM-only** (feature `operator-as-idea-provider`, PR #73):
+  - **Three-level architecture** в `development-protocol.md § 16`:
+    - **Strategic** (Operator/PM): стек, архитектура, бизнес-логика, security floor
+    - **Tactical** (AI silent): план, ADR alternatives, decomposition, tests strategy
+    - **Implementation** (AI silent): код, тесты, модули, refactoring choices
+    - PM видит только Strategic. Tactical/Implementation на operator-request only.
+  - **6 escalation triggers** (когда AI обязан спросить): business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold.
+  - **6 plain-language rules** (operator-facing communication): concrete-first / no-jargon без definition / tables+specifics / verification question / никаких abstract names / никаких internal IDs (F-NN, AP-NN).
+  - **AP-32** (`doc/anti-patterns/AP-32.md`) — Jargon-first operator communication (soft-warn). AI открывает диалог с PM терминами протокола — PM выключается на третьем термине; gate degeneration через approve-наугад.
+  - **`doc/_claude/operator-facing-examples.md`** — 5 terse/verbose pairs (one per logical agent). Examples role-specific (retention для planner, case-sensitivity для coder, assertion weakening для reviewer, MAJOR `feat!` для release-helper, ambiguous adoption signal для project-bootstrap router).
+  - **Linter family `operator-communication`** в `scripts/check-spec-discipline.sh.tmpl`:
+    - `check_operator_facing_jargon` (AP-32) — heuristic block detection на known headers (`## Summary для оператора`, `## Output handoff`, `## Краткое резюме`); grep на `\bAP-[0-9]+\b`, `\bF-[0-9]+\b`, `\[[a-z-]+-override:`, `\bStep [0-9]+\b`, `\bStage [A-E]\b`, `\bAskUserQuestion\b`. Soft-warn only (никогда `log_fail`).
+  - **`_claude/keyword-routing.md`** — preamble переписан с keyword exact-match на intent-detection; column renamed «Оператор пишет / keyword» → «Intent / typical phrasing».
+  - **`CLAUDE.md.tmpl`** — single bullet pointer на § 16 + AP-32 + examples.md.
+  - **Regression fixture** `regression-cases/operator-facing-jargon-001/` — synthetic `_review.md` с jargon violations.
+  - **Verbosity (PR #72) +18 agent extensions** — `### Operator escalation triggers (6)` + `### Plain-language rules` sub-sections в каждом из 9 agent prompts (5-15 LOC extension, pointer'ы на § 16, no content duplication).
+
+- **Spec-lifecycle + brownfield — Layer 3 anti-drift + retrofit routine** (feature `spec-lifecycle-and-brownfield`, PR #74):
+  - **Failure modes closed:** Layer 1+2 fokus'ятся на ОДНОЙ фиче за раз; Layer 3 ловит cross-feature contradiction (F-N нарушает invariant F-M через 3 месяца, PM не помнит). Brownfield adoption — натягивание шаблона на existing repo с features F-1..F-N БЕЗ specs.
+  - **5 сценариев матрица** (`development-protocol.md § 9.7`): А (новый продукт) / Б1 (active + new feature) / Б2 (active + bug fix) / **В1 (brownfield + new feature)** / **В2 (brownfield + bug fix)**.
+  - **Layer 3 cross-feature anti-drift** (`development-protocol.md § 9.6`):
+    - Reviewer-agent **дополнительно** делает cross-feature pass: читает `topology_impact:` / `threat_impact:` / `journey_impact:` / `scope_impact:` всех existing specs.
+    - Invariant extraction (regex baseline на `всегда / never / ни при каких / обязательно / запрещено`) — narrowed pre-emptively to require `## Invariants extracted` section ИЛИ list-item с hard absolutes (avoid greenfield prose false-positives).
+    - Hard cross-feature triggers (operator-gate): F-N меняет foundational doc / shared component / invariant overlap >= 2 between F-N spec и foundational + другие spec'и.
+  - **2 new AP**:
+    - **AP-31** (`doc/anti-patterns/AP-31.md`) — Spec staleness (warning). Detection: git log на code files vs `last_modified:` в spec'е. Threshold configurable через `staleness_days:` в `.bootstrap-state.md` (default 30). Hard fail при behaviour-changing code change без spec update. **Applies ко всем спекам включая retrofit'нутые** — incentive держать sync.
+    - **AP-33** (`doc/anti-patterns/AP-33.md`) — Cross-feature contradiction (critical). F-N implements pattern явно rejected F-M's invariants. Override marker `[cross-feature-override: <reason>]`.
+  - **Brownfield Full retrofit flow** (`.claude/agents/bootstrap-legacy.md`) — 4-й menu item поверх existing 3-choice:
+    - Step 1 (audit): scan repo, group files by feature (heuristic: directory structure, route groupings, module boundaries)
+    - Step 2 (operator review): «обнаружены features: F-A (auth), F-B (billing), F-C (export). Подтверди / split / merge»
+    - Step 3 (spec extraction): per approved feature — generate `<topic>_spec.md` skeleton с `## Behaviour observed` + `## Invariants extracted` + `## Open questions`
+    - Step 4 (operator approval): PM passes through spec'и, fills Open questions, marks `spec_approved:`
+  - **Spec template extension** (`_templates/feature-spec.md.tmpl`) — OPTIONAL `## Behaviour observed` + `## Invariants extracted` sections (HTML-comment wrapped — existing specs без break'а).
+  - **`affects_features: [topic1, topic2]`** frontmatter field — optional list для cross-feature link tracking. Documented в `_claude/frontmatter-convention.md`.
+  - **Linter family `cross-feature-bounded`** в `scripts/check-spec-discipline.sh.tmpl`:
+    - `check_spec_staleness` (AP-31) — git log dates vs spec `last_modified:`, threshold от `staleness_days:`
+    - `check_cross_feature_invariant` (AP-33) — pairwise scan invariants vs new F-N decisions
+    - `--regression` runner + 5 new fixtures (`cross-feature-drift-001..005`) — invariant overlap / foundational drift / staleness / affects_features chain violation / scope expansion
+  - **`check-cross-feature-invariants.sh.tmpl`** wrapper script — thin (5 LOC) alias к `check-spec-discipline.sh --check cross-feature-invariant`. Acceptance criterion satisfied (файл exists) + family pattern preserved.
+  - **§ 9.6/9.7 numbering note:** plan original predicted § 11/12, но existing § 11 «Feature workflow» был занят. Coder relocated на § 9.6/9.7 (thematic continuation после § 9.5 source-bounded). Layer architecture table в § 9.5 updated с Layer 3 row.
+
 ### Changed
 
 - **Anti-patterns granularization — Option C** (feature `prompt-economy`, PR-4):

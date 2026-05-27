@@ -193,6 +193,85 @@ Template убрал `meta/` целиком (был sandbox для audits / revie
 
 **Подробнее:** CHANGELOG.md § Unreleased / 0.7.0.
 
+### v0.7.0 follow-ups — prompt-economy wave (PR #63/#65/#67/#68/#69/#72)
+
+**Прыжок токенов вниз без потери дисциплины.** MINOR-additive (file moves + new agents files; legacy paths backward-compat через cross-refs).
+
+**Что изменилось:**
+
+- **`doc/anti-patterns.md`** (962 LOC monolith) → **`doc/anti-patterns/AP-NN.md` per-file** (PR #68). Master file → index с table-of-contents. Cross-refs `AP-NN` работают через текст, не path. AP-NN file structure: frontmatter (id / status / severity / domain), unified шаблон.
+- **`.claude/agents/project-bootstrap.md`** (733 LOC) → **router (~180 LOC) + 4 mode subagents** (PR #69):
+  - `bootstrap-greenfield.md` (Stage A-D для нового продукта)
+  - `bootstrap-legacy.md` (3-choice adoption + Tier framework)
+  - `bootstrap-resume.md` (Stage A-D не closed)
+  - `bootstrap-template-sync.md` (version bump + architecture overview)
+- **`CLAUDE.md.tmpl`** (229 LOC) → **core (~92 LOC) + on-demand `_claude/<concept>.md` refs** (PR #67). Agent читает CLAUDE.md всегда, остальное по pointer'ам.
+- **All 11 agent prompts** — cache-friendly ordering (PR #63): static blocks first (contract, AP discipline, output format), per-invocation context в tail.
+- **All 9 agent prompts** — `## Operator-facing tone` + `## Verbosity discipline` секции (PR #72): terse default, verbose только при architectural decision / new AP / cross-domain finding / source-bounded fork / escalation trigger.
+- **`development-protocol.md` § 9.5**: «Source-bounded contract» extract (PR #65) — universal blueprint для всех 12 agent files; per-agent contract section теперь pointer на § 9.5.
+
+**Action в product (template-sync):**
+- Регенерировать `doc/anti-patterns.md` → index format; добавить `doc/anti-patterns/` directory с per-AP files
+- Регенерировать `.claude/agents/project-bootstrap.md` + 4 новых `bootstrap-*.md`
+- Регенерировать `CLAUDE.md` (тонкий core)
+- Добавить `_claude/` directory из template: `keyword-routing.md`, `frontmatter-convention.md`, `subagent-context.md`, `lifecycle-scenarios.md`, etc.
+- Регенерировать все 9 agent prompts (cache ordering + tone/verbosity sections)
+- Регенерировать `development-protocol.md` (§ 9.5 source-bounded blueprint)
+
+### v0.7.0 follow-ups — anti-drift layers + brownfield (PR #71/#73/#74)
+
+**Три layer'а anti-drift complete.** MINOR-additive (new APs, new linter families, new template artifacts).
+
+**AP catalogue extension:**
+- **Layer 2 (PR #71):** AP-27 hallucinated decision component, AP-28 inter-ADR contradiction, AP-29 ADR scope creep, AP-30 plausibility / structure bias
+- **Layer 3 (PR #74):** AP-31 spec staleness (warning), AP-33 cross-feature contradiction (critical)
+- **Operator communication (PR #73):** AP-32 jargon-first communication (soft-warn)
+- **`affects_features:` frontmatter** (PR #74) — optional list field, описан в `_claude/frontmatter-convention.md`. Используется Layer 3 linter для cross-feature traceability.
+
+**Protocol additions:**
+- **`development-protocol.md § 9.6`** (PR #74) — Cross-feature invariants (Layer 3) — invariant extraction regex, hard cross-feature triggers, override marker `[cross-feature-override:]`
+- **`development-protocol.md § 9.7`** (PR #74) — Brownfield adoption (В1/В2 flow) — Full retrofit routine (audit/review/extract/approve)
+- **`development-protocol.md § 16`** (PR #73) — Operator interface model — three-level architecture (Strategic/Tactical/Implementation), 6 escalation triggers, 6 plain-language rules. Old § 16 «Что overlay может добавить» renumbered → § 17.
+
+**Linter additions** (all family-members в `check-spec-discipline.sh.tmpl`):
+- `adr-decision-component-bounded` / `inter-adr-contradiction` / `adr-feature-scope` (PR #71, family `cross-doc-bounded`)
+- `spec-staleness` / `cross-feature-invariant` (PR #74, family `cross-feature-bounded`)
+- `operator-facing-jargon` (PR #73, family `operator-communication`, soft-warn only)
+- **New wrapper script** `scripts/check-cross-feature-invariants.sh.tmpl` (PR #74) — thin alias к `check-spec-discipline.sh --check cross-feature-invariant`. Backward-compat для acceptance criterion literal naming.
+- **Mandatory `--regression` runner** — все 3 new families добавляют fixtures в `doc/_templates/regression-cases/`:
+  - `cross-doc-drift-001/` (PR #71)
+  - `cross-feature-drift-001..005/` (PR #74)
+  - `operator-facing-jargon-001/` (PR #73)
+
+**Reviewer extension** (PR #71): mandatory **Step 2.5** cross-doc check между planner и push'ем. Reviewer auto-loads foundational docs (vision / positioning / mvp-scope / threat-model) при `topology_impact: yes` / `threat_impact: yes`. Inline в `.claude/agents/reviewer.md`.
+
+**Bootstrap-legacy 4-choice menu** (PR #74): добавлен 4-й item «Full retrofit» поверх existing 3 (Quick auto / Manual staged / Skip). Flow: audit code → operator confirms grouped features → AI extracts spec skeletons → operator approves. Existing 3-choice сохранён без break'а.
+
+**Spec template extension** (PR #74): `_templates/feature-spec.md.tmpl` получает OPTIONAL секции `## Behaviour observed` + `## Invariants extracted` (HTML-comment wrapped — existing specs без break'а; используются brownfield extract'ом).
+
+**`bootstrap-state.md.tmpl` extension** (PR #74): новое поле `staleness_days: <integer>` (default 30) — threshold для AP-31 staleness check.
+
+**Action в product (template-sync):**
+- Регенерировать `doc/anti-patterns/AP-{27..33}.md` из template (7 новых files)
+- Регенерировать `doc/anti-patterns.md` index — обновить table-of-contents
+- Регенерировать `doc/development-protocol.md` (§ 9.5 layer table updated; § 9.6 / 9.7 / 16 / 17 added; old § 16 renumbered)
+- Регенерировать `doc/_templates/scripts/check-spec-discipline.sh.tmpl` — 3 new families + `--regression` runner
+- Добавить `doc/_templates/scripts/check-cross-feature-invariants.sh.tmpl` wrapper
+- Добавить `doc/_templates/regression-cases/` — 7 fixture directories
+- Регенерировать `.claude/agents/reviewer.md` — mandatory Step 2.5
+- Регенерировать `.claude/agents/planner.md` — auto-load foundational docs
+- Регенерировать `.claude/agents/bootstrap-legacy.md` — 4-choice menu
+- Регенерировать `.claude/agents/{coder,reviewer,release-helper,project-bootstrap,bootstrap-*}.md` — `## Operator-facing tone` extensions
+- Регенерировать `doc/_templates/CLAUDE.md.tmpl` — pointer line для plain-language rules
+- Регенерировать `doc/_templates/0000-adr-template.md.tmpl` — `### Components` subsection + `feature_topic:` frontmatter
+- Регенерировать `doc/_templates/feature-spec.md.tmpl` — optional `## Behaviour observed` + `## Invariants extracted`
+- Регенерировать `doc/_templates/bootstrap-state.md.tmpl` — `staleness_days:` field
+- Добавить `doc/_claude/operator-facing-examples.md` (5 terse/verbose pairs)
+- Обновить `doc/_claude/frontmatter-convention.md` — `affects_features:` field documented
+- Обновить `doc/_claude/keyword-routing.md` — intent-detection preamble
+
+**Inspection-before-regenerate discipline (особенно важно):** `check-spec-discipline.sh.tmpl` теперь contains 3 параллельных families (cross-doc / cross-feature / operator-communication). Если product кастомизировал какую-то family — manual merge при regenerate.
+
 ---
 
 ## Inspection-before-regenerate discipline (general)
