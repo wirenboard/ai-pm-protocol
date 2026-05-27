@@ -605,6 +605,14 @@ Findings body + chat summary включают full wrap (архитектурн�
 - **Terse-when:** PR — pure docs update, no AP violations, no domain section needed. Output в chat: «Review готов: `<path>`. Pure docs PR, mandatory baseline passed, no findings. Verdict: approve.»
 - **Verbose-when:** обнаружено `Math.random()` в crypto path (blocking, T-ID violation) — full wrap: какой invariant нарушен, к какому threat-model T-XX привязан, какой general principle (cryptographic RNG), suggested fix + alternative.
 
+### Operator escalation triggers (6)
+
+Поднимаешь голову в `## Summary для оператора` блоке review'а только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Остальные findings остаются внутри technical findings section (для coder'а, не для оператора). Per-reviewer example: coder ослабил test assertion (behaviour-changing) → escalate в operator summary; nit на naming inside private helper → не выноси в operator summary.
+
+### Plain-language rules
+
+Operator-facing summary блок (`## Summary для оператора`) формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких AP-NN / `[*-override:]` / Step N / Stage X / `AskUserQuestion` в operator summary — это soft-warn (AP-32). См. `.ai-pm/tooling/_claude/operator-facing-examples.md` § «reviewer escalation example». Reviewer **не активно охотится** за jargon у других agents — linter (`check-spec-discipline.sh --check operator-facing-jargon`) сам surface'ит WARN в output.
+
 ---
 
 ## Mandatory baseline

@@ -986,6 +986,78 @@ check_adr_feature_scope() {
   fi
 }
 
+# === Operator-communication family (AP-32 enforcement) ===
+#
+# Family: operator-communication. Closes AP-32 (jargon-first operator
+# communication) — internal protocol IDs / step references / override marker
+# syntax / stage names в operator-facing блоках `_review.md` / `_plan.md`.
+#
+# Mode: warning only (soft-warn per AP-32 NFR — hard-fail задушит legitimate
+# technical questions). Operator decides per case.
+#
+# Block detection: heuristic на known headers (operator decision Q4, 2026-05-27):
+# `## Summary для оператора`, `## Output handoff`, `## Краткое резюме`.
+# False-negative tolerable (warning-only); false-positive хуже.
+
+# === Check: operator-facing-jargon (AP-32) ===
+# Scan _review.md / _plan.md в $DOC_ROOT/features/. Внутри блоков с known
+# operator-facing headers grep'ает на patterns:
+#   - \bAP-[0-9]+\b           — anti-pattern IDs
+#   - \bF-[0-9]+\b            — feature IDs (F-01, F-04, ...)
+#   - \[[a-z-]+-override:     — override marker syntax
+#   - \bStep [0-9]+\b         — protocol step references
+#   - \bStage [A-E]\b         — protocol stage references
+#   - \bAskUserQuestion\b     — internal API name
+# Per finding — log_warn (never log_fail).
+check_operator_facing_jargon() {
+  local found_count=0
+  local operator_headers=(
+    "## Summary для оператора"
+    "## Output handoff"
+    "## Краткое резюме"
+  )
+
+  for doc in "$DOC_ROOT/features/"*_review.md "$DOC_ROOT/features/"*_plan.md "$DOC_ROOT/features/"*_plan.v*.md; do
+    [ -e "$doc" ] || continue
+
+    # Для каждого known operator-facing header — extract block body
+    # (от header'а до следующего `## ` или EOF), grep'аем на jargon patterns.
+    local header
+    for header in "${operator_headers[@]}"; do
+      # Escape для grep / awk
+      local block_body
+      block_body=$(awk -v hdr="$header" '
+        $0 == hdr {flag=1; next}
+        /^## / && flag {flag=0}
+        flag {print}
+      ' "$doc" 2>/dev/null)
+
+      [ -z "$block_body" ] && continue
+
+      # Patterns (per AP-32) — внутри operator-facing block
+      local pattern
+      local label
+      while IFS=$'\t' read -r pattern label; do
+        if echo "$block_body" | grep -qE "$pattern"; then
+          log_warn "operator-facing-jargon: $doc — '$header' block contains $label (AP-32). Reformulate в business / behaviour terms."
+          found_count=$((found_count + 1))
+        fi
+      done <<EOF
+\\bAP-[0-9]+\\b	internal AP-ID reference
+\\bF-[0-9]+\\b	internal feature-ID reference
+\\[[a-z-]+-override:	override marker syntax
+\\bStep [0-9]+\\b	protocol step reference
+\\bStage [A-E]\\b	protocol stage reference
+\\bAskUserQuestion\\b	internal API name
+EOF
+    done
+  done
+
+  if [ "$found_count" -eq 0 ]; then
+    log_ok "operator-facing-jargon"
+  fi
+}
+
 # === Regression mode ===
 # Запускает все checks на synthetic test fixtures из doc/_templates/regression-cases/
 # Каждый fixture: directory с anonymized synthetic case + expected_finding.md
@@ -1072,6 +1144,7 @@ case "${1:-all}" in
     check_adr_decision_component_bounded
     check_inter_adr_contradiction
     check_adr_feature_scope
+    check_operator_facing_jargon
     ;;
   --regression)
     # Regression test mode — run checks on synthetic fixtures
@@ -1106,6 +1179,7 @@ case "${1:-all}" in
     check_adr_decision_component_bounded
     check_inter_adr_contradiction
     check_adr_feature_scope
+    check_operator_facing_jargon
     ;;
 esac
 

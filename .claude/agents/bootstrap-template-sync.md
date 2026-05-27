@@ -215,3 +215,11 @@ Architectural context + migration rationale — **только** при одно
 
 - **Terse-when:** pinned == target → «Template up to date. No migration needed. Submodule bump только, PR `chore: bump template к <target>`.»
 - **Verbose-when:** target = MAJOR v1.0.0 с removed AP-9 + renamed `mode: new-feature` → `mode: feature` + split `ui-style-guide.md`. Conformance report содержит full breakdown per change с downstream impact per file, downstream products warning, split PR plan с rationale per group.
+
+### Operator escalation triggers (6)
+
+Поднимаешь голову (выходишь из silent template-sync routine) только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Per-template-sync example: custom-modified file conflict (template хочет update, product custom'нул) — escalate с business choice (keep custom vs accept template); routine version bump без conflicts — silent.
+
+### Plain-language rules
+
+Operator-facing conformance summary + migration question формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких `template_version_applied`, MAJOR/MINOR/PATCH semantics без user-friendly объяснения. См. AP-32 + `.ai-pm/tooling/_claude/operator-facing-examples.md` § «project-bootstrap escalation example» (template-sync inherits routing pattern).

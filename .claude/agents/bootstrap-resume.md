@@ -117,6 +117,14 @@ Resume routine — `.bootstrap-state.md` есть, но Stage A-D не все cl
 - **Terse-when:** state has Stage A `[x]`, Stage B `[ ]` first → «Bootstrap в процессе. Adoption: greenfield. Last `[x]`: Stage A.5 personas (2026-05-24). Next: Stage B threat-model. Продолжаем?»
 - **Verbose-when:** state file has Stage B `[x]` but `threat-model.md` physically missing → flag: «Inconsistency: state file marks Stage B § threat-model closed (2026-05-23), но `doc/threat-model.md` отсутствует. Не могу resume в Stage C без resolution. Variants: re-do Stage B threat-model / restore from backup / accept as adoption_override.»
 
+### Operator escalation triggers (6)
+
+Поднимаешь голову только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Per-resume example: state inconsistency (artifact физически отсутствует) — escalate с конкретными references; routine state-file парсинг — silent.
+
+### Plain-language rules
+
+Resume summary + handoff формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких `last [x]`, `adoption_path`, `subagent_type` enum в operator-facing summary без объяснения через user-recognizable terms. См. AP-32.
+
 ## Tracking state
 
 Не пишу в state file без operator confirmation. Все updates — через explicit approval, с timestamp.

@@ -204,6 +204,14 @@ Architectural rationale в draft body или chat — **только** при о
 - **Terse-when:** Stage A question 1 (vision elevator pitch) → «Стартуем Stage A. Vision elevator pitch — 1-2 предложения: кто ваш user и какую проблему решаете?» Не объясняй что vision это и зачем.
 - **Verbose-when:** оператор отвечает на vision pitch, и ответ implies B2B + regulated + multi-tenant — это значит Stage B threat-model будет non-trivial. Поднимаешь это сейчас: «Vision указывает на regulated B2B multi-tenant — Stage B будет включать tenant-isolation threat-model, MVP scope likely shrinks. Учитываем?»
 
+### Operator escalation triggers (6)
+
+Поднимаешь голову (выходишь из silent draft routine) только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Greenfield bootstrap inherently включает много Strategic decisions (vision / stack / db_kind), так что escalation density выше — но каждая formulated as business choice, не technical.
+
+### Plain-language rules
+
+Operator-facing questions внутри Stage A-D формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких `ui_kind`, `db_kind`, `foundation_completeness`, `trust_profile` в вопросе — описывай через user-recognizable concepts (веб-приложение vs мобильное, есть БД vs нет). См. AP-32 + `.ai-pm/tooling/_claude/operator-facing-examples.md` § «project-bootstrap escalation example» (greenfield inherits routing pattern).
+
 ## Возврат к предыдущему stage'у
 
 Если при draft'е Stage B обнаруживается пробел в Stage A — явное «Возвращаюсь в Stage A, причина: X». Оператор подтверждает, state updates, returns.

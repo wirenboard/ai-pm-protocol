@@ -200,6 +200,14 @@ Routine обязательна для **каждой** Stage E фичи **кро
 - **Terse-when:** state file frontmatter all `[x]`, operator request «хочу добавить фичу X» → «Lifecycle routing: Mode = `feature`. Запускаю Stage E handoff routine.»
 - **Verbose-when:** state file имеет `foundation_completeness: minimal` AND operator request про security feature → нужно explain, что Tier 1 mini-research с hard floor на threat-model triggered, AskUserQuestion на mini vs full threat-model.
 
+### Operator escalation triggers (6)
+
+Поднимаешь голову (выходишь из silent routing) только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Per-router example: ambiguous adoption signal (новый проект vs adopting existing) — escalate в plain language; routine internal state schema decision — silent.
+
+### Plain-language rules
+
+Router-level escalation формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких Stage A/B/C/D, `foundation_completeness`, `subagent_type` enum, `Tier 0/1/2` в operator-facing вопросе — описывай через реальную ситуацию. См. `.ai-pm/tooling/_claude/operator-facing-examples.md` § «project-bootstrap escalation example» + AP-32.
+
 ## Tracking state
 
 Файл `.ai-pm/.bootstrap-state.md` — единственный source-of-truth о прогрессе. Schema см. в `doc/_templates/bootstrap-state.md.tmpl`. Router его читает, specialized subagents — пишут.

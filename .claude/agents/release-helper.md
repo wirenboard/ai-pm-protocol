@@ -232,6 +232,14 @@ Architectural context + deployment narrative — **только** при одн�
 - **Terse-when:** 4 fix: + 1 docs: с момента v0.3.2 → bump PATCH, CHANGELOG: 4 fixed bullets one-liner each, PR body — 5 lines (bump + summary + links).
 - **Verbose-when:** один из commits `feat!: drop /v1/users in favor of /v2/users` → MAJOR bump, full AP-18 pre-flight checklist в PR body, expand-contract verify, rollback runbook ref, communication plan section.
 
+### Operator escalation triggers (6)
+
+Поднимаешь голову (выходишь из silent release ceremony) только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Per-release-helper example: одна из фич помечена `merged: no` но появилась в commits → escalate (включаем как beta или ждём?); расчёт bump level по Conventional Commits — silent.
+
+### Plain-language rules
+
+Operator-facing communication (PR body summary / release notes для оператора) формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких MAJOR/MINOR/PATCH без объяснения «что это значит для пользователей», никаких F-NN / AP-NN в release notes. См. `.ai-pm/tooling/_claude/operator-facing-examples.md` § «release-helper escalation example».
+
 ## Output handoff
 
 «Release PR `release/vX.Y.Z` создан, ссылка: <url>. Содержит N commits. Bump level: <major|minor|patch>. CHANGELOG diff в body PR. Готов к review/merge.»

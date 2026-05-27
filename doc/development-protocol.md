@@ -773,7 +773,53 @@ Foundational docs — living artifacts, но с разной review-cadence:
 
 ---
 
-## 16. Что overlay может добавить, но не отменить
+## 16. Operator interface model
+
+Оператор шаблона — PM, не reader of code / plan / ADR / protocol internals. Subagents и main session AI взаимодействуют с ним через **plain-language layer** на одном уровне абстракции: бизнес-поведение + scenarios + decisions. Технические слои (Tactical / Implementation) AI ведёт silent, поднимая голову только по explicit escalation triggers.
+
+Подробное обоснование parade'игмы — `doc/features/operator-as-idea-provider_spec.md`. Эта секция — оперативный source of truth для agent prompts (`.claude/agents/*.md`) и cross-ref для AP-32.
+
+### Three-level architecture
+
+| Уровень | Кто решает | Что обсуждается |
+|---|---|---|
+| **Strategic** | Operator (PM) | Стек, архитектура (high-level), бизнес-логика, security floor |
+| **Tactical** | AI silent | План реализации, ADR alternatives, decomposition, tests strategy |
+| **Implementation** | AI silent | Код, тесты, модули, refactoring choices |
+
+Оператор видит **только Strategic-уровень**. Tactical / Implementation не показываются по умолчанию — доступ on-demand через explicit operator request.
+
+### 6 escalation triggers (когда AI обязан спросить)
+
+AI silent до тех пор, пока не наткнётся на одно из:
+
+1. **Business-logic hole** — спека не покрывает реальный сценарий, AI не может довывести без operator input.
+2. **Business-affecting fork** — архитектурный выбор влияет на видимое поведение / user flow / pricing.
+3. **Stack-affecting decision** — новая зависимость / migration / отказ от existing component.
+4. **Security floor triggered** — `check-security-floor.sh` срабатывает.
+5. **Cross-feature contradiction** (Layer 3) — изменение в F-N нарушает invariant'ы F-M.
+6. **Cost / time threshold exceeded** — реализация уходит за лимит из spec'а / `mvp-scope.md`.
+
+Все остальные decisions (Tactical, Implementation) AI принимает без operator-gate. AP-3 (operator-gate at every stage) остаётся, но triggers пересмотрены — gate не на каждый ADR / каждый plan section, а на эти 6.
+
+### 6 plain-language rules (operator-facing communication)
+
+Все agent'ы при формулировке вопросов / summary к оператору соблюдают:
+
+1. **Concrete first, abstract second** — пример раньше определения.
+2. **No jargon без immediate definition** — если нельзя без термина, объяснение через 1 предложение на месте.
+3. **Tables followed by «что специфично»** — после таблицы — какие строки реально применяются здесь.
+4. **Verification question в конце** — «правильно понял что X?» вместо «надеюсь понятно».
+5. **Никаких abstract names** (Q1/Q2/Q3, опция A/B/C без короткого user-recognizable названия).
+6. **Internal IDs (F-04, AP-25, ADR-0014, Step 2, Stage E)** — никогда в operator-facing message. Только user-recognizable descriptions («recovery flow», «source-bounded discipline»).
+
+Enforcement — `check-spec-discipline.sh --check operator-facing-jargon` (warning level, soft-warn per AP-32 NFR). Examples — `.ai-pm/tooling/_claude/operator-facing-examples.md` (5 terse/verbose pairs per logical agent).
+
+Cross-ref: `doc/anti-patterns/AP-32.md`, Verbosity discipline section in `.claude/agents/*.md` (9 files).
+
+---
+
+## 17. Что overlay может добавить, но не отменить
 
 Overlay (`doc/development-protocol.md` в конкретном проекте) **может**:
 

@@ -286,6 +286,14 @@ Architectural context + trade-off explainer — **только** при одно
 - **Terse-when:** оператор выбрал Choice 1 Quick → «Запускаю Tier 0 extract.» После: «Extracted: stack=python, ui_kind=web (React), db_kind=external (PostgreSQL), topology sketch — 4 services. Stage D hooks installed. Adoption готова, foundation_completeness=minimal. Готов к первой фиче.»
 - **Verbose-when:** оператор выбрал Choice 3 Skip и сейчас просит первую feature с auth path → нужно объяснить hard floor: «Choice 3 skipped foundational threat-model, но auth path триггерит hard floor (AP-14). Нужен mini-threat-list в spec'е перед draft'ом, иначе security gates не проходят. Готов сделать Tier 1 mini-research?»
 
+### Operator escalation triggers (6)
+
+Поднимаешь голову (выходишь из silent extract / 3-choice routine) только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Per-legacy example: 3-choice adoption выбор (Quick / Standard / Skip) — это business-affecting decision, escalate с full trade-off; extract того что уже в `package.json` — silent.
+
+### Plain-language rules
+
+Operator-facing questions (3-choice prompt, override declaration, hard floor refusal) формулируешь по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких `foundation_completeness=minimal`, `Tier 0/1/2`, `adoption_overrides` без объяснения. См. AP-32 + `.ai-pm/tooling/_claude/operator-facing-examples.md` § «project-bootstrap escalation example».
+
 ## После draft'а ВСЕГДА показывай содержимое в чате
 
 Те же требования что в `bootstrap-greenfield`: заголовок + summary + key excerpts + open points + AskUserQuestion маркер. Файл огромный (> 200 строк) — показываешь structure + sample paragraphs.

@@ -254,6 +254,14 @@ Architectural context + general principle в chat / PR description — **тол�
 - **Terse-when:** plan говорит «POST /v1/users idempotent через Idempotency-Key, expand-contract migration» — реализуешь, commit «feat(backend): users endpoint with Idempotency-Key support. Refs plan § 3.» Не объясняй что Idempotency-Key решает.
 - **Verbose-when:** во время implementation обнаружил что plan'овский dual-write подход создаёт race в существующем `users_audit` table (cross-feature contradiction) — escalate с full architectural context: какой invariant ломается, suggested alternative, нужно решение оператора.
 
+### Operator escalation triggers (6)
+
+Поднимаешь голову (выходишь из silent Implementation mode) только при одном из 6 — full list в `development-protocol.md § 16 «Operator interface model»`. TL;DR: business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold. Все остальные implementation decisions (рефакторинг внутри модуля, выбор библиотечной функции, формат сообщения в логе) — silent. Per-coder example: spec говорит «email уникален», но не определяет case-sensitivity — это business-logic hole → escalate в business terms; выбор `assertEqual` vs `assertIs` в тесте — silent.
+
+### Plain-language rules
+
+При escalation формулируешь вопрос по 6 правилам plain-language — concrete-first / no-jargon / table+specifics / verification question / no-abstract-names / no-internal-IDs (full list — `development-protocol.md § 16`). Никаких `citext` / `collation` / `Layer N` / `Step M` в operator-facing message — описывай через observable behaviour. См. `doc/anti-patterns/AP-32.md` + `.ai-pm/tooling/_claude/operator-facing-examples.md` § «coder escalation example».
+
 ## Тон коммитов
 
 Conventional Commits 1.0:
