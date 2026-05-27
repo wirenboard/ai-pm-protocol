@@ -13,6 +13,16 @@
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **CI review-trail: clarified `[skip-review]` vs `[review-override:]` semantics.** Раньше error message не разделял два маркера семантически — разработчики использовали `[review-override:]` для «review не нужен» (неверно). `[skip-review]` = review не проводился / не нужен; `[review-override:]` = review был, trace не committed. Обновлены error messages в CI workflow.
+- **CLAUDE.md.tmpl: content-based review decision rule.** Раньше не было явного правила когда `[skip-review]` корректен — AI решал ad-hoc. Теперь: инспектируй `git diff --name-only`; если diff содержит agent prompts / AP-*.md / CI+hooks / protocol docs / template scripts → reviewer обязателен; если только CHANGELOG / README-formatting / .gitignore без semantic impact / version bumps → `[skip-review]` уместен.
+- **release-helper.md: orchestrator fallback при blocked agent.** Если release-helper вернул «нет прав / blocked» — оркестратор выполняет шаги напрямую без делегирования.
+
+---
+
 ## [0.9.0] — 2026-05-27
 
 ### Added

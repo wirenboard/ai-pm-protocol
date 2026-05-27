@@ -46,6 +46,8 @@
 - **Никаких direct-commits в `main`** (§ 13). Только feature/<topic> branch'и + PR + squash & merge.
 - **`--no-verify` запрещён** (AP-6). Pre-commit hook fail'ит — fix корень, не обходи.
 - **Reviewer-agent обязателен для каждого PR перед `git push`** (AP-16). Детали enforcement (Layer 4 hook + Layer 5 CI, формы trail, override marker'ы) — `.ai-pm/tooling/_claude/hard-rules-detail.md`.
+  - **`[skip-review]` уместен** только если diff НЕ затрагивает архитектуру, бизнес-логику или документацию их описывающую. Эвристика: проверь `git diff --name-only` — если только CHANGELOG / README-formatting / `.gitignore` без semantic impact / version bumps → `[skip-review]` корректен. Если diff содержит agent prompts, AP-*.md, CI/hooks (`.github/`, `.githooks/`), protocol docs, template scripts с логикой → **reviewer обязателен**, `[skip-review]` запрещён.
+  - **`[review-override: reason]`** — review проводился, trace не committed (local-only режим для non-release branches). Семантически отличается от `[skip-review]`: override = review был; skip = review не нужен.
 - **Оператор никогда не читает код** (PM-only ЦА в v0). Не показывай diff'ы; обсуждай в spec terms (поведение / scenarios / decisions), не в code terms.
 - **Plain-language operator interface** (AP-32) — escalate только по 6 triggers, формулируй вопросы в business terms (правила — `{{doc_root}}/development-protocol.md § 16` + AP-32; примеры — `.ai-pm/tooling/_claude/operator-facing-examples.md`).
 - **Языковая дисциплина** (AP-12 soft): формальные части проекта на `primary_language` из state. Детали (русские эквиваленты, sed запрещён) — `.ai-pm/tooling/_claude/hard-rules-detail.md`.
