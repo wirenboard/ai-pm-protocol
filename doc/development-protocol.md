@@ -1,6 +1,6 @@
 # Development Protocol — Generic
 
-Универсальный protocol разработки в связке **соло-оператор + AI-агент**. В v0 оператор — это PM (не читает AI-код), который ведёт продукт один; convention из anti-patterns.md AP-16. Developer-as-operator кейс — backlog item после empirical validation PM-кейса (см. personas.md «Что НЕ persona в v0»). Описывает **процесс**, не технологию: стек и инструменты выбираются на Stage C и генерируются на Stage D под конкретный проект.
+Универсальный protocol разработки в связке **соло-оператор + AI-агент**. В v0 оператор — это PM (не читает AI-код), который ведёт продукт один; convention из anti-patterns.md AP-16. Developer-as-operator кейс — backlog item после empirical validation PM-кейса (см. meta/personas.md «Что НЕ persona в v0»). Описывает **процесс**, не технологию: стек и инструменты выбираются на Stage C и генерируются на Stage D под конкретный проект.
 
 **Статус:** v0. Source-of-truth — `../ai-pm-protocol/`. Project-specific overlays могут добавлять правила (см. § 13), но **не отменять** generic.
 
