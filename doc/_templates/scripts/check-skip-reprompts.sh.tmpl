@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # scripts/check-skip-reprompts.sh
 #
-# Layer-climbing escalation для skip_decisions. Парсит skip_decisions block в
-# .ai-pm/.bootstrap-state.md, сверяет next_reprompt с today, печатает expired
-# skip'ы для оператора.
+# Layer-climbing escalation для двух типов expiring decisions:
+#   1. skip_decisions[].next_reprompt — per-artifact skip с default 90-day reprompt
+#   2. adoption_overrides[].expires_at — Tier 3 overrides с default 180-day expiry
+#
+# Парсит оба блока в .ai-pm/.bootstrap-state.md, сверяет даты с today, печатает
+# expired entries для оператора.
 #
 # Раньше (pre-v0.7.0) "advisor возвращается через 90 дней пересмотреть skip"
 # описывалось только в discipline-advisor.md промпте — полагались на то что
@@ -11,10 +14,14 @@
 # feature) — этот deterministic check единственный mechanism. Вызывается из
 # SessionStart hook / pre-commit warning / bootstrap entry / CI.
 #
+# adoption_overrides scanning добавлен в schema-additions PR (ARCH-9 в
+# architectural-backlog.md) — раньше adoption_overrides expires_at был
+# optional field в comment example, без enforcer. Теперь — first-class.
+#
 # Usage:
 #   ./check-skip-reprompts.sh           — human warning на stderr, exit 0 (non-blocking)
-#   ./check-skip-reprompts.sh --json    — JSON list expired skips на stdout
-#   ./check-skip-reprompts.sh --strict  — exit 1 если есть expired (для CI gate)
+#   ./check-skip-reprompts.sh --json    — JSON object {"skip_decisions": [...], "adoption_overrides": [...]} на stdout
+#   ./check-skip-reprompts.sh --strict  — exit 1 если есть expired в любом блоке (для CI gate)
 #
 # Format в bootstrap-state.md (YAML-в-markdown):
 #   skip_decisions:
@@ -24,6 +31,13 @@
 #       declared_at: YYYY-MM-DD
 #       next_reprompt: YYYY-MM-DD
 #       promoted_by: advisor-floor | quiz | operator
+#
+#   adoption_overrides:
+#     - skip: stage-e-hooks
+#       reason: "..."
+#       accepted-risk: "..."
+#       declared_at: YYYY-MM-DD
+#       expires_at: YYYY-MM-DD
 
 set -e
 
@@ -62,39 +76,59 @@ fi
 
 TODAY=$(date +%Y-%m-%d)
 
-# Extract skip_decisions block (от строки `skip_decisions:` до следующего top-level key).
-# Top-level keys identified as: ^[a-z_]+: (start of line, no leading whitespace).
-BLOCK=$(awk '
-  /^skip_decisions:/ { in_block = 1; print; next }
-  in_block && /^[a-z_][a-z_]*:/ { in_block = 0 }
-  in_block { print }
-' "$STATE_FILE")
+# Generic extract: read top-level YAML block ($1=block name) до следующего top-level key.
+extract_block() {
+  local block_name="$1"
+  awk -v block="$block_name" '
+    $0 ~ "^" block ":" { in_block = 1; next }
+    in_block && /^[a-z_][a-z_]*:/ { in_block = 0 }
+    in_block { print }
+  ' "$STATE_FILE"
+}
 
-# Parse YAML list entries. Каждый entry начинается с "  - " (или с "- ").
-# Собираем поля artifact и next_reprompt per entry.
-EXPIRED=$(printf '%s\n' "$BLOCK" | awk -v today="$TODAY" '
+# Parse YAML list entries — anchored field matching (F1 fix per audit
+# 2026-05-27 reviewer F1: substring matching `/skip:/` corrupted skip value
+# когда reason содержал слово "skip:". Original `/artifact:/` parser имел
+# same latent bug — рaboтал by accident. Fix: anchor to line start +
+# require dash-or-spaces prefix + trailing whitespace after colon.
+#
+# Pattern format: ^[[:space:]]*-?[[:space:]]*<field>:[[:space:]]
+#  - ^                — line start (anchored)
+#  - [[:space:]]*-?   — optional leading spaces + optional dash (YAML list item)
+#  - [[:space:]]*     — spaces after dash (если dash есть)
+#  - <field>:         — literal field name + colon
+#  - [[:space:]]      — at least one whitespace after colon (rejects field:value-without-space)
+#
+# Применяем match() + substr() для extraction value AFTER matched prefix.
+
+# Parse skip_decisions: per-entry artifact + next_reprompt + reason.
+SKIP_BLOCK=$(extract_block "skip_decisions")
+EXPIRED_SKIPS=$(printf '%s\n' "$SKIP_BLOCK" | awk -v today="$TODAY" '
   /^[[:space:]]*-[[:space:]]+/ {
     if (artifact && reprompt && reprompt < today) {
       printf "%s\t%s\t%s\n", artifact, reprompt, reason
     }
     artifact = ""; reprompt = ""; reason = ""
   }
-  /artifact:/ {
-    sub(/^[[:space:]]*-?[[:space:]]*artifact:[[:space:]]*/, "")
-    sub(/[[:space:]]*$/, "")
-    gsub(/"/, "")
-    artifact = $0
+  match($0, /^[[:space:]]*-?[[:space:]]*artifact:[[:space:]]/) {
+    val = substr($0, RLENGTH + 1)
+    sub(/[[:space:]]*$/, "", val)
+    gsub(/"/, "", val)
+    artifact = val
+    next
   }
-  /next_reprompt:/ {
-    sub(/^[[:space:]]*next_reprompt:[[:space:]]*/, "")
-    sub(/[[:space:]].*$/, "")
-    reprompt = $0
+  match($0, /^[[:space:]]*next_reprompt:[[:space:]]/) {
+    val = substr($0, RLENGTH + 1)
+    sub(/[[:space:]].*$/, "", val)
+    reprompt = val
+    next
   }
-  /reason:/ {
-    sub(/^[[:space:]]*reason:[[:space:]]*/, "")
-    sub(/[[:space:]]*$/, "")
-    gsub(/"/, "")
-    reason = $0
+  match($0, /^[[:space:]]*reason:[[:space:]]/) {
+    val = substr($0, RLENGTH + 1)
+    sub(/[[:space:]]*$/, "", val)
+    gsub(/"/, "", val)
+    reason = val
+    next
   }
   END {
     if (artifact && reprompt && reprompt < today) {
@@ -103,19 +137,67 @@ EXPIRED=$(printf '%s\n' "$BLOCK" | awk -v today="$TODAY" '
   }
 ')
 
+# Parse adoption_overrides: per-entry skip + expires_at + reason.
+OVR_BLOCK=$(extract_block "adoption_overrides")
+EXPIRED_OVERRIDES=$(printf '%s\n' "$OVR_BLOCK" | awk -v today="$TODAY" '
+  /^[[:space:]]*-[[:space:]]+/ {
+    if (skip && expires && expires < today) {
+      printf "%s\t%s\t%s\n", skip, expires, reason
+    }
+    skip = ""; expires = ""; reason = ""
+  }
+  match($0, /^[[:space:]]*-?[[:space:]]*skip:[[:space:]]/) {
+    val = substr($0, RLENGTH + 1)
+    sub(/[[:space:]]*$/, "", val)
+    gsub(/"/, "", val)
+    skip = val
+    next
+  }
+  match($0, /^[[:space:]]*expires_at:[[:space:]]/) {
+    val = substr($0, RLENGTH + 1)
+    sub(/[[:space:]].*$/, "", val)
+    expires = val
+    next
+  }
+  match($0, /^[[:space:]]*reason:[[:space:]]/) {
+    val = substr($0, RLENGTH + 1)
+    sub(/[[:space:]]*$/, "", val)
+    gsub(/"/, "", val)
+    reason = val
+    next
+  }
+  END {
+    if (skip && expires && expires < today) {
+      printf "%s\t%s\t%s\n", skip, expires, reason
+    }
+  }
+')
+
+# Combined for legacy single-stream consumers.
+EXPIRED="$EXPIRED_SKIPS"
+
 if [ "$MODE" = "json" ]; then
-  printf '['
+  printf '{"skip_decisions":['
   first=1
-  printf '%s\n' "$EXPIRED" | while IFS=$'\t' read -r artifact reprompt reason; do
+  printf '%s\n' "$EXPIRED_SKIPS" | while IFS=$'\t' read -r artifact reprompt reason; do
     [ -z "$artifact" ] && continue
     [ $first -eq 0 ] && printf ','
-    # JSON-escape
     art_e="${artifact//\\/\\\\}"; art_e="${art_e//\"/\\\"}"
     rea_e="${reason//\\/\\\\}"; rea_e="${rea_e//\"/\\\"}"
     printf '{"artifact":"%s","next_reprompt":"%s","reason":"%s"}' "$art_e" "$reprompt" "$rea_e"
     first=0
   done
-  echo ']'
+  printf '],"adoption_overrides":['
+  first=1
+  printf '%s\n' "$EXPIRED_OVERRIDES" | while IFS=$'\t' read -r skip expires reason; do
+    [ -z "$skip" ] && continue
+    [ $first -eq 0 ] && printf ','
+    skip_e="${skip//\\/\\\\}"; skip_e="${skip_e//\"/\\\"}"
+    rea_e="${reason//\\/\\\\}"; rea_e="${rea_e//\"/\\\"}"
+    printf '{"skip":"%s","expires_at":"%s","reason":"%s"}' "$skip_e" "$expires" "$rea_e"
+    first=0
+  done
+  echo ']}'
 else
   COUNT=0
   while IFS=$'\t' read -r artifact reprompt reason; do
@@ -128,18 +210,40 @@ else
     COUNT=$((COUNT + 1))
     echo "  $artifact (skip declared, next_reprompt: $reprompt < today $TODAY)" >&2
     [ -n "$reason" ] && echo "    причина skip'а: $reason" >&2
-  done <<< "$EXPIRED"
+  done <<< "$EXPIRED_SKIPS"
   if [ $COUNT -gt 0 ]; then
     echo "" >&2
-    echo "Спросить advisor: «зависимости / threats не изменились?» Решение — оператор." >&2
+    echo "Решение — оператор: dependencies / threats не изменились?" >&2
     echo "После re-validation обновить next_reprompt в .ai-pm/.bootstrap-state.md." >&2
+    echo "" >&2
+  fi
+
+  OVR_COUNT=0
+  while IFS=$'\t' read -r skip expires reason; do
+    [ -z "$skip" ] && continue
+    if [ $OVR_COUNT -eq 0 ]; then
+      echo "" >&2
+      echo "=== Adoption overrides — expired, force re-evaluation ===" >&2
+      echo "" >&2
+    fi
+    OVR_COUNT=$((OVR_COUNT + 1))
+    echo "  skip: $skip (declared, expires_at: $expires < today $TODAY)" >&2
+    [ -n "$reason" ] && echo "    причина override: $reason" >&2
+  done <<< "$EXPIRED_OVERRIDES"
+  if [ $OVR_COUNT -gt 0 ]; then
+    echo "" >&2
+    echo "Решение — оператор: trade-off всё ещё applicable?" >&2
+    echo "Опции: (а) extend expires_at (situation unchanged) / (б) remove override (адаптировать)." >&2
     echo "" >&2
   fi
 fi
 
-# Strict mode для CI gate
-if [ $STRICT -eq 1 ] && [ -n "$EXPIRED" ] && [ "$(echo "$EXPIRED" | grep -c .)" -gt 0 ]; then
-  exit 1
+# Strict mode для CI gate — fail если есть expired в любом блоке
+if [ $STRICT -eq 1 ]; then
+  HAS_EXPIRED=0
+  [ -n "$EXPIRED_SKIPS" ] && [ "$(echo "$EXPIRED_SKIPS" | grep -c .)" -gt 0 ] && HAS_EXPIRED=1
+  [ -n "$EXPIRED_OVERRIDES" ] && [ "$(echo "$EXPIRED_OVERRIDES" | grep -c .)" -gt 0 ] && HAS_EXPIRED=1
+  [ $HAS_EXPIRED -eq 1 ] && exit 1
 fi
 
 exit 0

@@ -55,9 +55,35 @@ staleness_days: 30
 # null — для greenfield projects пока Stage D не closed
 adoption_path: greenfield | legacy-quick | legacy-staged | legacy-skip | null
 
+# Manual staged adoption sequence — ordered list artifacts которые operator
+# выбрал в Choice 2 (bootstrap-legacy.md). Populated at start, не auto-updated
+# AI'ем. Stage checkboxes (body of file) track per-artifact completion;
+# этот список определяет ORDER iteration.
+#
+# Resume routine: scan Stage checkboxes для completed → next uncompleted
+# artifact в selected_artifacts — это где продолжить. Без этого list'а
+# (или для greenfield/quick/skip adoption paths) — sequence implicit
+# (Stage A → B → C → D), без operator-specific subset.
+#
+# Empty/absent если adoption_path ≠ legacy-staged.
+staged_progress:
+  selected_artifacts: []  # ordered list per operator selection в Choice 2
+  declared_at: YYYY-MM-DD
+# Example:
+# staged_progress:
+#   selected_artifacts: [personas.md, threat-model.md, topology.md]
+#   declared_at: 2026-05-27
+
 # Adoption overrides — declared trade-offs (Tier 3). Parallel к AP-16 review-override.
-# Каждый entry требует reason + accepted-risk. AI не override'ит сам — только
-# explicit operator instruction. См. AP-22 в anti-patterns.md.
+# Каждый entry требует reason + accepted-risk + expires_at. AI не override'ит
+# сам — только explicit operator instruction. См. AP-22.
+#
+# expires_at default: 180 days from declared_at. Cadence longer чем
+# skip_decisions.next_reprompt (90 days) — структурные decisions (no UI →
+# skip ui-style-guide) меняются реже чем per-artifact skip choices.
+#
+# Expired overrides surface'ятся через scripts/check-skip-reprompts.sh
+# (deterministic check, same mechanism что и skip_decisions.next_reprompt).
 adoption_overrides: []
 # Example:
 # adoption_overrides:
@@ -65,7 +91,7 @@ adoption_overrides: []
 #     reason: «legacy CI integration conflicts, hooks moved to separate PR»
 #     accepted-risk: «AP-16 enforcement soft, manual review-trail discipline»
 #     declared_at: YYYY-MM-DD
-#     expires_at: YYYY-MM-DD  # optional sunset, force re-evaluation
+#     expires_at: YYYY-MM-DD  # default 180 days from declared_at; force re-evaluation
 
 stack: typescript | python | go | rust | ... | unknown
 project_capabilities:
