@@ -5,7 +5,7 @@ lite-mode: no
 created: 2026-05-27
 spec_reference: doc/features/spec-lifecycle-and-brownfield_spec.md
 plan_version: 1
-plan_approved:
+plan_approved: 2026-05-27
 operator_approved:
 ---
 
@@ -14,6 +14,15 @@ operator_approved:
 **Stage E artifact, Step 2.** Status: draft.
 
 Файл реализует spec'у `spec-lifecycle-and-brownfield_spec.md` (approved 2026-05-27) — Layer 3 cross-feature anti-drift + brownfield routine. Source-bounded: каждая секция traces к spec scope/acceptance.
+
+---
+
+## Operator decisions (2026-05-27) — pre-coder resolutions
+
+| # | Question | Decision |
+|---|---|---|
+| Q1 | `check-cross-feature-invariants.sh` standalone vs family inside `check-spec-discipline.sh` | **Family inside `check-spec-discipline.sh`** + thin wrapper `doc/_templates/scripts/check-cross-feature-invariants.sh.tmpl` который инвоучит `check-spec-discipline.sh --check cross-feature-invariants`. Acceptance criterion satisfied (файл существует) + family pattern сохранён (consistency с PR #71 Layer 2). |
+| Q2 | Retrofit'нутые spec'и → code refactor → staleness loop | **Feature, не bug.** AP-31 staleness применяется ко ВСЕМ spec'ам включая retrofit'нутые. Fires как warning, operator решает per-case (update spec / mark deprecated / explicit acknowledgement через commit marker). Incentive держать spec'и in sync с code. |
 
 ---
 
