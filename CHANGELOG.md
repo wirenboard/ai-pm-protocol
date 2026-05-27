@@ -25,12 +25,12 @@ v0.8.0 — onboarding init routine закрывает chicken-and-egg между
 
 ### Added
 
-- `init.sh` (root, +x) — idempotent onboarding скрипт. Создаёт symlink `.claude/agents` → `.ai-pm/tooling/.claude/agents` (subagents видимы Claude Code) + копирует `CLAUDE.seed.md` → `./CLAUDE.md` если корневого нет (#78).
-- `CLAUDE.seed.md` — минимальный pre-bootstrap briefing. Инструктирует Claude invoke `project-bootstrap` при отсутствии `.ai-pm/.bootstrap-state.md`. Перезаписывается на Stage D bootstrap полной project-specific версией (#78).
+- `init.sh` (root, +x) — idempotent onboarding скрипт. Создаёт symlink `.claude/agents` → `.ai-pm/tooling/.claude/agents` (subagents видимы Claude Code) + копирует `CLAUDE.seed.md` → `./CLAUDE.md` если корневого нет (#79).
+- `CLAUDE.seed.md` — минимальный pre-bootstrap briefing. Инструктирует Claude invoke `project-bootstrap` при отсутствии `.ai-pm/.bootstrap-state.md`. Перезаписывается на Stage D bootstrap полной project-specific версией (#79).
 
 ### Changed
 
-- `README.md` секция «Установка» — добавлен шаг `init.sh` между `submodule add` и `claude` + explicit rationale «зачем нужен» (anti-regression комментарий для будущих правок) (#78).
+- `README.md` секция «Установка» — добавлен шаг `init.sh` между `submodule add` и `claude` + explicit rationale «зачем нужен» (anti-regression комментарий для будущих правок) (#79).
 
 ### Documentation migration impact (для downstream template-sync)
 
