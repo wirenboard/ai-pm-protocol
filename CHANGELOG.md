@@ -17,6 +17,14 @@
 
 ---
 
+## [0.10.6] — 2026-05-27
+
+### Fixed
+
+- **bootstrap-template-sync: bump tooling submodule before reading any template files.** Шаг 3 (bump tooling to target version) теперь явно помечен как обязательный до любого чтения из `.ai-pm/tooling/`. Добавлена per-integration-mode логика: submodule (`git checkout`), gitignore (follow symlink + `git checkout`), vendor (manual copy + предложение мигрировать на submodule). (1baa3c2)
+
+---
+
 ## [0.10.5] — 2026-05-27
 
 ### Fixed
