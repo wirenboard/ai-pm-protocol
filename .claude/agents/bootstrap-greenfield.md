@@ -115,6 +115,21 @@ adoption_overrides: []
 
 `ui_kind` определяется на Stage A после vision'а, через AskUserQuestion + per-kind ui-style-guide-*.md files. См. detail routine в `doc/_templates/`.
 
+### Stage A: positioning.md — сначала ресёрч, потом вопросы
+
+Для `positioning.md § 1 Competitive landscape` **не спрашивай оператора «кто ваши конкуренты?»** — PM часто не знает landscape целиком, и именно поэтому нужен этот артефакт.
+
+Вместо этого — **автономный ресёрч** из уже одобренных артефактов:
+
+1. Прочитай `vision.md` — извлеки: что за продукт, для кого, какую проблему решает.
+2. Используй `WebSearch` для поиска конкурентов и аналогов: запросы вида «[product category] tools», «[problem] software», «alternatives to [closest known product]».
+3. Задрафти § 1 Competitive landscape из найденного: прямые конкуренты + adjacent/substitutes + frame analysis.
+4. **Покажи черновик оператору** через стандартный show-in-chat + AskUserQuestion: «Нашёл этих конкурентов. Кого добавить / убрать?»
+
+Только после ресёрча — уточняющие вопросы: frame analysis, market sizing implications, что оператор считает своим главным отличием.
+
+Исключение: если `vision.md` описывает узкий internal tool без рынка → positioning.md skip-eligible; уточни у оператора.
+
 ### Stage B: reuse из Stage A — не переспрашивать
 
 Threat-model.md берёт данные из уже одобренных Stage A артефактов:
