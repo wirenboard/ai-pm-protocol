@@ -17,6 +17,14 @@
 
 ---
 
+## [0.10.4] — 2026-05-27
+
+### Documentation
+
+- **README: fix Structure section** — убрана несуществующая директория `scripts/`; уточнено что `_templates/` содержит `scripts/*.tmpl`; добавлены заметки «Генерируется на Stage D» к `check-*.sh` bullets. (de2bbb4, #102)
+
+---
+
 ## [0.10.3] — 2026-05-27
 
 ### Fixed
