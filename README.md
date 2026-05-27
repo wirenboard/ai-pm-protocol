@@ -28,7 +28,7 @@
 
 Между шагами вы говорите «ок, дальше». AI не идёт вперёд сам.
 
-Две вещи делают это надёжным:
+Три вещи делают это надёжным:
 
 ### 1. Ревью до push'а
 
@@ -63,6 +63,30 @@
 **Мягкий слой (operator-driven, v0.7.0+).** Раньше был `discipline-advisor` агент с 5-axis анализом. Retired в v0.7.0 — soft layer никогда не был validated через required accuracy gate ≥80% per axis (см. ARCH-8 в `doc/architectural-backlog.md`). Hard floor функциональность перенесена в `scripts/check-security-floor.sh` (детерминированный детектор stripe/bcrypt/aes-gcm/PII — не LLM heuristic), reprompt mechanism — в `scripts/check-skip-reprompts.sh`.
 
 Вы выбираете `[Skip]` / `[Keep]` для не-hard-floor артефактов прямо в bootstrap-агенте. Решение записывается с причиной и датой в `.ai-pm/.bootstrap-state.md` `skip_decisions:`. Через 90 дней `check-skip-reprompts.sh` (вызывается на старте каждой сессии + перед commit'ом) напомнит: «next_reprompt истёк, пересмотри». Hard floor от security-floor.sh — не override'ится оператором без `adoption_overrides:` с явной причиной (AP-22).
+
+### 3. Защита от AI-дрейфа (3 слоя)
+
+AI любит «улучшать» план — придумать лишний компонент, протащить элегантную симметрию, нарушить инвариант из соседней фичи. Когда вы не читаете код, поймать это глазами невозможно. Шаблон ловит это автоматически на трёх уровнях:
+
+| Слой | Что ловит | Где срабатывает |
+|---|---|---|
+| **Layer 1** (AP-25/26) | Spec extends beyond source — агент выходит за границы своего ground truth | per-agent контракт (planner / coder / reviewer молча обязаны trace'ить каждое решение к spec'у) |
+| **Layer 2** (AP-27..30) | Hallucinated component в ADR / inter-ADR contradiction / scope creep / plausibility bias («звучит логично — пишу») | mandatory reviewer Step 2.5 + linter family `cross-doc-bounded` |
+| **Layer 3** (AP-31, AP-33) | Cross-feature contradiction — F-N нарушает invariant установленный F-M; spec staleness — код drift'нул от spec'а > порога | linter family `cross-feature-bounded` (extract'ит «всегда/никогда/обязательно/запрещено» из спек, cross-check'ает новую фичу) |
+
+Плюс **AP-32** (jargon-first operator communication, soft-warn) — поверх ваших operator-facing блоков ревьюер чек'ает что AI не общается с вами на внутреннем жаргоне (Stage X, Step N, AP-NN, `[override]` markers).
+
+### Operator interface model (`development-protocol.md § 16`)
+
+PM — **дирижёр верхнего уровня**, утверждает только:
+
+- **Стек** (новая зависимость / migration)
+- **Архитектуру** (business-affecting fork)
+- **Бизнес-логику** (что фича делает / не делает)
+
+Всё остальное — план реализации, ADR alternatives, decomposition, refactoring choices — AI делает silently. Голову поднимает только при одном из **6 escalation triggers** (business-logic hole / business-affecting fork / stack-affecting decision / security floor / cross-feature contradiction / cost-time threshold).
+
+При escalation AI обязан задать вопрос по **6 plain-language rules**: concrete-first, no jargon без определения, никаких F-NN / AP-NN / Step X в формулировке. Если нарушит — AP-32 fire'нет.
 
 ## Установка
 
@@ -116,11 +140,12 @@ cd ../.. && git add .ai-pm/tooling && git commit -m "chore: bump ai-pm-protocol"
 
 ## Если у вас уже есть код (legacy)
 
-При первой сессии AI поймёт, что проект существующий, и предложит три варианта:
+При первой сессии AI поймёт, что проект существующий, и предложит четыре варианта:
 
 - **Quick auto** (5-10 мин) — автоматически вытаскивает что может (стек, тип UI, тип БД), ставит hooks. Дальше первая фича каждого нового домена потребует короткого ресёрча
 - **Manual staged** (часы) — вы выбираете какие артефакты делать сейчас, AI ведёт через процесс
 - **Skip** (минута) — только trust profile, стек и Stage D hooks. Дальше каждая фича — отдельный ресёрч
+- **Full retrofit** (30-60 мин) — AI scan'ит код, группирует файлы по фичам, predict'ит N features, оператор подтверждает / переименовывает / split'ит / merge'ит. AI extract'ит spec skeleton per feature (`## Behaviour observed` + `## Invariants extracted` + `## Open questions`). Оператор fills open questions, approves. Дальше Layer 3 (cross-feature anti-drift) работает полноценно
 
 Foundation растёт постепенно: `minimal → partial → complete`.
 
@@ -140,7 +165,7 @@ Profile auto-set на init — bootstrap-agent не спрашивает. Пол
 - **Статический security floor:** `check-security-floor.sh` — детерминированный grep по манифестам/коду/схемам на stripe/bcrypt/aes-gcm/PII. Output — ground truth для advisor'а
 - **Reprompt auto-trigger:** `check-skip-reprompts.sh` парсит state-файл на старте каждой сессии и перед commit'ом, печатает истёкшие skip-решения
 
-Подробности по каждому — `doc/development-protocol.md` и `doc/anti-patterns.md` (AP-1..AP-26, granular per-AP files в `doc/anti-patterns/`).
+Подробности по каждому — `doc/development-protocol.md` и `doc/anti-patterns.md` (AP-1..AP-33, granular per-AP files в `doc/anti-patterns/`).
 
 ## Структура
 
@@ -148,8 +173,8 @@ Profile auto-set на init — bootstrap-agent не спрашивает. Пол
 ai-pm-protocol/
 ├── doc/
 │   ├── development-protocol.md   ← основной протокол
-│   ├── anti-patterns.md          ← index AP-1..AP-26
-│   ├── anti-patterns/             ← per-AP files (AP-01.md..AP-26.md)
+│   ├── anti-patterns.md          ← index AP-1..AP-33
+│   ├── anti-patterns/             ← per-AP files (AP-01.md..AP-33.md)
 │   ├── _templates/               ← скелеты артефактов
 │   └── _recipes/cache/           ← конфиги под разные стеки
 ├── .claude/agents/               ← все агенты
