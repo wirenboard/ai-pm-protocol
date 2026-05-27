@@ -201,7 +201,7 @@ Template-sync — стресс, потому что меняется foundation.
 | 1 | Создаёт `.ai-pm/` в existing repo, активирует bootstrap-agent | — |
 | 2 | Agent: «Mode? Integration?» — отвечает (`feature` или другой) + gitignore | — |
 | 3 | Agent сканит репу: пытается определить стек по manifests | Любопытство |
-| 4 | **3-choice entry** (AskUserQuestion): «Foundation completeness? Quick auto / Manual staged / Skip» | Дилемма time-cost |
+| 4 | **4-choice entry** (AskUserQuestion): «Foundation completeness? Quick auto / Manual staged / Skip / Full retrofit» | Дилемма time-cost |
 | 5a | **Quick auto (5-10 min, recommended):** Tier 0 auto-extract scripts → stack / ui_kind / db_kind / topology sketch / ui-style-guide-base extract / database-design extract. `foundation_completeness: minimal`, `adoption_path: legacy-quick`. Trade-off: «первая фича каждого нового domain'а потребует Tier 1 mini-research» | Облегчение |
 | 5b | **Manual staged (часы-дни):** AskUserQuestion multi-select какие Stage A-C artifacts адаптировать сейчас. AI extracts baseline + ведёт через formal stage process. `foundation_completeness: partial` или `complete`, `adoption_path: legacy-staged` | Investment |
 | 5c | **Skip adoption (sub-minute):** только trust_profile + stack auto-detected + Stage D hooks. `foundation_completeness: none`, `adoption_path: legacy-skip`. **Hard floors** (security path) enforce'ятся mandatory даже в legacy-skip | Pragmatism |
@@ -214,12 +214,12 @@ Template-sync — стресс, потому что меняется foundation.
 
 Legacy adoption — менее frequent кейс для PM (PM обычно строит новые продукты с нуля). Но возможен — например PM подключается к existing продукту, который раньше вёл developer без template'а. В этом случае:
 - Шаг 3: agent определяет стек автоматически — критично, PM не знает manifest details.
-- Шаг 4: 3-choice — нужен default recommendation (Quick auto) с явным trade-off explanation.
+- Шаг 4: 4-choice — нужен default recommendation (Quick auto) с явным trade-off explanation.
 - Шаг 7: hard floors (security path) enforce'ятся mandatory даже в legacy-skip — PM полагается на это, не может catch security gaps сам.
 
 ### Критические точки оттока
 
-- Шаг 4: если 3-choice не поддерживает Skip — отвалится use case quick adoption.
+- Шаг 4: если 4-choice не поддерживает Skip — отвалится use case quick adoption.
 - Шаг 6: если template переписывает существующий `ci.yml` — отвалится сразу (existing CI invariants ломаются).
 - Шаг 7: если hard floors не enforce'ятся в Quick auto — silent security risk.
 
@@ -295,6 +295,6 @@ PM rarely uses этот journey — она строит с нуля. Но useful
 
 4. **Recipe staleness** — **backlog**: рецепты (`doc/_recipes/cache/ai-linting-{go,python,typescript}.md`) обновляются вручную при необходимости. Frontmatter `last_reviewed` / `stack_versions` + bootstrap-agent staleness check — backlog (decision 2026-05-25). Recipes для других стеков (Rust / Java / C# / etc.) — community contributions или manual draft.
 
-5. **3-choice legacy entry** (v0.1.0+) — Quick auto (recommended, 5-10 min, Tier 0) / Manual staged (часы-дни, multi-select) / Skip (sub-minute, hard floors only).
+5. **4-choice legacy entry** — Quick auto (recommended, 5-10 min, Tier 0) / Manual staged (часы-дни, multi-select) / Skip (sub-minute, hard floors only) / Full retrofit (часы — 1 день, complete foundation из code).
 
 6. **Conditional skip per artifact** (v0.4.0+) — `skip_eligibility` metadata в каждом `_templates/*.md.tmpl`. Advisor auto-detects from project capabilities. Layer-climbing escalation через `next_reprompt` field (default 90 days).

@@ -52,7 +52,7 @@ Greenfield bootstrap — новая репка без `.ai-pm/`, без existing
 
 - `new-product` — новый продукт с нуля (default для Greenfield)
 
-Для legacy продукта оператор не попадает сюда — там 3-choice routine (`bootstrap-legacy`).
+Для legacy продукта оператор не попадает сюда — там 4-choice routine (`bootstrap-legacy`).
 
 ### Вопрос 2: Primary language
 

@@ -12,8 +12,8 @@
 
 **Шаг 1: Прочитай `.ai-pm/.bootstrap-state.md`.**
 
-- Файла нет → invoke `project-bootstrap` (new-product mode).
-- Stage A-D не closed → invoke `project-bootstrap`, скажи оператору «Bootstrap не завершён, продолжаем со stage X». Не работай над фичами.
+- Файла нет → **немедленно** invoke `project-bootstrap` (new-product mode). Скажи «Bootstrap не запускался, запускаю сейчас.»
+- Stage A-D не closed → **немедленно** invoke `project-bootstrap`, не жди дополнительного input'а от оператора — agent сам спросит подтверждение. Скажи «Bootstrap не завершён, передаю project-bootstrap'у.» Не работай над фичами.
 - Stage A-D closed → шаг 1.1.
 
 **Шаг 1.1: Прочитай `.ai-pm/.session-state.md`, если есть.** Lightweight hint «где мы во флоу». State — hint, не contract: git wins при расхождении. Нет файла — восстанови через `git branch --show-current` + `gh pr list --state open` + scan `{{doc_root}}/features/*_spec.md` без парного `_plan.md`.
@@ -108,7 +108,7 @@ Generic example (illustrative, не из этого проекта): release-hel
 
 - **`project-bootstrap`** — router (mode + state detection). Делегирует одному из specialized bootstrap subagents:
   - **`bootstrap-greenfield`** — Stage A-D для нового продукта (`new-product` mode).
-  - **`bootstrap-legacy`** — 3-choice adoption (Quick / Manual staged / Skip) + Tier 0 auto-extract + Tier 2 promotion + Tier 3 overrides.
+  - **`bootstrap-legacy`** — 4-choice adoption (Quick / Manual staged / Skip / Full retrofit) + Tier 0 auto-extract + Tier 2 promotion + Tier 3 overrides.
   - **`bootstrap-resume`** — session resume когда Stage A-D не closed.
   - **`bootstrap-template-sync`** — template version bump workflow + architecture overview read-only extract.
 - **`planner`** — Step 2 plan writer. Read-only по коду. Trust-profile-aware.
@@ -118,7 +118,7 @@ Generic example (illustrative, не из этого проекта): release-hel
 
 Запуск: `claude --agent <name>` или ты приглашаешь оператора «invoke <agent>?», ждёшь approval, передаёшь управление (Agent tool с appropriate subagent_type).
 
-Known agent enum gap (Bug #3) + legacy review trail backward-compat — `.ai-pm/tooling/_claude/subagent-context.md`.
+Inline fallback (spawn limitation) + legacy review trail backward-compat — `.ai-pm/tooling/_claude/subagent-context.md`.
 
 ---
 

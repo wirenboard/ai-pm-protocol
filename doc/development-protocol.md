@@ -213,7 +213,7 @@ Init bootstrap → first feature → another feature → bug-fix →
 
 `project-bootstrap` agent — **router** всего жизненного цикла (prompt-economy Option B, v0.7.x). На каждый новый operator-intent (новая фича / bug / rework / release / template-sync / docs update / architecture overview) он определяет правильное routing и delegates подходящему specialized subagent'у:
 - `bootstrap-greenfield` — Stage A-D для нового продукта.
-- `bootstrap-legacy` — 3-choice adoption + Tier 0/2/3 routines.
+- `bootstrap-legacy` — 4-choice adoption + Tier 0/2/3 routines.
 - `bootstrap-resume` — session resume когда Stage A-D не closed.
 - `bootstrap-template-sync` — template version bump + architecture overview read-only.
 
@@ -225,9 +225,9 @@ Init bootstrap → first feature → another feature → bug-fix →
 
 См. CLAUDE.md.tmpl «Session start routine» и project-bootstrap.md «Lifecycle routing» для деталей.
 
-### 3.10. Legacy adoption — 3-choice entry
+### 3.10. Legacy adoption — 4-choice entry
 
-При first session в проекте **без `.ai-pm/`**, `project-bootstrap` (router) detect'ит legacy и delegates в `bootstrap-legacy`, который явно представляет оператору **3 варианта** через AskUserQuestion (Quick первым, **recommended**):
+При first session в проекте **без `.ai-pm/`**, `project-bootstrap` (router) detect'ит legacy и delegates в `bootstrap-legacy`, который явно представляет оператору **4 варианта** через AskUserQuestion (Quick первым, **recommended**):
 
 **Choice 1: Quick auto** (5-10 min, recommended)
 - AI auto-extracts: stack / `ui_kind` / `db_kind` / `tech-stack.md` topology sketch / `ui-style-guide-base.md` extract / `database-design-*.md` extract (Tier 0, см. § 3.11)
@@ -245,6 +245,12 @@ Init bootstrap → first feature → another feature → bug-fix →
 - Только: `trust_profile`, `stack` auto-detected, Stage D hooks
 - State: `foundation_completeness: none`, `adoption_path: legacy-skip`
 - Trade-off: «zero upfront, AP-14/15/18 enforce'ы limited, каждая фича требует mini-research»
+
+**Choice 4: Full retrofit** (часы — 1 день, disciplined)
+- AI reads existing code + tests, drafts all Stage A-D artifacts (personas, user journeys, threat model, mvp-scope, topology) from code evidence
+- Operator reviews and approves each artifact; AI flags open questions where business intent couldn't be inferred
+- State: `foundation_completeness: complete`, `adoption_path: legacy-staged`
+- Trade-off: «максимальная foundation coverage, но требует наибольшего времени upfront»
 
 **Hard floor** — что нельзя skip даже в Choice 3:
 - Stage D infrastructure hooks (без них AP-16 enforcement soft)
@@ -264,7 +270,7 @@ Init bootstrap → first feature → another feature → bug-fix →
 
 ### 3.12. Дискриминаторы (если оператор не уверен)
 
-1. Существует `.ai-pm/`? Нет → проект **legacy** → 3-choice entry.
+1. Существует `.ai-pm/`? Нет → проект **legacy** → 4-choice entry.
 2. Существует `.ai-pm/`, никогда не было кода? → `new-product` (если bootstrap ещё не done).
 3. `.ai-pm/` есть, Stage A-D closed, новая работа? Mode по характеру:
    - Меняется поведение/API/схема существующей фичи → `rework`
@@ -744,7 +750,7 @@ F-01 устанавливает invariant «server не имеет plaintext acc
 
 - **project-bootstrap** — **router** (prompt-economy Option B, v0.7.x). Определяет ситуацию (greenfield / legacy / resume / template-sync / lifecycle) по `.bootstrap-state.md` + git state и delegates подходящему specialized subagent'у.
 - **bootstrap-greenfield** — Stage A-D для нового продукта (Mode `new-product`). Content → infrastructure generation + handoff в Stage E. Trust-profile-aware.
-- **bootstrap-legacy** — Legacy adoption: 3-choice entry (Quick / Manual staged / Skip) + Tier framework (Tier 0 auto-extract, Tier 2 promotion, Tier 3 overrides).
+- **bootstrap-legacy** — Legacy adoption: 4-choice entry (Quick / Manual staged / Skip / Full retrofit) + Tier framework (Tier 0 auto-extract, Tier 2 promotion, Tier 3 overrides).
 - **bootstrap-resume** — Session resume routine когда Stage A-D не closed (Greenfield Init mid-flow или Manual staged mid-flow).
 - **bootstrap-template-sync** — Template version bump workflow (agent-driven holistic comparison) + Architecture overview read-only Tier 0 extract.
 - **planner** — читает spec + foundational docs, пишет plan. Trust-profile-aware (substantive для A, terser для C).
