@@ -17,6 +17,24 @@
 
 ---
 
+## [0.10.1] — 2026-05-27
+
+### Fixed
+
+- **bootstrap-greenfield: AskUserQuestion enforcement + question context + stage reuse.** (#96)
+
+### Changed
+
+- **auto-bootstrap on resume + 4-choice adoption consistency.** (#95)
+
+### Documentation
+
+- **README: full accuracy rewrite — three agents, correct gates, structure.** (#94)
+- **README: accurate PM gate description — spec+plan approval, then AI runs, then acceptance+merge.** (#93)
+- **README: fix flow diagram — show planner/coder/reviewer agents explicitly.** (#92)
+
+---
+
 ## [0.10.0] — 2026-05-27
 
 ### Added
