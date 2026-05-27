@@ -17,6 +17,14 @@
 
 ---
 
+## [0.10.7] — 2026-05-27
+
+### Fixed
+
+- **bootstrap-template-sync: handle dirty submodule before checkout.** Перед `git checkout <target>` выполняется `git update-index --refresh` (устраняет false-dirty от NFS/FUSE/timestamp), затем проверка реального diff'а: пустой diff → безопасный restore; реальный diff → стоп с объяснением оператору. Покрыты все три integration mode: submodule, gitignore (symlink), vendor. (a0753c4)
+
+---
+
 ## [0.10.6] — 2026-05-27
 
 ### Fixed
