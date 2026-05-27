@@ -3,7 +3,7 @@ topic: spec-lifecycle-and-brownfield
 mode: feature
 lite-mode: no
 created: 2026-05-26
-spec_approved:
+spec_approved: 2026-05-27
 plan_approved:
 acceptance: pending
 merged: no
