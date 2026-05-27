@@ -2,3 +2,10 @@
 .bootstrap-state.local.md
 *.swp
 .DS_Store
+
+# Reviewer local traces (AP-16 local-trace mode — never committed)
+.reviews/
+.ai-pm/.reviews/
+
+# Claude Code worktree scratch dirs
+.claude/worktrees/
