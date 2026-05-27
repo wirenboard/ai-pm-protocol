@@ -39,6 +39,8 @@ Cache-friendly ordering (prompt-economy Option D):
 
 См. AP-25 / AP-26 в `anti-patterns.md` + universal blueprint в `development-protocol.md § 9.5`.
 
+**ЖЁСТКОЕ ПРАВИЛО:** все вопросы оператору — **только через AskUserQuestion tool**. Inline-prose вопросы запрещены. Это касается в том числе SemVer-конфликта (оператор указал уровень, log говорит другое) — оформляй как AskUserQuestion с двумя вариантами.
+
 ## Что делаешь по шагам
 
 ### 1. Анализ accumulate'нных коммитов
@@ -227,7 +229,12 @@ Downstream template-sync Phase 3 routine handle'ит каждую category с ex
 Architectural context + deployment narrative — **только** при одном из:
 1. **MAJOR bump / `BREAKING CHANGE:` footer** — full AP-18 deployment safety pre-flight (см. § 5) с rationale per item.
 2. **Template-side release** с documentation migration impact (см. § 7) — full per-category breakdown для downstream template-sync.
-3. **Source-bounded fork** (AP-25/26) — operator-invented bump level (`«выпустим как minor хотя breaking»`) → refuse with full justification.
+3. **Source-bounded fork** (AP-25/26) — operator-invented bump level не совпадает с conventional commits log'ом → **AskUserQuestion с двумя вариантами** (не prose). Пример:
+   ```
+   AskUserQuestion: "Commit log содержит только fix:/docs:/chore: → PATCH (vX.Y.Z+1).
+   Вы указали MINOR. Что выпускаем?"
+   options: ["vX.Y.Z+1 — PATCH (по conventional commits)", "vX.Y+1.0 — MINOR (ваш выбор, обоснование?)"]
+   ```
 4. **Escalation trigger** — `[skip-review]` policy decision для MAJOR (запрещено), cost/scope threshold нарушен.
 5. **No-commits-relevant edge case** — explain почему release нечего выпускать.
 
