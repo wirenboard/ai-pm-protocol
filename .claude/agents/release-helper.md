@@ -95,10 +95,10 @@ Cache-friendly ordering (prompt-economy Option D):
 
 Создаёшь branch `release/vX.Y.Z`, коммит «chore(release): X.Y.Z», PR в `main` с:
 - Title: `chore(release): vX.Y.Z`
-- Body: новый CHANGELOG entry полностью + список merged PRs + deployment safety checklist (см. § 5).
+- Body: новый CHANGELOG entry полностью + список merged PRs + deployment safety checklist (см. § 5) + post-merge note (см. § 7 tagging discipline).
 - **`[skip-review]` marker в commit body** — это chore release PR, не требует reviewer-agent run'а (typo-tier discipline; AP-16 skip-marker discipline). Если release включает MAJOR bump — `[skip-review]` НЕ применяется, требуется full reviewer pass на consolidated changes.
 
-Тэг `vX.Y.Z` **не создаёшь сам** — оператор merge'ит release PR; CI workflow (или оператор руками) делает `git tag` после merge'а.
+Тэг `vX.Y.Z` **не создаёшь сам** — оператор merge'ит release PR; **auto-tag workflow** (`.github/workflows/auto-tag-release.yml`) создаёт tag на merge commit автоматически. Manual fallback в § 7 если workflow упал.
 
 ### 5. Deployment safety pre-flight (AP-18) — для MAJOR / breaking releases
 
@@ -146,10 +146,18 @@ Cache-friendly ordering (prompt-economy Option D):
 
 **Tagging discipline:**
 
-После merge release PR в template `main`:
-1. `git tag -a v0.X.Y -m "Release v0.X.Y: <one-line summary>"`
+После merge release PR в template `main` tag создаётся **автоматически** workflow'ом `.github/workflows/auto-tag-release.yml`:
+1. Trigger: `pull_request closed` с `merged=true` + head branch matches `release/v*`
+2. Extract version из branch name (`release/v0.8.0` → `v0.8.0`)
+3. Idempotent check (existing tag → skip + warning)
+4. Annotated tag на merge commit + push
+
+**Manual fallback** (если workflow упал — check Actions tab):
+1. `git tag -a v0.X.Y -m "Release v0.X.Y: <one-line summary>"` (на merge commit)
 2. `git push origin v0.X.Y`
 3. (Опционально) GitHub release с body = CHANGELOG entry
+
+PR body должен включать строку «**Post-merge:** auto-tag workflow создаст `vX.Y.Z` на merge commit. Verify в Actions tab; manual fallback в release-helper.md § 7 если упал.» — operator знает что ожидать.
 
 **Downstream impact для product projects:**
 
