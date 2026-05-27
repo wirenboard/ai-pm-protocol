@@ -219,7 +219,7 @@ Init bootstrap → first feature → another feature → bug-fix →
 
 **Session resume:** если оператор прервал работу в середине фичи (session crashed / next day), на новой сессии `project-bootstrap` (router):
 1. Reads `.ai-pm/.bootstrap-state.md`.
-2. Scans `.ai-pm/doc/features/` на in-progress фичи (по frontmatter каждого `_spec.md` / `_plan.md`).
+2. Scans `<doc_root>/features/` на in-progress фичи (по frontmatter каждого `_spec.md` / `_plan.md`).
 3. Proactively сообщает оператору: «вижу in-progress topic X, state Y, продолжаем?».
 4. Если Stage A-D не closed — delegates в `bootstrap-resume`. Иначе — Lifecycle routing inline.
 
@@ -288,7 +288,7 @@ Init bootstrap → first feature → another feature → bug-fix →
 | **B. Constraints** | strategic-frame, threat-model, mvp-scope, legal (если применимо), customer-interview-script, incident-runbook-draft | WRITE | READ + WRITE дельт | READ + WRITE дельт |
 | **C. Process** | tech-stack (включает topology + stack + db_kind references), dev-environment, ai-linting-rules, subagent configs verified, maintenance-playbook (опц.), development-protocol-overlay | WRITE | READ + reuse | READ + reuse |
 | **D. Bootstrap** | концретная infrastructure: CI, линтеры, security tools, pre-commit, branch protection (генерируется из catalogue + стек). 1 checkpoint + `bootstrap-verify.sh` health-check | WRITE | SKIP (verify consistency) | SKIP |
-| **E. Production** | `.ai-pm/doc/features/<topic>_{spec,plan,review}.md`, код, тесты | WRITE | WRITE | WRITE (с rework spec'/plan-структурой) |
+| **E. Production** | `<doc_root>/features/<topic>_{spec,plan,review}.md`, код, тесты | WRITE | WRITE | WRITE (с rework spec'/plan-структурой) |
 
 Stage D идёт **после** Stage A-C, не до — потому что infrastructure (какие линтеры включить, какие security rulesets, какой CI workflow) **выводится** из стека + project capabilities, зафиксированных в A/B/D. Создавать infrastructure упреждающе — анти-паттерн § AP-2. ADR-папка стартует **пустой**; первые ADR появляются в Step 2 plan'ов фич (§ AP-1) либо при foundational forks в Stage C `tech-stack.md` choice.
 
@@ -328,8 +328,8 @@ Stage D идёт **после** Stage A-C, не до — потому что inf
 
 **Foundational artifacts:**
 
-- `.ai-pm/doc/architecture-decisions/0000-template.md` (если ещё нет).
-- `.ai-pm/doc/features/` (пустая директория с `.gitkeep`).
+- `<doc_root>/architecture-decisions/0000-template.md` (если ещё нет).
+- `<doc_root>/features/` (пустая директория с `.gitkeep`).
 
 **Branch protection (Layer 5):**
 
@@ -467,9 +467,9 @@ Custom rule (semgrep custom, eslint plugin, golangci-lint custom analyzer). Со
 
 | Check | Что проверяет | Когда fail |
 |---|---|---|
-| `personas-exist` | `.ai-pm/doc/personas.md` существует, имеет ≥ 1 persona с заполненными required fields | Stage A открыт но personas — placeholder |
+| `personas-exist` | `<doc_root>/personas.md` существует, имеет ≥ 1 persona с заполненными required fields | Stage A открыт но personas — placeholder |
 | `journeys-reference-personas` | Каждый journey в `user-journeys.md` ссылается на persona, существующую в `personas.md` | Journey ссылается на удалённую persona |
-| `mvp-scope-no-orphans` | Каждый F-ID в `mvp-scope.md` либо имеет matching `.ai-pm/doc/features/<topic>_spec.md`, либо помечен `deferred` | F-ID без spec'а и без deferred-маркера |
+| `mvp-scope-no-orphans` | Каждый F-ID в `mvp-scope.md` либо имеет matching `<doc_root>/features/<topic>_spec.md`, либо помечен `deferred` | F-ID без spec'а и без deferred-маркера |
 | `spec-references-persona` | Каждый `<topic>_spec.md` в секции User stories ссылается на ≥ 1 persona по имени из `personas.md` | Spec описывает фичу без указания, для кого |
 | `spec-references-journey` | Каждый spec в секции Контекст ссылается на journey-шаг (по convention `journey-X step Y`) | Spec не объясняет, какой шаг journey'я обслуживает |
 | `spec-structure` | Каждый spec имеет required sections: Контекст / User stories / Сценарии / NFR / Не в scope / Open questions | Spec без обязательной секции |
@@ -787,7 +787,7 @@ F-01 устанавливает invariant «server не имеет plaintext acc
 ### 14.1. Branch model
 
 - **`main` — святое.** Никаких direct-коммитов в `main`. Никогда. Никто (ни оператор, ни AI, ни release-helper) не коммитит в `main` напрямую.
-- **Feature work — в branch'ах** с именем `feature/<topic>`, где `<topic>` совпадает с `<topic>` в `.ai-pm/doc/features/<topic>_spec.md`.
+- **Feature work — в branch'ах** с именем `feature/<topic>`, где `<topic>` совпадает с `<topic>` в `<doc_root>/features/<topic>_spec.md`.
 - **Fix branches** — `fix/<topic>` или `fix/<issue-id>`. Доки-only PR — `docs/<topic>`.
 - **Release-please / release-helper branches** — управляются автоматически, не трогаем руками.
 
