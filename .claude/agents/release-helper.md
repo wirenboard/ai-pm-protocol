@@ -95,7 +95,12 @@ Cache-friendly ordering (prompt-economy Option D):
 
 ### 4. Release PR
 
-Создаёшь branch `release/vX.Y.Z`, коммит «chore(release): X.Y.Z», PR в `main` с:
+Создаёшь branch `release/vX.Y.Z` **от актуального `main`** (не от текущей ветки):
+```
+git fetch origin main
+git checkout -b release/vX.Y.Z origin/main
+```
+Коммит «chore(release): X.Y.Z», PR в `main` с:
 - Title: `chore(release): vX.Y.Z`
 - Body: новый CHANGELOG entry полностью + список merged PRs + deployment safety checklist (см. § 5) + post-merge note (см. § 7 tagging discipline).
 - **`[skip-review]` marker в commit body** — это chore release PR, не требует reviewer-agent run'а (typo-tier discipline; AP-16 skip-marker discipline). Если release включает MAJOR bump — `[skip-review]` НЕ применяется, требуется full reviewer pass на consolidated changes.

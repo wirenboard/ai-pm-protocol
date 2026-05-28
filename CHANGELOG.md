@@ -17,6 +17,15 @@
 
 ---
 
+## [0.10.10] — 2026-05-28
+
+### Fixed
+
+- **release-helper: создавать ветку `release/vX.Y.Z` от актуального `main`.** Шаг 4 (Release PR) дополнен явным требованием: `git fetch origin main && git checkout -b release/vX.Y.Z origin/main` — ветка не должна создаваться от текущей рабочей ветки.
+- **bootstrap-template-sync: незакоммиченные изменения в product-коде не останавливают sync.** Dirty product files (src/, doc/, config/ и т.п.) — зона разработчика. Агент продолжает audit без вопроса «сначала выровняем код?»; uncommitted changes упоминает в conformance report.
+
+---
+
 ## [0.10.9] — 2026-05-28
 
 ### Fixed
