@@ -108,6 +108,17 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
 4. **No-op check:** если pinned == target → «template up to date, ничего мигрировать не нужно», просто commit submodule bump + update `.ai-pm/.bootstrap-state.md` → PR `chore: bump template к <target> (no migration)`. Routine завершена.
 
+   **ЗАПРЕЩЕНО:** делать вывод «нет контента» по количеству коммитов или их сообщениям («один release-коммит → пропускаю audit»). Commit messages ненадёжны — squash-merge может содержать произвольные изменения. Единственный критерий no-op — `pinned == target`. Если `pinned ≠ target` — **всегда продолжай шаги 5–12**, без исключений.
+
+4.5. **CLAUDE.md explicit check (обязательно, нельзя пропустить):**
+
+   Сравни `CLAUDE.md` проекта с `doc/_templates/CLAUDE.md.tmpl` из обновлённого tooling:
+   - Прочитай оба файла.
+   - Найди секции/правила в шаблоне, которых нет в `CLAUDE.md` проекта.
+   - Если есть расхождения — добавь их в conformance report как отдельный пункт `CLAUDE.md out of sync`, даже если остальной audit чист.
+
+   Этот шаг выполняется **всегда** (и при no-op, и при full migration) — `CLAUDE.md` генерируется единожды при bootstrap'е и не обновляется автоматически.
+
 5. **Read cheat sheet** — `.ai-pm/tooling/doc/template-evolution.md`. Перейди к секциям **после** pinned версии до target. Это навигационная карта: per-version key changes, renames, file moves, action items для product.
 
 6. **Read CHANGELOG entries** для тех же версий — `.ai-pm/tooling/CHANGELOG.md`. Шпаргалка указывает что искать, CHANGELOG содержит детали.

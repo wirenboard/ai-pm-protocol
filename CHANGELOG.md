@@ -17,6 +17,16 @@
 
 ---
 
+## [0.10.9] — 2026-05-28
+
+### Fixed
+
+- **bootstrap-template-sync: no-op guard — sole criterion is `pinned == target`.** Запрещён вывод «нет контента» по commit messages или количеству коммитов (squash-merge ненадёжен). Если `pinned ≠ target` — шаги 5–12 выполняются всегда без исключений. (3f1dce8)
+- **bootstrap-template-sync: mandatory step 4.5 — explicit CLAUDE.md check.** Добавлено обязательное сравнение `CLAUDE.md` проекта с `CLAUDE.md.tmpl` из обновлённого tooling. Выполняется всегда (и при no-op, и при full migration) — `CLAUDE.md` генерируется единожды при bootstrap'е и не обновляется автоматически. (3f1dce8)
+
+---
+
+
 ## [0.10.8] — 2026-05-28
 
 ### Fixed
