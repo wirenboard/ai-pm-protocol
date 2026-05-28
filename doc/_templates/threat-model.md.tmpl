@@ -1,68 +1,68 @@
----
-skip_eligibility:
-  default: conditional
-  skip_if: "все security capabilities = no"
-  hard_floor: "never if any security capability = yes"
----
-
 # Threat Model
 
-**Stage B artifact.** Что защищаем, от кого, какими средствами. Опирается на `personas.md` (кто наши actors / adversaries в конкретных терминах) и `strategic-frame.md` (jurisdictions, compliance).
+What we protect, from whom, and how. Read by agents before planning any feature that touches auth, data storage, network, or user input.
 
-Depth зависит от профиля проекта: high-stakes продукт (финансы, медицина, личная безопасность) — глубокая модель; low-risk внутренний tool — короткая страница.
-
----
-
-## 1. Assets
-
-Что у нас есть, что имеет ценность для злоумышленника или для пользователя.
-
-- **A1:** <…> — <значимость>
-- **A2:** <…>
-
-## 2. Actors
-
-Кто действует в системе, легитимно.
-
-- **U1: <persona 1 short name>** — <роль, права, доступ>
-- **U2: <persona 2>** — <…>
-
-## 3. Adversaries
-
-Кто может атаковать. Используем терминологию «модели угроз»: казуальный атакующий, целевой атакующий, инсайдер, государственный actor, и т.п.
-
-- **Adv1: <…>** — <возможности, мотивация, ресурсы>
-- **Adv2:** <…>
-
-## 4. Trust boundaries
-
-Границы, через которые проходит данные / запросы. На каждой границе — defense:
-
-- **B1:** <от чего к чему> — <какая аутентификация / шифрование / валидация>
-- **B2:** <…>
-
-## 5. Threats
-
-Конкретные угрозы. Каждой — уникальный ID (T01, T02, …), для дальнейших ссылок.
-
-- **T01:** <короткое описание> — *Affected assets:* <…> — *Adversary:* <…> — *Likelihood:* L/M/H — *Impact:* L/M/H
-- **T02:** <…>
-
-## 6. Mitigations
-
-Что мы делаем, чтобы threats не реализовались. Каждой — уникальный ID (M01, M02, …).
-
-- **M01:** <…> — *Mitigates:* T01, T03
-- **M02:** <…>
-
-## 7. Non-goals
-
-Что мы **намеренно** не защищаем (и почему). Это так же важно, как threats: без non-goals скоп защиты расползается.
-
-- <…>
+Depth matches project risk: financial / medical / personal safety product → full model. Internal tool → short page.
 
 ---
 
-## Review cadence
+## Assets
 
-Threat-model пересматривается quarterly или после security incident'а / новой persona / нового стратегического решения. Изменения идут отдельным PR.
+What exists in this system that has value to an attacker or matters to users.
+
+- **A1: <name>** — <what it is, why it matters>
+- **A2: <name>** — <…>
+
+## Users and roles
+
+Who legitimately uses the system and what they can access.
+
+- **<Role 1>** — <permissions, data access, trust level>
+- **<Role 2>** — <…>
+
+## Adversaries
+
+Who might attack and why.
+
+- **Casual attacker** — opportunistic, automated, low effort. Looks for: default credentials, exposed endpoints, unvalidated input.
+- **Targeted attacker** — motivated by specific data or disruption. Looks for: auth bypasses, privilege escalation, data exfiltration.
+- **Insider** — legitimate access misused. Looks for: data they shouldn't see, actions they shouldn't take.
+- <add or remove based on actual project risk profile>
+
+## Trust boundaries
+
+Where data crosses a boundary — each one needs a defense.
+
+| Boundary | From → To | Defense |
+|---|---|---|
+| <e.g., Internet → API> | external user → backend | auth token, input validation, rate limiting |
+| <e.g., API → DB> | backend → database | parameterized queries, no raw string interpolation |
+| <e.g., User → File system> | upload → storage | file type validation, size limit, no path traversal |
+
+## Threats
+
+Specific threats to this system. Each gets an ID for cross-referencing.
+
+| ID | Threat | Assets | Likelihood | Impact | Mitigation |
+|---|---|---|---|---|---|
+| T01 | <e.g., Password brute force> | user accounts | H | H | rate limiting, bcrypt |
+| T02 | <e.g., SQL injection via search> | all DB data | M | H | parameterized queries |
+| T03 | <…> | | | | |
+
+Likelihood and Impact: L / M / H
+
+## What we explicitly do NOT protect against
+
+Be honest about out-of-scope threats — without this list, scope creeps.
+
+- <e.g., "Nation-state level attacks — out of scope for v1">
+- <e.g., "Physical device theft — deployment context makes this acceptable">
+
+---
+
+## Review
+
+Revisit this document when:
+- New feature touches auth, storage, or network
+- New user role added
+- Security incident occurs

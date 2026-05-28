@@ -1,8 +1,0 @@
-{
-  "verdict": "approve",
-  "domain": "docs-chore",
-  "branch": "chore/architectural-backlog",
-  "summary": "Single doc file captures architectural issues not yet ready for full feature spec'ы. Альтернатива плодящимся draft-веткам. 10 entries (ARCH-1..10) с priority labels и effort estimates plus current queue snapshot.",
-  "findings": [],
-  "trail_format_note": "Pure docs PR, no code changes, no risk."
-}

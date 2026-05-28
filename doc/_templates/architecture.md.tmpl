@@ -1,0 +1,75 @@
+# Architecture
+
+## Tech stack
+
+| Layer | Choice | Why |
+|---|---|---|
+| Language | <...> | <reason> |
+| Framework | <...> | <reason> |
+| Database | <...> | <reason> |
+| Transport | <...> | <reason> |
+| <other> | <...> | <reason> |
+
+## Key decisions
+
+Document decisions that are not obvious from the stack choice. Each decision: what was chosen, why, what was rejected and why.
+
+### <Decision 1 title>
+
+**Chosen:** <option>
+**Why:** <reason>
+**Rejected:** <alternative> — because <reason>
+
+### <Decision 2 title>
+
+...
+
+## Constraints
+
+Things that must not be violated without an explicit PM decision. Agents read this and treat constraints as hard boundaries.
+
+- <e.g., "Only Postgres — no additional databases. Reason: operational simplicity, single backup target.">
+- <e.g., "No external services in hot path — everything must work offline. Reason: embedded deployment.">
+- <e.g., "No background threads outside the worker pool — reason: reproducibility in tests.">
+
+## Security constraints
+
+- <e.g., "Passwords: bcrypt min cost 12, never stored plain, never logged">
+- <e.g., "API keys: env vars only, never in source, never in response bodies or headers">
+- <e.g., "User input: validated and sanitized before any DB query or shell invocation">
+- <e.g., "Tokens: short-lived, not stored client-side beyond session">
+
+## Code conventions
+
+### AI-specific minimums
+
+These exist because AI tends to write monolithic files and complex functions. Adjust if project has legitimate exceptions (generated code, data files).
+
+- Max source file: 300 lines
+- Max function / method: 50 lines
+- Cyclomatic complexity: max 10 per function
+- No file-level lint suppressions (only line- or function-level with comment)
+- New code test coverage: min 80%
+
+### Stack-specific rules
+
+<e.g., naming conventions, error handling patterns, import organization — specific to this project's stack>
+
+### Linter commands
+
+```
+<lint command>
+<format command if separate>
+```
+
+## Dependencies
+
+### Policy
+
+<e.g., "Prefer standard library. Add a dependency only if it saves >100 lines of non-trivial code and is actively maintained.">
+
+### Current dependencies
+
+| Package | Purpose | Added |
+|---|---|---|
+| <name> | <why> | <date or feature> |

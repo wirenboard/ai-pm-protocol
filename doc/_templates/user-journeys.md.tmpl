@@ -1,49 +1,35 @@
----
-skip_eligibility:
-  default: recommended
-  skip_if: "mode = bug-fix; OR (no UI)"
-  hard_floor: "never if ui_kind has any value"
----
-
 # User Journeys
 
-**Stage A artifact.** Что делает каждая persona по шагам. Один journey на persona, плюс возможно «cross-persona» journeys для interaction-сценариев (например, отправитель ↔ получатель).
+How users interact with the product — step by step. Written for humans and read by agents before planning any feature.
 
-Без UI-деталей; только последовательность точек принятия решения и эмоциональный регистр.
+One journey per key user role. Focus on decision points and what can go wrong — not UI details.
 
 ---
 
-## Journey 1: <Имя persona> — <название journey>
+## Journey 1: <Role> — <Journey name>
 
-**Контекст входа:** что произошло в жизни persona, что привело её к продукту.
+**Entry context:** what happened in the user's life that brought them to this product.
 
-| Шаг | Что делает | Что чувствует | Friction point |
+| Step | What the user does | What they expect | What can go wrong |
 |---|---|---|---|
-| 1. <…> | <…> | <…> | <если есть> |
-| 2. <…> | <…> | <…> | |
-| 3. <…> | <…> | <…> | |
-| ... | | | |
-| N. <выход / завершение / повтор> | <…> | <…> | |
+| 1. | <action> | <expectation> | <failure mode> |
+| 2. | <action> | <expectation> | |
+| 3. | <action> | <expectation> | |
+| N. | <exit / completion> | <expectation> | |
 
-**Критические точки оттока:** где persona может бросить / испугаться / запутаться.
+**Drop-off points:** where the user might give up or get confused.
 
-**Что должно быть выполнено к моменту:** список инвариантов (например: «к шагу 5 у пользователя должен быть верифицированный email»).
-
----
-
-## Journey 2: <…>
-
-(тот же шаблон)
+**Invariants:** what must be true at each step for this journey to work.
+- By step N: <invariant>
 
 ---
 
-## Cross-journey взаимодействия
+## Journey 2: <Role> — <Journey name>
 
-Если у продукта есть несколько ролей (отправитель/получатель, owner/admin, и т.п.) — здесь описываются точки, где journey'и пересекаются.
+...
 
 ---
 
-## Что эти journeys должны проверять
+## Cross-journey interactions
 
-- Каждый feature spec на Stage E ссылается на конкретный шаг конкретного journey: «эта фича обслуживает шаг 3 journey-1».
-- Если фича не привязывается ни к одному шагу — это signal: либо мы делаем что-то под несуществующего пользователя, либо journey недостаточно полно описан и его надо расширить.
+If multiple user roles interact (e.g., sender ↔ receiver, admin ↔ user), describe the interaction points here.

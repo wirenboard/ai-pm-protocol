@@ -1,200 +1,89 @@
-# <Project> — Claude Code briefing
+# <Project Name>
 
-**Authoritative briefing для каждой сессии Claude в этой репке.** Прочитай ПОЛНОСТЬЮ перед работой.
+## Project
 
-Проект использует **ai-pm-protocol**. Полная документация — `{{doc_root}}/development-protocol.md` (project overlay) + `.ai-pm/tooling/development-protocol.md` (generic). On-demand references — `.ai-pm/tooling/doc/_claude/<concept>.md` (читай когда концепт релевантен).
+**What:** <one sentence — what the product does>
 
-**`{{doc_root}}`** — placeholder, bootstrap заменил на `doc` (greenfield) или `.ai-pm/doc` (retrofit). Текущее — frontmatter `doc_root:` в `.ai-pm/.bootstrap-state.md`.
+**Who:** <who uses it — be specific: "local network admin", "solo developer", "small team PM">
+
+**Problem solved:** <what problem this replaces or eliminates for the user>
 
 ---
 
-## Session start routine — делать СРАЗУ
+## Architecture
 
-**Шаг 1: Прочитай `.ai-pm/.bootstrap-state.md`.**
-
-- Файла нет → **немедленно** invoke `project-bootstrap` (new-product mode). Скажи «Bootstrap не запускался, запускаю сейчас.»
-- Stage A-D не closed → **немедленно** invoke `project-bootstrap`, не жди дополнительного input'а от оператора — agent сам спросит подтверждение. Скажи «Bootstrap не завершён, передаю project-bootstrap'у.» Не работай над фичами.
-- Stage A-D closed → шаг 1.1.
-
-**Шаг 1.05: Проверь версию шаблона.**
-```
-git -C .ai-pm/tooling describe --tags HEAD 2>/dev/null
-```
-Сравни с `template_version_applied` из bootstrap-state.md. Если отличаются → скажи оператору: «Tooling обновлён до `<новая версия>`, conformance audit ещё не выполнен. Запускаю.» → **немедленно invoke `project-bootstrap`** (маршрутизирует в `bootstrap-template-sync`). Не жди дополнительных команд. После завершения template-sync — **немедленно invoke `project-bootstrap`** с keyword «аудит» (audit mode — integrity check: spec↔template drift + code↔spec spot-check). По завершении audit — продолжай шаги 1.1 → 1.5 → 2 → 3 без паузы и ожидания оператора.
-
-**Шаг 1.1: Прочитай `.ai-pm/.session-state.md`, если есть.** Lightweight hint «где мы во флоу». State — hint, не contract: git wins при расхождении. Нет файла — восстанови через `git branch --show-current` + `gh pr list --state open` + scan `{{doc_root}}/features/*_spec.md` без парного `_plan.md`.
-
-**Шаг 1.5: Проверь `foundation_completeness` в state.** `complete` → standard workflow, AP-14 full read-pass. `partial` / `minimal` / `none` → mini-research per feature (project-bootstrap.md Tier 1). Security hard floors (Mini-threat-list) обязательны даже при `none`.
-
-**Шаг 2: Просканируй `{{doc_root}}/features/` на in-progress фичи.** Explicit state-marker → step mapping (если signals conflict — git wins, спроси оператора):
-
-| Marker observed | Step state | Resume action |
+### Tech stack
+| Layer | Choice | Why |
 |---|---|---|
-| `_spec.md` есть, нет `_plan.md` | Step 1 done, Step 2 (planner) pending | invoke `planner` для `<topic>` |
-| `_plan.md` есть, frontmatter `plan_approved:` empty | Step 2 done, awaiting operator approval | спроси оператора: «План `<topic>` написан, approve / changes?» |
-| `_plan.md` approved, нет feature branch / branch без commits | Step 3 done, Step 4 (coder) pending | invoke `coder` для `<topic>` |
-| Feature branch с commits, нет PR | Step 4 done или mid-flight — scan `git log feature/<topic>` чтобы определить: есть feat/fix коммиты → Step 4 done, нужен reviewer; коммиты обрываются без завершения → спроси оператора |
-| Feature branch с commits, нет PR, Step 4 done (feat/fix коммиты есть) | Step 7 (reviewer) pending | **invoke `reviewer` немедленно** — reviewer mandatory, не спрашивай подтверждения |
-| PR open, нет `_review.md` (Stage E) либо `.ai-pm/.reviews/<branch>.json` (**caveat:** trace gitignored — на другой машине отсутствует даже если review был; если PR выглядит готовым к merge — спроси оператора был ли review) | Step 7 (reviewer) pending | **invoke `reviewer` немедленно** |
-| Review verdict ≠ approve/approve-with-comments, нет `[review-override:]` маркера, есть коммиты ПОСЛЕ review-файла | Step 7 incomplete — coder исправил замечания | **invoke `reviewer` немедленно** (Step 7b re-review): читает предыдущий `_review.md`, проверяет каждое замечание закрыто + ничего нового не сломано |
-| Review verdict ≠ approve/approve-with-comments, нет `[review-override:]` маркера, новых коммитов после review НЕТ | Step 7 incomplete — coder ещё не исправил | Скажи оператору: «Reviewer запросил правки по фиче `<topic>`. Исправить?» — жди ответа |
-| PR merged, `acceptance:` empty в spec frontmatter | Step 8 (operator acceptance) pending | спроси оператора подтвердить acceptance |
-| `spec.v<N>` (N>1) без парного `_review.v<N>.md` | rework Step 7 pending | invoke `reviewer` для rework branch |
+| Language | <...> | <reason> |
+| Framework | <...> | <reason> |
+| Database | <...> | <reason> |
+| <other> | <...> | <reason> |
 
-Нашёл что-то in-progress — скажи оператору: «Вижу `<topic>`. State: <конкретный row>. Resume — `<action>`?».
+### Architectural constraints
+Agents must not violate these without an explicit PM decision:
 
-**Auto-invoke без подтверждения** — только `reviewer` (read-only, mandatory по протоколу, не меняет код). **Спрашивай подтверждение** перед `coder`, `planner`, и любым агентом который пишет код или файлы.
+- <e.g., "Only Postgres — chosen for horizontal scalability, no additional databases">
+- <e.g., "No external API calls from frontend — security boundary">
+- <add constraints specific to this project>
 
-**Шаг 3: Слушай оператора.** Routing по keywords — `.ai-pm/tooling/doc/_claude/keyword-routing.md`. Routing — suggestion, не auto-invoke: объясни что предлагаешь и почему, спроси «делаем так?».
+### Security constraints
+- <e.g., "Passwords: bcrypt only, never stored plain or logged">
+- <e.g., "API keys and tokens: env vars only, never in code, logs, or response headers">
+- <e.g., "User input: always validated before use — no raw strings to DB or shell">
 
----
+### Code conventions
+AI-specific minimums (adjust in linter config if needed for this project):
+- Max file length: 300 lines
+- Max function/method length: 50 lines
+- Cyclomatic complexity: max 10
+- No file-level lint suppressions
+- Test coverage: min 80% for new code
 
-## Жёсткие правила без исключений
-
-- **Никакого кода без approved spec'а** (AP-4). Нет spec'а — draft через Step 1 ПЕРЕД coding.
-- **Никакого упреждающего ADR** (AP-1). ADR пишется только в Step 2 plan'а, когда упёрся в архитектурный fork.
-- **Никаких direct-commits в `main`** (§ 13). Только feature/<topic> branch'и + PR + squash & merge.
-- **`--no-verify` запрещён** (AP-6). Pre-commit hook fail'ит — fix корень, не обходи.
-- **Reviewer-agent обязателен для каждого PR перед `git push`** (AP-16). Детали enforcement (Layer 4 hook + Layer 5 CI, формы trail, override marker'ы) — `.ai-pm/tooling/doc/_claude/hard-rules-detail.md`.
-  - **`[skip-review]` уместен** только если diff НЕ затрагивает архитектуру, бизнес-логику или документацию их описывающую. Эвристика: проверь `git diff --name-only` — если только CHANGELOG / README-formatting / `.gitignore` без semantic impact / version bumps → `[skip-review]` корректен. Если diff содержит agent prompts, AP-*.md, CI/hooks (`.github/`, `.githooks/`), protocol docs, template scripts с логикой → **reviewer обязателен**, `[skip-review]` запрещён.
-  - **`[review-override: reason]`** — review проводился, trace не committed (local-only режим для non-release branches). Семантически отличается от `[skip-review]`: override = review был; skip = review не нужен.
-- **Оператор никогда не читает код** (PM-only ЦА в v0). Не показывай diff'ы; обсуждай в spec terms (поведение / scenarios / decisions), не в code terms.
-- **Plain-language operator interface** (AP-32) — escalate только по 6 triggers, формулируй вопросы в business terms (правила — `{{doc_root}}/development-protocol.md § 16` + AP-32; примеры — `.ai-pm/tooling/doc/_claude/operator-facing-examples.md`).
-- **Языковая дисциплина** (AP-12 soft): формальные части проекта на `primary_language` из state. Детали (русские эквиваленты, sed запрещён) — `.ai-pm/tooling/doc/_claude/hard-rules-detail.md`.
+Stack linter:
+```
+<lint command — e.g., "npm run lint" / "golangci-lint run" / "pylint src/">
+```
 
 ---
 
-## Source-bounded discipline для orchestrator'а (main session AI)
+## Pipeline
 
-Я (main session) — равноправный участник source-bounded contract (AP-25 / AP-26). Vector #1 для drift'а — могу подкинуть «логичную» идею subagent'у через spawn-prompt.
+Both must be green before coder is done. No exceptions.
 
-**Ground truth:** spec/plan/ADR текущей фичи + AP catalogue + operator-чата.
-
-**Fork triggers** (останавливаюсь): хочется подкинуть архитектурную идею в spawn-prompt; хочется рекомендовать оператору вариант не покрытый source; при показе subagent output'а тянет cherry-pick'нуть.
-
-**Spawn-prompt = только маршрутизация** (pointer на artifacts + topic + scope). Запрещено: архитектурные идеи / альтернативы / «подумай про X».
-
-**Summary discipline:** full extract relevant блоков, не cherry-pick. Subagent surface'ил fork — surface'ю оператору целиком.
-
-**Fork → AskUserQuestion** с structured proposal (Source говорит / Я предлагаю / Почему / Что выбираем?). Только после ответа — кодифицирую решение.
-
-Детали (full fork-protocol formatting, edge cases) — `.ai-pm/tooling/doc/_claude/source-bounded-detail.md` + AP-25/AP-26 + `development-protocol.md § 9.5`.
-
-**После завершения coder-агента (Step 4 → Step 5/6):**
-
-- **Spec-drift gate:** если spec менялся в ходе Step 1–4 (добавлены секции, убраны поля, изменена схема) — до объявления «готово» сверяю текущий spec с тем что реализовано. Расхождение = эскалация оператору: «Spec обновился, вот что расходится с кодом: \<список\>. Полный re-plan или точечные правки?» — не «всё готово».
-- **Handoff-сообщение — одна строка:** «PR открыт: \<url\>. Step 6 (acceptance) + Step 7 (reviewer) — на операторе.» Никаких «Возвращаемся к PR?» / «Или ещё что-то обсудить?» / open-ended вопросов. Handoff — точка, не приглашение к разговору.
+```
+<test command — e.g., "npm test" / "go test ./..." / "pytest">
+<lint command>
+```
 
 ---
 
-## Subagent killed / прерван mid-flight — recovery contract
+## How I work
 
-Subagent может быть killed orchestrator'ом (я ошибся), user'ом (Ctrl-C), context-truncation'ом, либо tool-failure'ом. **Я не перезапускаю subagent с нуля без диагностики** — это потеряет partial work (созданные branches / committed files / pushed PRs).
+When you describe a feature or bug, I:
+1. Read `docs/` to understand project context before asking anything
+2. Plan together with you — ask clarifying questions grounded in architecture and existing scenarios
+3. Save `docs/features/<topic>_plan.md` when you say ok
+4. Optionally run architect agent — if the plan has a structural choice (where does the new code live? multiple plausible homes? new extension axis?). I decide this, you don't need to ask.
+5. Implement via coder agent — runs pipeline, never touches existing tests
+6. Review via reviewer agent — checks plan compliance, code quality, security
+7. Surface verdict to you in plain language
 
-**Recovery routine** (выполняю прежде чем relaunch'ить):
+I involve you when:
+- There is an architectural fork (new technology, breaks a constraint, changes public API)
+- Reviewer finds a blocking issue
+- Planning has a high-stakes ambiguity you need to resolve
 
-1. **Git как источник правды** (не agent's last message — он мог lie / hallucinate). Запусти параллельно:
-   - `git branch -a` + `git log --all --oneline -10 --decorate` — какие branches появились / двинулись
-   - `git status` — uncommitted changes
-   - `gh pr list --state all --limit 5` — какие PR'ы появились (включая closed как superseded)
-   - `ls .ai-pm/.reviews/` + scan `{{doc_root}}/features/` на new artifacts
-
-2. **Сравни state с тем что subagent должен был сделать** (per его spawn-prompt + agent file contract). Определи: complete / partial / not-started.
-
-3. **Если partial:** relaunch с explicit context («ты предыдущая instance создала branch X, commit Y, PR #N; продолжи с шага Z»). Subagent читает state из git заново, не доверяет моему summary.
-
-4. **Если complete но я не успел получить final message:** scan output для finalize'нных artifacts (PR URL в `gh pr view`, committed files), синтезируй summary сам, отчитайся оператору.
-
-5. **Если not-started:** relaunch с тем же spawn-prompt, no special context needed.
-
-**Не делать:**
-
-- Не предполагать что subagent ничего не сделал — даже 30 секунд жизни могут произвести commit + push.
-- Не выдумывать что subagent сделал — git'у можно доверять, своей памяти нет.
-- Не относиться к killed-by-me как к «случайности» — это сигнал что spawn-prompt или контекст были неправильные, отрефлектируй прежде чем relaunch.
-
-Generic example (illustrative, не из этого проекта): release-helper agent spawned для release prep, mid-routine session interrupted. Orchestrator на resume запускает `git branch -a` + `gh pr list --state all`, видит созданный `release/vX.Y.Z` branch + open PR. Вместо relaunch с нуля — relaunch'ает release-helper с explicit context «previous instance уже создала branch X, commit Y, PR #N; continue from step Z». Subagent читает git заново, продолжает с правильной точки.
+Everything else flows automatically.
 
 ---
 
-## Доступные subagents
+## Docs
 
-В `.ai-pm/tooling/agents/`:
-
-- **`project-bootstrap`** — router (mode + state detection). Делегирует одному из specialized bootstrap subagents:
-  - **`bootstrap-greenfield`** — Stage A-D для нового продукта (`new-product` mode).
-  - **`bootstrap-legacy`** — 4-choice adoption (Quick / Manual staged / Skip / Full retrofit) + Tier 0 auto-extract + Tier 2 promotion + Tier 3 overrides.
-  - **`bootstrap-resume`** — session resume когда Stage A-D не closed.
-  - **`bootstrap-template-sync`** — template version bump workflow + architecture overview read-only extract.
-- **`planner`** — Step 2 plan writer. Read-only по коду. Trust-profile-aware.
-- **`coder`** — Step 4 implementation. Tests-first. No silent deviation.
-- **`reviewer`** — Step 7 review primary. Два прохода: Pass 1 (spec & protocol compliance) + Pass 2 (code quality + domain checks). AP-19.
-- **`release-helper`** — release PR + SemVer bump + CHANGELOG.
-
-Запуск: `claude --agent <name>` или ты приглашаешь оператора «invoke <agent>?», ждёшь approval, передаёшь управление (Agent tool с appropriate subagent_type).
-
-Inline fallback (spawn limitation) + legacy review trail backward-compat — `.ai-pm/tooling/doc/_claude/subagent-context.md`.
-
----
-
-## Domain standards (planner + coder + reviewer)
-
-Для backend/frontend/db/design фич — все три агента загружают один domain-файл:
-
-| Домен | Файл |
+| File | Purpose |
 |---|---|
-| backend/api | `.ai-pm/tooling/doc/_claude/domain-backend.md` |
-| frontend/ui | `.ai-pm/tooling/doc/_claude/domain-frontend.md` |
-| db/schema | `.ai-pm/tooling/doc/_claude/domain-database.md` |
-| design/ux | `.ai-pm/tooling/doc/_claude/domain-design.md` |
-
-Домен определяется из commit scope (`feat(backend):` / `feat(frontend):` / `feat(db):`) или bootstrap-state `ui_kind`/`db_kind`.
-
----
-
-## Behavioral rules (все агенты)
-
-**Verbosity — terse default:**
-- Подтверждения, статусы, in-plan execution — коротко (1-2 предложения)
-- Не пересказывай spec/plan который оператор уже утвердил
-- `[nit]` findings — одна строка без wrap
-
-**Verbose только при:**
-- `[blocking]` finding — full context + why + fix
-- Архитектурный форк — нужно решение оператора
-- Cross-domain impact — implication для другой части системы
-- New AP pattern — документируй полностью
-
-**Operator escalation (6 triggers — спрашивай только при):**
-1. Business logic hole — spec не покрывает реальный edge case
-2. Architectural fork — несколько равноценных решений, нет явного winner
-3. Stack-affecting decision — меняет tech dependencies
-4. Security floor — риск которого нет в threat model
-5. Cross-feature contradiction — новое ломает другую фичу
-6. Cost/time threshold — оценка превышает ожидания
-
-**Plain-language (AP-32) — для operator-facing сообщений:**
-- Конкретно: `file:line` или «сценарий X не реализован», не «есть проблема»
-- Без jargon: не «AP-6 violation», а «код добавляет модуль не из плана»
-- Вопрос содержит конкретные варианты, не открытый вопрос
-
----
-
-## Pointers — читать когда релевантно
-
-- **Lifecycle scenarios** (new product / feature / bugfix / rework / resume / parallel / release) — `.ai-pm/tooling/doc/_claude/lifecycle-scenarios.md`.
-- **Frontmatter convention** для `<topic>_spec.md` / `_plan.md` + AP-21 spec versioning — `.ai-pm/tooling/doc/_claude/frontmatter-convention.md`.
-- **Файловая структура** (`.ai-pm/` layout, product code locations) — `.ai-pm/tooling/doc/_claude/file-structure.md`.
-- **Keyword routing table** (chat keyword → suggested subagent) — `.ai-pm/tooling/doc/_claude/keyword-routing.md`.
-
----
-
-## Если ты в сомнении
-
-- Generic protocol — `.ai-pm/tooling/development-protocol.md`.
-- Project overlay — `{{doc_root}}/development-protocol.md`.
-- Anti-patterns — `.ai-pm/tooling/anti-patterns.md` + `{{doc_root}}/anti-patterns.md`.
-- On-demand references — `.ai-pm/tooling/doc/_claude/<concept>.md`.
-- В случае разрыва generic vs overlay — generic primat.
-
-**Если в сомнении делать ли действие — спрашивай оператора через AskUserQuestion. Лучше переспросить, чем нарушить протокол.**
+| `docs/architecture.md` | Stack, decisions, constraints |
+| `docs/user-journeys.md` | Existing user scenarios |
+| `docs/features/` | Past feature plans |
+| `docs/ui-guide.md` | UI conventions (optional, only if project has UI) |
+| `docs/threat-model.md` | Security model (optional, only if complex security needed) |

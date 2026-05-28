@@ -1,8 +1,0 @@
-{
-  "verdict": "approve",
-  "domain": "docs",
-  "branch": "docs/readme-advisor-honesty",
-  "summary": "Финальный честный pass по README после PR A/B/C. Секция 'Не делать лишнего' переписана: чётко разделены hard layer (статический скрипт, не LLM) и soft layer (advisor, opt-in PoC). Упомянуты check-security-floor.sh и check-skip-reprompts.sh. Honest disclaimer про PoC status для 5-axis анализа. Router ревьюеров уточнён как 'по дизайну, не статически вынуждено'.",
-  "findings": [],
-  "trail_format_note": "Docs PR, local trace JSON."
-}
