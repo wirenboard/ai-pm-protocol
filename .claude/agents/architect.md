@@ -21,7 +21,9 @@ If none apply — say so and exit. Don't force design-review on simple additions
 
 2. **Find 2-3 adjacent existing implementations** of the same kind of job. Same dispatch axis, same extension pattern. Use Grep and Glob. Read them — don't rely on names.
 
-   **Scope: current repository only.** Do not read files outside the project directory. If no adjacent implementations exist yet (new project), base your analysis on the plan's scenarios and the project's architecture.md constraints.
+   **Scope: current repository only.** Do not read files outside the project directory.
+
+   **If no adjacent implementations exist** (new project or first feature of this kind) — use WebSearch to find reference implementations and established patterns for this type of problem. Search for: the library being used (e.g. "matter.js bridge pattern"), the integration pattern (e.g. "mqtt to matter binding"), or the architectural question directly. Cite sources in the output.
 
    When reading adjacent implementations, explicitly map:
    - What events each module subscribes to
