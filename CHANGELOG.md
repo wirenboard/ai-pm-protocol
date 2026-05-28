@@ -13,6 +13,14 @@
 
 ---
 
+## [1.5.0] — 2026-05-29
+
+### Added
+
+- Bootstrap docs-extractor subagent: dedicated agent for deep legacy codebase reading, extracts patterns and conventions before bootstrap planning (14726cf)
+
+---
+
 ## [1.4.1] — 2026-05-29
 
 ### Fixed
