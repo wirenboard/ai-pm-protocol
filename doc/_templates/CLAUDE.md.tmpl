@@ -58,6 +58,19 @@ Both must be green before coder is done. No exceptions.
 
 ---
 
+## Workflow agents
+
+These agents are part of this project's workflow (from `.claude/agents/`). Use only these — do not substitute with similarly-named agents from other toolsets:
+
+| Agent | When |
+|---|---|
+| `architect` | Structural choice in the plan — where does new code live? |
+| `coder` | Implement the plan |
+| `reviewer` | Review after implementation |
+| `pr-prep` | Squash branch and open PR |
+
+---
+
 ## How I work
 
 **If `docs/` doesn't exist yet** — I'll ask you a few questions and set up the project documentation before we do anything else. You don't need to run any commands.

@@ -13,6 +13,14 @@
 
 ---
 
+## [1.0.1] — 2026-05-28
+
+### Fixed
+
+- CLAUDE.md.tmpl: added explicit "Workflow agents" table so orchestrator uses template agents instead of similarly-named agents from other toolsets (5d9254d)
+
+---
+
 ## [1.0.0] — 2026-05-28
 
 ### Breaking Changes
