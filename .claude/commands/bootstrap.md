@@ -126,13 +126,22 @@ Do not ask PM to fill the gaps in detail — `[?]` items get resolved naturally 
 
 Read all significant modules without exception — business logic, data models, algorithms, entry points, config, tests if present, existing docs.
 
-Do not ask PM anything during reading.
+Do not ask PM anything during reading. If you encounter something unclear — re-read the relevant code to resolve it. Never stop and list unresolved questions for PM. "What we're not sure about" in the final brief is only for items where the code is clear but the business intent behind it is genuinely ambiguous even after reading everything.
+
+Before writing any docs, verify you've covered:
+- All form/window/screen units (not just main entry point)
+- All database procedures, stored queries, and data models
+- All export and report modes
+- All backup and data portability mechanisms
+- All configuration and settings screens
 
 From the full read, reconstruct and write:
 - `CLAUDE.md`
 - `docs/architecture.md` — complete stack, all key decisions, data flows, algorithms, constraints; no `[?]` placeholders
 - `docs/user-journeys.md` — extract journeys from the code itself (what the system actually does), not from PM's memory
-- Optional docs — same rules as greenfield
+- `docs/ui-guide.md` — if the project has a custom UI (HTML/CSS/components the project builds, or a desktop LCL/WinForms/Qt app). Do NOT create if UI is a platform-provided admin panel, generated forms, or dashboards.
+- `docs/threat-model.md` — only if security requirements are evident in the code (auth, payments, PII, encryption)
+- `docs/features/` directory — always create, empty is fine
 
 Only after all docs are written — present to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
 
