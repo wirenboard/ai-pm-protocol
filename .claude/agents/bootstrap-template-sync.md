@@ -104,7 +104,16 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
    - **`vendor`** (скопированные файлы):
      Скажи оператору: «Tooling — vendor copy. Автоматический bump невозможен. Нужно скопировать файлы из template repo вручную или через `rsync`. После обновления `.ai-pm/tooling/` — продолжим audit.» AskUserQuestion: «Хочешь перейти на submodule integration (проще обновлять)?»
 
-   (Commit submodule bump отложен — будет частью первого PR'а после audit)
+   **Commit submodule bump сразу — до audit:**
+   ```
+   git add .ai-pm/tooling
+   git commit -m "chore: bump tooling submodule to <target>"
+   git push
+   ```
+   Затем скажи оператору:
+   > «Tooling обновлён до `<target>`. **Перезапусти сессию** — при старте conformance audit запустится автоматически с новыми инструкциями агента.»
+
+   После этого — **стоп**. Не продолжай audit в текущей сессии: агент загружен со старыми инструкциями и не может их перечитать. Conformance audit запустится в новой сессии через session start routine.
 
    **Незакоммиченные изменения в product-коде — не останавливают template-sync.** Dirty product files (src/, doc/, config/ и т.п.) — незавершённая работа из предыдущей coder-сессии, не входит в scope template-sync. Не спрашивай «сначала выровняем код?». Продолжай audit.
 

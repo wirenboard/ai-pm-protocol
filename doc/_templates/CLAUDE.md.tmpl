@@ -16,6 +16,12 @@
 - Stage A-D не closed → **немедленно** invoke `project-bootstrap`, не жди дополнительного input'а от оператора — agent сам спросит подтверждение. Скажи «Bootstrap не завершён, передаю project-bootstrap'у.» Не работай над фичами.
 - Stage A-D closed → шаг 1.1.
 
+**Шаг 1.05: Проверь версию шаблона.**
+```
+git -C .ai-pm/tooling describe --tags HEAD 2>/dev/null
+```
+Сравни с `template_version_applied` из bootstrap-state.md. Если отличаются → скажи оператору: «Tooling обновлён до `<новая версия>`, conformance audit ещё не выполнен. Запускаю.» → **немедленно invoke `project-bootstrap`** (маршрутизирует в `bootstrap-template-sync`). Не жди дополнительных команд.
+
 **Шаг 1.1: Прочитай `.ai-pm/.session-state.md`, если есть.** Lightweight hint «где мы во флоу». State — hint, не contract: git wins при расхождении. Нет файла — восстанови через `git branch --show-current` + `gh pr list --state open` + scan `{{doc_root}}/features/*_spec.md` без парного `_plan.md`.
 
 **Шаг 1.5: Проверь `foundation_completeness` в state.** `complete` → standard workflow, AP-14 full read-pass. `partial` / `minimal` / `none` → mini-research per feature (project-bootstrap.md Tier 1). Security hard floors (Mini-threat-list) обязательны даже при `none`.
