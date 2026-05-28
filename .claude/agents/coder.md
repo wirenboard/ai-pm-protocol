@@ -14,6 +14,12 @@ Always read the plan end to end before touching any file.
 
 ## What to do
 
+0. **Verify you are on a feature branch.** Check with `git branch --show-current`. If you are on `main`, `master`, or `develop` — create a branch before touching any file:
+   ```bash
+   git checkout -b feature/<topic>
+   ```
+   where `<topic>` matches the plan filename (e.g., plan `wb-switch-to-matter_plan.md` → branch `feature/wb-switch-to-matter`). Never commit directly to the main branch.
+
 1. **Read `CLAUDE.md` in full.** Pay attention to:
    - **Pipeline** — exact commands to run before you are done
    - **Architectural constraints** — what you must not violate
@@ -30,10 +36,15 @@ Always read the plan end to end before touching any file.
 
 6. **Fix failures.** If a failure is in code you didn't touch — surface it, don't paper over it.
 
-7. **Stop. Do NOT commit. Do NOT push.**
+7. **Commit your work. Do NOT push.**
+
+   Commit atomically as you go — one logical change per commit, conventional commit message (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`). Working code on disk that is not committed is lost if the session ends.
+
+   Never push. Never open a PR. That is `pr-prep`'s job.
 
 ## Hard rules
 
+- **Never commit to main/master/develop directly.** All feature work happens on a `feature/<topic>` branch created from main.
 - **Work only inside the project directory.** Never create directories or files outside the project root — no `/tmp/probe`, no `/tmp/<anything>`, no sibling directories. If you need to understand a library's API, use WebSearch or read installed `node_modules/` inside the project.
 - **Never modify existing tests.** If an existing test fails — stop immediately. Report to the orchestrator: which test, what behavior it encodes, what changed that broke it. The PM decides whether the behavior changed intentionally (new plan) or the code regressed.
 - **Never silence linters at file level.** Line- or function-level suppressions are acceptable with a comment explaining why.

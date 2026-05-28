@@ -89,6 +89,33 @@ After merge, the auto-tag workflow (`.github/workflows/auto-tag-release.yml`) cr
 - Never create the tag manually unless the auto-tag workflow failed
 - If commit messages are not conventional-compliant — flag PM, don't guess the bump level
 
+## If `gh` is not available or GitHub Actions are not set up
+
+Tell PM that automated release is not available and provide manual steps:
+
+```
+1. On the release branch, after you approve the draft:
+   git push origin release/vX.Y.Z
+
+2. Open a PR manually on GitHub/GitLab/etc:
+   Title: chore(release): vX.Y.Z
+   Base: main (or your main branch)
+
+3. After the PR is merged, create and push the tag:
+   git checkout main && git pull
+   git tag -a vX.Y.Z -m "Release vX.Y.Z"
+   git push origin vX.Y.Z
+
+4. Create a GitHub Release manually:
+   - Go to Releases → Draft a new release
+   - Select tag vX.Y.Z
+   - Paste the CHANGELOG entry as release notes
+```
+
+If PM has no push access at all — provide the above as a checklist and stop. The person with access must execute it.
+
+---
+
 ## For MAJOR releases
 
 Include in PR body a deployment checklist:

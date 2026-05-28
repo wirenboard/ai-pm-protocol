@@ -25,7 +25,7 @@ When you describe a feature or bug:
 
 **Step 3 — I show you the architecture decision (if one was needed).** If the plan had a structural question (where does new code live?), I'll explain what was decided and why — in plain language, with a diagram if it helps. You can push back.
 
-**Step 4 — Coder implements.** Runs pipeline, never touches existing tests. After coder finishes, I tell you:
+**Step 4 — Coder implements.** Works on a feature branch, commits atomically as it goes, runs pipeline, never touches existing tests. After coder finishes, I tell you:
 - What the feature now does (user perspective, no code)
 - How to try it yourself step by step
 - Anything that needs your attention
