@@ -33,6 +33,13 @@ Always read the plan first. The plan is the contract — you check execution aga
 
 8. **Input validation.** New function accepts external input (HTTP, MQTT, file, env var, user input) and uses it without validation → blocking.
 
+9. **Hardcoded config values.** Any hardcoded credentials, ports, passcodes, device identifiers, or environment-specific values in the diff → blocking. Config must come from the config file or environment variables. No exceptions for "defaults" or "examples" in production code paths.
+
+10. **Infrastructure vs architecture.md.** Read `docs/architecture.md` deploy section. If it specifies a deployment method (Docker, systemd, etc.) and the corresponding infrastructure files are missing from the project — blocking. A non-technical PM cannot catch this gap; the reviewer must.
+    - Docker specified → `Dockerfile` and `docker-compose.yml` must exist
+    - systemd specified → service unit file must exist
+    - etc.
+
 ## What you do NOT check
 
 - Style and formatting that linters cover
