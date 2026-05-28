@@ -23,6 +23,7 @@
 
 - Release workflow: release-helper runs on feature branch, auto-tag on merge to main (5bb8e24)
 - Release-helper: remove confirmation gate before commit, report after execution (2ffb6ef)
+- Pr-prep: no confirmation gate, execute and report PR URL to orchestrator (ac809b8)
 
 ---
 
