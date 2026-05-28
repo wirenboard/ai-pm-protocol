@@ -64,7 +64,7 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 | `bootstrap-greenfield` | Свежая репка без `.ai-pm/`, нет existing кода. Mode = `new-product`. |
 | `bootstrap-legacy` | `.ai-pm/` нет, НО existing код есть (≥5 commits + manifest). 4-choice adoption + Tier 0/2/3 routines. |
 | `bootstrap-resume` | `.ai-pm/.bootstrap-state.md` есть, но Stage A-D не все closed. |
-| `bootstrap-template-sync` | Operator request: «template-sync» / «bump template» / «обнови template» / «составь архитектуру» (architecture overview read-only тоже здесь). |
+| `bootstrap-template-sync` | Operator request: «template-sync» / «bump template» / «обнови template» / «обнови шаблон» / «составь архитектуру» (architecture overview read-only тоже здесь). |
 
 **Lifecycle routing (working state)** — bootstrap completed, новый intent — делается **router'ом inline** (это короткая dispatch table, см. § Lifecycle routing).
 
@@ -105,7 +105,7 @@ Algorithm (pure function от state + git):
 | **«продолжай фичу X»** | Resume per-feature. Прочитай frontmatter `<topic>_spec.md`: `spec_approved` empty → Step 1; `plan_approved` empty → planner; `merged: no` → coder. |
 | **«ревью PR / проверь код»** | Invoke `reviewer` subagent. Apply «Mandatory baseline» section + ONE Domain section inline (Backend / Frontend / Design / Database). AP-19/AP-20. AP-16 verdict-gate. |
 | **«релиз»** | Invoke `release-helper`. Для MAJOR breaking — AP-18 deployment safety pre-flight. |
-| **«обнови template» / «template-sync» / «bump template»** | Invoke `bootstrap-template-sync` subagent. |
+| **«обнови template» / «обнови шаблон» / «template-sync» / «bump template»** | Invoke `bootstrap-template-sync` subagent. |
 | **«составь архитектуру» / «architecture overview» / «extract topology» / «опиши проект»** | Invoke `bootstrap-template-sync` subagent — там же architecture overview read-only routine. |
 | **«адаптируй полностью» / «promote foundation» / «consolidate»** | Invoke `bootstrap-legacy` (Tier 2 promotion routine). |
 | **«skip X с reason» / «add adoption override»** | Invoke `bootstrap-legacy` (Tier 3 overrides routine). |

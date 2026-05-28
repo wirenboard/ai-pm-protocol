@@ -17,11 +17,16 @@
 
 ---
 
-## [0.10.7] — 2026-05-27
+## [0.10.7] — 2026-05-28
 
 ### Fixed
 
 - **bootstrap-template-sync: handle dirty submodule before checkout.** Перед `git checkout <target>` выполняется `git update-index --refresh` (устраняет false-dirty от NFS/FUSE/timestamp), затем проверка реального diff'а: пустой diff → безопасный restore; реальный diff → стоп с объяснением оператору. Покрыты все три integration mode: submodule, gitignore (symlink), vendor. (a0753c4)
+- **coder: pre-handoff spec-drift gate.** Перед объявлением Step 4 done coder проверяет соответствие кода текущему spec'у (если spec менялся в ходе реализации). Расхождение → эскалация оператору с перечнем. Handoff-сообщение сведено к одной строке без open-ended вопросов.
+- **CLAUDE.md.tmpl: post-coder spec-drift gate и handoff discipline.** В секцию «Source-bounded discipline для orchestrator'а» добавлены: обязательная сверка spec ↔ код перед передачей управления + запрет chatty handoff («Возвращаемся к PR?», «Или ещё что-то обсудить?»).
+- **project-bootstrap + bootstrap-template-sync: alias «обнови шаблон».** Добавлен routing trigger «обнови шаблон» в routing table project-bootstrap.md и в description frontmatter/invocation секцию bootstrap-template-sync.md — рядом с существующими «обнови template» / «template-sync».
+- **bootstrap-greenfield + bootstrap-legacy: Stage D settings.json rules.** Добавлен раздел Stage D с правилами создания `.claude/settings.json`: копировать из `settings.json.tmpl`, никогда не генерировать с нуля; перечень допустимых hook-событий; явный запрет несуществующих событий (`preCommit`, `onSave`, etc.).
+- **settings.json.tmpl: valid hook events documentation.** Добавлен комментарий-блок `_valid_hook_events` с полным списком допустимых hook-событий Claude Code и явным указанием на несуществующие git/IDE-концепции.
 
 ---
 

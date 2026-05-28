@@ -6,6 +6,18 @@
     "Это hard enforcement: Claude НЕ может обойти через 'забыл'.",
     "Soft enforcement через CLAUDE.md briefing — Layer 1."
   ],
+  "_valid_hook_events": [
+    "ВАЖНО: допустимые ключи в 'hooks': PreToolUse, PostToolUse, PostToolUseFailure,",
+    "PostToolBatch, Notification, UserPromptSubmit, UserPromptExpansion,",
+    "SessionStart, SessionEnd, Stop, StopFailure, SubagentStart, SubagentStop,",
+    "PreCompact, PostCompact, PermissionRequest, PermissionDenied, Setup,",
+    "TeammateIdle, TaskCreated, TaskCompleted, Elicitation, ElicitationResult,",
+    "ConfigChange, WorktreeCreate, WorktreeRemove, InstructionsLoaded, CwdChanged,",
+    "FileChanged, MessageDisplay.",
+    "ЗАПРЕЩЁННЫЕ (несуществующие) события: preCommit, pre-commit, onSave, onEdit, beforeWrite —",
+    "это git/IDE hook-концепции, не Claude Code. Lint/typecheck перед commit = git pre-commit hook",
+    "(Layer 4), см. scripts/install-git-hooks.sh."
+  ],
   "_notes_for_paths": [
     "Скрипты живут в product репозитории (scripts/ или эквивалент), НЕ в submodule .ai-pm/tooling/.",
     "Bootstrap-agent на Stage D читает .tmpl из submodule, адаптирует и создаёт реальные scripts/*.sh."

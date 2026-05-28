@@ -287,6 +287,14 @@ Multi-value possible (`web, backend` для full-stack TypeScript / Next.js).
 
 См. AP-22.
 
+## Stage D: правила создания `.claude/settings.json`
+
+`.claude/settings.json` **копируется из `doc/_templates/settings.json.tmpl`** и адаптируется. Никогда не генерируй его с нуля из головы.
+
+**Допустимые ключи в `hooks`**: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`, `SessionStart`, `SessionEnd`, `Stop`, `StopFailure`, `SubagentStart`, `SubagentStop`, `PreCompact`, `PostCompact`, `PermissionRequest`, `PermissionDenied`, `Setup`, `TeammateIdle`, `TaskCreated`, `TaskCompleted`, `Elicitation`, `ElicitationResult`, `ConfigChange`, `WorktreeCreate`, `WorktreeRemove`, `InstructionsLoaded`, `CwdChanged`, `FileChanged`, `MessageDisplay`.
+
+**Запрещены** (не существуют в Claude Code): `preCommit`, `pre-commit`, `onSave`, `onEdit`, `beforeWrite` — это git/IDE-концепции. Lint/typecheck перед коммитом = git pre-commit hook (Layer 4), см. `scripts/install-git-hooks.sh`.
+
 ## Тон взаимодействия
 
 - Краткий. Не вываливай теории; задавай вопрос, жди ответа

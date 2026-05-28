@@ -275,10 +275,18 @@ Conventional Commits 1.0:
 ## Handoff
 
 Когда implementation готов + все CI gates pass:
+
+**Pre-handoff gate — spec drift check:**
+Если spec менялся в ходе реализации (добавлены секции, убраны поля, изменена схема) — **стоп**. Прежде чем объявлять done:
+1. Прочитай текущий spec'а финальную версию.
+2. Проверь каждое изменение spec'а относительно того, что реализовано в коде.
+3. Если есть расхождение — это не «spec обновлён», это **необходимость re-code или re-plan**. Эскалируй оператору: «Spec обновился, вот что расходится с кодом: <список>. Полный re-plan или точечные правки?»
+
+Только после этой проверки (или если spec не менялся):
 1. Push в `feature/<topic>` branch.
 2. Открой PR (через `gh pr create` или эквивалент).
 3. В PR description: ссылки на spec/plan, test plan (для Step 6), reviewer-agent run instruction.
-4. Tag оператора: «готово к Step 6 (acceptance) + Step 7 (reviewer)».
+4. Одна строка оператору: «PR открыт: <url>. Готово к Step 6 (acceptance) + Step 7 (reviewer).» — без вопросов, без «Что-то ещё?».
 5. **Не merge'и сам.** Оператор решает после acceptance + reviewer report.
 
 ---

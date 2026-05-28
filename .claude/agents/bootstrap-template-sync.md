@@ -1,6 +1,6 @@
 ---
 name: bootstrap-template-sync
-description: Template version bump routine + Architecture overview (read-only Tier 0). Invoked router'ом (`project-bootstrap`) при operator request «обнови template» / «template-sync» / «bump template» (template-sync workflow) или «составь архитектуру» / «architecture overview» / «extract topology» (read-only architecture extract). Agent-driven holistic comparison, не scripted detection.
+description: Template version bump routine + Architecture overview (read-only Tier 0). Invoked router'ом (`project-bootstrap`) при operator request «обнови template» / «обнови шаблон» / «template-sync» / «bump template» (template-sync workflow) или «составь архитектуру» / «architecture overview» / «extract topology» (read-only architecture extract). Agent-driven holistic comparison, не scripted detection.
 ---
 
 # Bootstrap Template-Sync Agent
@@ -46,7 +46,7 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
 ## Template-sync workflow
 
-**Invoked manually** оператором через «обнови template» / «template-sync» / «bump template» (router routes сюда). **AI не предлагает sync proactively** (respect AP-3 operator-gate).
+**Invoked manually** оператором через «обнови template» / «обнови шаблон» / «template-sync» / «bump template» (router routes сюда). **AI не предлагает sync proactively** (respect AP-3 operator-gate).
 
 Это **agent-driven** routine — LLM читает шпаргалку + CHANGELOG, holistically сравнивает project с template, решает per-decision с operator approval. Никаких scripted detection categories.
 
