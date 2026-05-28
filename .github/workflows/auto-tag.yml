@@ -1,8 +1,8 @@
 name: Release
 
 # Triggered on any push to main.
-# Reads the top version from CHANGELOG.md — if that tag doesn't exist yet,
-# creates the tag and GitHub Release in one job.
+# Reads the top version from CHANGELOG.md — if a GitHub Release doesn't exist yet,
+# creates the tag (if needed) and GitHub Release in one job.
 # Branch name and commit message don't matter.
 
 on:
@@ -24,6 +24,8 @@ jobs:
 
       - name: Detect new version in CHANGELOG
         id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(grep -m1 '^## \[[0-9]' CHANGELOG.md | sed 's/## \[\([^]]*\)\].*/\1/')
           if [ -z "$VERSION" ]; then
@@ -31,7 +33,7 @@ jobs:
             exit 0
           fi
           TAG="v${VERSION}"
-          if git tag | grep -qx "$TAG"; then
+          if gh release view "$TAG" &>/dev/null; then
             echo "is_release=false" >> "$GITHUB_OUTPUT"
           else
             echo "version=${TAG}" >> "$GITHUB_OUTPUT"
@@ -39,21 +41,24 @@ jobs:
             echo "is_release=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create tag
+      - name: Create tag if missing
         if: steps.detect.outputs.is_release == 'true'
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.detect.outputs.version }}" -m "Release ${{ steps.detect.outputs.version }}"
-          git push origin "${{ steps.detect.outputs.version }}"
+          TAG="${{ steps.detect.outputs.version }}"
+          if ! git tag | grep -qx "$TAG"; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          fi
 
       - name: Extract CHANGELOG notes
         if: steps.detect.outputs.is_release == 'true'
         id: notes
         run: |
           VERSION="${{ steps.detect.outputs.semver }}"
-          NOTES=$(awk "/^## \[${VERSION}\]/,/^## \[/" CHANGELOG.md \
-            | head -n -1 | tail -n +2 | sed '/^[[:space:]]*$/d' | head -200)
+          NOTES=$(awk "/^## \[${VERSION}\]/,/^## \[[0-9]/" CHANGELOG.md \
+            | head -n -1 | tail -n +2 | sed '/^---$/d' | sed '/^[[:space:]]*$/d' | head -200)
           if [ -z "$NOTES" ]; then
             NOTES="Release ${{ steps.detect.outputs.version }}"
           fi
