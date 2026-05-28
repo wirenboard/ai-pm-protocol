@@ -13,6 +13,14 @@
 
 ---
 
+## [1.4.1] — 2026-05-29
+
+### Fixed
+
+- Bootstrap full-mode gaps: self-resolve doubts without PM escalation, add coverage checklist (forms, DB procedures, exports, backups, settings screens), inline optional docs list for legacy bootstrap (13a01e0)
+
+---
+
 ## [1.4.0] — 2026-05-29
 
 ### Added
