@@ -284,14 +284,21 @@ Conventional Commits 1.0:
 
 Только после этой проверки (или если spec не менялся):
 
-**Если это первая реализация (PR ещё не открыт):**
+**Определи ситуацию перед handoff:**
+```bash
+REVIEW_FILE="<doc_root>/features/<topic>_review.md"
+grep -q "request-changes" "$REVIEW_FILE" 2>/dev/null && echo "fix-iteration" || echo "first-impl"
+```
+`request-changes` в review-файле → fix iteration. Иначе — первая реализация.
+
+**Если это первая реализация:**
 1. Push в `feature/<topic>` branch.
 2. Открой PR (через `gh pr create` или эквивалент).
 3. В PR description: ссылки на spec/plan, test plan (для Step 6), reviewer-agent run instruction.
 4. Одна строка оператору: «PR открыт: <url>. Готово к Step 6 (acceptance) + Step 7 (reviewer).» — без вопросов, без «Что-то ещё?».
 5. **Не merge'и сам.** Оператор решает после acceptance + reviewer report.
 
-**Если это исправление замечаний reviewer'а (PR уже открыт):**
+**Если это исправление замечаний reviewer'а (`request-changes` в review-файле):**
 1. Push fix-коммиты в ту же ветку.
 2. Одна строка оператору: «Замечания исправлены, запускаю повторное review.»
 3. **Немедленно invoke `reviewer` в режиме Step 7b** — без ожидания команды. В spawn-prompt укажи: «Step 7b re-review: прочитай `<topic>_review.md`, найди baseline commit через `git log --follow -1 --format="%H" .ai-pm/doc/features/<topic>_review.md`, проверь каждое замечание закрыто в fix-коммитах, проверь регрессии.»
