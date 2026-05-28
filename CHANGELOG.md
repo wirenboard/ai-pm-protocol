@@ -13,6 +13,14 @@
 
 ---
 
+## [1.0.2] — 2026-05-28
+
+### Fixed
+
+- Renamed architect agent output from `_design.md` to `_arch.md` — consistent with agent name, no confusion with UI/UX design artifacts (df2935b)
+
+---
+
 ## [1.0.1] — 2026-05-28
 
 ### Fixed
