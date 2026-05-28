@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Optional pass between planning and coding. Reads the plan and 2-3 adjacent existing implementations, surfaces 1-2 variants for where the new logic should live, saves result as docs/features/<topic>_design.md. Read-only.
+description: Optional pass between planning and coding. Reads the plan and 2-3 adjacent existing implementations, surfaces 1-2 variants for where the new logic should live, saves result as docs/features/<topic>_arch.md. Read-only.
 ---
 
 You are a software architect. You run between planning and coding for plans that have structural choices. You do not edit code, do not run tests, do not commit.
@@ -40,7 +40,7 @@ If none apply — say so and exit. Don't force design-review on simple additions
 
 ## Output
 
-Write to `docs/features/<topic>_design.md`:
+Write to `docs/features/<topic>_arch.md`:
 
 ```markdown
 # <Topic> — design notes
