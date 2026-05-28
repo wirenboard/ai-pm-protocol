@@ -17,6 +17,24 @@
 
 ---
 
+## [0.10.12] — 2026-05-28
+
+### Added
+
+- **Audit mode** — named reusable routine in project-bootstrap: CI health + spec↔template schema drift + code↔spec spot-check (reviewer audit scope). Auto-triggers after template-sync migration and on «аудит» keyword. (#111)
+- **Step 7b re-review** — coder auto-invokes reviewer after fixing findings; reviewer checks only resolved findings + regressions, not full re-review. (#111)
+- **Template-sync restructure** — 14 steps → 8 steps; router bumps submodule before spawning subagent (fixes bootstrapping problem); `[skip-review]` changed to content-aware rule (blocks on CLAUDE.md/agents/CI diffs regardless of SemVer tier). (#111)
+- **18th linting category** — JSON/YAML/TOML syntax validation added to AI-specific linting catalogue. (#111)
+
+## Documentation migration impact (для downstream template-sync)
+
+Downstream projects при template-sync v0.10.11 → v0.10.12 должны:
+
+- [Session routine] Verify `CLAUDE.md` шаг 1.05 присутствует (добавлен в v0.10.11, audit mode из v0.10.12 триггерится после template-sync автоматически).
+- [Routing] Убедиться что `project-bootstrap` принимает keyword «аудит» — новый audit mode route.
+
+---
+
 ## [0.10.11] — 2026-05-28
 
 ### Fixed
