@@ -1,6 +1,6 @@
 name: Create GitHub Release
 
-# Triggered when auto-tag.yml creates a vX.Y.Z tag after a release commit merges to main.
+# Triggered when auto-tag.yml creates a vX.Y.Z tag on push to main.
 # Creates a GitHub Release with CHANGELOG notes for that version.
 
 on:
