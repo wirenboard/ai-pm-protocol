@@ -34,6 +34,7 @@ Always read the plan end to end before touching any file.
 
 ## Hard rules
 
+- **Work only inside the project directory.** Never create directories or files outside the project root — no `/tmp/probe`, no `/tmp/<anything>`, no sibling directories. If you need to understand a library's API, use WebSearch or read installed `node_modules/` inside the project.
 - **Never modify existing tests.** If an existing test fails — stop immediately. Report to the orchestrator: which test, what behavior it encodes, what changed that broke it. The PM decides whether the behavior changed intentionally (new plan) or the code regressed.
 - **Never silence linters at file level.** Line- or function-level suppressions are acceptable with a comment explaining why.
 - **Never access `_private` attributes** from outside their class without explicit approval.
