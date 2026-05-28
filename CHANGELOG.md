@@ -17,6 +17,18 @@
 
 ---
 
+## [0.11.0] — 2026-05-28
+
+### Changed
+
+- **Agent constitution rewrite: reviewer/planner/coder + domain files.** reviewer.md: 869→209 lines. Two-pass architecture: Pass 1 (spec compliance, plan adherence, frontmatter, AP discipline) + Pass 2 (behavioral correctness graph-traversal, dead code grep, input validation, domain checks). Hot cache on diff+plan between passes. planner.md: 304→168 lines — loads domain file to embed standards into plan. coder.md: 332→203 lines — loads same domain file, implements to standards without waiting for reviewer. CLAUDE.md.tmpl: fix path bug (.ai-pm/tooling/_claude/ → doc/_claude/), shared Behavioral rules (verbosity, escalation, plain-language) removing ~80-line duplication per agent. Total: 1505→580 lines (-61%). (#118)
+
+### Breaking Changes
+
+- **Domain files renamed: `reviewer-domain-*.md` → `domain-*.md`.** Promoted from reviewer-only to shared context for planner+coder+reviewer. Downstream: `git submodule update` sufficient if using symlink convention.
+
+---
+
 ## [0.10.15] — 2026-05-28
 
 ### Added
