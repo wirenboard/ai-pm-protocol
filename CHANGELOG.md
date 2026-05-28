@@ -13,6 +13,18 @@
 
 ---
 
+## [1.0.6] — 2026-05-28
+
+### Added
+
+- Split CLAUDE.md into static project part + dynamic WORKFLOW.md — separates project config from orchestration workflow (dec55b4)
+
+### Fixed
+
+- orchestration flow: show PM what was built at each step (234cfe2)
+- reviewer: checks hardcoded config values and missing infrastructure (acdee68)
+
+
 ## [1.0.5] — 2026-05-28
 
 ### Fixed
