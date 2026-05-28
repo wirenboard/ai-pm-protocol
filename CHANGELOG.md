@@ -13,6 +13,19 @@
 
 ---
 
+## [1.0.3] — 2026-05-28
+
+### Added
+
+- `/research` command: WebSearch-based analysis of existing solutions and analogues. PM-readable output with pros/cons/fit. Saves to `docs/research/<topic>_research.md`. (bc93ba6)
+- bootstrap: asks PM about research at project start
+- plan-feature: suggests research when feature area might benefit from existing libraries
+
+### Fixed
+
+- architect: reverted WebSearch (wrong place); scope strictly current repo only (1403b92)
+
+
 ## [1.0.2] — 2026-05-28
 
 ### Fixed
