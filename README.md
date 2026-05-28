@@ -49,6 +49,10 @@ git submodule update --remote .ai-pm/tooling
 
 **Безопасность.** Reviewer думает adversarially о каждом диффе: что может утечь, что хранится небезопасно, что можно подделать.
 
+**Инфраструктура соответствует архитектуре.** Если `docs/architecture.md` указывает Docker — reviewer блокирует PR, если `Dockerfile` отсутствует.
+
+**Нет хардкода.** Reviewer блокирует любые credentials, паскоды, device ID в коде — только из конфига или env.
+
 **Модульный код.** Линтеры с AI-специфичными правилами (max file/function length, complexity) — часть обязательного pipeline.
 
 ## Что остаётся за PM
@@ -62,8 +66,9 @@ git submodule update --remote .ai-pm/tooling
 ## Структура шаблона
 
 ```
-.claude/agents/       — coder, reviewer, design-review, pr-prep
-.claude/commands/     — bootstrap, plan-feature (shortcuts для разработчиков)
+WORKFLOW.md           — правила работы агентов (динамическая часть, импортируется в CLAUDE.md)
+.claude/agents/       — architect, coder, reviewer, pr-prep, release-helper
+.claude/commands/     — bootstrap, plan-feature, research
 doc/_templates/       — шаблоны документов проекта
 ```
 
@@ -71,7 +76,8 @@ doc/_templates/       — шаблоны документов проекта
 
 ```
 README.md             — что и зачем, для людей
-CLAUDE.md             — инструкции для агентов (из шаблона)
+CLAUDE.md             — статическая часть: проект, архитектура, pipeline
+                         (автоматически импортирует .ai-pm/tooling/WORKFLOW.md)
 docs/
   architecture.md     — стек, решения, ограничения
   user-journeys.md    — пользовательские сценарии
@@ -81,6 +87,8 @@ docs/
     <topic>_plan.md   — накапливается по ходу
 .ai-pm/tooling/       — этот шаблон (submodule)
 ```
+
+При обновлении submodule (`git submodule update --remote .ai-pm/tooling`) агенты и `WORKFLOW.md` обновляются автоматически. Статическая часть `CLAUDE.md` остаётся нетронутой.
 
 ## Лицензия
 
