@@ -34,7 +34,15 @@ Then create from templates:
 - `docs/threat-model.md` from `threat-model.md.tmpl` — only if security requirements mentioned
 - `docs/features/` directory
 
+**UI note:** if PM mentions UI plans but says it's not a priority now — add a note to CLAUDE.md `## Docs` section:
+```
+| `docs/ui-guide.md` | UI conventions — not created yet, create when UI work starts |
+```
+Do NOT create ui-guide.md now. The note ensures it won't be forgotten.
+
 Show PM what was created. Ask: anything wrong or missing?
+
+**Initial commit:** commit the created docs files. If there is no source code yet (no package.json, no test runner) — the pipeline cannot run and that is expected. Use `git commit --no-verify` for this first documentation-only commit. State explicitly to PM: "Pipeline check skipped — no source code yet. Will be enforced on all subsequent commits once code exists."
 
 ---
 
@@ -52,6 +60,8 @@ Draft the missing documents:
 - Optional docs — same rules as greenfield
 
 Show PM the drafts. Iterate until PM says ok. Then save files.
+
+Same UI note and initial commit rules as greenfield apply.
 
 ---
 
