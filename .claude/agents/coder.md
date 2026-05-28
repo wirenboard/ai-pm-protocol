@@ -283,11 +283,19 @@ Conventional Commits 1.0:
 3. Если есть расхождение — это не «spec обновлён», это **необходимость re-code или re-plan**. Эскалируй оператору: «Spec обновился, вот что расходится с кодом: <список>. Полный re-plan или точечные правки?»
 
 Только после этой проверки (или если spec не менялся):
+
+**Если это первая реализация (PR ещё не открыт):**
 1. Push в `feature/<topic>` branch.
 2. Открой PR (через `gh pr create` или эквивалент).
 3. В PR description: ссылки на spec/plan, test plan (для Step 6), reviewer-agent run instruction.
 4. Одна строка оператору: «PR открыт: <url>. Готово к Step 6 (acceptance) + Step 7 (reviewer).» — без вопросов, без «Что-то ещё?».
 5. **Не merge'и сам.** Оператор решает после acceptance + reviewer report.
+
+**Если это исправление замечаний reviewer'а (PR уже открыт):**
+1. Push fix-коммиты в ту же ветку.
+2. Одна строка оператору: «Замечания исправлены, запускаю повторное review.»
+3. **Немедленно invoke `reviewer` в режиме Step 7b** — без ожидания команды. В spawn-prompt укажи: «Step 7b re-review: прочитай `<topic>_review.md`, найди baseline commit через `git log --follow -1 --format="%H" .ai-pm/doc/features/<topic>_review.md`, проверь каждое замечание закрыто в fix-коммитах, проверь регрессии.»
+4. **Не создавай новый PR и не предлагай merge** — это делает оператор после повторного review.
 
 ---
 

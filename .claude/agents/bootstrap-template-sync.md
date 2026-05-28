@@ -52,167 +52,45 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
 ### Routine
 
-1. **Read pinned version** — `.ai-pm/.bootstrap-state.md` → `template_version_applied` (или `template_version`)
+1. **Определи версии:**
+   - Pinned: читаю `template_version_applied` из `.ai-pm/.bootstrap-state.md`.
+   - Target: `git -C .ai-pm/tooling describe --tags HEAD 2>/dev/null || echo "untagged"`. Если `untagged` или ошибка — скажи оператору, жди. Для `vendor`: спроси оператора.
+   - Если pinned < v0.8.0 — incremental migration не supported. AskUserQuestion: fresh re-bootstrap / manual cherry-pick / abort (recommended: re-bootstrap если < 10 PR'ов с bootstrap'а).
 
-   **Pre-v0.8.0 baseline policy:** если pinned version < v0.8.0 (or absent) — **incremental migration не supported**. Schema bootstrap-state.md между v0.x и v0.8.0 эволюционировала без migration tool'инга; рисково. Скажи оператору:
+2. **Проверь tooling:**
+   - `submodule` / `gitignore`: tooling уже обновлён router'ом. Проверяю только dirty state: `git -C .ai-pm/tooling update-index --refresh 2>/dev/null; git -C .ai-pm/tooling diff`. Реальный diff → стоп, скажи оператору «откати вручную». Пустой → продолжаю.
+   - `vendor`: скажи оператору «скопируй файлы вручную или rsync». AskUserQuestion: «Хочешь перейти на submodule?»
+   - Dirty product files (src/, config/ и т.п.) — **не останавливают sync**. Незавершённая coder-сессия — зафиксирую в отчёте, не спрашиваю.
 
-   > Pinned version (`<X.Y.Z>`) старше migration baseline (v0.8.0). Incremental template-sync не гарантирует correct state schema mapping. Опции: (а) **fresh re-bootstrap** — backup existing `.ai-pm/`, удали, `init.sh` + `project-bootstrap`, восстанови decisions из backup'а вручную; (б) **manual cherry-pick** — operator + AI читают template-evolution.md per-version, применяют изменения руками без routine; (в) **abort sync** — оставайся на pinned version, accept что новые template features недоступны. Recommended: (а) если product young (< 10 PR'ов с момента bootstrap'а), (б) если product mature и cost-of-rebootstrap высокий. AskUserQuestion с этими тремя options.
+3. **CLAUDE.md check (всегда, даже при no-op):**
+   Сравни `CLAUDE.md` проекта с `doc/_templates/CLAUDE.md.tmpl`. Секции из шаблона которых нет в проекте → пометь `CLAUDE.md out of sync`.
 
-   Если pinned >= v0.8.0 — продолжай routine.
+4. **No-op check:**
+   Если pinned == target И CLAUDE.md in sync → commit submodule pointer + update `template_version_applied` → PR `chore: bump template к <target> (no migration)`. Готово.
+   Иначе — продолжай.
+   **ЗАПРЕЩЕНО** делать вывод «нет контента» по commit messages — squash-merge ненадёжен. Единственный критерий no-op: `pinned == target` И `CLAUDE.md in sync`.
 
-2. **Determine target version** — AskUserQuestion: «target = latest tag (stable) или main HEAD (bleeding edge, unreleased)?». Default — latest tag (более safe для production).
+5. **Прочитай изменения:**
+   - `doc/template-evolution.md` — секции от pinned до target (навигационная карта).
+   - `CHANGELOG.md` — детали тех же версий.
 
-3. **Bump tooling к target — ОБЯЗАТЕЛЬНО ДО любого чтения из `.ai-pm/tooling/`:**
+6. **Аудит проекта:**
+   Прочитай `CLAUDE.md`, `.ai-pm/.bootstrap-state.md`, `doc/**/*.md`, `scripts/*.sh`, `.claude/settings.json`, `.github/workflows/*.yml`. Найди расхождения с target:
+   - Устаревшая терминология, missing artifacts, schema gaps, file splits/folds, broken/missing scripts, custom-modified template files.
+   - Перед заменой скриптов из `_templates/scripts/*.tmpl` — сравни interface (stdin/env/argv). Если product version корректнее — flag, не replace.
+   - Незавершённая feature-работа: scan `doc/features/*_spec.md` + `git status` → добавь в отчёт секцию `## Незавершённая работа` (topic, статус, список файлов).
 
-   Per integration mode (читаю из `.ai-pm/.bootstrap-state.md` → `integration:`):
+7. **Согласуй migration plan:**
+   Сгруппируй расхождения в логичные PR'ы (НЕ мега-PR): infrastructure → schema/CLAUDE.md → docs → features cleanup. MAJOR bump — обязателен `## Migration order` с rationale. Сохрани отчёт в `.ai-pm/audits/<date>-template-sync-conformance.md`.
 
-   - **`submodule`:**
-     ```
-     # 1. Refresh index (fixes NFS/FUSE/timestamp false-dirty)
-     git -C .ai-pm/tooling update-index --refresh 2>/dev/null || true
-     # 2. Check for dirty state
-     git -C .ai-pm/tooling status --porcelain
-     ```
-     Если после `update-index --refresh` dirty файлы остались — проверяю реальный diff:
-     ```
-     git -C .ai-pm/tooling diff
-     ```
-     - **Нет реального diff'а** (пустой вывод — whitespace/line-endings/smudge noise, или `--refresh` не помог с timestamp'ами) → сбрасываю:
-       ```
-       git -C .ai-pm/tooling restore .
-       ```
-     - **Есть реальный diff** (кто-то менял файлы в субмодуле) → **не сбрасываю**, говорю оператору: «В `.ai-pm/tooling` есть несохранённые изменения: `<список файлов>`. Сохрани или откати их вручную перед template-sync.» Жду.
+   AskUserQuestion: «Conformance report готов. [summary]. Приступаем к migration? Также есть незавершённая работа по фиче `<topic>` — продолжить после migration?»
 
-     После чистого состояния:
-     ```
-     git -C .ai-pm/tooling fetch
-     git -C .ai-pm/tooling checkout <target>
-     git add .ai-pm/tooling
-     ```
-   - **`gitignore`** (symlink на отдельный клон):
-     ```
-     TOOLING=$(readlink -f .ai-pm/tooling)
-     git -C "$TOOLING" status --porcelain
-     git -C "$TOOLING" diff
-     ```
-     Та же логика dirty-check: пустой diff → `git -C "$TOOLING" restore .`; реальный diff → стоп, скажи оператору.
-     ```
-     git -C "$TOOLING" fetch
-     git -C "$TOOLING" checkout <target>
-     ```
-     Если `readlink` не даёт путь — скажи оператору: «Tooling — symlink, но не могу определить путь к клону. Обнови вручную: `cd <path-to-template-clone> && git fetch && git checkout <target>`, потом продолжим.»
-   - **`vendor`** (скопированные файлы):
-     Скажи оператору: «Tooling — vendor copy. Автоматический bump невозможен. Нужно скопировать файлы из template repo вручную или через `rsync`. После обновления `.ai-pm/tooling/` — продолжим audit.» AskUserQuestion: «Хочешь перейти на submodule integration (проще обновлять)?»
+8. **Выполни migration:**
+   Для каждого PR: ветка от `git checkout -b chore/template-sync-v<target> origin/main` (никогда не в feature-ветку — AP-19). Commits, AskUserQuestion на decision points. Update `template_version_applied` в финальном PR.
 
-   **Commit submodule bump сразу — до audit:**
-   ```
-   git add .ai-pm/tooling
-   git commit -m "chore: bump tooling submodule to <target>"
-   git push
-   ```
-   Затем скажи оператору:
-   > «Tooling обновлён до `<target>`. **Перезапусти сессию** — при старте conformance audit запустится автоматически с новыми инструкциями агента.»
+   **`[skip-review]`** — только если `git diff --name-only` данного PR содержит ИСКЛЮЧИТЕЛЬНО: `CHANGELOG.md`, `README*`, version bumps. Если diff затрагивает хотя бы один из: CLAUDE.md / agent prompts (`.claude/agents/`) / CI+hooks (`.github/`, `.githooks/`) / protocol docs / template scripts с логикой → **reviewer обязателен**, `[skip-review]` запрещён. MINOR/MAJOR всегда требуют reviewer (AP-16).
 
-   После этого — **стоп**. Не продолжай audit в текущей сессии: агент загружен со старыми инструкциями и не может их перечитать. Conformance audit запустится в новой сессии через session start routine.
-
-   **Незакоммиченные изменения в product-коде — не останавливают template-sync.** Dirty product files (src/, doc/, config/ и т.п.) — незавершённая работа из предыдущей coder-сессии, не входит в scope template-sync. Не спрашивай «сначала выровняем код?». Продолжай audit.
-
-   В conformance report включи секцию `## Незавершённая работа` с контекстом, собранным из git status + spec frontmatter:
-   - Какая фича в работе (topic из `doc/features/*_spec.md`)
-   - Её текущий статус (spec_approved? plan_approved? acceptance?)
-   - Краткое описание что незакоммичено (какие файлы, на основе `git status`)
-
-   В конце conformance report — единый вопрос оператору через AskUserQuestion: «Conformance report готов. Приступаем к migration? Также есть незавершённая работа по фиче `<topic>` — продолжить её после migration?» Оператор видит полный контекст и принимает решение одним ответом.
-
-4. **No-op check:** если pinned == target → «template up to date, ничего мигрировать не нужно», просто commit submodule bump + update `.ai-pm/.bootstrap-state.md` → PR `chore: bump template к <target> (no migration)`. Routine завершена.
-
-   **ЗАПРЕЩЕНО:** делать вывод «нет контента» по количеству коммитов или их сообщениям («один release-коммит → пропускаю audit»). Commit messages ненадёжны — squash-merge может содержать произвольные изменения. Единственный критерий no-op — `pinned == target`. Если `pinned ≠ target` — **всегда продолжай шаги 5–12**, без исключений.
-
-4.5. **CLAUDE.md explicit check (обязательно, нельзя пропустить):**
-
-   Сравни `CLAUDE.md` проекта с `doc/_templates/CLAUDE.md.tmpl` из обновлённого tooling:
-   - Прочитай оба файла.
-   - Найди секции/правила в шаблоне, которых нет в `CLAUDE.md` проекта.
-   - Если есть расхождения — добавь их в conformance report как отдельный пункт `CLAUDE.md out of sync`, даже если остальной audit чист.
-
-   Этот шаг выполняется **всегда** (и при no-op, и при full migration) — `CLAUDE.md` генерируется единожды при bootstrap'е и не обновляется автоматически.
-
-5. **Read cheat sheet** — `.ai-pm/tooling/doc/template-evolution.md`. Перейди к секциям **после** pinned версии до target. Это навигационная карта: per-version key changes, renames, file moves, action items для product.
-
-6. **Read CHANGELOG entries** для тех же версий — `.ai-pm/tooling/CHANGELOG.md`. Шпаргалка указывает что искать, CHANGELOG содержит детали.
-
-7. **Walk project docs holistically:**
-   - `CLAUDE.md`, `.ai-pm/.bootstrap-state.md`
-   - `doc/**/*.md` (или `.ai-pm/doc/**/*.md` для retrofit layout)
-   - `scripts/*.sh` (если есть)
-   - `.claude/settings.json`
-   - `.github/workflows/*.yml`
-
-8. **Identify discrepancies** — что в project не соответствует target version conventions. Группируй по типу:
-   - **Outdated terminology** (Mode 1/2/3, Stage F, husky refs, и т.п.)
-   - **Missing artifacts** (e.g., `database-design-*.md` если db_kind=external — AP-18)
-   - **Schema gaps** в state file (отсутствующие frontmatter поля)
-   - **File splits/folds** ещё не применённые (e.g., monolithic `ui-style-guide.md` без base + per-kind)
-   - **Broken/missing scripts** (e.g., старый `check-pr-has-review.sh` без замены на новый `check-review-trail.sh`)
-   - **Custom-modified template files** — flag, не auto-overwrite
-
-9. **Inspection-before-regenerate discipline** — **обязательно** перед blindly копированием `_templates/scripts/*.tmpl` → `product scripts/`:
-   - Сравни interface (stdin format, env vars, argv) — мог быть silent break #49
-   - Если product version корректнее template version — flag, не replace
-
-10. **Group discrepancies в logical PR'ы + determine ORDER:**
-    - **НЕ один мега-PR.** Split по concern'ам: infrastructure (scripts/hooks/CI) → schema (state + CLAUDE.md) → docs (Stage A-C artifacts) → features cleanup
-    - Easier review, easier rollback при проблеме
-    - Каждый PR — самодостаточный, может быть merged отдельно
-    - **MAJOR bumps (target major > pinned major, e.g., v0.8.0 → v1.0.0) — explicit order requirement.** Conformance report **обязан** содержать `## Migration order` section с rationale почему конкретный порядок (e.g., «schema rename A→B must precede product-code refactor → schema PR first; legacy compat shim TTL = N PR'ов»). Rationale: MAJOR per SemVer = breaking changes, без явного order'а operator не может safely interleave product feature PR'ы между migration PR'ами.
-    - **MINOR/PATCH bumps** — order обычно flexible, можно не документировать explicitly. Но если CHANGELOG entry конкретной version описывает inter-PR dependency (e.g., schema field added в PR-1 используется PR-2 hook'ом) — отметить.
-
-11. **Output conformance report** (перед PR'ами) — operator решает идти ли в migration:
-   ```markdown
-   # Template-sync conformance report
-
-   Project: <name>
-   Pinned: v0.X.Y → Target: v0.Z (HEAD)
-   Bump type: <PATCH|MINOR|MAJOR>
-
-   ## Discrepancies found (N)
-
-   ### Outdated terminology
-   - file:line — what
-
-   ### Missing artifacts
-   - ...
-
-   ### Schema gaps
-   - ...
-
-   ### File splits/folds
-   - ...
-
-   ### Custom modifications (do not auto-overwrite)
-   - ...
-
-   ## Proposed PR plan + migration order
-
-   1. chore: ... (infrastructure) — **must precede** schema PR'ы потому что <reason>
-   2. chore: ... (schema)         — **must precede** docs/features потому что <reason>
-   3. chore: ... (docs)
-   4. chore: ... (features cleanup) — flexible position, может быть параллельно с #3
-
-   <!-- MAJOR bumps: order section mandatory. MINOR/PATCH: укажи inter-PR
-        dependencies или скажи «order flexible». -->
-
-   Estimated effort: <N PR'ов, ориентировочно X commits each>
-   ```
-
-   Сохрани report в `.ai-pm/audits/<date>-template-sync-conformance.md`. Покажи оператору в чате + AskUserQuestion: «Migration plan такой <summary>. Approve / adjust / abort?»
-
-12. **Per-PR execution** (после approval plan'а) — для каждого proposed PR:
-    - Branch, commits, AskUserQuestion на decision points (renames preview, custom-modified merge approach, adoption_overrides)
-    - Phase output report в PR body
-    - Update `.ai-pm/.bootstrap-state.md` `template_version_applied` в финальном PR
-
-13. **`[skip-review]` marker** — только для PATCH-tier bumps (docs only refresh). MINOR/MAJOR требуют reviewer pass (AP-16).
+   **По завершении всех migration PR'ов:** сообщи оператору «Migration complete. Запускаю audit mode для проверки целостности.» — orchestrator (main session) немедленно invoke `project-bootstrap` с keyword «аудит». Результат: `<doc_root>/audits/<date>-project-audit.md`.
 
 ### Adoption_overrides (AP-22)
 

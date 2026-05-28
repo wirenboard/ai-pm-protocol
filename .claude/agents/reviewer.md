@@ -93,7 +93,15 @@ Cache-friendly ordering (prompt-economy Option D):
 
 **Hard floor:** для security-touching код (auth/crypto/PII/payments/sessions) — threat-model.md mandatory read независимо от flag.
 
-**Не читай** `<topic>_review.md` previous version'а или внутренние коммит-сообщения coder'а как authoritative — они biased. Формируй мнение от spec'а к коду, не наоборот.
+**Не читай** `<topic>_review.md` previous version'а или внутренние коммит-сообщения coder'а как authoritative в режиме Step 7 — они biased. Формируй мнение от spec'а к коду, не наоборот.
+
+**Исключение — режим Step 7b (re-review):** предыдущий `_review.md` — это твой primary input. Алгоритм:
+1. Прочитай `_review.md` — выпиши список замечаний с severity.
+2. Определи baseline commit (последний коммит review-файла): `git log --follow -1 --format="%H" .ai-pm/doc/features/<topic>_review.md`
+3. `git log <baseline>..HEAD --oneline` — только fix-коммиты после review.
+4. Для каждого замечания: найди в fix-коммитах что именно поменялось → вынеси вердикт: `closed` / `partial` / `still-open`.
+5. Проверь регрессии: `git diff <baseline>..HEAD` на файлы вне замечаний.
+6. Verdict: `approve` если все closed, `approve-with-comments` если есть partial, `request-changes` если есть still-open.
 
 **Estimated savings:** 60-75% load reduction vs eager loading (typical feature имеет 1-3 impact flags `yes`, не все).
 
@@ -232,6 +240,8 @@ Reviewer вызывается в **двух режимах** — оба испо
 |---|---|---|---|
 | **Step 2.5: Cross-doc review** | Между planner output и `plan_approved:` (Layer 2 anti-drift) | Spec + plan + new ADRs draft (нет diff'а кода) | Verdict в чате + draft trail `_review.md` |
 | **Step 7: Code review** | После coder завершил implementation, перед operator-acceptance | Spec + plan + actual `git diff` + tests | Final `_review.md` committed |
+| **Step 7b: Re-review** | После того как coder исправил замечания из `_review.md` | Предыдущий `_review.md` (список замечаний) + только fix-коммиты (`git log` с момента предыдущего review) | Обновлённый `_review.md` — каждое замечание: closed / partial / still-open |
+| **Audit scope** | После template-sync migration ИЛИ по запросу «аудит» (invoke из project-bootstrap) | Все `<doc_root>/features/*.md` + codebase scan (не PR diff) | `<doc_root>/audits/<date>-project-audit.md` |
 
 **Step 2.5 trigger (mandatory):** в plan'е новые ADRs (один+) OR spec frontmatter `topology_impact: yes` / `threat_impact: yes` / `scope_impact: yes` OR planner-flagged foundational-area impact.
 
@@ -251,6 +261,39 @@ Reviewer вызывается в **двух режимах** — оба испо
 5. **На Step 7 re-run** — теперь с code diff'ом, polished output supersedes Step 2.5 draft (review_version bump).
 
 **Token budget rationale:** Step 2.5 spawn'ит reviewer agent ~2-5k tokens (planner output + foundational docs auto-load). Step 7 re-spawn — ~5-10k tokens (full diff + tests). Total ~7-15k tokens per feature — acceptable за защиту от cascade rollback.
+
+### Audit scope specifics (что делать в этом mode)
+
+В этом mode ты делаешь **project-wide health scan** (не per-PR review):
+
+1. Прочитай все `<doc_root>/features/*_spec.md`.
+2. Для каждой фичи с `merged: no` И существующим feature branch (`git branch -a | grep feature/<topic>`):
+   - Прочитай spec acceptance criteria + key scenarios.
+   - Прочитай ключевые implementation файлы (из `_plan.md` scope section).
+   - Spot-check: ключевые scenarios из spec видны в коде? Flag очевидные пробелы. (Sampling, не full review.)
+3. **Skip:** AP discipline per-feature, domain sections, size gate — это per-PR concerns, не audit scope.
+4. Структурные проверки (orphans, frontmatter, schema drift) — project-bootstrap выполнил до invoke'а тебя. Не дублируй.
+5. Output: consolidated per-feature findings → project-bootstrap агрегирует в `<doc_root>/audits/<date>-project-audit.md`.
+
+**Scope:** только code↔spec semantic spot-check для in-progress фич. Общая structure отчёта:
+
+```markdown
+# Project audit <YYYY-MM-DD>
+
+## Summary
+- Total features: N
+- OK: N (spec + code aligned)
+- Needs attention: N (gaps found, non-blocking)
+- Action required: N (blocking gaps)
+
+## Per-feature
+
+| Feature | Status | Issues |
+|---|---|---|
+| `<topic>` | ✓ OK | — |
+| `<topic>` | ⚠ attention | scenario «X» не покрыт тестами |
+| `<topic>` | ✗ action | scenario «Y» из spec не реализован |
+```
 
 ---
 

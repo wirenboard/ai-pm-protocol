@@ -105,11 +105,30 @@ Algorithm (pure function от state + git):
 | **«продолжай фичу X»** | Resume per-feature. Прочитай frontmatter `<topic>_spec.md`: `spec_approved` empty → Step 1; `plan_approved` empty → planner; `merged: no` → coder. |
 | **«ревью PR / проверь код»** | Invoke `reviewer` subagent. Apply «Mandatory baseline» section + ONE Domain section inline (Backend / Frontend / Design / Database). AP-19/AP-20. AP-16 verdict-gate. |
 | **«релиз»** | Invoke `release-helper`. Для MAJOR breaking — AP-18 deployment safety pre-flight. |
-| **«обнови template» / «обнови шаблон» / «template-sync» / «bump template»** | Invoke `bootstrap-template-sync` subagent. |
+| **«обнови template» / «обнови шаблон» / «template-sync» / «bump template»** | Сначала bump tooling к latest tag (per integration mode из `.ai-pm/.bootstrap-state.md`): submodule → `git -C .ai-pm/tooling fetch && git -C .ai-pm/tooling checkout <latest-tag> && git add .ai-pm/tooling`; gitignore (symlink) → `git -C $(readlink -f .ai-pm/tooling) fetch && git -C $(readlink -f .ai-pm/tooling) checkout <latest-tag>`; vendor → пропусти bump здесь, bootstrap-template-sync скажет оператору обновить вручную. Затем invoke `bootstrap-template-sync` — он загрузится с новыми инструкциями. |
+| **«аудит» / «проверь проект» / «health check»** | Audit mode — см. § «Audit mode routine» ниже. |
 | **«составь архитектуру» / «architecture overview» / «extract topology» / «опиши проект»** | Invoke `bootstrap-template-sync` subagent — там же architecture overview read-only routine. |
 | **«адаптируй полностью» / «promote foundation» / «consolidate»** | Invoke `bootstrap-legacy` (Tier 2 promotion routine). |
 | **«skip X с reason» / «add adoption override»** | Invoke `bootstrap-legacy` (Tier 3 overrides routine). |
 | **«обнови personas / threat-model / mvp-scope»** | Отдельный PR на foundational docs в `docs/<topic>` branch. Не смешивать с feature work. AP-7. |
+
+### Audit mode routine
+
+Именованная переиспользуемая последовательность. Вызывается:
+- по keyword «аудит» / «проверь проект» / «health check»
+- автоматически из main session после завершения template-sync migration (CLAUDE.md шаг 1.05)
+
+Читай `doc_root` из `.ai-pm/.bootstrap-state.md`.
+
+1. **CI health:** `make test` — если fail, вывод → оператору, стоп.
+2. **Spec discipline:** `scripts/check-spec-discipline.sh` — если скрипт есть. Вывод в отчёт.
+3. **Структурный скан `<doc_root>/features/`:** для каждого `*_spec.md`:
+   - Frontmatter completeness: все обязательные поля из текущего `feature-spec.md.tmpl`?
+   - Orphaned артефакты: `plan_approved:` заполнен, `_plan.md` отсутствует; `merged: yes` + `acceptance: pending`.
+4. **Spec↔template schema drift:** поля frontmatter каждого spec — соответствуют текущей схеме (`doc/_templates/feature-spec.md.tmpl` в tooling)? Deprecated / отсутствующие новые поля → flag.
+5. **Code↔spec:** invoke `reviewer` в audit scope — spot-check для фич с `merged: no` и существующим feature branch (см. reviewer.md «Audit scope specifics»).
+6. **Сохрани** `<doc_root>/audits/<YYYY-MM-DD>-project-audit.md` — per-feature таблица + PM-facing summary.
+7. **Покажи оператору** сводку в чате: что в порядке, что требует внимания, что требует действия.
 
 ### In-progress detection on session start
 
