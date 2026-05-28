@@ -13,6 +13,14 @@
 
 ---
 
+## [1.4.0] — 2026-05-29
+
+### Added
+
+- Two-tier findings and backlog mechanism: structured backlog for findings with PM approval gate to promote items to the main queue (6dd6c42)
+
+---
+
 ## [1.3.0] — 2026-05-29
 
 ### Added
