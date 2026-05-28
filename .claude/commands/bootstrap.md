@@ -22,7 +22,7 @@ If PM says yes — `rm .git/hooks/<each>`. If PM says no — note it and continu
 
 Check what exists:
 
-- `CLAUDE.md` exists and has "How I work" section → already initialized, confirm and exit
+- `CLAUDE.md` exists and contains `@.ai-pm/tooling/WORKFLOW.md` → already initialized, confirm and exit
 - No `CLAUDE.md` but code exists → **legacy adoption**
 - No `CLAUDE.md` and no production code → **greenfield**
 
@@ -60,7 +60,15 @@ If yes — run `/research` before any feature planning.
 
 Show PM what was created. Ask: anything wrong or missing?
 
-**Initial commit:** commit the created docs files. If there is no source code yet (no package.json, no test runner) — the pipeline cannot run and that is expected. Use `git commit --no-verify` for this first documentation-only commit. State explicitly to PM: "Pipeline check skipped — no source code yet. Will be enforced on all subsequent commits once code exists."
+**Initial commit:** commit the created docs files with a normal `git commit -m "chore: bootstrap project docs"`. If pre-commit hooks run and fail because no test framework exists yet, that is expected — tell PM:
+
+> "The commit failed because the pipeline requires code that doesn't exist yet. Run this once to create the initial documentation commit:
+> ```
+> git commit --no-verify -m 'chore: bootstrap project docs'
+> ```
+> Pipeline will be enforced on all commits once source code exists."
+
+Do NOT run `--no-verify` yourself. Give PM the command to run.
 
 ---
 

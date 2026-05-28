@@ -76,7 +76,27 @@ Count the number of files in `docs/features/`. If 5 or more have been added sinc
 
 > "We've built N features. It might be worth a quick architectural retrospective — reviewing whether the codebase still matches architecture.md and whether any patterns have drifted. Do you want to do that now or after this feature?"
 
-If PM says now — read the current codebase top-level structure and compare to architecture.md. Report gaps. Don't implement fixes, just report.
+If PM says now:
+1. Read the current codebase top-level structure and compare to `docs/architecture.md`.
+2. Report gaps: decisions that changed, patterns that drifted, constraints that are no longer accurate.
+3. Save findings to `docs/retro-<YYYY-MM-DD>.md`.
+4. Ask PM which gaps to fix: update `docs/architecture.md` to match reality, or file a plan to bring code back in line. Don't implement fixes — just report and let PM decide.
+
+Don't implement fixes, just report.
+
+## Architect check
+
+After PM approves the plan, check architect criteria before handing off to coder:
+
+- Does the change add a new axis of extension (new device type, new event kind, new protocol handler alongside existing ones)?
+- Are there multiple plausible homes for the new logic in existing abstractions?
+- Does the plan contain a structural choice about internal layout rather than public API?
+
+If **yes to any** — suggest to PM: "This plan has a structural choice about where the new code lives. I can run an architecture review (5-10 min) to map the options and risks before coding starts. Worth doing?"
+
+If PM says yes — invoke `architect` agent with the plan, then hand off to coder with both plan and arch notes.
+If PM says no — hand off to coder with plan only.
+If **none apply** — hand off to coder directly without mentioning architect.
 
 ## Handoff
 
@@ -84,7 +104,7 @@ Show the draft to PM. Iterate until PM says ok.
 
 Save to `docs/features/<topic>_plan.md`.
 
-Tell PM the plan is saved and ask if they want to proceed to implementation.
+Tell PM the plan is saved and run architect check above.
 
 ## What the plan does NOT include
 

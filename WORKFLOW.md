@@ -30,16 +30,30 @@ When you describe a feature or bug:
 - How to try it yourself step by step
 - Anything that needs your attention
 
-**Step 5 — Reviewer checks.** Plan compliance, code quality, security, infrastructure. I surface the verdict to you in plain language.
+**Step 5 — Reviewer checks.** Plan compliance, code quality, security, infrastructure. I surface the verdict to you in plain language:
+
+- **Approved** → I run `pr-prep`: squashes commits into one clean commit and opens a PR. I give you the PR link — you merge it on GitHub.
+- **Approved with comments** → same as above, I note the comments for the next iteration.
+- **Request changes** → I tell you what was found and why it matters (no code). Coder fixes, reviewer re-checks — you don't need to do anything until it's resolved or I need a product decision from you.
 
 I involve you when:
 - Architectural fork (new technology, breaks a constraint, changes public API)
-- Reviewer finds a blocking issue
+- Reviewer finds a blocking issue that requires a product decision (e.g., descope a scenario, accept a known limitation)
 - Planning has a high-stakes ambiguity you need to resolve
 
 Everything else flows automatically.
 
-**To update the workflow** (get new agent versions): `git submodule update --remote .ai-pm/tooling` in your project root.
+---
+
+## Maintenance
+
+To get the latest agent versions when a new template is released:
+
+```bash
+git submodule update --remote .ai-pm/tooling
+git add .ai-pm/tooling
+git commit -m "chore: bump ai-pm-protocol"
+```
 
 ---
 

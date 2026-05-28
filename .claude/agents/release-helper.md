@@ -11,13 +11,43 @@ PM decided to cut a release. Enough feature PRs have merged into main, or there 
 
 ## What to do
 
-### 1. Analyze commits
+### 1. Check for unmerged work
 
-First, sync with remote so the analysis is based on current state:
+Before anything else — verify all intended work is already in main. A release branch is created from main; any commits not in main at this point will NOT be in the release.
 
 ```bash
-git fetch origin --tags
-git pull origin main
+git fetch origin --tags --prune
+```
+
+Check for remote feature/fix branches with commits not yet in main:
+
+```bash
+git branch -r | grep -E 'origin/(feature|fix)/' | while read branch; do
+  count=$(git log origin/main.."$branch" --oneline 2>/dev/null | wc -l)
+  if [ "$count" -gt 0 ]; then echo "$branch — $count commits not in main"; fi
+done
+```
+
+If any branches have unmerged commits — stop and tell PM:
+
+> "These branches have work not yet merged to main: [list]. They will NOT be included in this release. Merge their PRs first, or confirm to proceed without them."
+
+Wait for PM to confirm before continuing.
+
+If `gh` is available, also check for open PRs:
+
+```bash
+gh pr list --state open --json title,headRefName --jq '.[] | "\(.headRefName) — \(.title)"'
+```
+
+If open PRs exist — show the list to PM with the same warning.
+
+### 2. Analyze commits
+
+Sync local main with remote:
+
+```bash
+git checkout main && git pull origin main
 ```
 
 Then list commits since the last tag:
@@ -38,7 +68,7 @@ Determine bump level:
 - Only fix → `X.Y.Z+1`
 - Nothing relevant → no release needed, tell PM
 
-### 2. Draft CHANGELOG entry
+### 3. Draft CHANGELOG entry
 
 Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/). One bullet per commit, from commit subject + PR ref. Do not invent impact descriptions.
 
@@ -58,11 +88,11 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/). One bullet per co
 - <only if BREAKING CHANGE: footer or !: syntax>
 ```
 
-### 3. Version bump
+### 4. Version bump
 
 Update version in project metadata files (`package.json`, `pyproject.toml`, `Cargo.toml`, etc.) to X.Y.Z.
 
-### 4. Release PR — two phases
+### 5. Release PR — two phases
 
 **Phase 1 — draft (no git mutations):**
 
@@ -71,6 +101,7 @@ Show PM:
 - PR title: `chore(release): vX.Y.Z`
 - Bump level and which commits justify it
 - List of commits being included
+- Confirmation that no unmerged branches were found (or PM already confirmed above)
 
 **STOP.** Wait for PM to say "ok".
 
