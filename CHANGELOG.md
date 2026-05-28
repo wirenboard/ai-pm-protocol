@@ -13,6 +13,15 @@
 
 ---
 
+## [1.3.0] — 2026-05-29
+
+### Added
+
+- Structured reviewer dimensions: distilled 8 review dimensions (security, stability, test coverage, regressions, conventions, simplification, docs drift, infrastructure) with severity levels and explicit "what NOT to flag" rules (5645844)
+- Audit command: new optional /audit command for full-project health check using same review dimensions, generates PM-facing report in docs/audit-<date>.md (5645844)
+
+---
+
 ## [1.2.0] — 2026-05-29
 
 ### Added
