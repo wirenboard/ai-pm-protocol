@@ -19,9 +19,10 @@ Ask the PM these questions (one conversation, not a form):
 1. What does this product do? (one sentence)
 2. Who uses it? (be specific — role, context)
 3. What problem does it replace or eliminate?
-4. Tech stack? (language, framework, database — and why each choice)
-5. Does the project have a UI? If yes, what kind (web / mobile / desktop / CLI / TUI)?
-6. Any known security requirements? (auth, payments, PII, encryption)
+4. Does your company or team have technology standards? (approved languages, forbidden dependencies, codestyle guide — link or describe key rules)
+5. Tech stack? (language, framework, database — and why each choice)
+6. Does the project have a UI? If yes, what kind (web / mobile / desktop / CLI / TUI)?
+7. Any known security requirements? (auth, payments, PII, encryption)
 
 Then create from templates:
 

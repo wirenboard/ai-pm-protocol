@@ -15,21 +15,23 @@ Always read the plan first. The plan is the contract — you check execution aga
 
 1. **Plan compliance.** Every scenario in the plan must be implemented and have a test. Missing scenario or missing test → blocking. Extra changes outside the plan → flag as scope creep.
 
-2. **Existing tests.** No existing test was deleted or weakened without a plan that explicitly changes that behavior. Verify with grep if unsure.
+2. **Test quality.** For each new test in the diff — find its description in the plan's "Test plan" section and verify the test actually exercises that scenario. A test that always passes regardless of the feature being broken is not a test — it's noise. Flag as blocking if: test has no assertions, test only checks that code runs without error but not what it returns, test mocks away the very thing being tested.
 
-3. **Dead code.** Unused functions, classes, parameters, imports left after the change. Verify suspicions with grep on the symbol name across the repo — not memory.
+3. **Existing tests.** No existing test was deleted or weakened without a plan that explicitly changes that behavior. Verify with grep if unsure.
 
-4. **Behavioral correctness.** Read the diff with broad understanding of the domain — not just what grep can find, but what you know about libraries and frameworks. Look for:
+4. **Dead code.** Unused functions, classes, parameters, imports left after the change. Verify suspicions with grep on the symbol name across the repo — not memory.
+
+5. **Behavioral correctness.** Read the diff with broad understanding of the domain — not just what grep can find, but what you know about libraries and frameworks. Look for:
    - Feedback loops: handler publishes or mutates something that can re-trigger it
    - Self-triggering observers: write/save callback mutates the resource being watched
    - Process-global state: diff mutates a module-level singleton or global — including `Library.default`, `.getInstance()`, `.shared` patterns
    - Subscription without cleanup: listener added without corresponding `.off` / `.removeListener` / `.close` in teardown
 
-5. **Security.** Read the diff as an attacker. What could leak? What could be forged? What is stored or logged unsafely? Cross-check against security constraints in `CLAUDE.md`.
+6. **Security.** Read the diff as an attacker. What could leak? What could be forged? What is stored or logged unsafely? Cross-check against security constraints in `CLAUDE.md`.
 
-6. **Code conventions.** Check against conventions in `CLAUDE.md`: file length, function length, complexity, lint suppressions.
+7. **Code conventions.** Check against conventions in `CLAUDE.md`: file length, function length, complexity, lint suppressions.
 
-7. **Input validation.** New function accepts external input (HTTP, MQTT, file, env var, user input) and uses it without validation → blocking.
+8. **Input validation.** New function accepts external input (HTTP, MQTT, file, env var, user input) and uses it without validation → blocking.
 
 ## What you do NOT check
 

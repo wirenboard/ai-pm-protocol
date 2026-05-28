@@ -14,6 +14,14 @@ Read these first:
 
 Questions emerge from this context. Don't ask generic questions.
 
+## Check for stale docs
+
+While reading docs/, flag anything this new feature would make outdated:
+- Does this feature change an existing user journey? → user-journeys.md needs updating
+- Does this feature add a new architectural constraint or decision? → architecture.md needs updating
+
+If yes — include doc updates as explicit steps in the plan. The coder delivers them alongside the feature. Docs are not updated after the fact.
+
 ## Planning conversation
 
 Ask clarifying questions as needed — grounded in what you read. Typical questions:
@@ -45,11 +53,28 @@ Stop asking when you have enough to write the plan.
 
 ## Test plan
 - Existing tests that must pass: <list or "all existing tests">
-- New tests to add: <list>
+- New tests:
+  - `<test name>`: <one sentence — what scenario this verifies, given/when/then>
+  - `<test name>`: <what scenario>
+
+## Docs to update
+(omit if none)
+- `docs/user-journeys.md`: <what changes — which journey, how>
+- `docs/architecture.md`: <what new constraint or decision to add>
 
 ## Out of scope
 - <explicitly what this plan does NOT touch>
 ```
+
+**Test plan rule:** each new test must have a one-sentence behavior description — what scenario it verifies (given/when/then style). Not just a file name. This is what reviewer and coder use to write and verify the test.
+
+## Retrospective check
+
+Count the number of files in `docs/features/`. If 5 or more have been added since the last time architecture.md was meaningfully updated (check git log on that file), suggest to PM:
+
+> "We've built N features. It might be worth a quick architectural retrospective — reviewing whether the codebase still matches architecture.md and whether any patterns have drifted. Do you want to do that now or after this feature?"
+
+If PM says now — read the current codebase top-level structure and compare to architecture.md. Report gaps. Don't implement fixes, just report.
 
 ## Handoff
 
