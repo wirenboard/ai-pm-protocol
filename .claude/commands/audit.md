@@ -32,9 +32,10 @@ Check all eight dimensions across the full codebase:
 
 ## Severity levels
 
-- **blocking** — outage risk, data loss, exploitable, or critical infrastructure gap.
-- **warning** — concrete measurable risk under realistic conditions.
-- **nit** — improvement worth considering, not urgent.
+Two levels only:
+
+- **blocking** — outage risk, data loss, exploitable, or critical infrastructure gap. Must be addressed.
+- **note** — a real observation worth considering. PM decides: fix now, add to backlog, or ignore.
 
 ## What NOT to flag
 
@@ -56,17 +57,16 @@ Write to `docs/audit-<YYYY-MM-DD>.md`:
 ## Blocking
 1. `file:line` — <issue>. Why it matters: ... Fix: ...
 
-## Warnings
-1. `file:line` — <issue>
-
-## Nits
-(omit if none worth surfacing)
+## Notes
+1. `file:line` — <observation>. Why it matters: ...
 
 ## What looks healthy
 <brief note on areas that are solid — gives PM context for the findings above>
 ```
 
-Tell PM: "Audit complete. Found [N blocking / N warnings]. Full report in `docs/audit-<date>.md`."
+Tell PM: "Audit complete. Found [N blocking / N notes]. Full report in `docs/audit-<date>.md`."
+
+Present each note to PM: "Fix now, add to backlog, or ignore?" — never add to backlog without explicit PM approval.
 
 ## Hard rules
 

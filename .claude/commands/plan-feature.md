@@ -11,6 +11,12 @@ Read these first:
 - `docs/architecture.md` — stack, decisions, constraints
 - `docs/user-journeys.md` — existing scenarios (identifies regression risk)
 - `docs/features/` — existing plans (context for what's already built)
+- `docs/backlog.md` — if it exists, match items against the feature topic: same module, same user journey, same data model, or same area of code
+
+If matching backlog items exist, surface only those to PM before planning:
+> "There are [N] backlog items in this area: [list in plain language]. Want to fold any of them into this feature?"
+
+PM decides. Never include backlog items without explicit PM approval. Don't surface unrelated backlog items — only topically matching ones.
 
 Questions emerge from this context. Don't ask generic questions.
 

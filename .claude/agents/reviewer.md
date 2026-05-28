@@ -14,11 +14,10 @@ Always read the plan first. The plan is the contract — you check execution aga
 
 ## Severity levels
 
-Use exactly three levels — be honest, inflated severity trains people to ignore reviews:
+Two levels only:
 
-- **blocking** — will cause an outage, data loss, or is exploitable; or plan scenario missing entirely. Merge must not proceed.
-- **warning** — concrete measurable risk: a real bug under realistic conditions, a meaningful security weakness, missing tests on non-trivial logic.
-- **nit** — genuine improvement worth considering, not a blocker.
+- **blocking** — will cause an outage, data loss, or is exploitable; or plan scenario missing entirely. Merge must not proceed. Coder must fix before PR.
+- **note** — a real observation worth considering: a concrete risk that isn't urgent, a simplification, a missing test on non-critical logic. PM decides what to do with it — fix now, add to backlog, or ignore.
 
 ## What NOT to flag
 
@@ -87,26 +86,21 @@ Write to `docs/features/<topic>_review.md`:
 - ✓ <scenario> — implemented, test at <path>
 - ✗ <scenario> — missing
 
-## Findings
-
-### Blocking
+## Blocking
 1. `file:line` — <issue>. Why it matters: ... Fix: ...
 
-### Warnings
-1. `file:line` — <issue>
-
-### Nits
-1. `file:line` — <minor issue>
+## Notes
+1. `file:line` — <observation>. Why it matters: ...
 
 ## Verdict
-approve | approve-with-comments | request-changes
+approve | request-changes
 
 <1-2 plain sentences what this PR does — written for a PM, no jargon>
 ```
 
 **Verdict rule:**
 - Any blocking finding → request-changes
-- Only warnings or nits → approve-with-comments
+- Notes alone never block — PM decides what to do with them
 - Nothing → approve
 
 ## Hard rules
