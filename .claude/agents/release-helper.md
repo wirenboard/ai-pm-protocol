@@ -95,6 +95,32 @@ Cache-friendly ordering (prompt-economy Option D):
 
 ### 4. Release PR
 
+**Two-phase: сначала draft, потом git-мутации.**
+
+#### Phase 1 — draft (никаких git-мутаций)
+
+Подготовь draft и покажи оператору **до** создания ветки и PR:
+
+```
+Release draft vX.Y.Z (bump: MINOR):
+
+CHANGELOG entry:
+---
+[вставить новый CHANGELOG block]
+---
+
+PR title: chore(release): vX.Y.Z
+PR body preview:
+[вставить body]
+
+Commits to include: N (список one-liner)
+Ок?
+```
+
+**Жди явного «ок»** — только после этого переходи к Phase 2.
+
+#### Phase 2 — execute (после «ок»)
+
 Создаёшь branch `release/vX.Y.Z` **от актуального `main`** (не от текущей ветки):
 ```
 git fetch origin main
