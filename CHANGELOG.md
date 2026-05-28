@@ -17,6 +17,14 @@
 
 ---
 
+## [0.10.13] — 2026-05-28
+
+### Fixed
+
+- **coder: detect fix-iteration via review file, not PR open state.** Replace unreliable «PR already open» heuristic with explicit shell check: `grep -q "request-changes" _review.md`. Verdict `request-changes` → Step 7b re-review path; absent file or approve → first implementation path. Prevents false Step 7b trigger when PR is open but reviewer approved. (#113)
+
+---
+
 ## [0.10.12] — 2026-05-28
 
 ### Added
