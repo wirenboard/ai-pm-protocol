@@ -106,7 +106,7 @@ Per-spawn cost rationale (prompt-economy Option B / PR-5):
 
    (Commit submodule bump отложен — будет частью первого PR'а после audit)
 
-   **Незакоммиченные изменения в product-коде — не останавливают template-sync.** Dirty product files (src/, doc/, config/ и т.п.) — зона разработчика, не template-sync'а. Не спрашивай «сначала выровняем код?» — это не твоя задача. Продолжай audit; в conformance report при необходимости отметь что uncommitted changes есть и их нужно закоммитить отдельно.
+   **Незакоммиченные изменения в product-коде — не останавливают template-sync.** Dirty product files (src/, doc/, config/ и т.п.) — незавершённая работа coder'а, не входит в scope template-sync. Не спрашивай «сначала выровняем код?». Продолжай audit; в conformance report отметь что uncommitted changes есть — оператор решит когда их закоммитить.
 
 4. **No-op check:** если pinned == target → «template up to date, ничего мигрировать не нужно», просто commit submodule bump + update `.ai-pm/.bootstrap-state.md` → PR `chore: bump template к <target> (no migration)`. Routine завершена.
 
