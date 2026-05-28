@@ -17,6 +17,22 @@
 
 ---
 
+## [0.10.14] — 2026-05-28
+
+### Added
+
+- **Gap 4 assertion completeness check (coder.md)** — explicit discipline: for each new field/scenario, verify an assertion exists that would fail if the field is removed. Typed fixtures approach (compile-time, free) + grep fallback documented. Explains why per-diff coverage ≥ 80% misses vacuous coverage. (#115)
+- **Coverage blind spot + mutation testing docs (development-protocol.md § 6.1)** — what mutation testing is, tools per stack (mutmut/stryker/cargo-mutants), pragmatic table: normal → Gap 4 grep; security-critical → mutation testing mandatory; shared modules → recommended. (#115)
+
+## Documentation migration impact (для downstream template-sync)
+
+Downstream projects при template-sync v0.10.13 → v0.10.14 должны:
+
+- [Coder discipline] Coder agent checks для Gap 4 (assertion completeness) описаны в `coder.md` — downstream products получат расширенный coder prompt при template-sync.
+- [Dev protocol] § 6.1 добавлена mutation testing section — инструмент-специфичная таблица доступна downstream.
+
+---
+
 ## [0.10.13] — 2026-05-28
 
 ### Fixed
