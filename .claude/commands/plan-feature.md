@@ -14,13 +14,26 @@ Read these first:
 
 Questions emerge from this context. Don't ask generic questions.
 
-## Check for stale docs
+## Check and fill documentation gaps
 
-While reading docs/, flag anything this new feature would make outdated:
-- Does this feature change an existing user journey? → user-journeys.md needs updating
-- Does this feature add a new architectural constraint or decision? → architecture.md needs updating
+While reading docs/, identify whether this feature touches areas that are incomplete or missing.
 
-If yes — include doc updates as explicit steps in the plan. The coder delivers them alongside the feature. Docs are not updated after the fact.
+Three cases — handle each differently:
+
+**1. Documentation missing or marked `[?]`** — read the relevant code yourself, write what you find into `docs/architecture.md` or `docs/user-journeys.md`. Facts only, no interpretation. Do this before writing the plan.
+
+**2. Documentation exists but incomplete** — supplement with what's missing from code. Do not rewrite what's already there.
+
+**3. Documentation exists and contradicts what the plan would need** — do not touch the docs. Stop and surface to PM:
+> "The existing docs say X, but this feature would require Y. This is a product decision — should the behavior change, or should the feature stay within what's documented?"
+
+PM decides. Then plan accordingly.
+
+Also flag anything this feature makes outdated:
+- Does this feature change an existing user journey? → note the update needed in `docs/user-journeys.md`
+- Does this feature add a new architectural constraint or decision? → note the update needed in `docs/architecture.md`
+
+Include any doc updates as explicit steps in the plan — coder does not touch docs.
 
 ## Planning conversation
 
@@ -33,7 +46,7 @@ Ask clarifying questions as needed — grounded in what you read. Typical questi
 
 Stop asking when you have enough to write the plan.
 
-**Research trigger (optional):** If the feature area might benefit from existing libraries or established patterns (e.g., new protocol integration, new data format, new external service) — suggest `/research` before planning: "Есть ли смысл поискать готовые решения для X? Это займёт 5 минут и может сэкономить неделю разработки." PM decides.
+**Research trigger (optional):** If the feature area might benefit from existing libraries or established patterns (e.g., new protocol integration, new data format, new external service) — suggest `/research` before planning: "Worth searching for existing solutions for X? Takes 5 minutes and could save a week of development." PM decides.
 
 ## Plan format
 

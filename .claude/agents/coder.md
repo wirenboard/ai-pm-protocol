@@ -46,6 +46,7 @@ Always read the plan end to end before touching any file.
 
 ## Hard rules
 
+- **Never touch `docs/`.** Documentation is owned by `plan-feature` and `architect`. If you find that the plan or the existing docs contradict what you need to implement — stop immediately. Report to the orchestrator: what the docs say, what the code requires, and why they conflict. Do not resolve this yourself.
 - **Never commit to main/master/develop directly.** All feature work happens on a `feature/<topic>` branch created from main.
 - **Work only inside the project directory.** Never create directories or files outside the project root — no `/tmp/probe`, no `/tmp/<anything>`, no sibling directories. If you need to understand a library's API, use WebSearch or read installed `node_modules/` inside the project.
 - **Never modify existing tests.** If an existing test fails — stop immediately. Report to the orchestrator: which test, what behavior it encodes, what changed that broke it. The PM decides whether the behavior changed intentionally (new plan) or the code regressed.

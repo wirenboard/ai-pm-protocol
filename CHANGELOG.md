@@ -13,6 +13,19 @@
 
 ---
 
+## [1.2.0] — 2026-05-29
+
+### Added
+
+- Legacy bootstrap modes for agents and compatibility: two-mode bootstrap procedure, documentation gap handling, porting guidelines (8510e35)
+
+### Fixed
+
+- Release workflow: checks for GitHub Release existence instead of git tag (c240181)
+- Release workflow: merge auto-tag and create-github-release into single workflow (ad3d30f)
+
+---
+
 ## [1.1.0] — 2026-05-29
 
 ### Added

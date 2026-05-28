@@ -94,7 +94,7 @@ Format for PM:
 - [name](url)
 ```
 
-Then tell PM: "Research готов. Нашёл N вариантов. Рекомендация: [one sentence]. Файл: `docs/features/<topic>_research.md`" (or `docs/research.md` for project-level research).
+Then tell PM: "Research done. Found N options. Recommendation: [one sentence]. File: `docs/features/<topic>_research.md`" (or `docs/research.md` for project-level research).
 
 ## Hard rules
 

@@ -54,11 +54,23 @@ Then create from templates:
 - `docs/threat-model.md` from `threat-model.md.tmpl` — only if security requirements mentioned
 - `docs/features/` directory
 
-Ask PM: "Хочешь исследовать существующие решения — библиотеки, готовые продукты, аналоги? Это полезно на старте чтобы не строить то, что уже есть. Запустить /research?"
+Ask PM: "Want to research existing solutions — libraries, ready products, analogues? Useful at the start so you don't build what already exists. Run /research?"
 
 If yes — run `/research` before any feature planning.
 
-Show PM what was created. Ask: anything wrong or missing?
+Present a brief to PM summarizing what was captured. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms.
+
+**What we're building** — one paragraph: problem, solution, for whom. Written from PM's answers, not copied verbatim.
+
+**User** — who specifically, in what context.
+
+**Stack** — the chosen stack with the reasons behind each choice.
+
+**What's defined** — what the docs already contain (architecture constraints, security requirements, UI approach if applicable).
+
+**What's left open** — `docs/user-journeys.md` is a skeleton; user scenarios will be filled in as features are planned.
+
+Then ask: "Does this match your vision? Anything wrong or missing before we start?"
 
 **Initial commit:** commit the created docs files with a normal `git commit -m "chore: bootstrap project docs"`. If pre-commit hooks run and fail because no test framework exists yet, that is expected — tell PM:
 
@@ -74,18 +86,124 @@ Do NOT run `--no-verify` yourself. Give PM the command to run.
 
 ## Legacy adoption
 
-Read existing code first:
-- Scan entry points, main modules, config files
-- Identify: language, framework, database, key abstractions
-- Read any existing README or docs
+Ask PM one question before reading anything:
 
-Draft the missing documents:
-- `CLAUDE.md` — fill from code reading + ask PM to confirm/correct
-- `docs/architecture.md` — extract stack and decisions from code, mark inferred items clearly
-- `docs/user-journeys.md` — ask PM: what are the main things users do?
+> "Quick start — minimal docs to begin working? Or full documentation — understand the system deeply, e.g. before porting to a new stack?"
+
+Both modes are stack-agnostic: read code as text, reason about structure — no language-specific tooling required.
+
+### Shallow (quick start)
+
+Read:
+- Entry points, main modules, config files
+- Existing README or docs if present
+
+From this, determine: language, framework, database, key abstractions.
+
+Write minimal docs — enough to start adding features:
+- `CLAUDE.md` — fill what's clear from reading; mark gaps as `[?]`
+- `docs/architecture.md` — stack and key decisions extracted from code; mark gaps as `[?]`
+- `docs/user-journeys.md` — write only what's visible from entry points and module names; leave the rest as `[?]`
+- Optional docs — skip; create only if code clearly requires them (e.g., obvious security constraints)
+
+Present findings to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms.
+
+**What the product appears to do** — one paragraph from what's visible at the entry points and module names. Be honest about confidence level.
+
+**Who the user seems to be** — inferred from the code structure and naming.
+
+**Main scenarios visible** — what the system clearly supports based on entry points and key modules. Mark anything uncertain.
+
+**Stack** — language, framework, database, key dependencies.
+
+**Gaps** — list all `[?]` items so PM knows what's not yet understood.
+
+Then ask: "Does this match the project? Anything critically wrong?"
+
+Do not ask PM to fill the gaps in detail — `[?]` items get resolved naturally as work on the project progresses.
+
+### Full (complete documentation)
+
+Read all significant modules without exception — business logic, data models, algorithms, entry points, config, tests if present, existing docs.
+
+Do not ask PM anything during reading.
+
+From the full read, reconstruct and write:
+- `CLAUDE.md`
+- `docs/architecture.md` — complete stack, all key decisions, data flows, algorithms, constraints; no `[?]` placeholders
+- `docs/user-journeys.md` — extract journeys from the code itself (what the system actually does), not from PM's memory
 - Optional docs — same rules as greenfield
 
-Show PM the drafts. Iterate until PM says ok. Then save files.
+Only after all docs are written — present to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
+
+**What the product does** — one paragraph, no jargon. What problem it solves, for whom.
+
+**Who the user is** — specific role and context, not "end user".
+
+**Key user scenarios** — the main things a user can do, numbered list. Each in one sentence from the user's perspective ("User imports a price list from XLS → system maps columns → prices update in the catalog").
+
+**How it's structured** — ASCII diagram of the main components and how they connect. Show data flow, not file tree.
+
+**What we're not sure about** — list anything that was ambiguous in the code and required a judgment call. These are the items PM should pay attention to.
+
+Then ask: "Does this match how you understand the system? What's wrong or missing?"
+
+PM's role is validation only — confirming accuracy, not filling gaps. If PM points out something wrong — fix the docs by re-reading the relevant code yourself, not by asking PM to explain it.
+
+Result: docs complete enough to plan porting without opening the legacy codebase again.
+
+After PM validates — tell PM:
+
+> "Documentation is ready. We can either start working on the project with the current stack, or port to a new one — that's a significant separate undertaking. What's next?"
+
+If PM says porting — run the porting procedure below.
+
+---
+
+### Porting procedure
+
+Analyze the documented system and propose target stack options. Do not ask PM what stack they want — reason from the system's nature first.
+
+Read `docs/architecture.md` and consider:
+- What kind of system is this? (CLI tool, desktop app, web service, daemon, library, data pipeline...)
+- What are the main constraints? (performance, portability, team skills, deployment target, UI requirements)
+- What does the current stack do well, and where does it create problems?
+
+Then propose 2–3 target stack variants. For each:
+- Name the stack (language, framework, database, UI approach if applicable)
+- Why it fits this system specifically — not generic praise
+- What it solves compared to the current stack
+- What it costs: migration complexity, new skills required, ecosystem risks
+- Recommend one, explain why
+
+Example framing:
+> "Given that this is a desktop app with heavy data processing and cross-platform requirements, here are three options: [A], [B], [C]. I'd recommend [A] because..."
+
+Once PM chooses a stack:
+
+1. **Update docs** — replace the tech stack table in `docs/architecture.md` with the target stack, add a `## Porting notes` section with key mapping decisions (what maps to what, what gets dropped, what's new). `docs/user-journeys.md` stays untouched.
+
+2. **Ensure git repository exists** — check for `.git/`. If missing, initialize and commit the current state as a snapshot of the legacy codebase:
+   ```bash
+   git init
+   git add -A
+   git commit -m "chore: legacy codebase snapshot before porting"
+   ```
+
+3. **Create a porting branch** named after the target stack:
+   ```bash
+   git checkout -b port/<target-stack>   # e.g. port/rust-tauri
+   ```
+
+4. **Remove all legacy files** — delete everything except the documentation created during bootstrap (`docs/`, `CLAUDE.md`, `README.md`). Commit:
+   ```bash
+   git add -A
+   git commit -m "chore: remove legacy code, keep docs for porting"
+   ```
+
+5. Tell PM: "`architecture.md` updated. Legacy code removed from the porting branch — it stays preserved on the previous branch. Ready to plan the first phase."
+
+---
 
 Same UI note and initial commit rules as greenfield apply.
 
