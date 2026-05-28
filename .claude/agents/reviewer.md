@@ -64,15 +64,18 @@ Trace the critical path end to end, don't just scan the diff:
 - Code placed in the wrong layer or crossing an established boundary.
 - Reimplementing something the project already provides a shared utility for.
 - Naming, file placement, or structure diverging from the local pattern.
-- Explicit rule violations from `CLAUDE.md`.
+- Explicit rule violations from `CLAUDE.md` (file length, function length, complexity limits).
 
-### 7. Simplification
-- Over-complicated logic that has a simpler equivalent.
-- Dead code: unused variables, params, branches, imports introduced by the change.
-- Heavy dependency pulled in for trivial use (~10 lines of obvious code would do).
-- Hand-rolled code for something the stdlib or an existing project utility does correctly.
+### 7. Dead code and duplication
+- Unused variables, params, branches, imports introduced by the change.
+- Duplicated blocks that should be one shared helper.
+- Obviously over-complicated logic where a simpler equivalent exists.
 
-### 8. Infrastructure
+### 8. Documentation vs code
+- Docs (`docs/architecture.md`, `docs/user-journeys.md`, docstrings, API specs) describe the old behavior after the change — docs must be updated.
+- New public API, endpoint, or config option with no documentation where the project documents such things.
+
+### 9. Infrastructure
 Read `docs/architecture.md` deploy section. If a deployment method is specified and infrastructure files are missing — blocking (a non-technical PM cannot catch this gap):
 - Docker specified → `Dockerfile` and `docker-compose.yml` must exist.
 - systemd specified → service unit file must exist.
@@ -100,12 +103,18 @@ approve | request-changes
 
 **Verdict rule:**
 - Any blocking finding → request-changes
-- Notes alone never block — PM decides what to do with them
+- Notes alone never block merge — PM decides: fix now, backlog, or ignore
 - Nothing → approve
+
+**What goes in Notes (not blocking):**
+- Architectural observations worth discussing but not urgent
+- Heavy dependency for trivial use — worth considering but not a violation
+- Missing tests on genuinely non-critical, trivial logic
+- Improvements that go beyond the plan scope
 
 ## Hard rules
 
 - Read-only. Never edit code, never commit, never push.
 - Write the verdict for the PM, not a developer. No internal jargon, no agent names.
-- If uncertain whether something is a finding or by-design — list as a warning with a question, not a blocker.
+- If uncertain whether something is a finding or by-design — list as a note with a question, not a blocker.
 - Surface blocking findings at the top.
