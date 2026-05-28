@@ -13,6 +13,13 @@
 
 ---
 
+## [1.0.5] — 2026-05-28
+
+### Fixed
+
+- coder: must not create directories outside project root — no /tmp/probe dirs. Library API research via WebSearch or project node_modules/ (88449ea)
+
+
 ## [1.0.4] — 2026-05-28
 
 ### Fixed
