@@ -20,7 +20,7 @@
 ```
 git -C .ai-pm/tooling describe --tags HEAD 2>/dev/null
 ```
-Сравни с `template_version_applied` из bootstrap-state.md. Если отличаются → скажи оператору: «Tooling обновлён до `<новая версия>`, conformance audit ещё не выполнен. Запускаю.» → **немедленно invoke `project-bootstrap`** (маршрутизирует в `bootstrap-template-sync`). Не жди дополнительных команд.
+Сравни с `template_version_applied` из bootstrap-state.md. Если отличаются → скажи оператору: «Tooling обновлён до `<новая версия>`, conformance audit ещё не выполнен. Запускаю.» → **немедленно invoke `project-bootstrap`** (маршрутизирует в `bootstrap-template-sync`). Не жди дополнительных команд. После завершения template-sync — **немедленно invoke `project-bootstrap`** с keyword «аудит» (audit mode — integrity check: spec↔template drift + code↔spec spot-check). По завершении audit — продолжай шаги 1.1 → 1.5 → 2 → 3 без паузы и ожидания оператора.
 
 **Шаг 1.1: Прочитай `.ai-pm/.session-state.md`, если есть.** Lightweight hint «где мы во флоу». State — hint, не contract: git wins при расхождении. Нет файла — восстанови через `git branch --show-current` + `gh pr list --state open` + scan `{{doc_root}}/features/*_spec.md` без парного `_plan.md`.
 
@@ -33,13 +33,17 @@ git -C .ai-pm/tooling describe --tags HEAD 2>/dev/null
 | `_spec.md` есть, нет `_plan.md` | Step 1 done, Step 2 (planner) pending | invoke `planner` для `<topic>` |
 | `_plan.md` есть, frontmatter `plan_approved:` empty | Step 2 done, awaiting operator approval | спроси оператора: «План `<topic>` написан, approve / changes?» |
 | `_plan.md` approved, нет feature branch / branch без commits | Step 3 done, Step 4 (coder) pending | invoke `coder` для `<topic>` |
-| Feature branch с commits, нет PR | Step 4 mid-flight (killed?) | scan `git log feature/<topic> --since=<state.last_update>` + спроси оператора |
-| PR open, нет `_review.md` (Stage E) либо `.ai-pm/.reviews/<branch>.json` (chore/docs/fix — **caveat:** trace gitignored, на fresh checkout / другой машине отсутствует даже если review был сделан; спроси оператора если PR выглядит готовым к merge) | Step 7 (reviewer) pending | invoke `reviewer` либо ask оператора |
-| Review verdict ≠ approve/approve-with-comments, нет `[review-override:]` маркера | Step 7 incomplete | fix findings → re-review |
+| Feature branch с commits, нет PR | Step 4 done или mid-flight — scan `git log feature/<topic>` чтобы определить: есть feat/fix коммиты → Step 4 done, нужен reviewer; коммиты обрываются без завершения → спроси оператора |
+| Feature branch с commits, нет PR, Step 4 done (feat/fix коммиты есть) | Step 7 (reviewer) pending | **invoke `reviewer` немедленно** — reviewer mandatory, не спрашивай подтверждения |
+| PR open, нет `_review.md` (Stage E) либо `.ai-pm/.reviews/<branch>.json` (**caveat:** trace gitignored — на другой машине отсутствует даже если review был; если PR выглядит готовым к merge — спроси оператора был ли review) | Step 7 (reviewer) pending | **invoke `reviewer` немедленно** |
+| Review verdict ≠ approve/approve-with-comments, нет `[review-override:]` маркера, есть коммиты ПОСЛЕ review-файла | Step 7 incomplete — coder исправил замечания | **invoke `reviewer` немедленно** (Step 7b re-review): читает предыдущий `_review.md`, проверяет каждое замечание закрыто + ничего нового не сломано |
+| Review verdict ≠ approve/approve-with-comments, нет `[review-override:]` маркера, новых коммитов после review НЕТ | Step 7 incomplete — coder ещё не исправил | Скажи оператору: «Reviewer запросил правки по фиче `<topic>`. Исправить?» — жди ответа |
 | PR merged, `acceptance:` empty в spec frontmatter | Step 8 (operator acceptance) pending | спроси оператора подтвердить acceptance |
 | `spec.v<N>` (N>1) без парного `_review.v<N>.md` | rework Step 7 pending | invoke `reviewer` для rework branch |
 
-Нашёл что-то in-progress — скажи оператору: «Вижу `<topic>`. State per таблице выше: <конкретный row>. Resume — `<action>`?». Не auto-invoke без подтверждения.
+Нашёл что-то in-progress — скажи оператору: «Вижу `<topic>`. State: <конкретный row>. Resume — `<action>`?».
+
+**Auto-invoke без подтверждения** — только `reviewer` (read-only, mandatory по протоколу, не меняет код). **Спрашивай подтверждение** перед `coder`, `planner`, и любым агентом который пишет код или файлы.
 
 **Шаг 3: Слушай оператора.** Routing по keywords — `.ai-pm/tooling/_claude/keyword-routing.md`. Routing — suggestion, не auto-invoke: объясни что предлагаешь и почему, спроси «делаем так?».
 
