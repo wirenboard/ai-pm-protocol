@@ -17,6 +17,16 @@
 
 ---
 
+## [0.10.15] — 2026-05-28
+
+### Added
+
+- **Reviewer: behavioral correctness floor (§3.7) and code quality floor (§3.8).** Adds heuristic-based checks that catch runtime correctness issues without requiring spec_reference — parallel to the existing security floor (§3.4). §3.7 covers event-driven patterns: feedback loops (emit→handler→re-emit), self-triggering observers, process-global mutable state, subscription without cleanup. §3.8 covers universal code quality: input validation at system boundaries, logic vs. builder separation, grep-verified duplication. All new findings are `[blocking]`. Also adds: exported public symbols unreachable by `noUnusedLocals` (Step 0.1), new behaviour path without test (§3.3), polling loops in tests (§3.3). (#117)
+- **coder: structured handoff report and two-phase PR draft.** Handoff now requires a structured report (Implemented / Skipped / Out-of-scope findings / Pipeline / User verification). PR creation is two-phase: show title+body draft → wait for explicit "ok" → `gh pr create`. Adds "note it, don't fix it" as explicit rule. (#117)
+- **release-helper: two-phase hard stop before git mutations.** Show CHANGELOG draft + PR body to operator before creating branch, committing, or pushing. Prevents CHANGELOG errors already committed to repo. (#117)
+
+---
+
 ## [0.10.14] — 2026-05-28
 
 ### Added
