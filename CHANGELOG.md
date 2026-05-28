@@ -17,6 +17,21 @@
 
 ---
 
+## [0.10.11] — 2026-05-28
+
+### Fixed
+
+- **bootstrap-template-sync: commit submodule bump сразу и остановиться.** После обновления submodule агент коммитит bump немедленно (`git add .ai-pm/tooling && git commit && git push`), сообщает оператору «Перезапусти сессию» и прекращает работу в текущей сессии — агент загружен со старыми инструкциями и не может продолжать conformance audit. Audit запустится автоматически в новой сессии. (`.claude/agents/bootstrap-template-sync.md`)
+- **CLAUDE.md.tmpl: шаг 1.05 — автоматическая проверка версии tooling при старте сессии.** В session start routine добавлен шаг 1.05: сравнивает `template_version_applied` из `bootstrap-state.md` с реальной версией tooling. Если версии расходятся → немедленно invoke `project-bootstrap` без ожидания команды оператора. (`doc/_templates/CLAUDE.md.tmpl`)
+
+## Documentation migration impact (для downstream template-sync)
+
+Downstream projects при template-sync v0.10.10 → v0.10.11 должны:
+
+- [Session routine] Add шаг 1.05 в `CLAUDE.md` проекта — проверка версии tooling + auto-invoke `project-bootstrap` при расхождении. Downstream template-sync Phase 3 (CLAUDE.md diff) покроет это обновление.
+
+---
+
 ## [0.10.10] — 2026-05-28
 
 ### Fixed
