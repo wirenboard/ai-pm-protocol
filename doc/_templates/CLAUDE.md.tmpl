@@ -127,6 +127,7 @@ Generic example (illustrative, не из этого проекта): release-hel
   - **`bootstrap-resume`** — session resume когда Stage A-D не closed.
   - **`bootstrap-template-sync`** — template version bump workflow + architecture overview read-only extract.
 - **`planner`** — Step 2 plan writer. Read-only по коду. Trust-profile-aware.
+- **`design-review`** — опциональный архитектурный pass между planner и coder. Читает 2-3 смежных реализации, предлагает 1-2 варианта где разместить новую логику. Только для планов со структурным выбором.
 - **`coder`** — Step 4 implementation. Tests-first. No silent deviation.
 - **`reviewer`** — Step 7 review primary. Два прохода: Pass 1 (spec & protocol compliance) + Pass 2 (code quality + domain checks). AP-19.
 - **`release-helper`** — release PR + SemVer bump + CHANGELOG.

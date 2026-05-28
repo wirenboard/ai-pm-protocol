@@ -91,20 +91,18 @@ Output: draft `_review.md` с frontmatter `step: 2.5`. На Step 7 re-run supers
 | `feat(db)` / `feat(schema)` / `feat(migration)` | `domain-database.md` |
 | design changes / mockups / copy | `domain-design.md` |
 
-## 2.1 Behavioral correctness (граф-обход, не sequential read)
+## 2.1 Behavioral correctness
 
 **Trigger:** diff содержит event handlers, pub/sub callbacks, file watchers, reactive subscriptions.
 
-Процедура:
-1. Выпиши все subscriptions из diff: `{ event: X, handler_file: Y, handler_fn: Z }`
-2. Для каждого handler — что он emit/publish/мутирует? Если вызывает внешнюю функцию → grep по имени в смежных файлах
-3. Для каждой мутации/публикации → grep по имени атрибута/метода → кто подписан?
-4. Цепочка замкнулась? → есть guard (флаг, origin check, old/new comparison)? Нет → `[blocking]` «echo loop»
+Читай код с широким пониманием event-driven семантики — не только то что видно через grep, но и то что знаешь о библиотеках и фреймворках. Ищи:
 
-Дополнительно:
-- save/write callback мутирует тот же файл что наблюдается → нет debounce → `[blocking]`
-- Diff мутирует module-level/process-global объект (singleton, `Library.default`, `.getInstance()`, `.shared`, `.getOrCreate()`) → нет documented «single instance» constraint → `[blocking]`
-- Subscription добавлена без cleanup (`.off`/`.removeListener`/`.close`/`.unsubscribe` в teardown) → `[blocking]`
+- **Feedback loops:** handler публикует/мутирует то что может снова его триггернуть — через прямой emit, через библиотечный side-effect (ORM hooks, reactive state, attribute change events), через файловую систему. Если уверен → `[blocking]`. Если цепочка проходит через библиотечный API и ты не можешь гарантировать безопасность → `[question]`: «handler X мутирует Y — убедись что Y не триггерит X через внутренний механизм библиотеки».
+- **Self-triggering observers:** write/save callback мутирует тот же ресурс что наблюдается → нет debounce/origin check → `[blocking]`
+- **Process-global state:** diff мутирует module-level singleton или process-global объект — включая паттерны `Library.default`, `.getInstance()`, `.shared`, `.getOrCreate()` в сторонних библиотеках → нет documented single-instance constraint → `[blocking]`
+- **Subscription without cleanup:** подписка добавлена без соответствующего `.off`/`.removeListener`/`.close`/`.unsubscribe` в teardown/dispose → `[blocking]`
+
+Grep используй для подтверждения подозрений — не как основной метод обнаружения.
 
 ## 2.2 Dead code
 
