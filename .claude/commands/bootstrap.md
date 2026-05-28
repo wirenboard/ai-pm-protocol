@@ -37,7 +37,11 @@ Ask the PM these questions (one conversation, not a form):
 3. What problem does it replace or eliminate?
 4. Does your company or team have technology standards? (approved languages, forbidden dependencies, codestyle guide — link or describe key rules)
 5. Tech stack? (language, framework, database — and why each choice)
-6. Does the project have a UI? If yes, what kind (web / mobile / desktop / CLI / TUI)?
+6. Does the project have a UI? Three cases:
+   - **Custom UI** (HTML/CSS/components the project builds) → create `docs/ui-guide.md`
+   - **Platform UI** (generated forms, admin panels, dashboards provided by a platform — e.g., WB jsoneditor/confed, Django admin, Grafana) → no `ui-guide.md`. Add a "UI pattern" section to `docs/architecture.md` describing what platform surfaces exist and what the project owns (e.g., the JSON schema, the virtual device topics). Add same note to `CLAUDE.md`.
+   - **UI planned but not started** → add a note to CLAUDE.md `## Docs` table: `docs/ui-guide.md — not created yet, create when UI work starts`. Do NOT create the file now.
+   - **No UI** → skip entirely
 7. Any known security requirements? (auth, payments, PII, encryption)
 
 Then create from templates:
@@ -46,15 +50,9 @@ Then create from templates:
 - `README.md` from `README.md.tmpl`
 - `docs/architecture.md` from `architecture.md.tmpl`
 - `docs/user-journeys.md` from `user-journeys.md.tmpl` — leave as guided skeleton for PM to fill
-- `docs/ui-guide.md` from `ui-guide.md.tmpl` — only if project has UI
+- `docs/ui-guide.md` from `ui-guide.md.tmpl` — only if **custom** UI (case 1 above)
 - `docs/threat-model.md` from `threat-model.md.tmpl` — only if security requirements mentioned
 - `docs/features/` directory
-
-**UI note:** if PM mentions UI plans but says it's not a priority now — add a note to CLAUDE.md `## Docs` section:
-```
-| `docs/ui-guide.md` | UI conventions — not created yet, create when UI work starts |
-```
-Do NOT create ui-guide.md now. The note ensures it won't be forgotten.
 
 Show PM what was created. Ask: anything wrong or missing?
 
