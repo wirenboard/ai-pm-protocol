@@ -124,26 +124,13 @@ Do not ask PM to fill the gaps in detail — `[?]` items get resolved naturally 
 
 ### Full (complete documentation)
 
-Read all significant modules without exception — business logic, data models, algorithms, entry points, config, tests if present, existing docs.
+Invoke the `docs-extractor` subagent (defined in `.claude/agents/docs-extractor.md`) using the Agent tool. It reads all significant modules at defined depth and writes `docs/architecture.md`, `docs/user-journeys.md`, and optional docs (`ui-guide.md`, `threat-model.md`). Wait for it to complete and read its summary output.
 
-Do not ask PM anything during reading. If you encounter something unclear — re-read the relevant code to resolve it. Never stop and list unresolved questions for PM. "What we're not sure about" in the final brief is only for items where the code is clear but the business intent behind it is genuinely ambiguous even after reading everything.
+After the extractor finishes:
+- Write `CLAUDE.md` from `.ai-pm/tooling/doc/_templates/CLAUDE.md.tmpl` — fill in all placeholders using the stack and architecture the extractor documented
+- Create `docs/features/` directory if it doesn't exist
 
-Before writing any docs, verify you've covered:
-- All form/window/screen units (not just main entry point)
-- All database procedures, stored queries, and data models
-- All export and report modes
-- All backup and data portability mechanisms
-- All configuration and settings screens
-
-From the full read, reconstruct and write:
-- `CLAUDE.md`
-- `docs/architecture.md` — complete stack, all key decisions, data flows, algorithms, constraints; no `[?]` placeholders
-- `docs/user-journeys.md` — extract journeys from the code itself (what the system actually does), not from PM's memory
-- `docs/ui-guide.md` — if the project has a custom UI (HTML/CSS/components the project builds, or a desktop LCL/WinForms/Qt app). Do NOT create if UI is a platform-provided admin panel, generated forms, or dashboards.
-- `docs/threat-model.md` — only if security requirements are evident in the code (auth, payments, PII, encryption)
-- `docs/features/` directory — always create, empty is fine
-
-Only after all docs are written — present to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
+Present to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
 
 **What the product does** — one paragraph, no jargon. What problem it solves, for whom.
 
@@ -153,11 +140,11 @@ Only after all docs are written — present to PM. Follow the PM communication r
 
 **How it's structured** — ASCII diagram of the main components and how they connect. Show data flow, not file tree.
 
-**What we're not sure about** — list anything that was ambiguous in the code and required a judgment call. These are the items PM should pay attention to.
+**What we're not sure about** — take this from the extractor's "Judgment calls" list. These are the items PM should pay attention to.
 
 Then ask: "Does this match how you understand the system? What's wrong or missing?"
 
-PM's role is validation only — confirming accuracy, not filling gaps. If PM points out something wrong — fix the docs by re-reading the relevant code yourself, not by asking PM to explain it.
+PM's role is validation only — confirming accuracy, not filling gaps. If PM points out something wrong — re-invoke `docs-extractor` with a focused prompt: "Re-read [module], current docs say X but PM says Y."
 
 Result: docs complete enough to plan porting without opening the legacy codebase again.
 
