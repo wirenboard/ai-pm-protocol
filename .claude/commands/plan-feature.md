@@ -33,6 +33,8 @@ Ask clarifying questions as needed — grounded in what you read. Typical questi
 
 Stop asking when you have enough to write the plan.
 
+**Research trigger (optional):** If the feature area might benefit from existing libraries or established patterns (e.g., new protocol integration, new data format, new external service) — suggest `/research` before planning: "Есть ли смысл поискать готовые решения для X? Это займёт 5 минут и может сэкономить неделю разработки." PM decides.
+
 ## Plan format
 
 ```markdown

@@ -54,6 +54,10 @@ Then create from templates:
 - `docs/threat-model.md` from `threat-model.md.tmpl` — only if security requirements mentioned
 - `docs/features/` directory
 
+Ask PM: "Хочешь исследовать существующие решения — библиотеки, готовые продукты, аналоги? Это полезно на старте чтобы не строить то, что уже есть. Запустить /research?"
+
+If yes — run `/research` before any feature planning.
+
 Show PM what was created. Ask: anything wrong or missing?
 
 **Initial commit:** commit the created docs files. If there is no source code yet (no package.json, no test runner) — the pipeline cannot run and that is expected. Use `git commit --no-verify` for this first documentation-only commit. State explicitly to PM: "Pipeline check skipped — no source code yet. Will be enforced on all subsequent commits once code exists."
