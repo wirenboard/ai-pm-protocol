@@ -1,0 +1,78 @@
+name: Auto-open release PR
+
+# When release-helper pushes a release/vX.Y.Z branch, this workflow
+# opens the PR automatically — no gh CLI needed locally.
+# PM only needs to push the branch and then merge the PR on GitHub.
+
+on:
+  push:
+    branches:
+      - 'release/v*'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from branch name
+        id: version
+        run: |
+          set -e
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          VERSION="${BRANCH#release/}"
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Branch '$BRANCH' does not match release/vMAJOR.MINOR.PATCH format."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Check PR does not already exist
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ steps.version.outputs.branch }}"
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            echo "::notice::PR #$EXISTING already open for $BRANCH — skip."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract CHANGELOG notes for this version
+        id: notes
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_BARE="${VERSION#v}"
+          NOTES=$(awk "/^## \[${VERSION_BARE}\]/,/^## \[/" CHANGELOG.md \
+            | head -n -1 | tail -n +2 | sed '/^[[:space:]]*$/d' | head -100)
+          if [ -z "$NOTES" ]; then
+            NOTES="Release $VERSION"
+          fi
+          # Write to file to avoid shell quoting issues
+          echo "$NOTES" > /tmp/release_notes.md
+
+      - name: Open PR
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BRANCH: ${{ steps.version.outputs.branch }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(release): $VERSION" \
+            --body-file /tmp/release_notes.md
+          echo "::notice::PR opened for $BRANCH → main"

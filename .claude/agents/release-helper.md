@@ -13,6 +13,15 @@ PM decided to cut a release. Enough feature PRs have merged into main, or there 
 
 ### 1. Analyze commits
 
+First, sync with remote so the analysis is based on current state:
+
+```bash
+git fetch origin --tags
+git pull origin main
+```
+
+Then list commits since the last tag:
+
 ```bash
 git log <last-tag>..HEAD --oneline
 ```
@@ -74,12 +83,17 @@ git checkout -b release/vX.Y.Z origin/main
 
 Commit version bump + CHANGELOG: `chore(release): vX.Y.Z`
 
-Push and open PR:
+Push the branch:
 ```bash
-gh pr create --base main --title "chore(release): vX.Y.Z" --body "..."
+git push -u origin release/vX.Y.Z
 ```
 
-After merge, the auto-tag workflow (`.github/workflows/auto-tag-release.yml`) creates the tag automatically. Tell PM to check the Actions tab after merge.
+The `auto-open-release-pr` workflow opens the PR automatically within seconds. Tell PM to check GitHub and merge the PR there.
+
+After merge, the `auto-tag-release` workflow creates the tag and GitHub Release automatically. To pull the tag locally after merge:
+```bash
+git checkout main && git pull && git fetch --tags
+```
 
 ## Hard rules
 
@@ -101,10 +115,9 @@ Tell PM that automated release is not available and provide manual steps:
    Title: chore(release): vX.Y.Z
    Base: main (or your main branch)
 
-3. After the PR is merged, create and push the tag:
-   git checkout main && git pull
-   git tag -a vX.Y.Z -m "Release vX.Y.Z"
-   git push origin vX.Y.Z
+3. After the PR is merged, the auto-tag workflow creates the tag on GitHub.
+   Pull it locally:
+   git checkout main && git pull && git fetch --tags
 
 4. Create a GitHub Release manually:
    - Go to Releases → Draft a new release
