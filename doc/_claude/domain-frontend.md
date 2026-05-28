@@ -1,14 +1,18 @@
-# Reviewer domain: Frontend
+# Стандарты домена: Frontend
 
-Применяется для PR'ов с domain scope `feat(frontend)` / `feat(ui)` / `feat(web)` / `feat(mobile)` / etc. Проверяет tokens vs hardcoded, accessibility per-kind, frameworks-first compliance, responsive/adaptive, i18n, соответствие `ui-style-guide-<kind>.md` (web / native-mobile / native-desktop / tui / cli / embedded).
+Применяется для всех агентов (planner, coder, reviewer) при работе с domain scope `feat(frontend)` / `feat(ui)` / `feat(web)` / `feat(mobile)` / etc. Описывает стандарты tokens vs hardcoded, accessibility per-kind, frameworks-first compliance, responsive/adaptive, i18n, соответствие `ui-style-guide-<kind>.md` (web / native-mobile / native-desktop / tui / cli / embedded).
 
-## Ground truth (для frontend section)
+При планировании учитывай: все frontend стандарты (§§ 1-8) — основа для UI архитектурных решений.
+При реализации: реализуй tokens, accessibility, i18n сразу — не жди пока reviewer укажет на нарушения.
+При ревью проверяй: все checks из §§ 1-8 применяются к diff.
+
+## Источники
 
 - `<doc_root>/features/<topic>_spec.md` — UI scenarios + NFR
 - `<doc_root>/features/<topic>_plan.md` — план для UI
 - `.ai-pm/.bootstrap-state.md` — `ui_kind` (определяет какой per-kind guide читать)
 - `<doc_root>/ui-style-guide-base.md` — **общая база** (8 принципов, brand voice, i18n, accessibility общая)
-- `<doc_root>/ui-style-guide-<kind>.md` для **каждого** ui_kind value, который touches PR (web / native-mobile / native-desktop / tui / cli / embedded)
+- `<doc_root>/ui-style-guide-<kind>.md` для **каждого** ui_kind value (web / native-mobile / native-desktop / tui / cli / embedded)
 - Frontend code в diff'е
 - Frontend тесты в diff'е
 

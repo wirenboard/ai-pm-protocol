@@ -1,13 +1,17 @@
-# Reviewer domain: Backend
+# Стандарты домена: Backend
 
-Применяется для PR'ов с domain scope `feat(backend)` / `feat(api)` / `feat(server)`. Проверяет API contracts, идемпотентность, RFC 7807 errors, latency SLO, security серверной стороны, соответствие `ui-style-guide-backend.md`.
+Применяется для всех агентов (planner, coder, reviewer) при работе с domain scope `feat(backend)` / `feat(api)` / `feat(server)`. Описывает стандарты API contracts, идемпотентности, RFC 7807 errors, latency SLO, security серверной стороны, соответствие `ui-style-guide-backend.md`.
 
-## Ground truth (для backend section)
+При планировании учитывай: все backend operational invariants (§§ 1-13) — основа архитектурных решений.
+При реализации: реализуй по этим стандартам сразу, не жди пока reviewer укажет на нарушения.
+При ревью проверяй: все checks из §§ 1-13 применяются к diff.
 
-- `<doc_root>/features/<topic>_spec.md` — обращай внимание на NFR (latency / idempotency / errors)
+## Источники
+
+- `<doc_root>/features/<topic>_spec.md` — NFR (latency / idempotency / errors)
 - `<doc_root>/features/<topic>_plan.md` — Backend operational invariants секция
 - `<doc_root>/ui-style-guide-backend.md` — **single source of truth** для backend rules
-- `<doc_root>/threat-model.md` — относящиеся T-ID/M-ID для серверной стороны
+- `<doc_root>/threat-model.md` — T-ID/M-ID для серверной стороны
 - Backend code в diff'е
 - Тесты backend'а в diff'е
 

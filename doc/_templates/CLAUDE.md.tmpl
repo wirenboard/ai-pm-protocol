@@ -2,7 +2,7 @@
 
 **Authoritative briefing для каждой сессии Claude в этой репке.** Прочитай ПОЛНОСТЬЮ перед работой.
 
-Проект использует **ai-pm-protocol**. Полная документация — `{{doc_root}}/development-protocol.md` (project overlay) + `.ai-pm/tooling/development-protocol.md` (generic). On-demand references — `.ai-pm/tooling/_claude/<concept>.md` (читай когда концепт релевантен).
+Проект использует **ai-pm-protocol**. Полная документация — `{{doc_root}}/development-protocol.md` (project overlay) + `.ai-pm/tooling/development-protocol.md` (generic). On-demand references — `.ai-pm/tooling/doc/_claude/<concept>.md` (читай когда концепт релевантен).
 
 **`{{doc_root}}`** — placeholder, bootstrap заменил на `doc` (greenfield) или `.ai-pm/doc` (retrofit). Текущее — frontmatter `doc_root:` в `.ai-pm/.bootstrap-state.md`.
 
@@ -45,7 +45,7 @@ git -C .ai-pm/tooling describe --tags HEAD 2>/dev/null
 
 **Auto-invoke без подтверждения** — только `reviewer` (read-only, mandatory по протоколу, не меняет код). **Спрашивай подтверждение** перед `coder`, `planner`, и любым агентом который пишет код или файлы.
 
-**Шаг 3: Слушай оператора.** Routing по keywords — `.ai-pm/tooling/_claude/keyword-routing.md`. Routing — suggestion, не auto-invoke: объясни что предлагаешь и почему, спроси «делаем так?».
+**Шаг 3: Слушай оператора.** Routing по keywords — `.ai-pm/tooling/doc/_claude/keyword-routing.md`. Routing — suggestion, не auto-invoke: объясни что предлагаешь и почему, спроси «делаем так?».
 
 ---
 
@@ -55,12 +55,12 @@ git -C .ai-pm/tooling describe --tags HEAD 2>/dev/null
 - **Никакого упреждающего ADR** (AP-1). ADR пишется только в Step 2 plan'а, когда упёрся в архитектурный fork.
 - **Никаких direct-commits в `main`** (§ 13). Только feature/<topic> branch'и + PR + squash & merge.
 - **`--no-verify` запрещён** (AP-6). Pre-commit hook fail'ит — fix корень, не обходи.
-- **Reviewer-agent обязателен для каждого PR перед `git push`** (AP-16). Детали enforcement (Layer 4 hook + Layer 5 CI, формы trail, override marker'ы) — `.ai-pm/tooling/_claude/hard-rules-detail.md`.
+- **Reviewer-agent обязателен для каждого PR перед `git push`** (AP-16). Детали enforcement (Layer 4 hook + Layer 5 CI, формы trail, override marker'ы) — `.ai-pm/tooling/doc/_claude/hard-rules-detail.md`.
   - **`[skip-review]` уместен** только если diff НЕ затрагивает архитектуру, бизнес-логику или документацию их описывающую. Эвристика: проверь `git diff --name-only` — если только CHANGELOG / README-formatting / `.gitignore` без semantic impact / version bumps → `[skip-review]` корректен. Если diff содержит agent prompts, AP-*.md, CI/hooks (`.github/`, `.githooks/`), protocol docs, template scripts с логикой → **reviewer обязателен**, `[skip-review]` запрещён.
   - **`[review-override: reason]`** — review проводился, trace не committed (local-only режим для non-release branches). Семантически отличается от `[skip-review]`: override = review был; skip = review не нужен.
 - **Оператор никогда не читает код** (PM-only ЦА в v0). Не показывай diff'ы; обсуждай в spec terms (поведение / scenarios / decisions), не в code terms.
-- **Plain-language operator interface** (AP-32) — escalate только по 6 triggers, формулируй вопросы в business terms (правила — `{{doc_root}}/development-protocol.md § 16` + AP-32; примеры — `.ai-pm/tooling/_claude/operator-facing-examples.md`).
-- **Языковая дисциплина** (AP-12 soft): формальные части проекта на `primary_language` из state. Детали (русские эквиваленты, sed запрещён) — `.ai-pm/tooling/_claude/hard-rules-detail.md`.
+- **Plain-language operator interface** (AP-32) — escalate только по 6 triggers, формулируй вопросы в business terms (правила — `{{doc_root}}/development-protocol.md § 16` + AP-32; примеры — `.ai-pm/tooling/doc/_claude/operator-facing-examples.md`).
+- **Языковая дисциплина** (AP-12 soft): формальные части проекта на `primary_language` из state. Детали (русские эквиваленты, sed запрещён) — `.ai-pm/tooling/doc/_claude/hard-rules-detail.md`.
 
 ---
 
@@ -78,7 +78,7 @@ git -C .ai-pm/tooling describe --tags HEAD 2>/dev/null
 
 **Fork → AskUserQuestion** с structured proposal (Source говорит / Я предлагаю / Почему / Что выбираем?). Только после ответа — кодифицирую решение.
 
-Детали (full fork-protocol formatting, edge cases) — `.ai-pm/tooling/_claude/source-bounded-detail.md` + AP-25/AP-26 + `development-protocol.md § 9.5`.
+Детали (full fork-protocol formatting, edge cases) — `.ai-pm/tooling/doc/_claude/source-bounded-detail.md` + AP-25/AP-26 + `development-protocol.md § 9.5`.
 
 **После завершения coder-агента (Step 4 → Step 5/6):**
 
@@ -128,21 +128,64 @@ Generic example (illustrative, не из этого проекта): release-hel
   - **`bootstrap-template-sync`** — template version bump workflow + architecture overview read-only extract.
 - **`planner`** — Step 2 plan writer. Read-only по коду. Trust-profile-aware.
 - **`coder`** — Step 4 implementation. Tests-first. No silent deviation.
-- **`reviewer`** — Step 7 review primary (consolidated v0.7.0+). Mandatory baseline + ONE domain section sequentially. AP-19 + AP-20.
+- **`reviewer`** — Step 7 review primary. Два прохода: Pass 1 (spec & protocol compliance) + Pass 2 (code quality + domain checks). AP-19.
 - **`release-helper`** — release PR + SemVer bump + CHANGELOG.
 
 Запуск: `claude --agent <name>` или ты приглашаешь оператора «invoke <agent>?», ждёшь approval, передаёшь управление (Agent tool с appropriate subagent_type).
 
-Inline fallback (spawn limitation) + legacy review trail backward-compat — `.ai-pm/tooling/_claude/subagent-context.md`.
+Inline fallback (spawn limitation) + legacy review trail backward-compat — `.ai-pm/tooling/doc/_claude/subagent-context.md`.
+
+---
+
+## Domain standards (planner + coder + reviewer)
+
+Для backend/frontend/db/design фич — все три агента загружают один domain-файл:
+
+| Домен | Файл |
+|---|---|
+| backend/api | `.ai-pm/tooling/doc/_claude/domain-backend.md` |
+| frontend/ui | `.ai-pm/tooling/doc/_claude/domain-frontend.md` |
+| db/schema | `.ai-pm/tooling/doc/_claude/domain-database.md` |
+| design/ux | `.ai-pm/tooling/doc/_claude/domain-design.md` |
+
+Домен определяется из commit scope (`feat(backend):` / `feat(frontend):` / `feat(db):`) или bootstrap-state `ui_kind`/`db_kind`.
+
+---
+
+## Behavioral rules (все агенты)
+
+**Verbosity — terse default:**
+- Подтверждения, статусы, in-plan execution — коротко (1-2 предложения)
+- Не пересказывай spec/plan который оператор уже утвердил
+- `[nit]` findings — одна строка без wrap
+
+**Verbose только при:**
+- `[blocking]` finding — full context + why + fix
+- Архитектурный форк — нужно решение оператора
+- Cross-domain impact — implication для другой части системы
+- New AP pattern — документируй полностью
+
+**Operator escalation (6 triggers — спрашивай только при):**
+1. Business logic hole — spec не покрывает реальный edge case
+2. Architectural fork — несколько равноценных решений, нет явного winner
+3. Stack-affecting decision — меняет tech dependencies
+4. Security floor — риск которого нет в threat model
+5. Cross-feature contradiction — новое ломает другую фичу
+6. Cost/time threshold — оценка превышает ожидания
+
+**Plain-language (AP-32) — для operator-facing сообщений:**
+- Конкретно: `file:line` или «сценарий X не реализован», не «есть проблема»
+- Без jargon: не «AP-6 violation», а «код добавляет модуль не из плана»
+- Вопрос содержит конкретные варианты, не открытый вопрос
 
 ---
 
 ## Pointers — читать когда релевантно
 
-- **Lifecycle scenarios** (new product / feature / bugfix / rework / resume / parallel / release) — `.ai-pm/tooling/_claude/lifecycle-scenarios.md`.
-- **Frontmatter convention** для `<topic>_spec.md` / `_plan.md` + AP-21 spec versioning — `.ai-pm/tooling/_claude/frontmatter-convention.md`.
-- **Файловая структура** (`.ai-pm/` layout, product code locations) — `.ai-pm/tooling/_claude/file-structure.md`.
-- **Keyword routing table** (chat keyword → suggested subagent) — `.ai-pm/tooling/_claude/keyword-routing.md`.
+- **Lifecycle scenarios** (new product / feature / bugfix / rework / resume / parallel / release) — `.ai-pm/tooling/doc/_claude/lifecycle-scenarios.md`.
+- **Frontmatter convention** для `<topic>_spec.md` / `_plan.md` + AP-21 spec versioning — `.ai-pm/tooling/doc/_claude/frontmatter-convention.md`.
+- **Файловая структура** (`.ai-pm/` layout, product code locations) — `.ai-pm/tooling/doc/_claude/file-structure.md`.
+- **Keyword routing table** (chat keyword → suggested subagent) — `.ai-pm/tooling/doc/_claude/keyword-routing.md`.
 
 ---
 
@@ -151,7 +194,7 @@ Inline fallback (spawn limitation) + legacy review trail backward-compat — `.a
 - Generic protocol — `.ai-pm/tooling/development-protocol.md`.
 - Project overlay — `{{doc_root}}/development-protocol.md`.
 - Anti-patterns — `.ai-pm/tooling/anti-patterns.md` + `{{doc_root}}/anti-patterns.md`.
-- On-demand references — `.ai-pm/tooling/_claude/<concept>.md`.
+- On-demand references — `.ai-pm/tooling/doc/_claude/<concept>.md`.
 - В случае разрыва generic vs overlay — generic primat.
 
 **Если в сомнении делать ли действие — спрашивай оператора через AskUserQuestion. Лучше переспросить, чем нарушить протокол.**

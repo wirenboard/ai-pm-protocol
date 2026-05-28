@@ -1,15 +1,19 @@
-# Reviewer domain: Database
+# Стандарты домена: Database
 
-Применяется для PR'ов с domain scope `feat(db)` / `feat(schema)` / `feat(migration)`. Проверяет schema design, migrations safety (AP-18 expand-contract), indexing strategy, FK/CHECK/UNIQUE, audit columns, time semantics (timestamptz), identifier strategy (UUID v7), partition / sharding / pooling, EXPLAIN review, соответствие `database-design-<kind>.md`.
+Применяется для всех агентов (planner, coder, reviewer) при работе с domain scope `feat(db)` / `feat(schema)` / `feat(migration)`. Описывает стандарты schema design, migrations safety (AP-18 expand-contract), indexing strategy, FK/CHECK/UNIQUE, audit columns, time semantics (timestamptz), identifier strategy (UUID v7), partition / sharding / pooling, EXPLAIN review, соответствие `database-design-<kind>.md`.
 
-## Ground truth (для database section)
+При планировании учитывай: identifier strategy, expand-contract sequence, migration safety — до выбора schema design.
+При реализации: FK/CHECK/NOT NULL/audit columns по умолчанию — не жди ревью.
+При ревью проверяй: все checks из §§ 1-10 применяются к diff.
+
+## Источники
 
 - `<doc_root>/features/<topic>_spec.md` — schema-affecting scenarios + NFR
 - `<doc_root>/features/<topic>_plan.md` — Migration section с expand-contract sequence
 - `.ai-pm/.bootstrap-state.md` — `db_kind` (определяет какой per-kind guide читать)
 - `<doc_root>/database-design-base.md` — pragmatism / scaling / identifier strategy / encryption / backups / migrations discipline
 - `<doc_root>/database-design-<kind>.md` для каждого db_kind value (embedded / external)
-- `<doc_root>/threat-model.md` — relevant T-ID/M-ID для DB-level threats
+- `<doc_root>/threat-model.md` — T-ID/M-ID для DB-level threats
 - Migration files в diff'е
 - Schema changes (SQL DDL) в diff'е
 - ORM model files если применимо

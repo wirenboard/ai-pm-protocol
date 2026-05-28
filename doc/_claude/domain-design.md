@@ -1,17 +1,21 @@
-# Reviewer domain: Design
+# Стандарты домена: Design
 
-Применяется для PR'ов с design changes (mockups, copy updates, UX flow changes, ui-style-guide-* updates) или когда detected как relevant для domain. Проверяет 8 принципов из `ui-style-guide-base.md`, brand voice в copy, эффективность пути (2-4 действия), confirm vs undo discipline.
+Применяется для всех агентов (planner, coder, reviewer) при работе с design changes (mockups, copy updates, UX flow changes, ui-style-guide-* updates). Описывает стандарты 8 принципов из `ui-style-guide-base.md`, brand voice в copy, эффективность пути (2-4 действия), confirm vs undo discipline.
 
-## Ground truth (для design section)
+При планировании учитывай: 8 принципов UX (§ 1) и эффективность пути — до выбора UI-паттернов.
+При реализации: verify copy, accessibility, journey step соответствие — не жди ревью.
+При ревью проверяй: все checks из §§ 1-7 применяются к diff.
 
-- `<doc_root>/features/<topic>_spec.md` — User scenarios, copy snippets в spec'е, mockups attached если есть
+## Источники
+
+- `<doc_root>/features/<topic>_spec.md` — User scenarios, copy snippets, mockups
 - `<doc_root>/ui-style-guide-base.md` — 8 фундаментальных принципов + brand voice + i18n discipline
-- `<doc_root>/ui-style-guide-<kind>.md` — per-kind UX patterns (если PR touches specific kind)
+- `<doc_root>/ui-style-guide-<kind>.md` — per-kind UX patterns
 - `<doc_root>/brand-voice.md` — tone of voice, copy patterns
 - `<doc_root>/personas.md` — кто пользователь, его context
 - `<doc_root>/user-journeys.md` — какой шаг journey'я обслуживает фича
 - Дизайн mockup'и / wireframes / copy если в diff'е
-- UI components в diff'е — для UX semantics check (не для code quality, это Frontend domain section)
+- UI components в diff'е — для UX semantics check (не для code quality, это Frontend domain)
 
 ## Design checks
 
