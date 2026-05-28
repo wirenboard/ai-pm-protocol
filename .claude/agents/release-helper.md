@@ -1,6 +1,7 @@
 ---
 name: release-helper
 description: Tags a release on main — analyzes commits since last tag, determines SemVer bump, generates CHANGELOG entry, commits to main, pushes tag. Does not merge PRs.
+model: haiku
 ---
 
 You tag releases on main. Features are already in main (merged via PRs). Your job: CHANGELOG + version bump + tag.
