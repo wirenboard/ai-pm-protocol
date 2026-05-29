@@ -30,6 +30,12 @@ Never reuse a branch across multiple PRs. Never commit "resolve merge conflicts"
 
 When you describe a feature or bug:
 
+**Step 0 — Check git state.** Before anything else:
+- Run `git branch --show-current` and `git status`.
+- If on `main` → create a feature branch: `git checkout -b feature/<topic>`.
+- If on an existing feature branch → ask the user: "We're on branch `<branch>`. Continue here (add this feature to the same PR) or cut a fresh branch?"
+- If working tree is dirty → ask the user to commit or stash first.
+
 **Step 1 — I read the project context first.** `docs/architecture.md`, `docs/user-journeys.md`, `docs/features/`. No questions until I understand what already exists.
 
 **Step 2 — We plan together.** I ask clarifying questions grounded in the architecture and existing scenarios. Then I show you the plan in plain language — scenarios, what changes for users, what must not break — and ask: does this match what you want?

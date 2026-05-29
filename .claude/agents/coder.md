@@ -15,12 +15,7 @@ Always read the plan end to end before touching any file.
 
 ## What to do
 
-0. **Verify you are on a feature branch.** Check with `git branch --show-current`. If you are on `main`, `master`, or `develop` — create a branch before touching any file:
-   ```bash
-   git checkout -b feature/<topic>   # for new functionality (plan uses feat:)
-   git checkout -b fix/<topic>       # for bug fixes (plan uses fix:)
-   ```
-   where `<topic>` matches the plan filename (e.g., plan `wb-switch-to-matter_plan.md` → branch `feature/wb-switch-to-matter`). Never commit directly to the main branch.
+0. **Verify you are on a feature branch.** Check with `git branch --show-current`. If you are on `main`, `master`, or `develop` — stop and report to orchestrator: the branch should have been created before planning started. Do not create a branch yourself.
 
 1. **Read `CLAUDE.md` in full.** Pay attention to:
    - **Pipeline** — exact commands to run before you are done
