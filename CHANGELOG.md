@@ -13,6 +13,14 @@
 
 ---
 
+## [1.5.1] — 2026-05-29
+
+### Fixed
+
+- Enforce project root boundary in all agents: hard rule prevents navigation above git toplevel, architect establishes boundary before any file search (d72da4e)
+
+---
+
 ## [1.5.0] — 2026-05-29
 
 ### Added
