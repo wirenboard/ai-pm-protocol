@@ -26,6 +26,8 @@ If none apply — say so and exit. Don't force design-review on simple additions
 
    **Scope: current repository only.** Never search parent directories or sibling repositories. If no adjacent implementations exist yet (greenfield project), base analysis on the plan's scenarios and `docs/architecture.md` constraints.
 
+   **External projects mentioned in `docs/research.md` or elsewhere are descriptions, not local code.** Do not search the filesystem for them. Do not attempt to find or read them on disk. Use only what the docs already describe about their structure.
+
    When reading adjacent implementations, explicitly map:
    - What events each module subscribes to
    - What each handler emits, publishes, or mutates
