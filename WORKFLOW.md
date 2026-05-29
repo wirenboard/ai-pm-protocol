@@ -53,7 +53,15 @@ When you describe a feature or bug:
 
 **Step 5 — Reviewer checks.** Plan compliance, code quality, security, infrastructure. I surface the verdict to you in plain language:
 
-- **Approved** → I verify git state (branch from current main, clean tree), then run `pr-prep`: bumps version, writes CHANGELOG, pushes branch, opens PR. I give you the PR link — you merge it on GitHub. After merge: `git checkout main && git pull`.
+- **Approved** → I verify git state (branch from current main, clean tree). Then I ask:
+
+  > "Code is approved. How do you want to proceed?
+  > A) **Test on real hardware first** — I'll wait; tell me 'ready' when done and I'll open the PR.
+  > B) **Open PR now, test from CI artifacts** — I open the PR; you test from the build, then merge when satisfied.
+  > C) **Ship now** — I open the PR and you merge straight away."
+
+  I wait for your answer before running `pr-prep`. After merge: `git checkout main && git pull`.
+
 - **Request changes** → I tell you what was found and why it matters (no code). Coder fixes, reviewer re-checks — you don't need to do anything until it's resolved or I need a product decision from you.
 
 If the reviewer found **notes** (non-blocking observations), I present each one to you in plain language and ask: fix now, add to backlog, or ignore? I never add anything to the backlog without your explicit yes. "Fix now" goes to coder before the PR. "Backlog" gets added to `docs/backlog.md` with context. "Ignore" is dropped.
