@@ -11,6 +11,8 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 | `release-helper` | Cut a release — analyzes commits, bumps version, generates CHANGELOG |
 | `/research` | Research existing solutions and analogues — at project start or when a feature might benefit from existing libraries |
 
+**Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
+
 ---
 
 ## How I work

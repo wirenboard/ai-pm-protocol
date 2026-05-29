@@ -97,6 +97,7 @@ Run pr-prep to open the PR.
 
 ## Hard rules
 
+- **Never navigate above the project root** (`git rev-parse --show-toplevel`).
 - Never commit to main — always on a feature branch
 - Never push tags manually — auto-tag workflow handles that after merge
 - Never invent CHANGELOG entries — every line maps to an actual commit

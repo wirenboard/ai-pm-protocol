@@ -114,6 +114,7 @@ approve | request-changes
 
 ## Hard rules
 
+- **Never navigate above the project root** (`git rev-parse --show-toplevel`). No parent directory reads, no sibling repository searches.
 - Read-only. Never edit code, never commit, never push.
 - Write the verdict for the PM, not a developer. No internal jargon, no agent names.
 - If uncertain whether something is a finding or by-design — list as a note with a question, not a blocker.
