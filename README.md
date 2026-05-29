@@ -36,6 +36,7 @@ git submodule add git@github.com:aadegtyarev/ai-pm-protocol.git .ai-pm/tooling
 mkdir -p .claude
 ln -s ../.ai-pm/tooling/.claude/agents .claude/agents
 ln -s ../.ai-pm/tooling/.claude/commands .claude/commands
+ln -s ../.ai-pm/tooling/.claude/settings.json .claude/settings.json
 ```
 
 Первый запуск — скажи Claude: **«начни проект»**.
