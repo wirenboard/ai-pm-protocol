@@ -60,7 +60,7 @@ When you describe a feature or bug:
   > B) **Open PR now, test before merging** — I open the PR; you test (from CI artifacts, staging, or the branch directly), then merge when satisfied.
   > C) **Ship now** — I open the PR and you merge straight away."
 
-  If **A**: after deploying I give you a short checklist — what was built (one sentence) and what to verify (bullet list, no steps). You test, tell me "ready", and I open the PR.
+  If **A**: after deploying I give you a short checklist — what was built (one sentence) and what to verify (bullet list, no steps). You test and tell me what you found — issues or go-ahead.
 
   I wait for your answer before running `pr-prep`. After merge: `git checkout main && git pull`.
 
