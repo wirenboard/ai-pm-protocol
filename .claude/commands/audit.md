@@ -1,102 +1,54 @@
 # Audit project
 
-Run a full code quality audit across the entire project codebase. Use when you want a broad health check — not tied to a specific feature or diff.
+Run a full code quality audit across the entire project codebase. Use when PM wants a broad health check — not tied to a specific feature or diff.
 
 This is optional and PM-initiated. It is not part of the regular feature pipeline.
 
-## Scope
+## Orchestration
 
-Read all source files in the project — not just a diff. Skip: lockfiles, vendored dependencies, generated files, minified assets.
+This command does **not** read the codebase itself. It spawns the `auditor` subagent and uses its structured summary to drive a PM-facing flow.
 
-Load project context first: `CLAUDE.md`, `docs/architecture.md`, `docs/stack-notes.md`, linter configs, test runner setup.
+1. **Spawn `auditor`** (defined in `.claude/agents/auditor.md`) using the Agent tool. Pass:
+   - The project root (`git rev-parse --show-toplevel`).
+   - The audit date (today, ISO format).
+   - Optional focus area if PM asked for a narrow audit instead of a full sweep.
 
-If `docs/stack-notes.md` is missing or empty for stack components actually used in the codebase — that itself is the first finding (dim 10 below) and changes how the rest of the audit reads the code: without stack-notes, the audit cannot evaluate stack expectations, only structural quality.
+   Wait for it to complete. It will write `docs/audit-<YYYY-MM-DD>.md` and return the structured summary block.
 
-## Dimensions
+2. **Read the structured summary** from auditor's return — that is what drives the next steps. Do not re-read the full report unless PM asks a specific detail.
 
-Check all eight dimensions across the full codebase:
+3. **Tell PM the headline:**
+   > "Audit complete. Found [N blocking / N notes]. Full report in `docs/audit-<YYYY-MM-DD>.md`."
 
-**1. Security** — Hardcoded secrets anywhere in source (high-entropy strings, `password=`, `secret=`, known key shapes). Auth/authorization gaps. Missing input validation at trust boundaries. Sensitive data in logs or error responses.
+4. **Walk PM through blocking findings using the priority order** from auditor's summary. For each blocking finding ask **one** question — when to fix:
+   > "Blocking #<n>: <short title>. **Fix now** (open `/plan-feature audit-fixup-<topic>` next), **next sprint** (backlog with reason), or **accept-with-context** (document the conscious acceptance, stays in audit history)?"
 
-**2. Stability** — Unhandled errors on realistic failure paths. Null/undefined dereferences. Concurrency issues: races, non-atomic operations, unsafe shared state. Resource leaks: connections, subscriptions, timers without cleanup. Unbounded growth: queues or caches with no ceiling. Silent failures with no logging.
+   Three valid PM answers per blocking:
+   - **Fix now** → orchestrator opens `/plan-feature audit-fixup-<topic>` after the audit conversation closes.
+   - **Next sprint** → add to `docs/backlog.md` with a reference to this audit report.
+   - **Accept-with-context** → add a one-line entry to `docs/backlog.md` marked "accepted (auditor-<date>): <reason>" so the next audit does not re-raise it as new.
 
-**3. Test coverage** — Areas of meaningful business logic with no tests. Bug-prone paths (error handling, edge cases, boundary conditions) left unexercised. Tests that call code but assert nothing meaningful.
+   Never auto-batch these answers. Each blocking gets its own PM decision.
 
-**4. Regressions risk** — Public API surfaces with no contract documentation. Shared utilities used in many places with fragile assumptions. Config/env vars with undocumented behavior.
+5. **Walk PM through notes** the same way, briefer:
+   > "Note <n>: <short title>. **Fix now / backlog / ignore?**"
 
-**5. Conventions** — Code in the wrong layer. Reimplemented utilities the project already provides. Naming or structure diverging from the established pattern across the project.
+   Ignore drops the note. Backlog adds to `docs/backlog.md`. Fix now opens `/plan-feature audit-fixup-<topic>`.
 
-**6. Simplification** — Heavily duplicated logic that should be consolidated. Heavyweight dependencies used for trivial purposes. Dead code: unused exports, unreachable branches, stale flags.
+6. **Open the chosen fixup plans** in the priority order from auditor's summary. The orchestrator runs `/plan-feature` for each, one at a time — never in parallel, never skipping ahead. The plan title is `audit-fixup-<topic>`, and the plan's first section is **Audit reference** quoting the relevant finding verbatim (same shape as the **Incident facts** section for prod-incident hotfixes).
 
-**7. Documentation drift** — Code that contradicts `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`. Undocumented public APIs where the project documents such things. Stale comments describing removed behavior. `docs/stack-notes.md` sections with `Last reviewed` older than 6 months for components still actively used — note (request `stack-researcher` refresh).
+7. **After all chosen fixups land** (their PRs merged), the next audit will compare against the closed fixup PRs. Findings present in the previous audit and not addressed (either by fix-now, by an explicit accept-with-context, or by a backlog item) will surface again — that is the design.
 
-**8. Infrastructure completeness and integration delivery** — Two layers:
+## What this command does NOT do
 
-- *Presence:* `docs/architecture.md` deploy section vs. actual infrastructure files (Dockerfile, service units, etc.).
-- *Delivery:* For every entry in `docs/stack-notes.md` "Integration contracts" — the local artifact (schema, manifest, unit file) is present; the delivery mechanism (Dockerfile COPY, deb package install, volume mount, CRD apply) reaches the path the external system expects; the native validator from the contract is wired into the `Pipeline` block of `CLAUDE.md`. A schema in `schemas/` that the Dockerfile does not copy to the external system's expected path is blocking — the project is shipping a broken integration on every build.
-
-**9. Stack expectations compliance** — For every component with an entry in `docs/stack-notes.md`, audit the code against the cited idioms and constraints. Code that contradicts a sourced rule → blocking with citation reproduced in the finding. Tests that codify a spec-forbidden value (e.g., property-based round-trip over a range the spec rejects) → blocking — they freeze the wrong contract.
-
-**10. Stack-notes integrity** — Components used in the code but missing from `docs/stack-notes.md` → blocking (orchestrator must spawn `stack-researcher` and re-audit). Validators listed in stack-notes "Validators wired into pipeline" but absent from `CLAUDE.md` Pipeline block → blocking. Integration contracts listed but lacking a delivery mechanism in the repo → blocking. Unsourced rules in stack-notes → blocking (every rule must cite a URL).
-
-## Severity levels
-
-Two levels only:
-
-- **blocking** — outage risk, data loss, exploitable, or critical infrastructure gap. Must be addressed.
-- **note** — a real observation worth considering. PM decides: fix now, add to backlog, or ignore.
-
-## What NOT to flag
-
-- Theoretical risks that need unlikely preconditions.
-- Style and formatting linters already govern.
-- Every small imperfection in a healthy codebase — focus on real risks.
-- Pre-existing issues that pose no active risk and are clearly known/accepted.
-
-## Output
-
-Write to `docs/audit-<YYYY-MM-DD>.md`:
-
-```markdown
-# Project audit — <date>
-
-## Summary
-<2-3 sentences: overall health, biggest concerns, tone — written for a PM>
-
-## Blocking
-1. `file:line` — <issue>. Why it matters: ... Fix: ...
-
-## Notes
-1. `file:line` — <observation>. Why it matters: ...
-
-## What looks healthy
-<brief note on areas that are solid — gives PM context for the findings above>
-```
-
-Tell PM: "Audit complete. Found [N blocking / N notes]. Full report in `docs/audit-<date>.md`."
-
-Present each note to PM: "Fix now, add to backlog, or ignore?" — never add to backlog without explicit PM approval.
-
-## How fixes happen (and how they do not)
-
-Audit is read-only — it finds gaps, it does not close them. Closure is the job of the standard pipeline. When PM says **"Fix now"** for a finding, the orchestrator:
-
-1. Opens `/plan-feature` with topic `audit-fixup-<short-area>` (e.g., `audit-fixup-missing-stack-notes`, `audit-fixup-schema-delivery`).
-2. Plan includes the audit finding verbatim in an **Audit reference** section — same shape as the "Incident facts" section used for prod incidents.
-3. Standard pipeline runs: plan → coder → reviewer → pr-prep → PR → merge → deployment script.
-4. PM sees the PR, approves merge.
-
-The orchestrator never edits files directly to close an audit finding, never `ssh`-patches remote systems based on an audit finding, never amends the audit report itself to mark a finding "fixed" — fixes are evidenced by closed PRs, not by edited reports.
-
-If an audit finding is a missing `docs/stack-notes.md` entry — the fix is to spawn `stack-researcher`, not to edit stack-notes by hand.
-
-If an audit finding is a missing validator in `CLAUDE.md` Pipeline — the fix is a plan that extends the Pipeline block (and the project's CI), reviewer dim 9 enforces the new validator from that point forward.
-
-If an audit finding is a delivery gap (artifact not reaching its external system) — the fix is a plan that updates Dockerfile / deployment script and adds the native validator to Pipeline.
+- Does not read the source code itself. That is the auditor's job, in a subagent context that does not pollute main session.
+- Does not edit any file, including the audit report. Audit reports are snapshots; once written by the auditor, they are not patched.
+- Does not `ssh`-patch any remote system. Closures go through `/plan-feature` → coder → reviewer → pr-prep → PR → merge → deployment script.
+- Does not skip PM. Every blocking and every note gets an explicit PM decision. No silent backlog adds, no silent fixes.
 
 ## Hard rules
 
-- Read-only. Never edit code, never commit, never `ssh`-patch any remote system.
-- Write for the PM — no internal jargon, no agent names, plain language.
-- Don't manufacture findings. A short report with real issues is better than a long one with noise.
-- Every closure goes through `/plan-feature`. Audit reports are not patched after the fact — the report is a snapshot; the PR is the truth.
+- Read-only orchestration. Only the auditor reads the codebase; only the PM-facing flow above runs in the main session.
+- Write for the PM in product language. The auditor's technical detail lives in the report; the conversation surfaces severity and choice.
+- One PM decision per finding. No batching.
+- Closures only through `/plan-feature audit-fixup-*`. No direct edits, no shortcut paths.

@@ -118,7 +118,7 @@ git submodule update --remote .ai-pm/tooling
 
 ```
 WORKFLOW.md           — правила работы агентов (импортируется в CLAUDE.md проекта)
-.claude/agents/       — architect, coder, reviewer, pr-prep, docs-extractor, stack-researcher
+.claude/agents/       — architect, coder, reviewer, pr-prep, docs-extractor, stack-researcher, auditor
 .claude/commands/     — bootstrap, plan-feature, research, audit
 doc/_templates/       — шаблоны документов проекта (включая stack-notes.md.tmpl)
 ```

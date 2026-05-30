@@ -10,8 +10,9 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 | `reviewer` | Review after implementation |
 | `pr-prep` | Bump version, generate CHANGELOG, push branch, open or update PR |
 | `docs-extractor` | Auto-spawn from `/bootstrap` legacy full mode; reads existing codebase and writes `docs/architecture.md` + `docs/user-journeys.md` |
+| `auditor` | Auto-spawn from `/audit`; read-only project-wide sweep across the 10 dimensions, writes `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary |
 | `/research` | Research existing solutions and analogues (build vs use). PM-facing pros/cons output. Different from `stack-researcher` (which is agent-facing canonical citations). |
-| `/audit` | Read-only health check of the whole project across the same 10 dimensions as reviewer. PM-initiated, not part of the regular feature pipeline. Fix-now closures go through `/plan-feature audit-fixup-*` |
+| `/audit` | PM-initiated project-wide health check. Spawns `auditor`, then drives a PM-facing flow over the findings (one decision per blocking: fix now / next sprint / accept-with-context). Fix-now closures go through `/plan-feature audit-fixup-*` |
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
