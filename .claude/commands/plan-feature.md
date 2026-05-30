@@ -7,10 +7,12 @@ This skill runs in the main session — planning is a conversation with the PM, 
 ## Before asking anything
 
 Read these first:
+- `.ai-pm/state/current.md` — current task state; if `Status` is anything other than `idle` or `done`, an active task exists; surface to PM ("we are in the middle of <task> — finish that first, or pause and start this new one?")
 - `CLAUDE.md` — architecture constraints, security constraints
 - `docs/architecture.md` — stack, decisions, constraints
 - `docs/stack-notes.md` — stack idioms, constraints, validators, integration contracts (mandatory; see "Stack component check" below)
 - `docs/user-journeys.md` — existing scenarios (identifies regression risk)
+- `.ai-pm/contracts/` — existing Product Contracts; identifies which features the new work might touch
 - `docs/features/` — existing plans (context for what's already built)
 - `docs/backlog.md` — if it exists, match items against the feature topic: same module, same user journey, same data model, or same area of code
 
@@ -174,7 +176,25 @@ Show the draft to PM. Iterate until PM says ok.
 
 Save to `docs/features/<topic>_plan.md`.
 
-Tell PM the plan is saved and run architect check above.
+**Initialize Execution State.** Update `.ai-pm/state/current.md`:
+- `Task`: <one-sentence plan summary>
+- `Status`: `planning` → `coding` (after handoff)
+- `Done`: <list any items completed during planning>
+- `Remaining`: <list of next concrete steps>
+- `Touched files`: <will be filled by coder>
+- `Next step`: hand off to architect (if check below applies) or coder
+- `Validation`: <will be set per plan's Test plan>
+
+**Product Contract check.** Ask PM one product question (only when the plan touches user-visible behavior):
+> "Does this change what the user sees or can do? If yes — which feature is the contract for (existing or new)?"
+
+If yes and the feature does not yet have a contract: draft `.ai-pm/contracts/<feature>.md` from the template based on the plan's Scenarios (Must work) and "Existing behaviors this feature touches" (Must not break) and Test plan (Acceptance checks). Show the draft to PM for one-pass validation, then save.
+
+If yes and the contract exists: surface it to PM ("this touches contract X — Must work / Must not break items will be re-verified by reviewer").
+
+If no (backend-only): skip silently; note "no contract — change is backend-only" in the plan handoff message.
+
+Tell PM the plan is saved, state is initialized, and run architect check above.
 
 ## What the plan does NOT include
 
