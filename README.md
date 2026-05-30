@@ -20,16 +20,24 @@ stack-researcher автоматически читает канон стека (
 (если в backlog есть подходящие заметки — предлагает взять в план)
 PM: "ок"
         ↓
+Если фича пользовательская — оформляется Product Contract
+(.ai-pm/contracts/<feature>.md: что должно работать, что не должно сломаться,
+какие тесты проверяют). Backend-only фичи пропускают этот шаг.
+        ↓
+.ai-pm/state/current.md обновляется: задача, статус, сделано, осталось, следующий шаг
+        ↓
 Architect-агент решает структурный вопрос (если есть): где живёт новый код?
 Учитывает ограничения стека из stack-notes. Объясняет PM решение — PM может возразить
         ↓
-Coder-агент реализует, сверяясь со stack-notes;
-запускает тесты + линтеры + stack-валидаторы (всё из Pipeline блока CLAUDE.md)
+Coder-агент читает state и Product Contract; реализует, сверяясь со stack-notes;
+запускает тесты + линтеры + stack-валидаторы (всё из Pipeline блока CLAUDE.md);
+обновляет state в конце.
 Объясняет PM что сделано и как попробовать — без кода
         ↓
-Reviewer-агент проверяет по 10 измерениям: план (полнота + соответствие стеку),
+Reviewer-агент проверяет по 11 измерениям: план (полнота + соответствие стеку),
 тесты, безопасность, стабильность, регрессии, конвенции, мёртвый код, документация,
-инфраструктура + delivery интеграционных артефактов, соответствие стек-ожиданиям
+инфраструктура + delivery интеграционных артефактов, соответствие стек-ожиданиям,
+Product Contract compliance. Выдаёт явный Definition of Done: pass | fail.
         ↓
 PM получает вердикт: "готово" или "нашёл проблему: X"
 Если есть заметки (notes) — PM решает: починить сейчас, отложить в backlog, или игнорировать
@@ -77,7 +85,7 @@ ln -s ../.ai-pm/tooling/.claude/settings.json .claude/settings.json
 git submodule update --remote .ai-pm/tooling
 ```
 
-## Что шаблон снижает риск
+## Какие риски шаблон снижает
 
 Шаблон — это система снижения рисков, не система абсолютных гарантий. Каждая защита ниже снижает вероятность определённого класса ошибок, но не исключает их полностью. Где возможно, защита подкреплена техническим гейтом (hook, reviewer dimension, audit); где невозможно — формальной инструкцией.
 
@@ -109,7 +117,7 @@ git submodule update --remote .ai-pm/tooling
 
 **Silent behavior change — реже.** Coder обязан вписать Product Impact Report в свой отчёт, когда фича касается контракта (Feature / Behavior changes / Verified Acceptance checks / Risks / PM decision required). Reviewer dim 11 блокирует PR, в котором поведение изменилось, но контракт не обновлён. Auditor dim 11 ловит дрейф контракта от кода в проекте в целом.
 
-**Завершённость задачи объективна — реже субъективна.** Reviewer выдаёт явный «Definition of Done: pass | fail» по 7 проверкам (scope respected, stack rules, contract honored, pipeline green, state updated, impact report present, docs updated). Pass без всех галок — противоречие, и verdict должен быть request-changes даже без Blocking.
+**Завершённость задачи объективна — реже субъективна.** Reviewer выдаёт явный «Definition of Done: pass | fail» по 7 проверкам (scope respected, stack rules, contract honored, pipeline green, state updated, impact report present, docs updated). Подробности в WORKFLOW.md.
 
 ## Что остаётся за PM
 

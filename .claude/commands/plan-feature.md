@@ -188,7 +188,7 @@ Save to `docs/features/<topic>_plan.md`.
 **Product Contract check.** Ask PM one product question (only when the plan touches user-visible behavior):
 > "Does this change what the user sees or can do? If yes — which feature is the contract for (existing or new)?"
 
-If yes and the feature does not yet have a contract: draft `.ai-pm/contracts/<feature>.md` from the template based on the plan's Scenarios (Must work) and "Existing behaviors this feature touches" (Must not break) and Test plan (Acceptance checks). Show the draft to PM for one-pass validation, then save.
+If yes and the feature does not yet have a contract: draft `.ai-pm/contracts/<feature>.md` from the template at `.ai-pm/tooling/doc/_templates/contract.md.tmpl` based on the plan's Scenarios (Must work) and "Existing behaviors this feature touches" (Must not break) and Test plan (Acceptance checks). Show the draft to PM for one-pass validation, then save.
 
 If yes and the contract exists: surface it to PM ("this touches contract X — Must work / Must not break items will be re-verified by reviewer").
 

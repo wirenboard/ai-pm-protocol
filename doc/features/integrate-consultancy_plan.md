@@ -47,7 +47,8 @@ No guarantee weakened or removed. README wording shifts from absolutes to risk r
 
 6. **Out of scope for this PR but planned separately:**
    - Additional document fragmentation (Part 6) — current fragmentation (agents, commands, templates, docs, stack-notes) is sufficient; revisit if pain shows.
-   - `.gitignore` cleanup (audit-fixup #23) — small separate PR.
+   - ~~`.gitignore` cleanup (audit-fixup #23)~~ — **revised in-flight:** absorbed into this PR. PM observation triggered it: the consultancy introduces a new state-keeping system (`.ai-pm/state/`) that semantically supersedes the stale `.bootstrap-state.local.md` and `.ai-pm/.reviews/release-*.json` mentions in `.gitignore`. Cleaning the dead references in the same PR that introduces the replacement is more honest than splitting. Reviewer caught this as silent scope creep; this note legalises the absorption.
+   - ~~Architect persona stale `design-review` reference (audit-fixup #25 sub-item)~~ — **revised in-flight:** absorbed into the same `.gitignore` cleanup commit. Same rationale: stale references to retired concepts are conceptually one cleanup; splitting would be ceremony.
    - CHANGELOG backfill (audit-fixup #26) — small separate PR.
    - Architect persona extension for canonical architecture.md ownership (audit-fixup #27) — small separate PR.
 

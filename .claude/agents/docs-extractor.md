@@ -94,6 +94,8 @@ For each user-facing journey discovered, create a draft Product Contract using t
 
 Contracts are drafts — PM validates them in the post-extraction brief. Do NOT create contracts for backend-only modules (data access, internal utilities, refactors).
 
+**Budget rule for legacy projects with many journeys.** If extraction surfaces more than 8 user-facing journeys, do not draft contracts for all of them blindly — that creates a wall of stubs the PM cannot reasonably validate at once. Instead: draft contracts for the journeys explicitly marked as primary in your reading (entry points, the journeys whose code volume is largest, the journeys with the most existing tests), cap at 8 drafts, and surface the rest as a list to the caller with `**Pending contracts:**` (count + names). The caller asks PM which additional journeys to draft on demand.
+
 ## Output
 
 Write each doc file directly to disk.
