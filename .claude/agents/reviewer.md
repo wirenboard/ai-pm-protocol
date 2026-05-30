@@ -116,8 +116,11 @@ Write to `docs/features/<topic>_review.md`:
 ## Blocking
 1. `file:line` — <issue>. Why it matters: ... Fix: ...
 
-## Notes
+## Notes (product)
 1. `file:line` — <observation>. Why it matters: ...
+
+## Notes (technical)
+1. `file:line` — <observation>. Why it matters: ... Routing: respawn `<agent>` / drop on merge / defer to next plan.
 
 ## Verdict
 approve | request-changes
@@ -127,14 +130,32 @@ approve | request-changes
 
 **Verdict rule:**
 - Any blocking finding → request-changes
-- Notes alone never block merge — PM decides: fix now, backlog, or ignore
+- Notes alone never block merge
 - Nothing → approve
 
-**What goes in Notes (not blocking):**
-- Architectural observations worth discussing but not urgent
-- Heavy dependency for trivial use — worth considering but not a violation
-- Missing tests on genuinely non-critical, trivial logic
-- Improvements that go beyond the plan scope
+**Notes are split into two groups, and the difference matters for how they reach PM:**
+
+**Product notes** — observations the PM should weigh because they touch what the user sees, the scope of the feature, or a product trade-off:
+- "This handles online users but not the offline path; should offline come in this plan or a separate one?"
+- "Using a heavy third-party library for a trivial use — is the dependency worth it?"
+- "Missing test on a meaningful scenario — should it be added now?"
+- Architectural observations worth discussing but not urgent.
+
+Product notes are the ones the orchestrator surfaces to PM with `fix now / backlog / ignore`.
+
+**Technical notes** — observations about the inside of artefacts (phrasing of a citation, attribution of a source URL, code-style choices, internal naming, organization of a document section, cosmetic CHANGELOG wording) that the PM has neither the context nor the obligation to decide:
+- "This citation's wording overstates what the linked issue says — soften the phrasing or add a second source."
+- "Two URLs are listed without explaining which is canonical for what."
+- "Variable name `_reachable` is dead — remove or expose via a getter."
+
+Technical notes are routed by the orchestrator, not by the PM:
+- If a fix is cheap and the responsible agent is obvious — orchestrator respawns that agent with the technical notes batched in (e.g., `stack-researcher` for stack-notes content, `coder` for code-level notes, `pr-prep` for release-ceremony notes).
+- If a fix is trivial and the issue is cosmetic enough to ignore — orchestrator may drop it on merge, noting in the verdict why.
+- The orchestrator never asks the PM to choose between "soften the phrasing" and "add a second URL". That is a category-error: PM is product, not technical.
+
+Each technical note in the verdict must carry an explicit **Routing** line stating which agent gets the fix, or `drop on merge: <reason>`. This is so the orchestrator can act without guessing.
+
+If you cannot tell whether an observation is product or technical — default to product. A product-routed note costs one extra question to the PM; a misrouted technical note risks burdening the PM with a decision they cannot make.
 
 ## Hard rules
 

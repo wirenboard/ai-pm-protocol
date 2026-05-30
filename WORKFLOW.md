@@ -16,6 +16,12 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
+**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator does not edit **content artefacts** directly. Content artefacts are anything that captures the project's design, code, contracts or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, plan / arch / review files under `docs/features/`. Each of those has an agent that owns it (`coder`, `architect`, `stack-researcher`, `docs-extractor`, `auditor`, `reviewer`, `plan-feature` as a command). When a content artefact needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
+
+**Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `docs/backlog.md` entries, the choice of which `audit-fixup-*` plan goes next, recording PM decisions, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
+
+The line: if it captures product design or technical canon, an agent writes it. If it records the conversation with the PM or moves work through the pipeline, the orchestrator writes it.
+
 **Remote-system boundary rule (applies to all agents and the orchestrator):** the rule is about **the source of truth**, not about whether ssh-with-write is allowed at all. Production code, configs, schemas, manifests and infrastructure files that **the project owns in git** must change through git — never by editing the file in place on a remote system. Everything else (runtime state, deployment actions, dev experiments, PM-initiated maintenance) is fair game.
 
 **Forbidden:**
@@ -85,7 +91,12 @@ When you describe a feature or bug:
 
 - **Request changes** → I tell you what was found and why it matters (no code). Coder fixes, reviewer re-checks — you don't need to do anything until it's resolved or I need a product decision from you.
 
-If the reviewer found **notes** (non-blocking observations), I present each one to you in plain language and ask: fix now, add to backlog, or ignore? I never add anything to the backlog without your explicit yes. "Fix now" goes to coder before the PR. "Backlog" gets added to `docs/backlog.md` with context. "Ignore" is dropped.
+If the reviewer found **notes**, I split them by type:
+
+- **Product notes** (touch what the user sees, scope, or a product trade-off) — I present each one to you in plain language and ask: fix now, add to backlog, or ignore? "Fix now" routes through the responsible agent before the PR. "Backlog" gets added to `docs/backlog.md` with the context of this conversation. "Ignore" is dropped.
+- **Technical notes** (phrasing of a citation, attribution of a source URL, code-style choices, internal naming, cosmetic CHANGELOG wording — things the PM has neither context nor obligation to decide) — I handle without burdening you. If the fix is cheap and the responsible agent is obvious, I respawn that agent with the technical notes batched in. If the issue is cosmetic enough to ignore, I drop it on merge. The reviewer's verdict labels each note as product or technical and adds a routing line so I act without guessing. If a technical note turns out to have product implications you should know about, I surface it to you anyway — better one extra question than a missed call.
+
+I never add anything to `docs/backlog.md` without an explicit yes from you (product note backlog) or a clear technical reason I will record alongside the entry (e.g., "deferred to `audit-fixup-confed-schema-delivery` because the upstream docs do not yet answer this"). The backlog itself is an orchestration artefact — I write it directly, that is part of my job.
 
 `docs/backlog.md` is created on first use — not upfront.
 
