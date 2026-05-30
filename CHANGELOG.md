@@ -13,6 +13,24 @@
 
 ---
 
+## [1.8.1] — 2026-05-30
+
+### Fixed
+
+- `.claude/settings.json` hook regexes: ssh content-edit and ssh mutating-action gates now match the quoted form (`ssh host "sed -i ..."`, `ssh host 'rm /etc/foo'`, `ssh host "systemctl restart x"`), closing blocking #3 of `doc/features/audit-2026-05-30.md`; find boundary gate now blocks bare-root `find / -name x` / `find / -type f`, closing blocking #4. (7012c4d)
+
+### Added
+
+- `tests/hooks.sh` — 44 POSIX-shell unit cases over all 5 PreToolUse hooks (Read boundary, find boundary, ssh content-edit, ssh mutating, git force-push, git no-verify), with positive (deny/ask) and negative (pass) coverage and full `hookSpecificOutput` shape assertion (`hookEventName`, `permissionDecision`, `permissionDecisionReason`) on every positive case. (b3cca9c, 28e763c)
+- `.github/workflows/lint-hooks.yml` — CI gate runs `tests/hooks.sh` on every PR/push that touches `.claude/settings.json`, `tests/hooks.sh`, or the workflow itself; failing tests block merge. Closes note #6 of `doc/features/audit-2026-05-30.md`. (dfac399)
+
+### Changed
+
+- `doc/architecture.md` — `tests/` directory and `.github/workflows/lint-hooks.yml` added to File layout; "no automated tests by design" constraint refined: tests on meta-infrastructure (hook regexes) are allowed, runtime/feature tests still are not. (6dd28dd)
+- `WORKFLOW.md` — Hook-level enforcement section notes the new test-gate so PM sees rules are now verified, not only declared. (6dd28dd)
+
+---
+
 ## [1.8.0] — 2026-05-30
 
 ### Added
