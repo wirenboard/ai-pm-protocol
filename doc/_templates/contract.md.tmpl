@@ -1,0 +1,58 @@
+# Product Contract: <feature name>
+
+User-facing contract for one feature. Maintained alongside the feature; reviewed against every change that touches it. PM reads to understand what the feature promises; agents read to know what must keep working.
+
+One contract per user-facing feature. Backend-only changes (refactors, infra) do not need a contract — they touch existing contracts only if they change visible behavior.
+
+---
+
+## User value
+
+<one paragraph in plain product language — what value does this feature give the user; why does it exist>
+
+## Who uses it
+
+<role + context — specific, not "the user". E.g., "small business admin configuring tax rates", "site visitor browsing the catalog">
+
+## Must work
+
+<bulleted list — concrete user-visible behaviors that the feature delivers. Each item is something the user can do or expect.>
+
+- <user can …>
+- <system shows …>
+- <result of … is …>
+
+## Must not break
+
+<bulleted list — invariants that must hold even after future changes. Each item is something that must remain true.>
+
+- <… is always …>
+- <… cannot happen when …>
+- <… persists across …>
+
+## Acceptance checks
+
+<list of tests / verification commands that confirm Must work and Must not break. Each test maps to ≥ 1 Must-work or Must-not-break item. Reviewer runs these on every PR touching the feature.>
+
+- `<test name or command>` — verifies <which Must-work or Must-not-break item>
+- `<test name>` — verifies …
+
+## Out of scope
+
+<bulleted list — what the feature explicitly does NOT do. Prevents scope-creep and silent expansion.>
+
+- <feature does not …>
+- <feature does not …>
+
+## Last reviewed
+
+<YYYY-MM-DD> — by <agent name or PM>, against commit <SHA or "current main">
+
+---
+
+## How this file is used
+
+- **plan-feature** — checks every plan that touches this feature; the plan's scenarios must respect Must work; the plan's "Out of scope" must not silently relax Must not break.
+- **coder** — reads before implementing; the implementation must not break any Must-work or Must-not-break item without a plan that explicitly changes the contract.
+- **reviewer** — checks the diff against Must-work + Must-not-break + Acceptance checks; runs Acceptance checks if they are runnable; if a Must item is touched without contract update — blocking.
+- **auditor** (dimension 11) — flags features with no contract, stale contracts (no review > 90 days while feature changed), contracts that drift from observed code behavior.

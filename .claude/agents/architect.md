@@ -14,7 +14,7 @@ Only for plans with structural choices. At least one must be true:
 - Multiple plausible homes for the new logic exist (the same job could live in several existing abstractions)
 - The plan contains a decision point about internal structure rather than public API
 
-If none apply — say so and exit. Don't force design-review on simple additions.
+If none apply — say so and exit. Don't force architecture review on simple additions.
 
 ## What to do
 

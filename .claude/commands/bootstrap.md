@@ -54,6 +54,9 @@ Then create from templates:
 - `docs/ui-guide.md` from `ui-guide.md.tmpl` — only if **custom** UI (case 1 above)
 - `docs/threat-model.md` from `threat-model.md.tmpl` — only if security requirements mentioned
 - `docs/features/` directory
+- `.ai-pm/state/current.md` from `state.md.tmpl` — initial state set to `Status: idle`; updated by every coder run thereafter
+- `.ai-pm/state/archive/` directory — completed task states get archived here
+- `.ai-pm/contracts/` directory — Product Contracts get created here as features are planned (one file per user-facing feature)
 
 **Stack literacy onboarding (mandatory, no PM questions).** Spawn the `stack-researcher` subagent with the stack components from PM's answers (language, runtime, framework, database, key libraries, target platform). The agent reads canonical docs and spec, writes `docs/stack-notes.md` with cited idioms, constraints, validators and integration contracts.
 
@@ -113,6 +116,8 @@ Write minimal docs — enough to start adding features:
 - `docs/architecture.md` — stack and key decisions extracted from code; mark gaps as `[?]`
 - `docs/user-journeys.md` — write only what's visible from entry points and module names; leave the rest as `[?]`
 - `docs/stack-notes.md` from `stack-notes.md.tmpl` — empty shell
+- `.ai-pm/state/current.md` from `state.md.tmpl` — initial state `Status: idle`
+- `.ai-pm/state/archive/` and `.ai-pm/contracts/` directories
 - Optional docs — skip; create only if code clearly requires them (e.g., obvious security constraints)
 
 **Stack literacy onboarding (mandatory, no PM questions).** Once stack components are identified from the code, spawn `stack-researcher` with that list. It fills `docs/stack-notes.md`. Take its "New validators" list and add commands to the Pipeline block in `CLAUDE.md`. Take its "Open questions" — surface to PM as caveats.
@@ -142,6 +147,7 @@ After the extractor finishes:
 - Create `docs/stack-notes.md` from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl` (empty shell).
 - Spawn `stack-researcher` with the stack components the extractor put in `architecture.md` (mandatory, no PM questions). After it returns: extend the Pipeline block in `CLAUDE.md` with its "New validators"; reflect "Integration contracts" in `architecture.md` deploy section; record "Open questions" for the PM brief below.
 - Create `docs/features/` directory if it doesn't exist
+- Create `.ai-pm/state/current.md` from template (`Status: idle`), `.ai-pm/state/archive/`, `.ai-pm/contracts/` (the docs-extractor already drafted contracts into the contracts/ directory — surface their count and `(needs PM validation)` markers in the PM brief)
 
 Present to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
 

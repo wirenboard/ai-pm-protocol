@@ -69,6 +69,18 @@ Every feature plan that mentions a categorical concept (type, mode, role, state,
 
 `.github/workflows/auto-tag.yml` runs on every push to `main`, reads the top `## [<VERSION>]` entry from `CHANGELOG.md`, creates the matching `v<VERSION>` tag if missing, extracts the section as release notes, and calls `gh release create`. No release branch, no manual tagging, no confirmation gates. **Source:** `.github/workflows/auto-tag.yml` (current shape); decision sequence: `3f1ef5b Streamline release workflow: auto-tag + no confirmation gates`, `e14b720 fix: auto-tag reads CHANGELOG instead of commit message`, `ad3d30f fix: merge auto-tag and create-github-release into one workflow`, `c240181 fix: release workflow checks GitHub Release, not tag`.
 
+### Execution State as the single source of progress
+
+One file — `.ai-pm/state/current.md` (per downstream project) — holds the active task's Status / Done / Remaining / Touched files / Next step / Validation. Every coder run reads it first and writes it last. plan-feature initializes it. Completed tasks are archived to `.ai-pm/state/archive/`. The intent is that any future session — same model, different model, same agent, different agent — can resume from this file alone, without scrolling chat history. **Source:** `doc/features/integrate-consultancy_plan.md` § "Scenarios"; `doc/_templates/state.md.tmpl`.
+
+### Product Contracts as the product-side complement to stack-notes
+
+Stack-notes describes technical idioms cited from upstream docs. Product Contracts describe user-visible behavior in the project's own words: User value / Who uses it / Must work / Must not break / Acceptance checks / Out of scope. One contract per user-facing feature, in `.ai-pm/contracts/<feature>.md`. Coder reads before implementing; reviewer verifies the diff against the contract (dimension 11); auditor flags missing or stale contracts. Backend-only changes (refactor, infra) skip contract checks explicitly. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions"; `doc/_templates/contract.md.tmpl`.
+
+### Definition of Done as an explicit reviewer subsection
+
+Reviewer verdict now contains a "Definition of Done" subsection with 7 hard checks: scope respected; stack expectations honored; Product Contract honored; pipeline green; state updated; Product Impact Report present (when contract touched); plan's docs updates landed. The subsection ends with `DoD: pass | fail`. A pass with any unchecked box is a contradiction; reviewer must re-read its own findings. A fail forces `request-changes` even when Blocking is empty. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions" point 4; `.claude/agents/reviewer.md` § "Verdict format".
+
 ---
 
 ## Architectural constraints
@@ -100,12 +112,14 @@ Real top-level paths in this repo (cross-checked against `ls` and `git ls-tree -
 | `.github/workflows/auto-tag.yml` | The release CI workflow — runs on push to `main`. |
 | `.github/workflows/lint-hooks.yml` | The hook-config CI workflow — runs `tests/hooks.sh` on every PR or push that touches `.claude/settings.json`, `tests/hooks.sh`, or the workflow itself. |
 | `tests/hooks.sh` | POSIX-shell unit tests for the `PreToolUse` hook regexes in `.claude/settings.json`. Simulates the documented `{tool_name, tool_input}` stdin contract for each hook and verifies the produced `permissionDecision`. The only test artefact in the repo (see Architectural constraints — meta-infrastructure exception). |
-| `doc/_templates/` | Templates copied / referenced by `/bootstrap` to populate downstream `docs/` (`CLAUDE.md.tmpl`, `README.md.tmpl`, `architecture.md.tmpl`, `stack-notes.md.tmpl`, `threat-model.md.tmpl`, `ui-guide.md.tmpl`, `user-journeys.md.tmpl`). |
-| `doc/features/` | Plans, reviews, audits for the template's own development (`template-v2_plan.md`, `protocol-integrity-and-stack-literacy_plan.md`, `audit-2026-05-30.md`, `audit-fixup-*_plan.md`, …). |
+| `doc/_templates/` | Templates copied / referenced by `/bootstrap` to populate downstream `docs/` (`CLAUDE.md.tmpl`, `README.md.tmpl`, `architecture.md.tmpl`, `stack-notes.md.tmpl`, `state.md.tmpl`, `contract.md.tmpl`, `threat-model.md.tmpl`, `ui-guide.md.tmpl`, `user-journeys.md.tmpl`). |
+| `doc/features/` | Plans, reviews, audits for the template's own development. |
 | `doc/stack-notes.md` | Template's own stack-notes — citations + idioms for the six components above. |
 | `doc/architecture.md` | This document. |
 
-Local-only and ignored paths (`.reviews/`, `.claude/worktrees/`, `.bootstrap-state.local.md`) are not part of the delivered surface and not listed above.
+**In downstream projects only** (not present in this repo): `.ai-pm/state/current.md` and `.ai-pm/state/archive/` hold the live and archived Execution States; `.ai-pm/contracts/<feature>.md` files hold one Product Contract per user-facing feature.
+
+Local-only and ignored paths (`.reviews/`, `.claude/worktrees/`) are not part of the delivered surface.
 
 ---
 

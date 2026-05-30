@@ -10,7 +10,7 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 | `reviewer` | Review after implementation |
 | `pr-prep` | Bump version, generate CHANGELOG, push branch, open or update PR |
 | `docs-extractor` | Auto-spawn from `/bootstrap` legacy full mode; reads existing codebase and writes `docs/architecture.md` + `docs/user-journeys.md` |
-| `auditor` | Auto-spawn from `/audit`; read-only project-wide sweep across the 10 dimensions, writes `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary |
+| `auditor` | Auto-spawn from `/audit`; read-only project-wide sweep across the 11 dimensions, writes `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary |
 | `/research` | Research existing solutions and analogues (build vs use). PM-facing pros/cons output. Different from `stack-researcher` (which is agent-facing canonical citations). |
 | `/audit` | PM-initiated project-wide health check. Spawns `auditor`, then drives a PM-facing flow over the findings (one decision per blocking: fix now / next sprint / accept-with-context). Fix-now closures go through `/plan-feature audit-fixup-*` |
 
@@ -114,6 +114,32 @@ I never add anything to `docs/backlog.md` without an explicit yes from you (prod
 After you merge: pull main locally and we're ready for the next feature.
 
 **When you're ready to ship** — say "release". I verify git state, run `pr-prep` (version bump + CHANGELOG + PR). You merge — GitHub auto-tags and publishes the release.
+
+---
+
+## How state is kept
+
+One file — `.ai-pm/state/current.md` — holds the live snapshot of the active task: Status, what's Done, what's Remaining, Touched files, Next step, Validation command. Every coder run reads it first and updates it last. Every plan-feature run initializes it.
+
+This means: if you pause for a week, come back, and re-enter Claude Code, my first move is to open that file and continue. You do not need to re-explain. You can open the file yourself to see where we are, but you don't write to it — agents do.
+
+When a task finishes, the file is archived to `.ai-pm/state/archive/<topic>-<date>.md` and reset to `Status: idle`.
+
+For user-facing features, a parallel set of files lives in `.ai-pm/contracts/` — one Product Contract per feature, with what must work, what must not break, and the acceptance checks that prove it. Coder reads the contract before implementing; reviewer verifies the diff against it; auditor flags missing or stale contracts. The contract is how we keep a feature recognizable across many small changes — without it, the product slowly drifts.
+
+PM never edits state or contracts. PM reads them when curious.
+
+### Three channels surface to PM, not one
+
+After implementation, PM hears about results through three channels (not just the reviewer verdict):
+
+- **Coder's Product Impact Report** — when a user-facing contract was touched: which Behavior changes happened, which Acceptance checks passed/failed, what risk surfaces were touched, whether a PM decision is required. This is the "what changed for the user" channel.
+- **Reviewer's Notes (product)** — non-blocking observations the PM should weigh: scope choices, trade-offs, missing tests on meaningful paths. This is the "what to think about" channel.
+- **Reviewer's Definition of Done line** — the binary signal: pass (everything is in order) or fail (something is missing, even if no Blocking finding). This is the "is it actually done" channel.
+
+If any of the three contradicts the other (e.g., DoD says pass but Impact Report says PM decision required) — that is itself a finding to surface, not silently resolved.
+
+**DoD rule:** a pass with any unchecked box is a contradiction; reviewer must re-read its own findings before signing off. A fail forces `request-changes` even when Blocking is empty. The DoD is binding; it is not a summary.
 
 ---
 

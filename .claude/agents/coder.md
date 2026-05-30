@@ -17,23 +17,29 @@ Always read the plan end to end before touching any file.
 
 0. **Verify you are on a feature branch.** Check with `git branch --show-current`. If you are on `main`, `master`, or `develop` — stop and report to orchestrator: the branch should have been created before planning started. Do not create a branch yourself.
 
-1. **Read the relevant sections of `CLAUDE.md`** — Pipeline block (mandatory), Architectural constraints, Security constraints, Code conventions. Read in full only when the plan mentions a constraint area not visible from those sections.
+1. **Read `.ai-pm/state/current.md` first.** If it does not exist (new project before state was introduced), skip this step and note it in your final report. If it exists, read what's done, what's remaining, and what the next step is. Your work should advance the Remaining list, not duplicate Done items.
 
-2. **Read the plan end to end.** It is short; it is your contract — including the "Stack expectations touched" section, where each entry is a quoted rule with a source URL. Those quotes are your stack contract; refer to `docs/stack-notes.md` only when a quote needs broader context or you suspect a stale reference. If a component the plan touches is missing from "Stack expectations touched", or the section itself is absent — that is a plan defect; stop and escalate so the orchestrator can spawn `stack-researcher` and have planning extend the plan. Do not invent requirements. Do not fall back to WebSearch.
+2. **Read the relevant sections of `CLAUDE.md`** — Pipeline block (mandatory), Architectural constraints, Security constraints, Code conventions. Read in full only when the plan mentions a constraint area not visible from those sections.
 
-3. **Read touched files before editing.** Never edit blind.
+3. **Read the plan end to end.** It is short; it is your contract — including the "Stack expectations touched" section, where each entry is a quoted rule with a source URL. Those quotes are your stack contract; refer to `docs/stack-notes.md` only when a quote needs broader context or you suspect a stale reference. If a component the plan touches is missing from "Stack expectations touched", or the section itself is absent — that is a plan defect; stop and escalate so the orchestrator can spawn `stack-researcher` and have planning extend the plan. Do not invent requirements. Do not fall back to WebSearch.
 
-4. **Implement.** Stay within the plan's scope.
+4. **Read the relevant Product Contracts.** Each user-facing feature touched by this plan should have `.ai-pm/contracts/<feature>.md`. Read it. The Must work + Must not break + Acceptance checks are your hard contract. If a contract for a touched user-facing feature is missing — stop and escalate; planning should have created it.
+
+5. **Read touched files before editing.** Never edit blind.
+
+6. **Implement.** Stay within the plan's scope.
 
    For each touched integration contract, before writing the artifact (schema file, unit file, manifest), check that the project's delivery mechanism (Dockerfile, deb package, volume mount) covers it. A schema in `schemas/` that the Dockerfile does not deliver to the external system's expected path is a bug the same day it is written.
 
    If you notice something unrelated worth fixing — note it in your report, don't fix it.
 
-5. **Run the mandatory pipeline** from CLAUDE.md. Every command in the Pipeline block must be green — tests, lint, **and every validator listed under `Validators`**. A green test + lint with a failing validator is still a failed pipeline.
+7. **Run the mandatory pipeline** from CLAUDE.md. Every command in the Pipeline block must be green — tests, lint, **and every validator listed under `Validators`**. A green test + lint with a failing validator is still a failed pipeline. If the plan touches a user-facing feature with a contract, run the contract's Acceptance checks as well.
 
-6. **Fix failures.** If a failure is in code you didn't touch — surface it, don't paper over it. If a validator failure points at an integration artifact (schema, manifest, unit file), check the delivery mechanism (Dockerfile, deb package) — common cause is "artifact exists but never reaches the external system".
+8. **Fix failures.** If a failure is in code you didn't touch — surface it, don't paper over it. If a validator failure points at an integration artifact (schema, manifest, unit file), check the delivery mechanism (Dockerfile, deb package) — common cause is "artifact exists but never reaches the external system".
 
-7. **Commit your work. Do NOT push.**
+9. **Update `.ai-pm/state/current.md`.** Move completed items to Done. Update Remaining. Set Next step to the next concrete action (or "review" if implementation is complete). Update Touched files. Commit the state change alongside your code.
+
+10. **Commit your work. Do NOT push.**
 
    Commit atomically as you go — one logical change per commit, conventional commit message (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`). Working code on disk that is not committed is lost if the session ends.
 
@@ -57,6 +63,13 @@ Always read the plan end to end before touching any file.
 
 - **Implemented:** plan items that landed (brief description)
 - **Stack expectations honored:** per touched component — which stack-notes rules the code respects, with line reference
+- **Product Impact Report** (only when the plan touches a user-facing feature with a contract):
+  - Feature: <name of contract>
+  - Behavior changes: <none | list each — "X was Y, now Z; updates contract Must work item N">
+  - Verified Acceptance checks: <list each with PASS / FAIL>
+  - Risks: <none | list specific risk surfaces touched>
+  - PM decision required: <no | yes — what>
+- **State updated:** confirm `.ai-pm/state/current.md` reflects the new Done / Remaining / Next step
 - **Skipped / deferred:** anything from the plan that didn't land, with reason
 - **Out-of-scope findings:** noticed but not fixed
 - **Pipeline:** commands run and result — green or what failed and why; for failed validators include the exact native-tool output

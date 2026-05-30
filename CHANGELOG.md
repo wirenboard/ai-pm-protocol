@@ -13,6 +13,33 @@
 
 ---
 
+## [1.9.0] — 2026-05-30
+
+### Added
+
+- `doc/_templates/state.md.tmpl` — Execution State Protocol artefact: Status (idle | in-progress | blocked) / Done / Remaining / Touched files / Next step / Validation. Single source of truth for the active task; overwritten as progress lands, archived on completion. Agent step 1 reads it; agent step last updates it. (b599700)
+- `doc/_templates/contract.md.tmpl` — Product Contract artefact (one per user-facing feature): User value / Who uses it / Must work / Must not break / Acceptance checks / Out of scope / Last reviewed. Backend-only changes don't need a contract; user-facing features must have one. (b599700)
+- `coder` agent: reads `.ai-pm/state/current.md` as step 1; reads Product Contract for touched user-facing features as step 4; updates state at end (step 9); new Product Impact Report section in the closing report when contracts are touched. (49d83c1)
+- `reviewer` agent: new dimension 11 'Product Contract compliance' — silent behavior change blocks merge; missing contract for touched user-facing feature blocks; failing Acceptance check blocks. New 'Definition of Done' section in verdict format with 7 explicit checks; pass requires all checked, fail requires request-changes regardless of Blocking count. (49d83c1)
+- `auditor` agent: load context now includes `.ai-pm/contracts/` and `.ai-pm/state/current.md`; new dimension 11 'Product Contract integrity' mirrors reviewer dim 11 project-wide — missing contracts, stale contracts, drift between contract and code, phantom Acceptance checks. (49d83c1)
+- `docs-extractor` agent: legacy bootstrap full mode now drafts initial Product Contracts from discovered journeys, mapped one-to-one. Drafts marked '(extracted from legacy — needs PM validation)' on Last reviewed. Cap of 8 contracts per extraction; remaining journeys surfaced as 'Pending contracts'. (49d83c1, d60612a)
+- `bootstrap` command (greenfield, legacy-shallow, legacy-full): creates `.ai-pm/state/current.md` from `state.md.tmpl` with Status: idle, plus `.ai-pm/state/archive/` and `.ai-pm/contracts/` directories. Surfaces draft contract count in the PM brief. (18dc48c)
+- `plan-feature` command: reads `.ai-pm/state/current.md` first (warns PM if active task exists); reads `.ai-pm/contracts/` in read-list. After plan approval: initialises Execution State; runs Product Contract check (asks PM one product question — drafts contract from plan Scenarios + Existing behaviors + Test plan if user-facing, notes 'no contract' if backend-only). Names explicit template path `.ai-pm/tooling/doc/_templates/contract.md.tmpl`. (18dc48c, d60612a)
+- `WORKFLOW.md` — new 'How state is kept' section between release and prod-incident: `.ai-pm/state/current.md` as resume-from-pause artefact; `.ai-pm/contracts/` as user-facing feature contracts; PM read-only on both. New 'Three channels surface to PM, not one' subsection: Coder's Product Impact Report, Reviewer's product Notes, Reviewer's DoD line. The DoD rule (pass with unchecked box is contradiction) lives here. (1803b4c, d60612a)
+- `doc/architecture.md` — three new architectural decisions cited from the integrate-consultancy plan: Execution State as single source of progress, Product Contracts as product-side complement to stack-notes, Definition of Done as explicit reviewer subsection. File layout updated with `state.md.tmpl` + `contract.md.tmpl` and a note about downstream `.ai-pm/state/` and `.ai-pm/contracts/` created at bootstrap. (1803b4c)
+
+### Changed
+
+- `README.md` — 'Что гарантирует' renamed to 'Что снижает риск'; guarantees reworded from absolutes (гарантирует) to risk reductions (реже). Three new entries: state persistence (context loss reduced), silent behavior change (Product Impact Report + dim 11), Definition of Done (objective 'done'). Section header grammar fixed; flow diagram updated with contract-draft step between plan approval and architect; reviewer dimension count 10 → 11; DoD pass | fail line added. (1803b4c, d60612a)
+- `.gitignore` — dropped v0.x leftovers: `.bootstrap-state.local.md` (bootstrap state machine removed in v1.0.0 template-v2 rewrite); AP-16 local-trace mode (AP-N anti-patterns system removed in same rewrite); `.ai-pm/.reviews/release-*.json` exception (release-PR tracing model retired with auto-tag workflow). What remains: editor swp files, `.DS_Store`, `.reviews/`, Claude Code worktree scratch dir. Closes audit-fixup #23 in-line. (3f96a2b)
+- `architect` agent — `design-review` reference (planned but never shipped in template-v2) rewritten as 'architecture review'. (3f96a2b)
+
+### Notes
+
+- Integrates external consultancy parts 1, 2, 7, 10. Rejects part 3 (modes-vs-agents, conflicts with subagent isolation), part 4 (strict One Logical Step, kept as guidance), part 6 (additional doc fragmentation). Plan and review trail in `doc/features/integrate-consultancy_plan.md`, `doc/features/integrate-consultancy_review.md`, `doc/features/integrate-consultancy_review.v2.md`. (277a90b, e7f0d9b)
+
+---
+
 ## [1.8.1] — 2026-05-30
 
 ### Fixed
