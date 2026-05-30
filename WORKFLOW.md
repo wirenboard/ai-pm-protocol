@@ -37,6 +37,15 @@ The line: if it captures product design or technical canon, an agent writes it. 
 
 The bright line: **if the file you're about to touch on a remote system has a sibling in the repo, the change goes through git first.** Otherwise it's a runtime / deployment action — proceed with the usual product caution (back up before destructive ops, ask PM before anything irreversible).
 
+**Hook-level enforcement.** The rules above are also enforced as Claude Code `PreToolUse` hooks shipped in `.claude/settings.json`, so they hold even if a future session does not re-read this file:
+
+- `ssh ... sed -i / vi / vim / nano / tee / > file` on a remote host — **denied** automatically (direct content edit; this is the silent-fix path the rule is designed to block).
+- `ssh ... systemctl restart / docker compose / docker exec / apt / npm install / kubectl apply / rm / cp / mv / mkdir / touch` on a remote host — **asked** for confirmation (legitimate when it is deployment, PM-initiated maintenance, or runtime-state work; the prompt makes that intent explicit).
+- `git push --force / -f / --force-with-lease` — **asked** (rewrites remote history).
+- `git commit --no-verify / --no-gpg-sign` — **asked** (bypasses pre-commit / signing).
+
+Read-only ssh diagnostics (`cat` for reading, `ls`, `journalctl`, `systemctl status`, `docker logs`, `docker ps`, native status / audit / info commands) are not gated. Local mutating commands (anything not over ssh) are not gated either — they are normal dev work.
+
 **Git workflow — orchestrator owns this, not subagents:**
 
 ```

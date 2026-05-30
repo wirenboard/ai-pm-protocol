@@ -19,6 +19,30 @@
             "if": "Bash(find *)",
             "command": "INPUT=$(cat); ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -z \"$ROOT\" ] && exit 0; CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; FPATH=$(echo \"$CMD\" | grep -oP 'find +\\K/[^ |;&\"\\x27]+' | head -1); [ -z \"$FPATH\" ] && exit 0; case \"$FPATH\" in \"$ROOT\"|\"$ROOT\"/*) exit 0 ;; /*) echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"find searches outside project root: $FPATH\\\"}}\";; esac",
             "statusMessage": "Checking find boundary..."
+          },
+          {
+            "type": "command",
+            "if": "Bash(ssh *)",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; if echo \"$CMD\" | grep -qE '(^|[ ;&|`(])ssh([ ]|$)' && echo \"$CMD\" | grep -qE '(sed[ ]+-i|[ ]vi[ ]|[ ]vim[ ]|[ ]nano[ ]|[ ]tee[ ]|>[ ]*[^ &|;>]+)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"ssh + direct content edit on a remote system (sed -i, vi/vim/nano, tee, > redirect). Repo-owned files (code, schemas, configs in git) must change via plan -> coder -> reviewer -> PR -> deployment, never via in-place edit. See WORKFLOW.md remote-system boundary rule.\"}}'; fi",
+            "statusMessage": "Checking ssh content-edit boundary..."
+          },
+          {
+            "type": "command",
+            "if": "Bash(ssh *)",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; if echo \"$CMD\" | grep -qE '(^|[ ;&|`(])ssh([ ]|$)' && echo \"$CMD\" | grep -qE '([ ]systemctl[ ]+(restart|reload|stop|start|enable|disable)|[ ]docker[ ]+(exec|compose[ ]+(up|down|run|restart|exec))|[ ]apt(-get)?[ ]+(install|upgrade|remove|purge|autoremove)|[ ]npm[ ]+(install|update|uninstall)|[ ]kubectl[ ]+(edit|apply|patch|delete|create|replace)|[ ]rm[ ]|[ ]cp[ ]|[ ]mv[ ]|[ ]mkdir[ ]|[ ]touch[ ])'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"ssh + mutating action on remote system (service restart, container/package management, file ops). Legitimate when it is part of deployment, PM-initiated maintenance, or runtime-state operation that does not live in the repo. Confirm intent before proceeding. If you are editing a repo-owned file in place, stop and go through plan -> coder -> reviewer -> PR.\"}}'; fi",
+            "statusMessage": "Checking ssh mutating action..."
+          },
+          {
+            "type": "command",
+            "if": "Bash(git push *)",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; if echo \"$CMD\" | grep -qE 'git[ ]+push([ ]+[^ ]+)*[ ]+(--force|--force-with-lease|-f)([ =]|$)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"git push --force / -f rewrites remote history. Confirm with PM that this is intentional (e.g., rewriting a feature branch they own); never force-push to main.\"}}'; fi",
+            "statusMessage": "Checking force-push..."
+          },
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; if echo \"$CMD\" | grep -qE 'git[ ]+commit([ ]+[^ ]+)*[ ]+(--no-verify|--no-gpg-sign)([ =]|$)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"git commit --no-verify / --no-gpg-sign skips pre-commit hooks or signing. Confirm with PM that this is intentional. If a pre-commit hook is failing, fix the underlying issue rather than bypassing the hook.\"}}'; fi",
+            "statusMessage": "Checking commit verification..."
           }
         ]
       }
