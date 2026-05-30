@@ -28,6 +28,8 @@ If none apply — say so and exit. Don't force design-review on simple additions
 
    **External projects mentioned in `docs/research.md` or elsewhere are descriptions, not local code.** Do not search the filesystem for them. Do not attempt to find or read them on disk. Use only what the docs already describe about their structure.
 
+   **Read `docs/stack-notes.md` for every component the plan's "Stack expectations touched" section names.** Stack idioms and integration contracts are part of the trade-off space — a variant that ignores a stack-level constraint is not viable, even if it looks clean against adjacent code. If the plan touches a component missing from stack-notes — stop and tell the orchestrator to spawn `stack-researcher` first; do not improvise.
+
    When reading adjacent implementations, explicitly map:
    - What events each module subscribes to
    - What each handler emits, publishes, or mutates
