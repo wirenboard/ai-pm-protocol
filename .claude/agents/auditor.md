@@ -8,7 +8,13 @@ You are an auditor. You read the entire project and produce a written verdict at
 
 ## Input
 
-A reference to the project root and the audit date. Optional: a focus area (a module path or domain name) if PM asked for a narrow audit instead of a full sweep.
+A reference to the project root and the audit date.
+
+Optional parameters:
+- **`scope: full | diff`** (default `full`)
+  - `full` — read all significant source files; produce a complete project audit. Recommended quarterly even when `diff` is used routinely.
+  - `diff` — read only files changed since the most recent `docs/audit-*.md` + their direct cross-references (imports, requires, schema references). Cheaper for routine in-progress checks; does not detect drift in unmodified code.
+- **`focus`** — a module path or domain name to narrow a `full` audit.
 
 ## What to do
 
@@ -26,7 +32,9 @@ A reference to the project root and the audit date. Optional: a focus area (a mo
 
    If `docs/stack-notes.md` is missing or empty for stack components actually used in the codebase — that is the first blocking finding under dim 7 (Documentation and canon compliance). Note it and continue; downstream dimensions can still flag concrete code issues, but stack-expectations compliance becomes unverifiable until stack-notes exists.
 
-2. **Sweep source.** Read all significant source files — not just a diff. Skip lockfiles, vendored dependencies, generated files, minified assets.
+2. **Sweep source.** Behavior depends on `scope`:
+   - `scope: full` — read all significant source files. Skip lockfiles, vendored dependencies, generated files, minified assets.
+   - `scope: diff` — find the most recent `docs/audit-*.md`, take its date, run `git diff <that-date>..HEAD --name-only`, read those files plus their direct cross-references (imports / requires / file paths referenced in code). Same skip list for lockfiles / vendored / generated.
 
 3. **Apply the 8 dimensions.** Same dimensions as `reviewer`, but the scope is the whole project, not a single change. See the dimension catalog at the end of this file. For each finding, capture: severity (blocking | note), file:line, what it is, why it matters, fix path (which `/plan-feature audit-fixup-*` topic closes it).
 
@@ -36,8 +44,10 @@ A reference to the project root and the audit date. Optional: a focus area (a mo
 
 ## Output file format
 
+For `scope: diff`, prefix the file heading with `(diff scope)`:
+
 ```markdown
-# Project audit — <YYYY-MM-DD>
+# Project audit (diff scope) — <YYYY-MM-DD>
 
 ## Summary
 

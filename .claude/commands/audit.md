@@ -11,7 +11,8 @@ This command does **not** read the codebase itself. It spawns the `auditor` suba
 1. **Spawn `auditor`** (defined in `.claude/agents/auditor.md`) using the Agent tool. Pass:
    - The project root (`git rev-parse --show-toplevel`).
    - The audit date (today, ISO format).
-   - Optional focus area if PM asked for a narrow audit instead of a full sweep.
+   - `scope`: `full` (default — read all source) or `diff` (read only files changed since the most recent `docs/audit-*.md` + cross-references). Use `diff` for routine in-progress checks between full audits; use `full` quarterly or when PM asks for a broad sweep.
+   - Optional focus area if PM asked for a narrow `full` audit.
 
    Wait for it to complete. It will write `docs/audit-<YYYY-MM-DD>.md` and return the structured summary block.
 
