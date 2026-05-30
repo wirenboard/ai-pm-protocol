@@ -1,3 +1,5 @@
+> **This file is the canonical orchestration spec** — read by agents and downstream `CLAUDE.md` via `@.ai-pm/tooling/WORKFLOW.md`. For a friendlier overview of the protocol (Russian, marketing-level) see `README.md`. When the two documents disagree, this one wins.
+
 ## Workflow agents
 
 These agents are part of this project's workflow (from `.claude/agents/`). Use only these — do not substitute with similarly-named agents from other toolsets:
