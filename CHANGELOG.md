@@ -13,6 +13,14 @@
 
 ---
 
+## [1.8.0] — 2026-05-30
+
+### Added
+
+- `doc/architecture.md` for the template itself: 7 in-scope sections (Project, Tech stack pointer into `doc/stack-notes.md`, 9 architectural decisions each citing commit SHA / PR / doc path, constraints, file layout, integration contract, release flow) + 5 explicit N/A sections (Security, Code conventions, Deploy, Database, UI) — every line of the template's own `architecture.md.tmpl` walked through. Closes finding #1 of `doc/features/audit-2026-05-30.md`. Second of 7 self-* audit-fixup plans in meta-audit priority order. (7bb6e05)
+
+---
+
 ## [1.7.0] — 2026-05-30
 
 ### Added
