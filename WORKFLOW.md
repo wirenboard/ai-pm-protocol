@@ -117,6 +117,20 @@ After you merge: pull main locally and we're ready for the next feature.
 
 ---
 
+## How state is kept
+
+One file — `.ai-pm/state/current.md` — holds the live snapshot of the active task: Status, what's Done, what's Remaining, Touched files, Next step, Validation command. Every coder run reads it first and updates it last. Every plan-feature run initializes it.
+
+This means: if you pause for a week, come back, and re-enter Claude Code, my first move is to open that file and continue. You do not need to re-explain. You can open the file yourself to see where we are, but you don't write to it — agents do.
+
+When a task finishes, the file is archived to `.ai-pm/state/archive/<topic>-<date>.md` and reset to `Status: idle`.
+
+For user-facing features, a parallel set of files lives in `.ai-pm/contracts/` — one Product Contract per feature, with what must work, what must not break, and the acceptance checks that prove it. Coder reads the contract before implementing; reviewer verifies the diff against it; auditor flags missing or stale contracts. The contract is how we keep a feature recognizable across many small changes — without it, the product slowly drifts.
+
+PM never edits state or contracts. PM reads them when curious.
+
+---
+
 ## When you say it doesn't work in production
 
 When you tell me "X doesn't work on the controller / on production / in the deployed environment", I follow a strict diagnose-then-plan flow. I never edit, restart, or re-deploy on the live system in the moment.
