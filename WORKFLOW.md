@@ -127,7 +127,7 @@ Different change types impose different overhead. This table is the single sourc
 | Change type | Execution State | Product Contract | Definition of Done | Stack expectations |
 |---|---|---|---|---|
 | User-facing feature (new behavior, new UI, new public API) | required, update each step | required (create or update + Product Impact Report from coder) | yes, all 7 items | required if stack touched |
-| Backend refactor / infrastructure / build / CI | required, update each step | skip with one-line reason in commit message | yes, items 1, 2, 4, 6, 7 | required if stack touched |
+| Backend refactor / infrastructure / build / CI | required, update each step | skip with one-line reason in commit message | yes, items 1, 2, 4, 5, 7 | required if stack touched |
 | Docs-only fix (typo, wording, README, plan, review trail) | optional (set Status: done at end) | skip | yes, items 1, 4, 7 | skip |
 | Trivial fixup (see `/fixup` rules) | skip | skip | trivial DoD: scope + pipeline + docs landed | skip |
 

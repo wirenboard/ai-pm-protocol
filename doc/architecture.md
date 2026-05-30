@@ -39,7 +39,7 @@ Persona files at `.claude/agents/*.md` are Markdown documents with YAML frontmat
 
 ### Commands are Markdown procedures
 
-Slash commands at `.claude/commands/*.md` (`bootstrap`, `plan-feature`, `audit`, `research`) are Markdown procedure documents — the same loading mechanism as agents. They are developer-operator shortcuts, not the PM interface. **Source:** `doc/features/template-v2_plan.md` ("Key design decisions" section: "Slash commands are developer shortcuts, not PM interface").
+Slash commands at `.claude/commands/*.md` (`bootstrap`, `plan-feature`, `audit`, `research`, `fixup`) are Markdown procedure documents — the same loading mechanism as agents. They are developer-operator shortcuts, not the PM interface. **Source:** `doc/features/template-v2_plan.md` ("Key design decisions" section: "Slash commands are developer shortcuts, not PM interface").
 
 ### WORKFLOW.md imported into downstream `CLAUDE.md` via `@.ai-pm/tooling/WORKFLOW.md`
 
@@ -75,7 +75,7 @@ One file — `.ai-pm/state/current.md` (per downstream project) — holds the ac
 
 ### Product Contracts as the product-side complement to stack-notes
 
-Stack-notes describes technical idioms cited from upstream docs. Product Contracts describe user-visible behavior in the project's own words: User value / Who uses it / Must work / Must not break / Acceptance checks / Out of scope. One contract per user-facing feature, in `.ai-pm/contracts/<feature>.md`. Coder reads before implementing; reviewer verifies the diff against the contract (dimension 11); auditor flags missing or stale contracts. Backend-only changes (refactor, infra) skip contract checks explicitly. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions"; `doc/_templates/contract.md.tmpl`.
+Stack-notes describes technical idioms cited from upstream docs. Product Contracts describe user-visible behavior in the project's own words: User value / Who uses it / Must work / Must not break / Acceptance checks / Out of scope. One contract per user-facing feature, in `.ai-pm/contracts/<feature>.md`. Coder reads before implementing; reviewer verifies the diff against the contract (dimension 1, Plan & Contract compliance); auditor flags missing or stale contracts. Backend-only changes (refactor, infra) skip contract checks explicitly. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions"; `doc/_templates/contract.md.tmpl`.
 
 ### Definition of Done as an explicit reviewer subsection
 
@@ -106,7 +106,7 @@ Real top-level paths in this repo (cross-checked against `ls` and `git ls-tree -
 | `LICENSE` | AGPL v3. |
 | `.gitignore` | Excludes `.reviews/`, `.claude/worktrees/`, local-only files. |
 | `.claude/agents/` | Seven persona files (`architect`, `auditor`, `coder`, `docs-extractor`, `pr-prep`, `reviewer`, `stack-researcher`). |
-| `.claude/commands/` | Four slash-command procedures (`audit`, `bootstrap`, `plan-feature`, `research`). |
+| `.claude/commands/` | Five slash-command procedures (`audit`, `bootstrap`, `fixup`, `plan-feature`, `research`). |
 | `.claude/settings.json` | `PreToolUse` hooks for path boundary, ssh content-edit, ssh mutating action, force-push, no-verify. |
 | `.claude/settings.local.json` | Local-only settings overlay; not part of the delivered surface. |
 | `.github/workflows/auto-tag.yml` | The release CI workflow — runs on push to `main`. |

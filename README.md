@@ -105,7 +105,7 @@ git submodule update --remote .ai-pm/tooling
 
 **Мёртвый код, дублирование, нарушение конвенций — реже.** Reviewer dim 6 и 7 блокируют по `CLAUDE.md` конвенциям.
 
-**Документация расходится с кодом — реже.** Если изменилось поведение — reviewer блокирует PR пока `docs/` не обновлены. Plus Product Contracts (`.ai-pm/contracts/`) явно описывают, что должно работать для каждой пользовательской фичи — drift между контрактом и кодом ловится auditor'ом dim 11.
+**Документация расходится с кодом — реже.** Если изменилось поведение — reviewer блокирует PR пока `docs/` не обновлены. Plus Product Contracts (`.ai-pm/contracts/`) явно описывают, что должно работать для каждой пользовательской фичи — drift между контрактом и кодом ловится auditor'ом dim 1 (Plan & Contract compliance).
 
 **Инфраструктура расходится с архитектурой — реже.** Если `docs/architecture.md` указывает Docker — reviewer блокирует PR, если `Dockerfile` отсутствует. Если интеграция требует доставки артефакта внешней системе (schema → confed, manifest → kubectl) — reviewer блокирует PR, если в репо нет канала доставки или нет нативного валидатора в pipeline.
 
@@ -119,7 +119,7 @@ git submodule update --remote .ai-pm/tooling
 
 **Контекст между сессиями теряется — реже.** `.ai-pm/state/current.md` хранит снимок активной задачи (статус, сделано, осталось, следующий шаг). Coder читает его первым шагом и обновляет последним. После недели паузы — открыл файл и продолжил, не пересказывая историю.
 
-**Silent behavior change — реже.** Coder обязан вписать Product Impact Report в свой отчёт, когда фича касается контракта (Feature / Behavior changes / Verified Acceptance checks / Risks / PM decision required). Reviewer dim 11 блокирует PR, в котором поведение изменилось, но контракт не обновлён. Auditor dim 11 ловит дрейф контракта от кода в проекте в целом.
+**Silent behavior change — реже.** Coder обязан вписать Product Impact Report в свой отчёт, когда фича касается контракта (Feature / Behavior changes / Verified Acceptance checks / Risks / PM decision required). Reviewer dim 1 блокирует PR, в котором поведение изменилось, но контракт не обновлён. Auditor dim 1 ловит дрейф контракта от кода в проекте в целом.
 
 **Завершённость задачи объективна — реже субъективна.** Reviewer выдаёт явный «Definition of Done: pass | fail» по 7 проверкам (scope respected, stack rules, contract honored, pipeline green, state updated, impact report present, docs updated). Подробности в WORKFLOW.md.
 
