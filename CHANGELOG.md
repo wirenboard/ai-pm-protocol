@@ -13,6 +13,19 @@
 
 ---
 
+## [1.11.0] — 2026-05-30
+
+### Changed
+
+- `README.md` — three inline blockquote cross-references added to sections "Как это работает", "Какие риски шаблон снижает", "Что остаётся за PM". Each cross-ref points to `WORKFLOW.md` as the canonical orchestration spec (rules detail / PM communication reference). No content migration; the README stays a Russian marketing/quickstart overview. (7f180c6)
+- `WORKFLOW.md` — one-line header note above "Workflow agents" declaring it the canonical orchestration spec read by agents and downstream `CLAUDE.md` via `@.ai-pm/tooling/WORKFLOW.md`, with `README.md` as the friendlier Russian overview. Tie-breaker rule made explicit: when the two documents disagree, `WORKFLOW.md` wins. (7f180c6)
+
+### Notes
+
+- Closes task #24 (audit-fixup-readme-workflow-split). Drift between README and WORKFLOW now surfaces at review time because the cross-references are explicit. Plan + review trail in `doc/features/readme-workflow-split_plan.md` and the review-trail commit (8dbe74e, 42c60e9).
+
+---
+
 ## [1.10.1] — 2026-05-30
 
 ### Fixed
