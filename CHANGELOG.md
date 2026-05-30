@@ -13,6 +13,18 @@
 
 ---
 
+## [1.10.1] — 2026-05-30
+
+### Fixed
+
+- `CHANGELOG.md` — backfilled missing `## [1.6.0]` entry for the orphan tag (released without a CHANGELOG entry or GitHub Release at the time) and added a `## [1.6.0 → 1.7.0 intermediate work]` aggregate block for PRs #142–#145 that landed on `main` between the two tags without their own intermediate version tags. v1.6.0 entry covers 9 commits (Added / Fixed / Changed split per actual ranges from `git log v1.5.1..v1.6.0`). No existing entry mutated. Closes task #26 (audit-fixup-changelog-backfill). Plan + review trail (v1 request-changes → v2 approve after attribution fix) in `doc/features/changelog-backfill_plan.md`, `doc/features/changelog-backfill_review.md`, `doc/features/changelog-backfill_review.v2.md`. (aecf82f, 8f5eddf, e85e82d)
+
+### Notes
+
+- Surfaced by `pr-prep` on PR #146. GitHub Release for v1.6.0 not backfilled retroactively — out of scope; release notes live in CHANGELOG.
+
+---
+
 ## [1.10.0] — 2026-05-30
 
 ### Added
