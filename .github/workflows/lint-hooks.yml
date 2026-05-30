@@ -1,0 +1,34 @@
+name: Lint hooks
+
+# Runs tests/hooks.sh on PRs and pushes that change either the hooks layer
+# itself (.claude/settings.json) or the tests / workflow that gate it.
+# Anything else does not need this validation.
+#
+# Stack rules respected (citations in doc/stack-notes.md):
+#   * Path filter on push/pull_request — `on.<event>.paths` (workflow-syntax
+#     reference): https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+#   * actions/checkout@v4 — README confirms `fetch-depth: 1` is sufficient
+#     when no history walking is needed. Source:
+#     https://github.com/actions/checkout
+
+on:
+  push:
+    paths:
+      - '.claude/settings.json'
+      - 'tests/hooks.sh'
+      - '.github/workflows/lint-hooks.yml'
+  pull_request:
+    paths:
+      - '.claude/settings.json'
+      - 'tests/hooks.sh'
+      - '.github/workflows/lint-hooks.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run hook unit tests
+        run: bash tests/hooks.sh
