@@ -119,6 +119,25 @@ After you merge: pull main locally and we're ready for the next feature.
 
 ---
 
+## What is mandatory when
+
+Different change types impose different overhead. This table is the single source of truth for what's required and what can be skipped. Coder and reviewer read it once instead of hunting through inline conditions.
+
+| Change type | Execution State | Product Contract | Definition of Done | Stack expectations |
+|---|---|---|---|---|
+| User-facing feature (new behavior, new UI, new public API) | required, update each step | required (create or update + Product Impact Report from coder) | yes, all 7 items | required if stack touched |
+| Backend refactor / infrastructure / build / CI | required, update each step | skip with one-line reason in commit message | yes, items 1, 2, 4, 6, 7 | required if stack touched |
+| Docs-only fix (typo, wording, README, plan, review trail) | optional (set Status: done at end) | skip | yes, items 1, 4, 7 | skip |
+| Trivial fixup (see `/fixup` rules) | skip | skip | trivial DoD: scope + pipeline + docs landed | skip |
+
+**"Skip with one-line reason"** means coder writes in the commit message `Skips Product Contract: backend-only refactor, no user-visible behavior change`. Reviewer dim 1 accepts the skip if the line is present and honest; absence of the line on a backend change → blocking.
+
+**"Set Status: done at end"** means coder writes the state file once in the closing commit, doesn't update it mid-task. For docs-only fixes the state is essentially a record that the change happened.
+
+Trivial-fixup rules and the `/fixup` command are in `.claude/commands/fixup.md`.
+
+---
+
 ## How state is kept
 
 One file — `.ai-pm/state/current.md` — holds the live snapshot of the active task: Status, what's Done, what's Remaining, Touched files, Next step, Validation command. Every coder run reads it first and updates it last. Every plan-feature run initializes it.
