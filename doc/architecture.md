@@ -39,7 +39,7 @@ Persona files at `.claude/agents/*.md` are Markdown documents with YAML frontmat
 
 ### Commands are Markdown procedures
 
-Slash commands at `.claude/commands/*.md` (`bootstrap`, `plan-feature`, `audit`, `research`) are Markdown procedure documents — the same loading mechanism as agents. They are developer-operator shortcuts, not the PM interface. **Source:** `doc/features/template-v2_plan.md` ("Key design decisions" section: "Slash commands are developer shortcuts, not PM interface").
+Slash commands at `.claude/commands/*.md` (`bootstrap`, `plan-feature`, `audit`, `research`, `fixup`) are Markdown procedure documents — the same loading mechanism as agents. They are developer-operator shortcuts, not the PM interface. **Source:** `doc/features/template-v2_plan.md` ("Key design decisions" section: "Slash commands are developer shortcuts, not PM interface").
 
 ### WORKFLOW.md imported into downstream `CLAUDE.md` via `@.ai-pm/tooling/WORKFLOW.md`
 
@@ -75,11 +75,23 @@ One file — `.ai-pm/state/current.md` (per downstream project) — holds the ac
 
 ### Product Contracts as the product-side complement to stack-notes
 
-Stack-notes describes technical idioms cited from upstream docs. Product Contracts describe user-visible behavior in the project's own words: User value / Who uses it / Must work / Must not break / Acceptance checks / Out of scope. One contract per user-facing feature, in `.ai-pm/contracts/<feature>.md`. Coder reads before implementing; reviewer verifies the diff against the contract (dimension 11); auditor flags missing or stale contracts. Backend-only changes (refactor, infra) skip contract checks explicitly. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions"; `doc/_templates/contract.md.tmpl`.
+Stack-notes describes technical idioms cited from upstream docs. Product Contracts describe user-visible behavior in the project's own words: User value / Who uses it / Must work / Must not break / Acceptance checks / Out of scope. One contract per user-facing feature, in `.ai-pm/contracts/<feature>.md`. Coder reads before implementing; reviewer verifies the diff against the contract (dimension 1, Plan & Contract compliance); auditor flags missing or stale contracts. Backend-only changes (refactor, infra) skip contract checks explicitly. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions"; `doc/_templates/contract.md.tmpl`.
 
 ### Definition of Done as an explicit reviewer subsection
 
 Reviewer verdict now contains a "Definition of Done" subsection with 7 hard checks: scope respected; stack expectations honored; Product Contract honored; pipeline green; state updated; Product Impact Report present (when contract touched); plan's docs updates landed. The subsection ends with `DoD: pass | fail`. A pass with any unchecked box is a contradiction; reviewer must re-read its own findings. A fail forces `request-changes` even when Blocking is empty. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions" point 4; `.claude/agents/reviewer.md` § "Verdict format".
+
+---
+
+### Eight review dimensions, decision matrix, trivial fast path, audit scope
+
+Four orthogonal optimizations applied together:
+1. **Reviewer / auditor dimensions reduced from 11 to 8** by merging three overlapping pairs (Plan + Product Contract → Plan & Contract compliance; Security + Stability → Correctness; Docs drift + Stack expectations → Documentation and canon compliance). No defect class lost; only the heading collapses.
+2. **Decision matrix in WORKFLOW.md** (`## What is mandatory when`) — single table covering Execution State, Product Contract, DoD scope, Stack expectations by change type (user-facing / backend / docs-only / trivial). Replaces scattered inline conditions in coder.md and reviewer.md.
+3. **`/fixup` command** for changes meeting four conditions (≤ 50 LOC, no user-visible behavior change, no stack-notes touch, no new source file). Skips plan-feature; reviewer runs in trivial mode (re-validates the four conditions; only escape hatch).
+4. **Auditor `--scope=diff`** mode reads only files changed since the most recent `docs/audit-*.md` + their cross-references. `full` remains default and is explicitly recommended quarterly.
+
+**Source:** `doc/features/optimize-without-losing-rigor_plan.md`; commits d09ac14, e441949, d563b02, 310695d.
 
 ---
 
@@ -106,7 +118,7 @@ Real top-level paths in this repo (cross-checked against `ls` and `git ls-tree -
 | `LICENSE` | AGPL v3. |
 | `.gitignore` | Excludes `.reviews/`, `.claude/worktrees/`, local-only files. |
 | `.claude/agents/` | Seven persona files (`architect`, `auditor`, `coder`, `docs-extractor`, `pr-prep`, `reviewer`, `stack-researcher`). |
-| `.claude/commands/` | Four slash-command procedures (`audit`, `bootstrap`, `plan-feature`, `research`). |
+| `.claude/commands/` | Five slash-command procedures (`audit`, `bootstrap`, `fixup`, `plan-feature`, `research`). |
 | `.claude/settings.json` | `PreToolUse` hooks for path boundary, ssh content-edit, ssh mutating action, force-push, no-verify. |
 | `.claude/settings.local.json` | Local-only settings overlay; not part of the delivered surface. |
 | `.github/workflows/auto-tag.yml` | The release CI workflow — runs on push to `main`. |

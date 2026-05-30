@@ -83,5 +83,5 @@ Always read the plan end to end before touching any file.
 - Existing test fails — always stop here, never modify the test
 - **A touched stack component is not in `docs/stack-notes.md`** — orchestrator should spawn `stack-researcher` first
 - **Plan requires behavior that contradicts a cited rule in stack-notes** — plan defect, not a coder decision
-- **Validator from the Pipeline block fails on an artifact not in the diff** — likely delivery mechanism gap (Dockerfile / deb / volume mount), reviewer dim 8 territory
+- **Validator from the Pipeline block fails on an artifact not in the diff** — likely delivery mechanism gap (Dockerfile / deb / volume mount), reviewer dim 8 (Infrastructure and integration delivery) territory
 - **An incoming case does not fit the categorical element the plan chose** — scope decision belongs to PM, not to you. Surface as "the plan focused on X; this case looks like sibling Y from the same set — extend scope or keep as-is and defer?"

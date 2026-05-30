@@ -13,6 +13,30 @@
 
 ---
 
+## [1.12.0] — 2026-05-30
+
+### Added
+
+- `.claude/commands/fixup.md` — new `/fixup` slash-command: fast path for changes meeting all four conditions (≤50 LOC, no user-visible behavior change, no stack-notes touch, no new source file). Skips `plan-feature`; coder runs with compact prompt; reviewer runs in `--mode=trivial`. Mutually exclusive with `/plan-feature` on a single PR. Third of four optimizations in `optimize-without-losing-rigor` plan. (d563b02)
+- `reviewer` agent — new `--mode=trivial`: re-validates the four `/fixup` conditions against the actual diff (only escape hatch), applies trivial DoD (scope + pipeline + docs), skips all other dimensions, writes a short verdict file at `docs/features/fixup-<topic>_review.md`. No Notes — if it is worth noting, it is not trivial. (d563b02)
+- `auditor` agent — new `--scope=diff` mode for routine in-progress audits: reads only files changed since the most recent `docs/audit-*.md` plus their direct cross-references (imports / requires / file paths). Output filename unchanged; heading prefixed with `(diff scope)`. Full sweep remains default and is explicitly recommended quarterly. (310695d)
+- `/audit` command — exposes `scope` parameter and routes the choice to the auditor. (310695d)
+- `WORKFLOW.md` — new "What is mandatory when" decision matrix: 4-row table (User-facing feature / Backend / Docs-only / Trivial) collapsing scattered conditions from `coder.md`, `reviewer.md`, and `plan-feature.md` into one reference. Each row specifies state required, contract required, DoD scope, stack expectations. Introduces the "Skip with one-line reason" convention: `Skips Product Contract: <reason>` in commit message; reviewer accepts when present, blocks when absent on a backend change. Second of four optimizations. (e441949)
+
+### Changed
+
+- `reviewer` and `auditor` agents — 11 dimensions merged into 8 without coverage loss. Three overlapping pairs collapsed: dim 1 (Plan compliance + Plan completeness + Categorical coverage) + dim 11 (Product Contract compliance) → new dim 1 "Plan & Contract compliance"; dim 3 (Security) + dim 4 (Stability) → new dim 3 "Correctness (security + stability)" — same defect class, two reading modes (attacker / operator-on-call); dim 8 (Docs vs code) + dim 10 (Stack expectations) → new dim 7 "Documentation and canon compliance" — both compare code against a documented source of truth. Renumbered to 1..8. All defect classes still caught; only the heading collapses. DoD checklist in reviewer unchanged (items reference behavioral checks, not dimension numbers). Cross-references in `coder.md` / `auditor.md` updated to new dim numbers and full names. First of four optimizations. (d09ac14)
+- `README.md` — flow diagram updated: "11 измерениям" → "8 измерениям". Three stale `dim 11` references at lines 108 and 122 updated to `dim 1 (Plan & Contract compliance)`. (d09ac14, b176c1c)
+- `doc/architecture.md` — `dimension 11` reference at line 78 updated to `dimension 1`. File layout updated: "Four slash-commands" → "Five (adding fixup)". New "Architectural decisions" entry for the four optimizations (dim merge + matrix + fixup + audit scope) citing all four feature commits and the plan path. (b176c1c, 44a180d)
+- `WORKFLOW.md` — agent table extended with `/fixup` and `/audit` (with scope explanation) rows; decision matrix backend row typo fixed: "items 1, 2, 4, 6, 7" → "1, 2, 4, 5, 7" (item 6 is Product Impact Report which is N/A for backend; item 5 is state updated which IS required). (b176c1c, d563b02, 310695d)
+- `doc/_templates/contract.md.tmpl` — stale `dimension 11` reference updated to `dimension 1`. Template that downstream projects copy, so this matters more than a cosmetic doc fix. (87070d9, 362bc99)
+
+### Notes
+
+- Four orthogonal optimizations shipped as one PR per PM directive: reviewer/auditor 11 → 8 dimensions, decision matrix in WORKFLOW.md, `/fixup` fast path, auditor `--scope=diff` mode. No gate removed. Every defect class previously caught is still caught; only the form changes. Categorical scope: chose text consolidation + new fast path + new parameter; siblings (gate removal, modes redesign, content migration) explicitly Out of scope. Plan + review trail in `doc/features/optimize-without-losing-rigor_plan.md`. Review v1 surfaced three stale dim-11 references + matrix typo + missing architecture decisions entry; fix-pass closed all (b176c1c, 44a180d). Review v2 approved with one trivial note (contract.md.tmpl dim-11), also fixed (87070d9, 362bc99). Reviewer ran the new 8-dim form on itself during review v1 — dogfooding held.
+
+---
+
 ## [1.11.0] — 2026-05-30
 
 ### Changed

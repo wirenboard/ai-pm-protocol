@@ -28,24 +28,36 @@ Two levels only:
 
 ## Dimensions to check
 
-### 1. Plan compliance
-Every scenario in the plan must be implemented and have a test. Missing scenario or missing test → blocking. Changes outside the plan → flag as scope creep.
+### 1. Plan & Contract compliance
 
 **Plan completeness sub-check.** Before checking compliance, check the plan itself:
-- If the feature touches any stack component listed in `docs/stack-notes.md` and the plan omits the "Stack expectations touched" section — plan is incomplete, **blocking**. Verdict: request-changes with note "plan must list touched stack expectations before implementation can be reviewed".
+- If the feature touches any stack component listed in `docs/stack-notes.md` and the plan omits the "Stack expectations touched" section — plan is incomplete, **blocking**.
 - If the plan has "Stack expectations touched" but lacks source URLs for each cited rule — **blocking**. Unsourced rules cannot be verified.
 
-**Categorical coverage sub-check.** For every categorical element the plan focuses on (a chosen type, mode, role, state, operation, category), the plan must either treat the full set or list each excluded sibling under Out of scope with a one-line reason. In the diff:
-- A sibling case implemented as a permissive variant of the chosen element (enum that accepts more than the plan says, optional / empty field that silently flips behavior, conditional branch that handles a case the plan placed Out of scope) — **blocking**. The fix is a plan update, not a code tweak.
-- An Out of scope sibling appearing in tests, fixtures, or example configs without a plan change — **blocking** by the same rule.
+**Categorical coverage sub-check.** For every categorical element the plan focuses on (a chosen type, mode, role, state, operation, category), the plan must either treat the full set or list each excluded sibling under Out of scope with a one-line reason. A sibling case implemented as a permissive variant of the chosen element (enum that accepts more than the plan says, optional / empty field that silently flips behavior, conditional branch that handles a case the plan placed Out of scope) → **blocking**. An Out of scope sibling appearing in tests, fixtures, or example configs without a plan change → **blocking** by the same rule.
+
+**Implementation compliance.** Every scenario in the plan must be implemented and have a test. Missing scenario or missing test → **blocking**. Changes outside the plan → flag as scope creep.
+
+**Product Contract compliance.** For every user-facing feature touched by the diff:
+- Read `.ai-pm/contracts/<feature>.md`. Must work and Must not break items are the contract.
+- Any change that breaks a Must work item or violates a Must not break item without a plan that explicitly updates the contract → **blocking**.
+- Acceptance checks listed in the contract must run (or the test plan must verify them). Missing run or failing check → **blocking**.
+- If the diff changes user-visible behavior (coder's Product Impact Report flagged a Behavior change) but the contract is not updated → **blocking**. Silent behavior change is forbidden.
+- User-facing feature touched but no contract exists → **blocking**. Plan should have created or referenced one.
+
+Backend-only changes (refactor, infra, internal-only utility) skip the Product Contract part of this dimension — verdict states "no Product Contract touched" explicitly. The other sub-checks still apply.
 
 ### 2. Test quality
+
 For each new test — find its description in the plan's "Test plan" and verify it actually exercises that scenario. Flag as blocking if: no assertions, only checks "no exception", mocks away the very thing being tested. Verify no existing test was deleted or weakened without a plan that explicitly changes that behavior.
 
-### 3. Security
-Read the diff as an attacker:
+### 3. Correctness (security + stability)
+
+Read the diff both as an attacker and as an operator on call.
+
+**As attacker:**
 - Injection: SQL, command, path traversal, template, header injection.
-- Hardcoded secrets, API keys, tokens, passwords — anywhere in the diff including configs, fixtures, comments. A leaked credential is blocking; fix is rotate-and-remove-from-history, not just delete.
+- Hardcoded secrets, API keys, tokens, passwords — anywhere including configs, fixtures, comments. A leaked credential is blocking; fix is rotate-and-remove-from-history, not just delete.
 - Auth/authorization bypass: missing access checks, broken object-level authorization.
 - Missing input validation at trust boundaries (HTTP, file, env var, external data).
 - Sensitive data in logs, errors, or responses.
@@ -53,8 +65,7 @@ Read the diff as an attacker:
 
 Trace untrusted data from its entry point before deciding — value already sanitized upstream is not a finding.
 
-### 4. Stability
-Trace the critical path end to end, don't just scan the diff:
+**As operator on call:**
 - Unhandled errors on paths that can realistically fail (I/O, network, DB, parsing).
 - Null/undefined dereferences, unchecked optionals, empty-collection and zero/negative edge cases.
 - Concurrency: data races, non-atomic read-modify-write, unsafe shared mutable state, ordering assumptions across async/await.
@@ -62,29 +73,44 @@ Trace the critical path end to end, don't just scan the diff:
 - Unbounded growth: queues/caches/collections with no ceiling, loading unbounded data into memory.
 - Silent failures: new error paths that fail with no log or metric — undiagnosable in production.
 
-### 5. Regressions
+### 4. Regressions
+
 - Changed function signatures, return types, or error behavior — grep callers and verify they still work.
 - Altered defaults, config keys, or env vars that change behavior for existing setups.
 - Public API / endpoint changes that break backward compatibility.
 - Behavior changes hidden inside a refactor presented as "no functional change".
 
-### 6. Conventions
+### 5. Conventions
+
 - Code placed in the wrong layer or crossing an established boundary.
 - Reimplementing something the project already provides a shared utility for.
 - Naming, file placement, or structure diverging from the local pattern.
 - Explicit rule violations from `CLAUDE.md` (file length, function length, complexity limits).
 
-### 7. Dead code and duplication
+### 6. Dead code and simplification
+
 - Unused variables, params, branches, imports introduced by the change.
 - Duplicated blocks that should be one shared helper.
 - Obviously over-complicated logic where a simpler equivalent exists.
 
-### 8. Documentation vs code
+### 7. Documentation and canon compliance
+
+Two sub-checks against documented sources of truth:
+
+**Docs vs code drift:**
 - Docs (`docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, docstrings, API specs) describe the old behavior after the change — docs must be updated.
 - New public API, endpoint, or config option with no documentation where the project documents such things.
 - Stack-notes is stale relative to the code: if the diff touches a component and stack-notes for that component shows `Last reviewed` more than 6 months ago — flag as a note (request `stack-researcher` re-run, not blocking by itself).
 
-### 9. Infrastructure and integration delivery
+**Stack expectations compliance.** For every entry in the plan's "Stack expectations touched":
+- The cited rule + source URL in the plan is your contract. Check the diff against it. Code that contradicts the rule → **blocking**, reproduce the citation in the verdict. Open `docs/stack-notes.md` only when you need broader context or suspect the quote is stale.
+- Check the test plan: each cited rule has a stack-spec test (per `plan-feature.md` "Stack-spec test rule"). Missing stack-spec test for a cited rule → **blocking**.
+- Property-based or round-trip tests that freeze a value the cited rule forbids → **blocking**. These tests codify the wrong contract.
+
+If the plan claims to touch a component but the "Stack expectations touched" entry is missing or unsourced, or `docs/stack-notes.md` has no entry the plan could cite — that is a plan/protocol failure, surface separately. Don't try to "make the diff correct" against a missing reference.
+
+### 8. Infrastructure and integration delivery
+
 Read `docs/architecture.md` deploy section and `docs/stack-notes.md` "Integration contracts" table. Two layers:
 
 **Presence layer (binary check).** If a deployment method is specified and the file is missing — blocking:
@@ -94,25 +120,24 @@ Read `docs/architecture.md` deploy section and `docs/stack-notes.md` "Integratio
 **Delivery layer.** For every integration contract listed in stack-notes:
 - The local artifact (schema, unit file, manifest, config template) is present in the diff or already in repo — blocking if missing.
 - The delivery mechanism (Dockerfile `COPY` to expected path, deb package install hook, volume mount, CRD apply) reaches the path the external system expects — blocking if the artifact has no path to its consumer. A `schemas/foo.schema.json` that the Dockerfile does not copy to `/usr/share/<system>/schemas/` is broken on day one.
-- The native validator from the contract is wired into the Pipeline block of `CLAUDE.md` — blocking if missing. "Files exist but were never validated by the external system's own tool" is the same defect class as "code compiles but spec violated".
+- The native validator from the contract is wired into the Pipeline block of `CLAUDE.md` — blocking if missing.
 
-### 10. Stack expectations compliance
-For every entry in the plan's "Stack expectations touched":
-- The cited rule + source URL in the plan is your contract. Check the diff against it. Code that contradicts the rule → **blocking**, reproduce the citation in the verdict. Open `docs/stack-notes.md` only when you need broader context or suspect the quote is stale.
-- Check the test plan: each cited rule has a stack-spec test (per `plan-feature.md` "Stack-spec test rule"). Missing stack-spec test for a cited rule → **blocking**.
-- Check for property-based or round-trip tests that freeze a value the cited rule forbids → **blocking**. These tests codify the wrong contract.
+## Trivial mode (`--mode=trivial`)
 
-If the plan claims to touch a component but the "Stack expectations touched" entry is missing or unsourced, or `docs/stack-notes.md` has no entry the plan could cite — that is a plan/protocol failure, surface separately. Don't try to "make the diff correct" against a missing reference.
+When invoked from `/fixup`, run a stripped-down review:
 
-### 11. Product Contract compliance
-For every user-facing feature touched by the diff:
-- Read `.ai-pm/contracts/<feature>.md`. The Must work and Must not break items are the contract.
-- Check the diff: any change that breaks a Must work item or violates a Must not break item without a plan that explicitly updates the contract → **blocking**.
-- Run the Acceptance checks listed in the contract (or verify they pass via the diff's test plan). Missing run or failing check → **blocking**.
-- If the diff changes user-visible behavior (the coder's Product Impact Report flagged a Behavior change) but the contract is not updated → **blocking**. Silent behavior change is forbidden.
-- If a user-facing feature is touched but no contract exists for it → **blocking**. Plan should have created or referenced one.
+1. **Re-validate the four `/fixup` conditions** against the actual diff (≤ 50 LOC, no user-visible behavior change, no `docs/stack-notes.md` touch, no new source file). If any condition broke during implementation → return `request-changes` with the single reason "trivial-fixup violation — escalate to plan-feature". This is the only escape hatch from the fast path.
 
-Backend-only changes (refactor, infra, internal-only utility) skip this dimension — verdict states "no Product Contract touched" explicitly.
+2. **Trivial DoD only:**
+   - [ ] Scope respected (change matches the request)
+   - [ ] Pipeline green (tests + lint + validators from `CLAUDE.md`)
+   - [ ] Docs that needed updating are updated
+
+3. **Skip all other dimensions.** No Product Contract check (condition 2 forbids user-facing). No stack-spec test check (condition 3 forbids stack-notes touch). No Impact Report check (no contract). No Notes (product) or Notes (technical) — if there's something worth noting, the change isn't trivial; escalate.
+
+4. **Verdict file** at `docs/features/fixup-<short-topic>_review.md` with: condition re-validation, trivial DoD, `Verdict: approve | request-changes`. Short — if the file gets long, the change wasn't trivial.
+
+In full mode (`/plan-feature`-driven), continue with the full verdict format below.
 
 ## Verdict format
 

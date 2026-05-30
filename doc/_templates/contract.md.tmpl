@@ -55,4 +55,4 @@ One contract per user-facing feature. Backend-only changes (refactors, infra) do
 - **plan-feature** — checks every plan that touches this feature; the plan's scenarios must respect Must work; the plan's "Out of scope" must not silently relax Must not break.
 - **coder** — reads before implementing; the implementation must not break any Must-work or Must-not-break item without a plan that explicitly changes the contract.
 - **reviewer** — checks the diff against Must-work + Must-not-break + Acceptance checks; runs Acceptance checks if they are runnable; if a Must item is touched without contract update — blocking.
-- **auditor** (dimension 11) — flags features with no contract, stale contracts (no review > 90 days while feature changed), contracts that drift from observed code behavior.
+- **auditor** (dimension 1, Plan & Contract compliance) — flags features with no contract, stale contracts (no review > 90 days while feature changed), contracts that drift from observed code behavior.

@@ -12,9 +12,10 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 | `reviewer` | Review after implementation |
 | `pr-prep` | Bump version, generate CHANGELOG, push branch, open or update PR |
 | `docs-extractor` | Auto-spawn from `/bootstrap` legacy full mode; reads existing codebase and writes `docs/architecture.md` + `docs/user-journeys.md` |
-| `auditor` | Auto-spawn from `/audit`; read-only project-wide sweep across the 11 dimensions, writes `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary |
+| `auditor` | Auto-spawn from `/audit`; read-only project-wide sweep across the 8 dimensions, writes `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary |
 | `/research` | Research existing solutions and analogues (build vs use). PM-facing pros/cons output. Different from `stack-researcher` (which is agent-facing canonical citations). |
-| `/audit` | PM-initiated project-wide health check. Spawns `auditor`, then drives a PM-facing flow over the findings (one decision per blocking: fix now / next sprint / accept-with-context). Fix-now closures go through `/plan-feature audit-fixup-*` |
+| `/audit` | PM-initiated health check. Spawns `auditor` with `scope=full` (default, all source) or `scope=diff` (only files changed since the last audit + cross-refs). Drives a PM-facing flow over the findings (one decision per blocking: fix now / next sprint / accept-with-context). Fix-now closures go through `/plan-feature audit-fixup-*`. Full scope recommended quarterly. |
+| `/fixup` | Fast path for trivial changes (≤ 50 lines, no behavior change, no stack-notes touch, no new code file). Skips plan-feature; goes directly to coder + reviewer in trivial mode. Falls back to `/plan-feature` if any condition fails. |
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
@@ -116,6 +117,25 @@ I never add anything to `docs/backlog.md` without an explicit yes from you (prod
 After you merge: pull main locally and we're ready for the next feature.
 
 **When you're ready to ship** — say "release". I verify git state, run `pr-prep` (version bump + CHANGELOG + PR). You merge — GitHub auto-tags and publishes the release.
+
+---
+
+## What is mandatory when
+
+Different change types impose different overhead. This table is the single source of truth for what's required and what can be skipped. Coder and reviewer read it once instead of hunting through inline conditions.
+
+| Change type | Execution State | Product Contract | Definition of Done | Stack expectations |
+|---|---|---|---|---|
+| User-facing feature (new behavior, new UI, new public API) | required, update each step | required (create or update + Product Impact Report from coder) | yes, all 7 items | required if stack touched |
+| Backend refactor / infrastructure / build / CI | required, update each step | skip with one-line reason in commit message | yes, items 1, 2, 4, 5, 7 | required if stack touched |
+| Docs-only fix (typo, wording, README, plan, review trail) | optional (set Status: done at end) | skip | yes, items 1, 4, 7 | skip |
+| Trivial fixup (see `/fixup` rules) | skip | skip | trivial DoD: scope + pipeline + docs landed | skip |
+
+**"Skip with one-line reason"** means coder writes in the commit message `Skips Product Contract: backend-only refactor, no user-visible behavior change`. Reviewer dim 1 accepts the skip if the line is present and honest; absence of the line on a backend change → blocking.
+
+**"Set Status: done at end"** means coder writes the state file once in the closing commit, doesn't update it mid-task. For docs-only fixes the state is essentially a record that the change happened.
+
+Trivial-fixup rules and the `/fixup` command are in `.claude/commands/fixup.md`.
 
 ---
 
