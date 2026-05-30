@@ -12,7 +12,20 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
-**Remote-system boundary rule (applies to all agents and the orchestrator):** no writes on remote / production systems. SSH, `scp`, `docker exec`, `kubectl edit`, `kubectl apply`, MQTT writes to physical-output controls, package installs — all forbidden against any system other than the local project tree. Read-only diagnostics on remote systems is allowed (`cat`, `ls`, `journalctl`, `systemctl status`, `docker logs`, `docker ps`, native status / audit commands). Any change destined for a remote system must live in the local repo first, go through plan → coder → reviewer → pr-prep → PR → merge → controlled deployment. "Just hot-patching the broken config" is the most common form of this rule violation and the single biggest source of orchestrator-introduced silent regressions.
+**Remote-system boundary rule (applies to all agents and the orchestrator):** the rule is about **the source of truth**, not about whether ssh-with-write is allowed at all. Production code, configs, schemas, manifests and infrastructure files that **the project owns in git** must change through git — never by editing the file in place on a remote system. Everything else (runtime state, deployment actions, dev experiments, PM-initiated maintenance) is fair game.
+
+**Forbidden:**
+- Silently editing on a remote system a file that has a counterpart in the repo (a schema in `/usr/share/.../schemas/`, a config template in `/etc/`, code under `/opt/`, a unit file, a Kubernetes manifest). Even if the fix looks tiny and obvious — that path destroys the git source of truth, the next firmware update or container rebuild reverts it, and the next feature will plan against the in-repo state which silently disagrees with reality.
+- Restarting / mutating production state without PM's awareness while investigating a "doesn't work in prod" report. The diagnose flow stays read-only until the fix is planned. Once the plan is in motion and the PM has agreed, the deployment script can do whatever it does.
+
+**Allowed:**
+- Read-only diagnostics: logs, statuses, file content reads, `journalctl`, `systemctl status`, `docker logs`, native audit / health commands, `tcpdump`, `strace` — anything that observes without changing files the repo owns.
+- Mutating actions on dev or staging environments as part of normal development workflow: build, scp a feature-branch artifact, smoke-test on real hardware before opening a PR.
+- Mutating actions on production **when the PM has explicitly asked for them in this conversation**: a requested reboot, package upgrade, factory reset, pairing operation. These are product decisions, not silent fixes.
+- Operations on runtime state that does not live in the repo: clear caches, restart a service to pick up a new package, rotate logs, manage pairing / fabric credentials, MQTT messages to virtual controls.
+- Running the project's own deployment script / playbook / CI step — that is the canonical change channel and is reviewed code already.
+
+The bright line: **if the file you're about to touch on a remote system has a sibling in the repo, the change goes through git first.** Otherwise it's a runtime / deployment action — proceed with the usual product caution (back up before destructive ops, ask PM before anything irreversible).
 
 **Git workflow — orchestrator owns this, not subagents:**
 
