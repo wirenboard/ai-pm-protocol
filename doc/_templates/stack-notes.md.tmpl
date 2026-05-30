@@ -1,0 +1,69 @@
+# Stack notes
+
+Living document. Initialised at bootstrap, extended on every feature that touches a new external system.
+Maintained by `stack-researcher`. Read by `plan-feature`, `architect`, `coder`, `reviewer`.
+
+**Last full review:** <YYYY-MM-DD>
+
+---
+
+## How this document is used
+
+- **plan-feature** reads it before drafting a plan that touches any listed component. If the feature touches a component that is missing here, plan-feature spawns `stack-researcher` to extend this document **before** continuing.
+- **architect** reads it when proposing variants — stack constraints are part of the trade-off space.
+- **coder** reads it before writing a mapping, handler, schema, or any integration code for a listed component. On contradiction between task and stack-notes, coder stops and escalates — no fallback to WebSearch.
+- **reviewer** checks every diff against the relevant entries. Code that contradicts an idiom or constraint listed here is **blocking** with a citation back to this file.
+
+If this document is missing or empty for a component the feature touches — that is a protocol-level defect, not a content gap. Bootstrap or plan-feature should have caught it.
+
+---
+
+## Components
+
+For each component of the stack (language, runtime, framework, library, target platform, integration point), one section:
+
+### <Component name>
+
+- **Role in this project:** <one sentence — what the component is used for here>
+- **Canonical docs:** <URL — the source the maintainers point users at>
+- **Spec / reference:** <URL with anchor when possible — the part of the docs the project relies on>
+- **Required validators:**
+  - `<command>` — <when to run, what it gates>
+- **Idioms and constraints** (each item: rule + source URL):
+  - <rule one>. Source: <URL>
+  - <rule two>. Source: <URL>
+- **Known gotchas** (issue-tracker observations, real-world traps):
+  - <gotcha>. Source: <URL>
+- **Last reviewed:** <YYYY-MM-DD>
+
+Repeat per component. Keep entries focused — the goal is "what a coder must respect", not a textbook.
+
+---
+
+## Validators wired into pipeline
+
+Every validator listed here must be in the project's `Pipeline` block in `CLAUDE.md`. Pipeline runs them as mandatory gates — green pipeline means every listed validator passed.
+
+| Validator | Command | Gates |
+|---|---|---|
+| <name> | `<command>` | <which guarantee or constraint it enforces> |
+
+---
+
+## Integration contracts
+
+For each external system the project integrates with — what local artifact carries the contract, how it gets delivered to the external system, and which tool validates the contract end-to-end.
+
+| External system | Local artifact in repo | Delivery mechanism | Validator |
+|---|---|---|---|
+| <e.g., wb-mqtt-confed> | `schemas/*.schema.json` | `<COPY in Dockerfile / Debian package / volume mount>` | `<command that proves the artifact is accepted by the external system>` |
+
+Missing rows here for a system the project actually talks to is a defect — reviewer dim 8 blocks on it.
+
+---
+
+## How to extend this document
+
+Only `stack-researcher` edits this file. Other agents read it. If a coder or reviewer notices a missing rule or stale entry, they surface it to the orchestrator — orchestrator spawns `stack-researcher` to update.
+
+Each rule must cite a source URL. Unsourced claims do not belong here — they are guesses dressed as docs.
