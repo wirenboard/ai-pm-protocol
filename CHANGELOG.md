@@ -13,6 +13,18 @@
 
 ---
 
+## [1.13.0] — 2026-05-31
+
+### Added
+
+- `.claude/commands/plan-feature.md` — new "Before every PM question — product vs technical check" block before AskUserQuestion. Surfaces the WORKFLOW.md notes-routing rule (product = PM decides, technical = orchestrator decides) into plan-feature's clarifying-question loop. Product trade-offs (user-visible alternatives, scope, deferral) surface to PM; technical details (file layout, naming, library specifics, unit file shape) the orchestrator decides and documents in Key design decisions. Concrete re-framing example: "PM chooses between systemd / Docker / k8s" → wrong question; "integrator experience: single canonical install or component-by-component setup?" → right question. Closes a real recurring pattern observed in the downstream `audit-fixup-confed-schema-delivery` cycle. (9d71a0d)
+
+### Notes
+
+- Shipped via `/fixup` fast path (+7 LOC, edit-only, no stack-notes touch, no new source file — all four conditions met). Trivial-mode review trail at `doc/features/fixup-plan-feature-product-vs-technical_review.md`: approve, DoD pass, no notes. (612f7f8)
+
+---
+
 ## [1.12.0] — 2026-05-30
 
 ### Added
