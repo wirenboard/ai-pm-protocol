@@ -13,6 +13,21 @@
 
 ---
 
+## [1.10.0] — 2026-05-30
+
+### Added
+
+- `architect` agent — second responsibility: owns canonical `docs/architecture.md` (in template: `doc/architecture.md`) in addition to existing per-feature arch notes. New Section A workflow: read `docs/stack-notes.md` + `CLAUDE.md` + architecture.md template, walk every template section (mark N/A with one-line reason), cite every decision (commit SHA / PR / doc / bootstrap conversation), cross-check file layout / release flow / integration contract against repo state, then write. Section B (per-feature arch notes) unchanged. Allowed writes tightened to `docs/architecture.md` and `docs/features/<topic>_arch.md` only. (e0fc4c9)
+- `bootstrap` command (greenfield) — spawns `architect` Section A after `stack-researcher` returns, instead of orchestrator writing `docs/architecture.md` inline. The architect now owns the file end-to-end on the greenfield path. (e0fc4c9)
+- `WORKFLOW.md` — agent table row for `architect` extended to mention canonical `docs/architecture.md` ownership alongside per-feature structural review. (e0fc4c9)
+- `doc/backlog.md` — new file for observations recorded during reviews/audits. First entry: bootstrap full-mode (legacy adoption path) still has orchestrator writing `docs/architecture.md` inline after docs-extractor — greenfield/legacy asymmetry to reconcile in a future plan. (0f88a49)
+
+### Notes
+
+- Closes task #27 (template gap: architecture.md ownership, surfaced in meta-audit). Removes the workaround language used in `audit-fixup-self-docs-architecture` where orchestrator invoked architect with an extended prompt. Plan + review trail in `doc/features/architect-owns-architecture-md_plan.md` and `doc/features/architect-owns-architecture-md_review.md`. (c28d5fa, 0f88a49)
+
+---
+
 ## [1.9.0] — 2026-05-30
 
 ### Added
