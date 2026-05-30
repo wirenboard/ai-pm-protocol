@@ -83,6 +83,18 @@ Reviewer verdict now contains a "Definition of Done" subsection with 7 hard chec
 
 ---
 
+### Eight review dimensions, decision matrix, trivial fast path, audit scope
+
+Four orthogonal optimizations applied together:
+1. **Reviewer / auditor dimensions reduced from 11 to 8** by merging three overlapping pairs (Plan + Product Contract → Plan & Contract compliance; Security + Stability → Correctness; Docs drift + Stack expectations → Documentation and canon compliance). No defect class lost; only the heading collapses.
+2. **Decision matrix in WORKFLOW.md** (`## What is mandatory when`) — single table covering Execution State, Product Contract, DoD scope, Stack expectations by change type (user-facing / backend / docs-only / trivial). Replaces scattered inline conditions in coder.md and reviewer.md.
+3. **`/fixup` command** for changes meeting four conditions (≤ 50 LOC, no user-visible behavior change, no stack-notes touch, no new source file). Skips plan-feature; reviewer runs in trivial mode (re-validates the four conditions; only escape hatch).
+4. **Auditor `--scope=diff`** mode reads only files changed since the most recent `docs/audit-*.md` + their cross-references. `full` remains default and is explicitly recommended quarterly.
+
+**Source:** `doc/features/optimize-without-losing-rigor_plan.md`; commits d09ac14, e441949, d563b02, 310695d.
+
+---
+
 ## Architectural constraints
 
 Hard constraints — agents and the orchestrator treat these as non-negotiable without an explicit PM decision.
