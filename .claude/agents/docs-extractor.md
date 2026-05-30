@@ -82,6 +82,18 @@ Required sections:
 
 Only write if security artifacts are present in code: authentication, session handling, payments, PII data fields, encryption, access control.
 
+### .ai-pm/contracts/<feature>.md
+
+For each user-facing journey discovered, create a draft Product Contract using the template at `.ai-pm/tooling/doc/_templates/contract.md.tmpl`. Map from journey to contract:
+
+- **Journey title (role + goal)** → Contract's User value and Who uses it
+- **Step table → "what user does"** → Must work items
+- **"What can go wrong" column** → Must not break items (invariants that should hold even when things go wrong)
+- **Existing tests that exercise the journey** → Acceptance checks
+- **Last reviewed:** the date of this extraction, marked `(extracted from legacy code — needs PM validation)`
+
+Contracts are drafts — PM validates them in the post-extraction brief. Do NOT create contracts for backend-only modules (data access, internal utilities, refactors).
+
 ## Output
 
 Write each doc file directly to disk.
@@ -94,6 +106,7 @@ After writing all files, output a summary block — this is returned to the call
 **Schemas documented:** <count> tables/collections
 **Procedures documented:** <count> significant algorithms
 **Journeys documented:** <count>
+**Contracts drafted:** <count> in .ai-pm/contracts/
 **Optional docs created:** <list, or "none">
 **Judgment calls:** <list each item where code was ambiguous and you made an interpretation>
 ```

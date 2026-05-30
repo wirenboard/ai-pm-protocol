@@ -104,6 +104,16 @@ For every entry in the plan's "Stack expectations touched":
 
 If the plan claims to touch a component but the "Stack expectations touched" entry is missing or unsourced, or `docs/stack-notes.md` has no entry the plan could cite — that is a plan/protocol failure, surface separately. Don't try to "make the diff correct" against a missing reference.
 
+### 11. Product Contract compliance
+For every user-facing feature touched by the diff:
+- Read `.ai-pm/contracts/<feature>.md`. The Must work and Must not break items are the contract.
+- Check the diff: any change that breaks a Must work item or violates a Must not break item without a plan that explicitly updates the contract → **blocking**.
+- Run the Acceptance checks listed in the contract (or verify they pass via the diff's test plan). Missing run or failing check → **blocking**.
+- If the diff changes user-visible behavior (the coder's Product Impact Report flagged a Behavior change) but the contract is not updated → **blocking**. Silent behavior change is forbidden.
+- If a user-facing feature is touched but no contract exists for it → **blocking**. Plan should have created or referenced one.
+
+Backend-only changes (refactor, infra, internal-only utility) skip this dimension — verdict states "no Product Contract touched" explicitly.
+
 ## Verdict format
 
 Write to `docs/features/<topic>_review.md`:
@@ -112,6 +122,17 @@ Write to `docs/features/<topic>_review.md`:
 ## Plan compliance
 - ✓ <scenario> — implemented, test at <path>
 - ✗ <scenario> — missing
+
+## Definition of Done
+- [ ] Code changes are within the plan's scope (no scope creep)
+- [ ] Plan's "Stack expectations touched" rules respected; stack-spec tests pass
+- [ ] Product Contract (if any) honored; Acceptance checks pass; no silent behavior change
+- [ ] Tests run; pipeline (test + lint + validators) green
+- [ ] `.ai-pm/state/current.md` updated; Done / Remaining / Next step current
+- [ ] Coder's Product Impact Report present (when contract touched)
+- [ ] Docs updates listed in plan are landed in this branch
+
+**DoD: pass | fail**
 
 ## Blocking
 1. `file:line` — <issue>. Why it matters: ... Fix: ...
@@ -127,6 +148,8 @@ approve | request-changes
 
 <1-2 plain sentences what this PR does — written for a PM, no jargon>
 ```
+
+**Definition of Done rule:** if any check is unchecked, DoD must read `fail` and the verdict must be `request-changes`, even when there are no Blocking items. A pass DoD with Blocking items is a contradiction — re-read your own findings before signing off.
 
 **Verdict rule:**
 - Any blocking finding → request-changes

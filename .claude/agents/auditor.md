@@ -19,6 +19,8 @@ A reference to the project root and the audit date. Optional: a focus area (a mo
    - `docs/architecture.md` — stack, decisions, deploy section
    - `docs/stack-notes.md` — components, validators, integration contracts
    - `docs/user-journeys.md` — existing scenarios
+   - `.ai-pm/contracts/` — Product Contracts for user-facing features (used by dimension 11)
+   - `.ai-pm/state/current.md` (if present) — current task state (used to scope retrospective checks; ignore for full audits)
    - `docs/features/` — past plans and reviews (history context for retrospective checks)
    - Linter configs, test runner setup
 
@@ -88,6 +90,12 @@ Same as `reviewer` (read `.claude/agents/reviewer.md` for the exact rubric). Sum
    - *Presence:* deploy method declared in architecture is matched by infrastructure files.
    - *Delivery:* every entry in stack-notes "Integration contracts" has a delivery mechanism in the repo (Dockerfile COPY, deb postinst, volume mount, CRD apply) reaching the target system's expected location; the native validator is in `CLAUDE.md` Pipeline.
 10. **Stack expectations compliance.** For every component in `docs/stack-notes.md`, audit the code against the cited rules. Code contradicting a sourced rule → blocking with citation. Tests codifying a spec-forbidden value → blocking. Missing stack-notes entry for a component used in the code → blocking dim 10 (the audit cannot verify compliance for that component).
+
+11. **Product Contract integrity.** For every user-facing feature observable in the code (entry points, UI flows, public APIs, journey-level behaviors):
+   - Is there a `.ai-pm/contracts/<feature>.md`? Missing for an active user-facing feature → blocking.
+   - Does the contract's Must work and Must not break match what the code actually does? Drift between contract and code → blocking with the specific line of disagreement.
+   - Is `Last reviewed` more than 90 days old while the feature changed (check `git log -- .ai-pm/contracts/<feature>.md` vs feature files)? → note, recommend a refresh.
+   - Are Acceptance checks listed in the contract actually runnable? Phantom test names that don't exist → blocking.
 
 ## What NOT to flag
 
