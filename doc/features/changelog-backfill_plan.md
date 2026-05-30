@@ -9,9 +9,11 @@ Also auditor finding #5 (post-v1.0.0 plan-less commits), now partially addressed
 
 ## Scenarios
 
-1. `CHANGELOG.md` contains a `## [1.6.0]` entry for the existing orphan tag (`b94b1d2 feat: require AskUserQuestion tool for all PM decisions`).
-2. The intermediate work between `v1.6.0` and `v1.7.0` (10+ commits incl. PRs #139, #140, #141, #142, #143, #144, #145) is recorded as a single aggregate entry with each commit / PR listed, so audit trail is recoverable from CHANGELOG alone.
+1. `CHANGELOG.md` contains a `## [1.6.0]` entry covering the 9 commits in the actual `v1.5.1..v1.6.0` range (b94b1d2 + 8 pre-merge commits including PRs #140 and #141).
+2. The intermediate work between `v1.6.0` and `v1.7.0` (exactly the 4 PRs #142, #143, #144, #145 per `git log v1.6.0..v1.7.0`) is recorded as a single aggregate entry, so audit trail is recoverable from CHANGELOG alone.
 3. The orphan v1.6.0 GitHub Release stays absent — backfilling the release retroactively is optional and explicitly out of scope (the tag exists; the release notes live in CHANGELOG).
+
+**Correction note (after review v1):** the first draft of this plan misattributed 9 of 13 listed commits to the intermediate block. Reviewer caught this by comparing against actual git history. The commit ranges are now verified: v1.5.1..v1.6.0 = 9 commits (in v1.6.0 entry), v1.6.0..v1.7.0 = 4 PRs (in intermediate block).
 
 ## Stack expectations touched
 

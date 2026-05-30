@@ -94,6 +94,20 @@
 ### Added
 
 - Require `AskUserQuestion` tool for all PM decisions; plain-text questions no longer allowed in the orchestrator dialog (b94b1d2)
+- Pre-PR checkpoint — ask PM how to proceed after approve (manual testing / open PR test before merge / ship now) (c86fb00)
+- After-deploy checklist for option A — give PM short list of what to verify (7b1a05f)
+
+### Fixed
+
+- PM reports findings after testing, no longer forced to say 'ready' (bf84440)
+- Deploy in option A follows `docs/architecture.md` deploy section (596939f)
+- Offer deployment help in manual-testing option A (b642b4c)
+- Pre-PR checkpoint wording made generic — any project, not hardware-specific (1352ed7)
+- `architect` agent — do not search filesystem for external reference projects (#140, 14dcd0d)
+
+### Changed
+
+- Install instructions: explicit `settings.json` symlink line added (#141, 2626106)
 
 ### Note
 
@@ -108,15 +122,6 @@ The following PRs landed on `main` between the `v1.6.0` tag and the
 `v1.7.0` release without their own intermediate version tags. Their
 changes are part of the v1.7.0 baseline; recorded here for traceability.
 
-- PM reports findings after testing, not forced to say 'ready' (bf84440)
-- After deploy in option A, give PM checklist of what to verify (7b1a05f)
-- Deploy follows docs/architecture.md deploy section in option A (596939f)
-- Offer deployment help in manual-testing option A (b642b4c)
-- Make pre-PR checkpoint generic — any project, not hardware-specific (1352ed7)
-- Add pre-PR checkpoint — ask PM how to proceed after approve (c86fb00)
-- Settings.json symlink line added to install instructions (#141, 2626106)
-- architect: do not search filesystem for external reference projects (#140, 14dcd0d)
-- Enforce project root boundary in all agents (#139, 15e89d6)
 - Protocol integrity + stack literacy — close 5 structural gaps (#142, 6e1bf14)
 - /audit spawns auditor subagent instead of reading in main (#143, cf889c6)
 - Post-cycle lessons: notes split, edit ownership, pr-prep flexibility (#144, 9f81f64)
