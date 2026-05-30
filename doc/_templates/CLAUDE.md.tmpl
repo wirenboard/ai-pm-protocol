@@ -49,12 +49,22 @@ Stack linter:
 
 ## Pipeline
 
-Both must be green before coder is done. No exceptions.
+Every command in this block must be green before coder is done. No exceptions.
 
+**Tests + lint:**
 ```
 <test command — e.g., "npm test" / "go test ./..." / "pytest">
-<lint command>
+<lint command — e.g., "npm run lint" / "golangci-lint run" / "pylint src/">
 ```
+
+**Validators** (populated by `stack-researcher` at bootstrap and extended on every feature that introduces a new validator — see `docs/stack-notes.md` "Validators wired into pipeline" table):
+```
+<config / schema validator — e.g., "ajv validate -s schemas/foo.schema.json -d examples/*.json">
+<integration dry-run — e.g., "kubectl apply --dry-run=client -f manifests/", "terraform validate">
+<spec-compliance check — e.g., type-check in strict mode, framework-provided lint, native init-time validation surfaced as exit-non-zero>
+```
+
+A green tests + lint with a failing validator is still a failed pipeline. Reviewer dim 9 blocks if a validator listed in `stack-notes.md` is not present here, or if it is present here but not actually run by the coder.
 
 ---
 
@@ -68,6 +78,7 @@ Both must be green before coder is done. No exceptions.
 |---|---|
 | `docs/architecture.md` | Stack, decisions, constraints |
 | `docs/user-journeys.md` | Existing user scenarios |
+| `docs/stack-notes.md` | Stack idioms, constraints, validators, integration contracts (maintained by `stack-researcher`; read by `plan-feature`, `architect`, `coder`, `reviewer`) |
 | `docs/features/` | Past feature plans |
 | `docs/ui-guide.md` | UI conventions (optional, only if project has UI) |
 | `docs/threat-model.md` | Security model (optional, only if complex security needed) |

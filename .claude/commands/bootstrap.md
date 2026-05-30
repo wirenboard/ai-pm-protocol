@@ -46,15 +46,23 @@ Ask the PM these questions (one conversation, not a form):
 
 Then create from templates:
 
-- `CLAUDE.md` from `CLAUDE.md.tmpl` — fill in all placeholders
+- `CLAUDE.md` from `CLAUDE.md.tmpl` — fill in all placeholders. Pipeline section is left with `<test command>` and `<lint command>` as placeholders for now — extended after `stack-researcher` runs.
 - `README.md` from `README.md.tmpl`
 - `docs/architecture.md` from `architecture.md.tmpl`
 - `docs/user-journeys.md` from `user-journeys.md.tmpl` — leave as guided skeleton for PM to fill
+- `docs/stack-notes.md` from `stack-notes.md.tmpl` — empty shell; `stack-researcher` fills the components on the next step
 - `docs/ui-guide.md` from `ui-guide.md.tmpl` — only if **custom** UI (case 1 above)
 - `docs/threat-model.md` from `threat-model.md.tmpl` — only if security requirements mentioned
 - `docs/features/` directory
 
-Ask PM: "Want to research existing solutions — libraries, ready products, analogues? Useful at the start so you don't build what already exists. Run /research?"
+**Stack literacy onboarding (mandatory, no PM questions).** Spawn the `stack-researcher` subagent with the stack components from PM's answers (language, runtime, framework, database, key libraries, target platform). The agent reads canonical docs and spec, writes `docs/stack-notes.md` with cited idioms, constraints, validators and integration contracts.
+
+After `stack-researcher` returns:
+- Take its "New validators" list and add each command to the `Pipeline` block in `CLAUDE.md` — these are mandatory gates alongside `<test command>` and `<lint command>`.
+- Take its "Integration contracts" findings and reflect them in `docs/architecture.md` deploy / infrastructure section (e.g., "schema delivered via package postinst to the system's standard schema directory", "manifest applied via CI step", "config rendered into platform-expected path").
+- Take its "Open questions" list and surface to PM as a brief technical caveats block (one sentence each, plain language) — PM does not have to act on them now, but they exist on record.
+
+Then ask PM: "Want to research existing solutions — libraries, ready products, analogues? Useful at the start so you don't build what already exists. Run /research?"
 
 If yes — run `/research` before any feature planning.
 
@@ -104,7 +112,10 @@ Write minimal docs — enough to start adding features:
 - `CLAUDE.md` — fill what's clear from reading; mark gaps as `[?]`
 - `docs/architecture.md` — stack and key decisions extracted from code; mark gaps as `[?]`
 - `docs/user-journeys.md` — write only what's visible from entry points and module names; leave the rest as `[?]`
+- `docs/stack-notes.md` from `stack-notes.md.tmpl` — empty shell
 - Optional docs — skip; create only if code clearly requires them (e.g., obvious security constraints)
+
+**Stack literacy onboarding (mandatory, no PM questions).** Once stack components are identified from the code, spawn `stack-researcher` with that list. It fills `docs/stack-notes.md`. Take its "New validators" list and add commands to the Pipeline block in `CLAUDE.md`. Take its "Open questions" — surface to PM as caveats.
 
 Present findings to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms.
 
@@ -127,7 +138,9 @@ Do not ask PM to fill the gaps in detail — `[?]` items get resolved naturally 
 Invoke the `docs-extractor` subagent (defined in `.claude/agents/docs-extractor.md`) using the Agent tool. It reads all significant modules at defined depth and writes `docs/architecture.md`, `docs/user-journeys.md`, and optional docs (`ui-guide.md`, `threat-model.md`). Wait for it to complete and read its summary output.
 
 After the extractor finishes:
-- Write `CLAUDE.md` from `.ai-pm/tooling/doc/_templates/CLAUDE.md.tmpl` — fill in all placeholders using the stack and architecture the extractor documented
+- Write `CLAUDE.md` from `.ai-pm/tooling/doc/_templates/CLAUDE.md.tmpl` — fill in all placeholders using the stack and architecture the extractor documented. Pipeline section left as placeholders until `stack-researcher` runs.
+- Create `docs/stack-notes.md` from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl` (empty shell).
+- Spawn `stack-researcher` with the stack components the extractor put in `architecture.md` (mandatory, no PM questions). After it returns: extend the Pipeline block in `CLAUDE.md` with its "New validators"; reflect "Integration contracts" in `architecture.md` deploy section; record "Open questions" for the PM brief below.
 - Create `docs/features/` directory if it doesn't exist
 
 Present to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:

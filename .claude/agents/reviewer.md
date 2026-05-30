@@ -31,6 +31,14 @@ Two levels only:
 ### 1. Plan compliance
 Every scenario in the plan must be implemented and have a test. Missing scenario or missing test → blocking. Changes outside the plan → flag as scope creep.
 
+**Plan completeness sub-check.** Before checking compliance, check the plan itself:
+- If the feature touches any stack component listed in `docs/stack-notes.md` and the plan omits the "Stack expectations touched" section — plan is incomplete, **blocking**. Verdict: request-changes with note "plan must list touched stack expectations before implementation can be reviewed".
+- If the plan has "Stack expectations touched" but lacks source URLs for each cited rule — **blocking**. Unsourced rules cannot be verified.
+
+**Categorical coverage sub-check.** For every categorical element the plan focuses on (a chosen type, mode, role, state, operation, category), the plan must either treat the full set or list each excluded sibling under Out of scope with a one-line reason. In the diff:
+- A sibling case implemented as a permissive variant of the chosen element (enum that accepts more than the plan says, optional / empty field that silently flips behavior, conditional branch that handles a case the plan placed Out of scope) — **blocking**. The fix is a plan update, not a code tweak.
+- An Out of scope sibling appearing in tests, fixtures, or example configs without a plan change — **blocking** by the same rule.
+
 ### 2. Test quality
 For each new test — find its description in the plan's "Test plan" and verify it actually exercises that scenario. Flag as blocking if: no assertions, only checks "no exception", mocks away the very thing being tested. Verify no existing test was deleted or weakened without a plan that explicitly changes that behavior.
 
@@ -72,13 +80,29 @@ Trace the critical path end to end, don't just scan the diff:
 - Obviously over-complicated logic where a simpler equivalent exists.
 
 ### 8. Documentation vs code
-- Docs (`docs/architecture.md`, `docs/user-journeys.md`, docstrings, API specs) describe the old behavior after the change — docs must be updated.
+- Docs (`docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, docstrings, API specs) describe the old behavior after the change — docs must be updated.
 - New public API, endpoint, or config option with no documentation where the project documents such things.
+- Stack-notes is stale relative to the code: if the diff touches a component and stack-notes for that component shows `Last reviewed` more than 6 months ago — flag as a note (request `stack-researcher` re-run, not blocking by itself).
 
-### 9. Infrastructure
-Read `docs/architecture.md` deploy section. If a deployment method is specified and infrastructure files are missing — blocking (a non-technical PM cannot catch this gap):
+### 9. Infrastructure and integration delivery
+Read `docs/architecture.md` deploy section and `docs/stack-notes.md` "Integration contracts" table. Two layers:
+
+**Presence layer (binary check).** If a deployment method is specified and the file is missing — blocking:
 - Docker specified → `Dockerfile` and `docker-compose.yml` must exist.
 - systemd specified → service unit file must exist.
+
+**Delivery layer.** For every integration contract listed in stack-notes:
+- The local artifact (schema, unit file, manifest, config template) is present in the diff or already in repo — blocking if missing.
+- The delivery mechanism (Dockerfile `COPY` to expected path, deb package install hook, volume mount, CRD apply) reaches the path the external system expects — blocking if the artifact has no path to its consumer. A `schemas/foo.schema.json` that the Dockerfile does not copy to `/usr/share/<system>/schemas/` is broken on day one.
+- The native validator from the contract is wired into the Pipeline block of `CLAUDE.md` — blocking if missing. "Files exist but were never validated by the external system's own tool" is the same defect class as "code compiles but spec violated".
+
+### 10. Stack expectations compliance
+For every entry in the plan's "Stack expectations touched":
+- The cited rule + source URL in the plan is your contract. Check the diff against it. Code that contradicts the rule → **blocking**, reproduce the citation in the verdict. Open `docs/stack-notes.md` only when you need broader context or suspect the quote is stale.
+- Check the test plan: each cited rule has a stack-spec test (per `plan-feature.md` "Stack-spec test rule"). Missing stack-spec test for a cited rule → **blocking**.
+- Check for property-based or round-trip tests that freeze a value the cited rule forbids → **blocking**. These tests codify the wrong contract.
+
+If the plan claims to touch a component but the "Stack expectations touched" entry is missing or unsourced, or `docs/stack-notes.md` has no entry the plan could cite — that is a plan/protocol failure, surface separately. Don't try to "make the diff correct" against a missing reference.
 
 ## Verdict format
 

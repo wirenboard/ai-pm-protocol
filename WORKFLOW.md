@@ -4,13 +4,31 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 
 | Agent | When |
 |---|---|
+| `stack-researcher` | Auto-spawn from `/bootstrap` (initial stack onboarding) or from `/plan-feature` (when a feature touches a stack component not yet in `docs/stack-notes.md`). Reads canonical docs + spec, writes cited rules into stack-notes |
 | `architect` | Structural choice in the plan — where does new code live? |
 | `coder` | Implement the plan |
 | `reviewer` | Review after implementation |
 | `pr-prep` | Bump version, generate CHANGELOG, push branch, open or update PR |
-| `/research` | Research existing solutions and analogues — at project start or when a feature might benefit from existing libraries |
+| `docs-extractor` | Auto-spawn from `/bootstrap` legacy full mode; reads existing codebase and writes `docs/architecture.md` + `docs/user-journeys.md` |
+| `/research` | Research existing solutions and analogues (build vs use). PM-facing pros/cons output. Different from `stack-researcher` (which is agent-facing canonical citations). |
+| `/audit` | Read-only health check of the whole project across the same 10 dimensions as reviewer. PM-initiated, not part of the regular feature pipeline. Fix-now closures go through `/plan-feature audit-fixup-*` |
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
+
+**Remote-system boundary rule (applies to all agents and the orchestrator):** the rule is about **the source of truth**, not about whether ssh-with-write is allowed at all. Production code, configs, schemas, manifests and infrastructure files that **the project owns in git** must change through git — never by editing the file in place on a remote system. Everything else (runtime state, deployment actions, dev experiments, PM-initiated maintenance) is fair game.
+
+**Forbidden:**
+- Silently editing on a remote system a file that has a counterpart in the repo (a schema in `/usr/share/.../schemas/`, a config template in `/etc/`, code under `/opt/`, a unit file, a Kubernetes manifest). Even if the fix looks tiny and obvious — that path destroys the git source of truth, the next firmware update or container rebuild reverts it, and the next feature will plan against the in-repo state which silently disagrees with reality.
+- Restarting / mutating production state without PM's awareness while investigating a "doesn't work in prod" report. The diagnose flow stays read-only until the fix is planned. Once the plan is in motion and the PM has agreed, the deployment script can do whatever it does.
+
+**Allowed:**
+- Read-only diagnostics: logs, statuses, file content reads, `journalctl`, `systemctl status`, `docker logs`, native audit / health commands, `tcpdump`, `strace` — anything that observes without changing files the repo owns.
+- Mutating actions on dev or staging environments as part of normal development workflow: build, scp a feature-branch artifact, smoke-test on real hardware before opening a PR.
+- Mutating actions on production **when the PM has explicitly asked for them in this conversation**: a requested reboot, package upgrade, factory reset, pairing operation. These are product decisions, not silent fixes.
+- Operations on runtime state that does not live in the repo: clear caches, restart a service to pick up a new package, rotate logs, manage pairing / fabric credentials, MQTT messages to virtual controls.
+- Running the project's own deployment script / playbook / CI step — that is the canonical change channel and is reviewed code already.
+
+The bright line: **if the file you're about to touch on a remote system has a sibling in the repo, the change goes through git first.** Otherwise it's a runtime / deployment action — proceed with the usual product caution (back up before destructive ops, ask PM before anything irreversible).
 
 **Git workflow — orchestrator owns this, not subagents:**
 
@@ -73,6 +91,24 @@ If the reviewer found **notes** (non-blocking observations), I present each one 
 After you merge: pull main locally and we're ready for the next feature.
 
 **When you're ready to ship** — say "release". I verify git state, run `pr-prep` (version bump + CHANGELOG + PR). You merge — GitHub auto-tags and publishes the release.
+
+---
+
+## When you say it doesn't work in production
+
+When you tell me "X doesn't work on the controller / on production / in the deployed environment", I follow a strict diagnose-then-plan flow. I never edit, restart, or re-deploy on the live system in the moment.
+
+**Step A — Read-only diagnostics.** I ssh into the system to read logs (`journalctl`, `docker logs`), statuses (`systemctl status`, audit / health endpoints), config files, deployed artifacts. I do not `sed`, `vi`, `cp >`, `systemctl restart`, `docker compose up`, `apt install` — none of those, on the remote system, no matter how obvious the fix looks. The boundary is hard.
+
+**Step B — Formulate findings in product language.** I summarise to you what's broken from the user's perspective. Plain language: "users can open the cart but checkout never confirms the order" — not "POST /checkout returns 502 because the upstream pricing service times out after 30s due to a config drift on the cache layer". The technical detail goes into the fix plan, not into the PM update.
+
+**Step C — Hotfix planning.** I run `/plan-feature` with the topic marked as hotfix (`hotfix-<area>`). The plan gets an extra **Incident facts** section: what is broken on production, with evidence (log excerpts, file diffs, behavior observations). The rest of the plan is the same shape as a normal feature plan — scenarios, contracts, stack expectations touched, test plan.
+
+**Step D — Standard pipeline.** Coder → reviewer → pr-prep → PR. You merge when reviewer approves. Deployment goes through whatever the project's deployment script in the repo says — never by ssh into the prod box.
+
+**Why this matters.** Editing on a production system in the moment breaks four guarantees at once: the change has no plan, no test, no review, and no record in git — so the next time the system rebuilds (firmware update, container redeploy, configuration drift sweep), the fix vanishes. Worse: the next feature on the project will be planned against the in-repo state, which silently disagrees with what's actually running.
+
+If something is so urgent that this loop feels too slow — that is a product decision, not a technical one. Tell me. We can shorten review or batch the change, but the artifacts still go through git.
 
 I involve you when:
 - Architectural fork (new technology, breaks a constraint, changes public API)
