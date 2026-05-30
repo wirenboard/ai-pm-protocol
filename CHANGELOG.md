@@ -13,6 +13,14 @@
 
 ---
 
+## [1.7.0] — 2026-05-30
+
+### Added
+
+- `doc/stack-notes.md` for 6 self-* components (architect, planner, coder, reviewer, pr-prep, auditor): documents the protocol's own stack — markdown spec, agent persona conventions, hook scripts, install layout. Closes finding #2 of `doc/features/audit-2026-05-30.md`. First of 7 self-* audit-fixup plans in meta-audit priority order. (4f71ab0)
+
+---
+
 ## [1.5.1] — 2026-05-29
 
 ### Fixed
