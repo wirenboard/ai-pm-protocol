@@ -89,6 +89,13 @@ Ask clarifying questions as needed — grounded in what you read. Typical questi
 - Any edge cases? (empty state, errors, concurrent access)
 - Is there an existing pattern in the codebase this should follow?
 
+**Before every PM question — product vs technical check.** PM is product, not technical (the same split that governs reviewer notes in `WORKFLOW.md`). Apply it to every clarifying question:
+
+- **Product trade-offs** (what the user experiences, scope between user-visible alternatives, deferral between user-facing features) — surface to PM. Examples: "single install command vs split installs", "real-time vs batch update", "one feature this iteration vs both".
+- **Technical detail** (file layout, naming, internal type choices, library API specifics, unit file shape, regex form, sysd vs supervisord, port numbers) — orchestrator decides. Asking the PM about these is a category-error that wastes their attention and produces low-quality answers.
+
+Before forming an AskUserQuestion, write down the question and check: *would a non-technical PM be able to give a meaningful answer based on product knowledge alone?* If no — drop the question, decide yourself, document the decision in the plan's Key design decisions section. If you're framing technical options as "PM chooses between systemd / Docker / k8s", you are asking the wrong question — re-frame to the product trade-off those technical options serve ("integrator experience: single canonical install or component-by-component setup?"), then map technical options back to whichever product direction the PM picks.
+
 Stop asking when you have enough to write the plan.
 
 **Research trigger (optional):** If the feature area might benefit from existing libraries or established patterns (e.g., new protocol integration, new data format, new external service) — suggest `/research` before planning: "Worth searching for existing solutions for X? Takes 5 minutes and could save a week of development." PM decides.
