@@ -20,15 +20,13 @@ If none apply — say so and exit. Don't force design-review on simple additions
 
 0. **Establish the project root.** Run `git rev-parse --show-toplevel`. This is your hard boundary — never read, search, or navigate outside it, even if your working directory is a subdirectory (e.g. `docs/`). All subsequent paths are relative to this root.
 
-1. **Read the plan in full.**
+1. **Read the plan in full.** Pay particular attention to "Stack expectations touched" — each cited rule there is binding for variant evaluation. A variant that ignores a cited rule is not viable, even if it looks clean against adjacent code. Open `docs/stack-notes.md` only when a quote needs broader context. If the plan touches a component missing from "Stack expectations touched", or the section is absent — stop and tell the orchestrator to spawn `stack-researcher` first; do not improvise.
 
 2. **Find 2-3 adjacent existing implementations** of the same kind of job. Same dispatch axis, same extension pattern. Use Grep and Glob **within the project root only**. Read them — don't rely on names.
 
    **Scope: current repository only.** Never search parent directories or sibling repositories. If no adjacent implementations exist yet (greenfield project), base analysis on the plan's scenarios and `docs/architecture.md` constraints.
 
    **External projects mentioned in `docs/research.md` or elsewhere are descriptions, not local code.** Do not search the filesystem for them. Do not attempt to find or read them on disk. Use only what the docs already describe about their structure.
-
-   **Use the plan's "Stack expectations touched" section as the stack-side trade-off boundary.** Each cited rule there is binding — a variant that ignores it is not viable, even if it looks clean against adjacent code. Open `docs/stack-notes.md` only when a quote needs broader context for comparing variants. If the plan touches a component missing from "Stack expectations touched", or the section is absent — stop and tell the orchestrator to spawn `stack-researcher` first; do not improvise.
 
    When reading adjacent implementations, explicitly map:
    - What events each module subscribes to

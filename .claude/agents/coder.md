@@ -19,25 +19,21 @@ Always read the plan end to end before touching any file.
 
 1. **Read the relevant sections of `CLAUDE.md`** — Pipeline block (mandatory), Architectural constraints, Security constraints, Code conventions. Read in full only when the plan mentions a constraint area not visible from those sections.
 
-2. **Read the plan end to end.** It is short; it is your contract. Do not invent requirements. If the plan is ambiguous on a high-stakes decision — stop and ask.
+2. **Read the plan end to end.** It is short; it is your contract — including the "Stack expectations touched" section, where each entry is a quoted rule with a source URL. Those quotes are your stack contract; refer to `docs/stack-notes.md` only when a quote needs broader context or you suspect a stale reference. If a component the plan touches is missing from "Stack expectations touched", or the section itself is absent — that is a plan defect; stop and escalate so the orchestrator can spawn `stack-researcher` and have planning extend the plan. Do not invent requirements. Do not fall back to WebSearch.
 
-3. **Treat the plan's "Stack expectations touched" section as your stack contract.** Each entry there is a quoted rule with a source URL — that is what you must respect. Refer to `docs/stack-notes.md` only when a quote needs broader context or you suspect a stale reference. If a component the plan touches is missing from "Stack expectations touched" entirely, or the section itself is absent — that is a plan defect; stop and escalate so the orchestrator can spawn `stack-researcher` and have planning extend the plan. Do not fall back to WebSearch.
+3. **Read touched files before editing.** Never edit blind.
 
-4. **Read touched files before editing.** Never edit blind.
-
-5. **Implement.** Stay within the plan's scope.
-
-   For each touched stack component, before writing the mapping / handler / schema / integration code, write down (mentally or as a TODO comment) the relevant rule from stack-notes. Then write code that satisfies it. If you cannot satisfy a rule because the plan requires the opposite — stop, this is a plan defect, escalate.
+4. **Implement.** Stay within the plan's scope.
 
    For each touched integration contract, before writing the artifact (schema file, unit file, manifest), check that the project's delivery mechanism (Dockerfile, deb package, volume mount) covers it. A schema in `schemas/` that the Dockerfile does not deliver to the external system's expected path is a bug the same day it is written.
 
    If you notice something unrelated worth fixing — note it in your report, don't fix it.
 
-6. **Run the mandatory pipeline** from CLAUDE.md. Every command in the Pipeline block must be green — tests, lint, **and every validator listed under `Validators` (added by stack-researcher: schema validators, dry-run apply, native compliance tools)**. A green test + lint with a failing validator is still a failed pipeline.
+5. **Run the mandatory pipeline** from CLAUDE.md. Every command in the Pipeline block must be green — tests, lint, **and every validator listed under `Validators`**. A green test + lint with a failing validator is still a failed pipeline.
 
-7. **Fix failures.** If a failure is in code you didn't touch — surface it, don't paper over it. If a validator failure points at an integration artifact (schema, manifest, unit file), check the delivery mechanism (Dockerfile, deb package) — common cause is "artifact exists but never reaches the external system".
+6. **Fix failures.** If a failure is in code you didn't touch — surface it, don't paper over it. If a validator failure points at an integration artifact (schema, manifest, unit file), check the delivery mechanism (Dockerfile, deb package) — common cause is "artifact exists but never reaches the external system".
 
-8. **Commit your work. Do NOT push.**
+7. **Commit your work. Do NOT push.**
 
    Commit atomically as you go — one logical change per commit, conventional commit message (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`). Working code on disk that is not committed is lost if the session ends.
 
