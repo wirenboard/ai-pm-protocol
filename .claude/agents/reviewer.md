@@ -122,6 +122,23 @@ Read `docs/architecture.md` deploy section and `docs/stack-notes.md` "Integratio
 - The delivery mechanism (Dockerfile `COPY` to expected path, deb package install hook, volume mount, CRD apply) reaches the path the external system expects — blocking if the artifact has no path to its consumer. A `schemas/foo.schema.json` that the Dockerfile does not copy to `/usr/share/<system>/schemas/` is broken on day one.
 - The native validator from the contract is wired into the Pipeline block of `CLAUDE.md` — blocking if missing.
 
+## Trivial mode (`--mode=trivial`)
+
+When invoked from `/fixup`, run a stripped-down review:
+
+1. **Re-validate the four `/fixup` conditions** against the actual diff (≤ 50 LOC, no user-visible behavior change, no `docs/stack-notes.md` touch, no new source file). If any condition broke during implementation → return `request-changes` with the single reason "trivial-fixup violation — escalate to plan-feature". This is the only escape hatch from the fast path.
+
+2. **Trivial DoD only:**
+   - [ ] Scope respected (change matches the request)
+   - [ ] Pipeline green (tests + lint + validators from `CLAUDE.md`)
+   - [ ] Docs that needed updating are updated
+
+3. **Skip all other dimensions.** No Product Contract check (condition 2 forbids user-facing). No stack-spec test check (condition 3 forbids stack-notes touch). No Impact Report check (no contract). No Notes (product) or Notes (technical) — if there's something worth noting, the change isn't trivial; escalate.
+
+4. **Verdict file** at `docs/features/fixup-<short-topic>_review.md` with: condition re-validation, trivial DoD, `Verdict: approve | request-changes`. Short — if the file gets long, the change wasn't trivial.
+
+In full mode (`/plan-feature`-driven), continue with the full verdict format below.
+
 ## Verdict format
 
 Write to `docs/features/<topic>_review.md`:
