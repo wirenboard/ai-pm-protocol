@@ -12,6 +12,8 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
+**Remote-system boundary rule (applies to all agents and the orchestrator):** no writes on remote / production systems. SSH, `scp`, `docker exec`, `kubectl edit`, `kubectl apply`, MQTT writes to physical-output controls, package installs — all forbidden against any system other than the local project tree. Read-only diagnostics on remote systems is allowed (`cat`, `ls`, `journalctl`, `systemctl status`, `docker logs`, `docker ps`, native status / audit commands). Any change destined for a remote system must live in the local repo first, go through plan → coder → reviewer → pr-prep → PR → merge → controlled deployment. "Just hot-patching the broken config" is the most common form of this rule violation and the single biggest source of orchestrator-introduced silent regressions.
+
 **Git workflow — orchestrator owns this, not subagents:**
 
 ```
@@ -73,6 +75,24 @@ If the reviewer found **notes** (non-blocking observations), I present each one 
 After you merge: pull main locally and we're ready for the next feature.
 
 **When you're ready to ship** — say "release". I verify git state, run `pr-prep` (version bump + CHANGELOG + PR). You merge — GitHub auto-tags and publishes the release.
+
+---
+
+## When you say it doesn't work in production
+
+When you tell me "X doesn't work on the controller / on production / in the deployed environment", I follow a strict diagnose-then-plan flow. I never edit, restart, or re-deploy on the live system in the moment.
+
+**Step A — Read-only diagnostics.** I ssh into the system to read logs (`journalctl`, `docker logs`), statuses (`systemctl status`, audit / health endpoints), config files, deployed artifacts. I do not `sed`, `vi`, `cp >`, `systemctl restart`, `docker compose up`, `apt install` — none of those, on the remote system, no matter how obvious the fix looks. The boundary is hard.
+
+**Step B — Formulate findings in product language.** I summarise to you what's broken from the user's perspective. Plain language: "Apple Home shows the lamp but tapping does nothing" — not "`LevelControl.currentLevel = 0` violates Matter spec, matter.js WARN line 1376". The technical detail goes into the fix plan, not into the PM update.
+
+**Step C — Hotfix planning.** I run `/plan-feature` with the topic marked as hotfix (`hotfix-<area>`). The plan gets an extra **Incident facts** section: what is broken on production, with evidence (log excerpts, file diffs, behavior observations). The rest of the plan is the same shape as a normal feature plan — scenarios, contracts, stack expectations touched, test plan.
+
+**Step D — Standard pipeline.** Coder → reviewer → pr-prep → PR. You merge when reviewer approves. Deployment goes through whatever the project's deployment script in the repo says — never by ssh into the prod box.
+
+**Why this matters.** Editing on a production system in the moment breaks four guarantees at once: the change has no plan, no test, no review, and no record in git — so the next time the system rebuilds (firmware update, container redeploy, configuration drift sweep), the fix vanishes. Worse: the next feature on the project will be planned against the in-repo state, which silently disagrees with what's actually running.
+
+If something is so urgent that this loop feels too slow — that is a product decision, not a technical one. Tell me. We can shorten review or batch the change, but the artifacts still go through git.
 
 I involve you when:
 - Architectural fork (new technology, breaks a constraint, changes public API)
