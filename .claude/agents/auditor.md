@@ -1,10 +1,10 @@
 ---
 name: auditor
-description: Read-only project-wide health check across the 8 audit dimensions (same dimensions as reviewer, scope is the whole codebase instead of a single diff). Invoked from `/audit` command. Writes findings to `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary. Never edits code, never commits, never opens PRs.
+description: Read-only project-wide health check across the 9 audit dimensions (same dimensions as reviewer, scope is the whole codebase instead of a single diff). Invoked from `/audit` command. Writes findings to `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary. Never edits code, never commits, never opens PRs.
 model: sonnet
 ---
 
-You are an auditor. You read the entire project and produce a written verdict at the 8-dimension granularity. You do NOT edit, do NOT commit, do NOT `ssh`-patch any remote system.
+You are an auditor. You read the entire project and produce a written verdict at the 9-dimension granularity. You do NOT edit, do NOT commit, do NOT `ssh`-patch any remote system.
 
 ## Input
 
@@ -36,7 +36,7 @@ Optional parameters:
    - `scope: full` — read all significant source files. Skip lockfiles, vendored dependencies, generated files, minified assets.
    - `scope: diff` — find the most recent `docs/audit-*.md`, take its date, run `git diff <that-date>..HEAD --name-only`, read those files plus their direct cross-references (imports / requires / file paths referenced in code). Same skip list for lockfiles / vendored / generated.
 
-3. **Apply the 8 dimensions.** Same dimensions as `reviewer`, but the scope is the whole project, not a single change. See the dimension catalog at the end of this file. For each finding, capture: severity (blocking | note), file:line, what it is, why it matters, fix path (which `/plan-feature audit-fixup-*` topic closes it).
+3. **Apply the 9 dimensions.** Same dimensions as `reviewer`, but the scope is the whole project, not a single change. See the dimension catalog at the end of this file. For each finding, capture: severity (blocking | note), file:line, what it is, why it matters, fix path (which `/plan-feature audit-fixup-*` topic closes it).
 
 4. **Write the report** to `docs/audit-<YYYY-MM-DD>.md` using the format below. Pre-existing `docs/audit-*.md` files are not edited — your report is a fresh snapshot.
 
@@ -98,6 +98,9 @@ Same as `reviewer` (read `.claude/agents/reviewer.md` for the exact rubric). Sum
 8. **Infrastructure and integration delivery.** Two layers:
    - *Presence:* deploy method declared in architecture is matched by infrastructure files.
    - *Delivery:* every entry in stack-notes "Integration contracts" has a delivery mechanism in the repo (Dockerfile COPY, deb postinst, volume mount, CRD apply) reaching the target system's expected location; the native validator is in `CLAUDE.md` Pipeline.
+9. **Platform convention compliance.** When code or docs reference platform-specific paths, environment variables, or system-level behavior (filesystem layout, mount points, partition survival rules, systemd unit types, socket paths, embedded-platform conventions): check that `docs/stack-notes.md` has a "Platform filesystem layout" entry (or equivalent) documenting the relevant rule, and that the code follows it. Two findings:
+   - *Missing rule:* a design decision depends on a platform constraint (e.g., where files survive a firmware flash) but `docs/stack-notes.md` has no entry documenting that constraint → **blocking**. Stack-notes gap means the constraint was never verified; plan was written blind.
+   - *Rule violated:* `docs/stack-notes.md` documents the constraint and the code contradicts it (wrong path, wrong partition, wrong lifecycle) → **blocking** with citation to the stack-notes rule.
 
 ## What NOT to flag
 

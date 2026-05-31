@@ -122,6 +122,16 @@ Read `docs/architecture.md` deploy section and `docs/stack-notes.md` "Integratio
 - The delivery mechanism (Dockerfile `COPY` to expected path, deb package install hook, volume mount, CRD apply) reaches the path the external system expects — blocking if the artifact has no path to its consumer. A `schemas/foo.schema.json` that the Dockerfile does not copy to `/usr/share/<system>/schemas/` is broken on day one.
 - The native validator from the contract is wired into the Pipeline block of `CLAUDE.md` — blocking if missing.
 
+### 9. Platform convention compliance
+
+When the diff touches platform-specific paths, environment variables, or system-level behavior (filesystem layout, mount points, partition survival rules, systemd unit types, socket paths):
+
+1. **Stack-notes coverage check.** Open `docs/stack-notes.md` and look for a "Platform filesystem layout" entry (or equivalent covering the platform the project targets). If the plan's "Stack expectations touched" cites a platform rule — cross-check the code against it as with any other stack-spec rule.
+   - No entry in stack-notes for the platform constraint the diff depends on → **blocking**. A design decision made without a documented platform rule is unverifiable; fix is `plan-feature audit-fixup-stack-notes-platform-layout` before any path-placement change.
+   - Entry present but code contradicts it (wrong path, wrong partition, wrong lifecycle assumption) → **blocking** with citation to the stack-notes rule and source URL.
+
+2. **Scope.** Only applies when the diff contains a concrete path placement, unit file target directory, package postinst path, or other system-level placement decision. Pure logic changes with no filesystem or env-var references → skip this dimension.
+
 ## Trivial mode (`--mode=trivial`)
 
 When invoked from `/fixup`, run a stripped-down review:

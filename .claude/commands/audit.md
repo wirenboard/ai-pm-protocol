@@ -31,6 +31,10 @@ This command does **not** read the codebase itself. It spawns the `auditor` suba
 
    Never auto-batch these answers. Each blocking gets its own PM decision.
 
+   **"Fix it" / "исправь" after the audit summary** — if PM says this before the per-finding loop starts, treat it as "fix now" for all blocking findings. Confirm before acting:
+   > "I'll fix all N findings in priority order: 1. X, 2. Y, 3. Z. Starting with #1 now."
+   Then run step 6 in priority order. Do NOT silently load `/plan-feature` without this confirmation — the PM must see what they approved.
+
 5. **Walk PM through notes** the same way, briefer:
    > "Note <n>: <short title>. **Fix now / backlog / ignore?**"
 

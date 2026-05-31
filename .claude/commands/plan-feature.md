@@ -80,6 +80,14 @@ For each touched component, check `docs/stack-notes.md`:
 
 Never plan against a missing or stale stack-notes entry. This is not a PM question — PM never sees this step. If a researcher run takes time, tell PM one sentence ("checking stack docs before planning, one moment") and continue.
 
+**Deployment path trigger (mandatory when applicable).** If the plan touches any of: deployment paths, packaging, system-level config file placement, service unit target directories, container image paths, or partition-specific locations on an embedded/opinionated platform — before writing any path in the plan, explicitly check `docs/stack-notes.md` for a "Platform filesystem layout" section (or equivalent) that documents which paths survive system resets, firmware flashes, or OS upgrades.
+
+- **Section present and covers the path in question** → cite the rule in the plan's "Stack expectations touched" section. If the platform rule constrains the path, the plan must use the correct path, not the convenient one.
+- **Section missing or does not cover the specific constraint** → this is not a PM question. Spawn `stack-researcher` to document the platform filesystem layout before continuing. If `stack-researcher` cannot resolve it (platform-specific knowledge requiring human input), add as **the first task in the plan**:
+  > `[ ] Document <platform> partition layout and path survival rules in docs/stack-notes.md before implementing any file placement`
+
+  Never write a path placement into a plan without a platform-level reference in stack-notes.
+
 ## Planning conversation
 
 Ask clarifying questions as needed — grounded in what you read. Typical questions:

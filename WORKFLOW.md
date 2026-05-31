@@ -12,7 +12,7 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 | `reviewer` | Review after implementation |
 | `pr-prep` | Bump version, generate CHANGELOG, push branch, open or update PR |
 | `docs-extractor` | Auto-spawn from `/bootstrap` legacy full mode; reads existing codebase and writes `docs/architecture.md` + `docs/user-journeys.md` |
-| `auditor` | Auto-spawn from `/audit`; read-only project-wide sweep across the 8 dimensions, writes `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary |
+| `auditor` | Auto-spawn from `/audit`; read-only project-wide sweep across the 9 dimensions, writes `docs/audit-<YYYY-MM-DD>.md` and returns a structured summary |
 | `/research` | Research existing solutions and analogues (build vs use). PM-facing pros/cons output. Different from `stack-researcher` (which is agent-facing canonical citations). |
 | `/audit` | PM-initiated health check. Spawns `auditor` with `scope=full` (default, all source) or `scope=diff` (only files changed since the last audit + cross-refs). Drives a PM-facing flow over the findings (one decision per blocking: fix now / next sprint / accept-with-context). Fix-now closures go through `/plan-feature audit-fixup-*`. Full scope recommended quarterly. |
 | `/fixup` | Fast path for trivial changes (≤ 50 lines, no behavior change, no stack-notes touch, no new code file). Skips plan-feature; goes directly to coder + reviewer in trivial mode. Falls back to `/plan-feature` if any condition fails. |
@@ -39,6 +39,12 @@ The line: if it captures product design or technical canon, an agent writes it. 
 - Running the project's own deployment script / playbook / CI step — that is the canonical change channel and is reviewed code already.
 
 The bright line: **if the file you're about to touch on a remote system has a sibling in the repo, the change goes through git first.** Otherwise it's a runtime / deployment action — proceed with the usual product caution (back up before destructive ops, ask PM before anything irreversible).
+
+**Audit-to-fix transition rule.** After `/audit` completes, the orchestrator must not silently load `/plan-feature` and start planning. Two valid paths:
+- PM goes through the per-finding loop (step 4 in `audit.md`): one question per finding → explicit "fix now / next sprint / accept-with-context" → then plan-feature for each "fix now" in order.
+- PM gives a blanket "fix it" / "исправь" / "go ahead" after the summary → orchestrator confirms the full list ("I'll fix N findings in order: 1. X, 2. Y, 3. Z. Starting with #1.") and proceeds in priority order.
+
+In both cases the PM sees what will be fixed before the first `/plan-feature` loads. What is forbidden: loading `/plan-feature` without showing PM the finding list — that removes PM from the triage decision entirely.
 
 **Hook-level enforcement.** The rules above are also enforced as Claude Code `PreToolUse` hooks shipped in `.claude/settings.json`, so they hold even if a future session does not re-read this file:
 

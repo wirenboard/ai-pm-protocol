@@ -18,6 +18,22 @@ If this document is missing or empty for a component the feature touches — tha
 
 ---
 
+## Platform filesystem layout
+
+> **Fill in this section before any packaging, deployment, or config-placement work.** Agents use it to verify path choices. If the platform has no special filesystem constraints, write "N/A — standard Linux FHS, no partition survival rules" so reviewers know it was considered.
+
+- **Target platform:** <e.g. Wiren Board WB7, OpenWrt, standard Debian, container-only, etc.>
+- **Partitions and survival rules:**
+  - `<mount point>` — <what lives here, does it survive firmware flash / factory reset / OS upgrade? yes / no / partial>
+  - `<mount point>` — ...
+- **User-editable service configs must go to:** `<path prefix>` — survives: yes / no
+- **Read-only rootfs paths (wiped on flash):** `<path prefix>` — never install user data here
+- **Persistent data partition:** `<path prefix>` — safe for configs, databases, user files
+- **Source:** <link to platform vendor docs on filesystem layout, or "internal knowledge — owner: <name>">
+- **Last reviewed:** <YYYY-MM-DD>
+
+---
+
 ## Components
 
 For each component of the stack (language, runtime, framework, library, target platform, integration point), one section:
