@@ -81,10 +81,13 @@ For every `.ai-pm/contracts/<feature>.md`:
 
 - `docs/architecture.md`: does it list the major components visible in the codebase? Significant component missing → **note**.
 - `docs/user-journeys.md`: does it cover user-facing flows that are implemented? Missing journey for an implemented user-facing feature → **note**.
-- `docs/features/_index.md`: must exist and list every `*_plan.md` file in `docs/features/`. Check three things:
-  - Index file missing → **note** (remediation: create it via `/pm-bootstrap` re-run or manually).
-  - Feature plan not listed in index → **note** (stale index — orchestrator must add the row).
-  - Status mismatch: `.ai-pm/reviews/<topic>_review.md` exists but index shows `planned` or `active` → **note** (update row to `done`).
+- `docs/features/_index.md`: must exist and be current. Check:
+  - Index missing → **note** (remediation: generate via index generation procedure in `pm-bootstrap.md`).
+  - Feature plan not listed in any index section → **note** (stale index).
+  - Status mismatch: review file exists but index shows `planned`/`active` → **note**.
+  - `Done` date missing when status is `done` → **note**.
+  - `Review` or `Contract` link points to a non-existent file → **note**.
+  - Feature grouped under a component that doesn't match `docs/architecture.md` (e.g., component was renamed or removed) → **note**.
 
 Notes, not blocking — docs can lag slightly, but the same gap flagged in two consecutive full audits upgrades to blocking.
 
