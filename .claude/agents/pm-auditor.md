@@ -49,6 +49,13 @@ For every feature in the inventory:
 - `.ai-pm/reviews/<topic>_review.md` exists (or pm-plan-checker gave written sign-off) → **blocking** if missing.
 - Plan's Scenarios section mentions user-observable outcomes → `.ai-pm/contracts/<feature>.md` must exist → **blocking** if missing.
 
+  **User-observable** means any scenario where a human — end-user, integrator, operator — can see, interact with, or be affected by the result. This includes:
+  - UI changes (new screen, field, section, error message)
+  - CLI/package behavior visible to the integrator (`apt install` produces files, `docker-compose.yml` pins a version, config survives firmware flash)
+  - Any behavior a user could verify without reading source code
+
+  Does NOT include: internal refactors, doc-only changes, test-only changes, state file migrations with no externally visible effect.
+
 Remediation for missing plan: `/pm-plan <topic>` (retroactive — write what was built, not what was intended).
 Remediation for missing review: re-run `pm-plan-checker` on that feature's commits.
 Remediation for missing contract: PM validates and saves `.ai-pm/contracts/<feature>.md`.
