@@ -96,11 +96,58 @@ ln -s ../.ai-pm/tooling/.claude/settings.json .claude/settings.json
   - *Быстрый старт* — читает минимум, создаёт черновую документацию с пробелами `[?]`, можно сразу работать
   - *Полное документирование* — читает весь код сам, восстанавливает архитектуру и пользовательские сценарии, PM только валидирует результат. После этого можно портировать на новый стек.
 
-Обновление шаблона:
+## Обновление шаблона
 
 ```bash
 git submodule update --remote .ai-pm/tooling
+git add .ai-pm/tooling
+git commit -m "chore: bump ai-pm-protocol"
 ```
+
+Агенты, команды и `WORKFLOW.md` обновляются автоматически — они symlinks внутри submodule. `CLAUDE.md` и `docs/` проекта остаются нетронутыми.
+
+## Миграция с v1.x на v2.0
+
+v2.0 переносит операционные артефакты из `docs/` в `.ai-pm/`. Документация проекта (`docs/architecture.md`, `docs/stack-notes.md`, `docs/features/*_plan.md`) остаётся на месте.
+
+**Шаг 1 — обновить submodule:**
+
+```bash
+git submodule update --remote .ai-pm/tooling
+git add .ai-pm/tooling
+git commit -m "chore: bump ai-pm-protocol to v2.0"
+```
+
+**Шаг 2 — создать новые директории:**
+
+```bash
+mkdir -p .ai-pm/audits .ai-pm/reviews .ai-pm/arch .ai-pm/research .ai-pm/contracts
+```
+
+**Шаг 3 — перенести артефакты:**
+
+```bash
+# ревью-файлы
+for f in docs/features/*_review.md; do git mv "$f" .ai-pm/reviews/; done
+
+# архитектурные заметки по фичам
+for f in docs/features/*_arch.md; do git mv "$f" .ai-pm/arch/; done
+
+# файл аудита (если был в docs/ или docs/features/)
+for f in docs/features/audit-*.md docs/audit-*.md; do
+  [ -f "$f" ] && git mv "$f" .ai-pm/audits/
+done
+
+# backlog
+[ -f docs/backlog.md ] && git mv docs/backlog.md .ai-pm/backlog.md
+
+# research
+[ -f docs/research.md ] && git mv docs/research.md .ai-pm/research/research.md
+```
+
+**Шаг 4 — проверить `CLAUDE.md`:** убедиться что есть строка `@.ai-pm/tooling/WORKFLOW.md`.
+
+**Шаг 5 — запустить аудит:** скажи Claude «проверь проект» — он сгруппирует все pre-migration артефакты в одно finding и предложит принять массово.
 
 ## Какие риски шаблон снижает
 
@@ -152,28 +199,43 @@ doc/_templates/       — шаблоны документов проекта
 
 ## Структура downstream-проекта
 
+**Документация проекта** — в git, редактируется агентами через plan:
+
 ```
-README.md             — что и зачем, для людей
-CLAUDE.md             — статическая часть: проект, архитектура, pipeline
-                        (автоматически импортирует .ai-pm/tooling/WORKFLOW.md)
+README.md
+CLAUDE.md                          — импортирует @.ai-pm/tooling/WORKFLOW.md
 docs/
-  architecture.md     — стек, решения, ограничения
-  stack-notes.md      — правила стека с цитатами и валидаторами
-  user-journeys.md    — пользовательские сценарии
+  architecture.md
+  stack-notes.md
+  user-journeys.md
   features/
-    <topic>_plan.md   — спецификации фич (только планы)
-.ai-pm/
-  tooling/            — этот шаблон (submodule)
-  state/current.md    — текущая задача
-  contracts/          — Product Contracts по фичам
-  reviews/            — история ревью
-  arch/               — архитектурный анализ по фичам
-  audits/             — отчёты аудитов
-  backlog.md          — отложенные заметки
-  research/           — исследования альтернатив
+    <topic>_plan.md
 ```
 
-При обновлении submodule (`git submodule update --remote .ai-pm/tooling`) агенты и `WORKFLOW.md` обновляются автоматически. Статическая часть `CLAUDE.md` остаётся нетронутой.
+**Операционные артефакты** — в git, пишутся агентами автоматически:
+
+```
+.ai-pm/
+  tooling/                         ← сам шаблон (submodule, read-only)
+  state/
+    current.md                     ← снимок активной задачи
+    archive/<topic>-<date>.md      ← завершённые задачи
+  contracts/
+    <feature>.md                   ← Product Contract на каждую user-facing фичу
+  reviews/
+    <topic>_review.md              ← план compliance + code-review findings
+    fixup-<topic>_review.md        ← ревью тривиальных правок
+  arch/
+    <topic>_arch.md                ← архитектурный анализ по фиче
+  audits/
+    audit-<YYYY-MM-DD>.md          ← отчёт аудита протокола
+  research/
+    <topic>_research.md            ← исследования перед планированием
+    research.md                    ← project-level research (bootstrap)
+  backlog.md                       ← отложенные заметки (создаётся по первому use)
+```
+
+`.ai-pm/tooling/` — единственная часть `.ai-pm/`, которую PM не трогает и которая обновляется через `git submodule update`. Всё остальное в `.ai-pm/` — артефакты конкретного проекта.
 
 ## Лицензия
 
