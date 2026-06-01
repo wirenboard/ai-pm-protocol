@@ -1,6 +1,8 @@
 # pm-audit — project health check
 
-Run when PM says "check the project", "audit", "review the project", or "is everything ok?". Also triggered automatically from `/pm-plan` when N features have accumulated since the last audit.
+Run when PM says "check the project", "audit", "review the project", "is everything ok?", "проверь проект", "аудит", "всё ок?", "проверь состояние", or similar. Also triggered automatically from `/pm-plan` when N features have accumulated since the last audit.
+
+**IMPORTANT:** Do NOT perform inline ad-hoc checks (reading review files, running tests manually). Always invoke this skill and spawn `pm-auditor` as a subagent — that is the only valid audit path. Inline checks bypass protocol compliance verification and produce no audit artifact.
 
 ## Auto-scope decision (orchestrator decides, not PM)
 
