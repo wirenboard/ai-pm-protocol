@@ -119,6 +119,17 @@ For `scope: diff`, prefix the heading with `(diff scope)`:
 
 <2–3 sentences for the PM: overall protocol health, biggest gaps, tone>
 
+## Contract check
+
+Fill this table for EVERY feature in the inventory before writing Blocking/Notes.
+Extract the subject of the first sentence of each scenario — do not infer from feature name or category.
+
+| Feature | Scenario 1 subject | Needs contract | Contract file |
+|---|---|---|---|
+| <topic> | <first noun from scenario 1> | yes / no | present / MISSING / n/a |
+
+Rule: subject is a human role (integrator, operator, user, admin, developer, …) → `yes`. Subject is a system/process/file → `no`. Every `yes` + `MISSING` row → **blocking**.
+
 ## Blocking
 
 1. `<artifact or git ref>` — <finding>. **Why it matters:** <protocol integrity impact>. **Remediation:** <which protocol step — /pm-plan <topic>, pm-plan-checker re-run, contract update, etc.>.
