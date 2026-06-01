@@ -51,6 +51,12 @@ All agents below are project agents — use the Agent tool with the exact `subag
 3. **Tell PM the headline:**
    > "Check complete. Found [N blocking / N notes]. Full report in `.ai-pm/audits/audit-<YYYY-MM-DD>.md`."
 
+   If scope was `diff` — after the headline, ask PM via AskUserQuestion:
+   > "This was a quick diff check — only commits since the last audit were scanned. A full audit sweeps the entire project history and can surface gaps that predate the last check (e.g. missing contracts on older features). Run a full audit now?"
+   
+   Options: **Yes, run full audit** / **No, continue with these findings**.
+   If yes — re-spawn `pm-auditor` with `scope: full` before walking through findings.
+
 4. **Walk PM through blocking findings** using the auditor's priority order. For each:
    > "Blocking #<n>: <short title>. **Fix now** (run the remediation step next), **next sprint** (backlog), or **accept-with-context** (note the reason, skip next time)?"
 
