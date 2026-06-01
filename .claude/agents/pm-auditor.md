@@ -50,7 +50,7 @@ For every feature in the inventory:
 - Plan's Scenarios section mentions user-observable outcomes → `.ai-pm/contracts/<feature>.md` must exist → **blocking** if missing.
 
 Remediation for missing plan: `/plan-feature <topic>` (retroactive — write what was built, not what was intended).
-Remediation for missing review: re-run `pm-reviewer` on that feature's commits.
+Remediation for missing review: re-run `pm-plan-checker` on that feature's commits.
 Remediation for missing contract: PM validates and saves `.ai-pm/contracts/<feature>.md`.
 
 ### 2. Plan → implementation parity

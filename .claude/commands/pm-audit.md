@@ -57,7 +57,7 @@ PM can redirect naturally: "just a quick one" → `diff`; "go deep" / "everythin
 
 6. **Run the chosen remediations** in priority order. One at a time:
    - Missing plan → `/pm-plan-feature <topic>` (retroactive)
-   - Missing review → respawn `pm-reviewer` on that feature's commits
+   - Missing review → respawn `pm-plan-checker` on that feature's commits
    - Missing contract → PM validates; orchestrator drafts `.ai-pm/contracts/<feature>.md`
    - Stale contract → PM validates update; orchestrator updates the contract
    - Orphaned implementation → `/pm-plan-feature <topic>` (retroactive)

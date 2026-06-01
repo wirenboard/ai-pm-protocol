@@ -9,10 +9,10 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 | `pm-stack-researcher` | Auto-spawn from `/pm-bootstrap` (initial stack onboarding) or from `/pm-plan-feature` (when a feature touches a stack component not yet in `docs/stack-notes.md`). Reads canonical docs + spec, writes cited rules into stack-notes |
 | `pm-architect` | Structural choice in the plan — where does new code live? Plus: owns canonical `docs/architecture.md` (creates at bootstrap, refreshes on audit findings, updates on architectural decisions). |
 | `pm-coder` | Implement the plan |
-| `pm-reviewer` | Review after implementation |
+| `pm-plan-checker` | Plan compliance after implementation — verifies all scenarios implemented, contracts honored, interaction scenarios tested, DoD satisfied |
 | `pm-pr-prep` | Bump version, generate CHANGELOG, push branch, open or update PR |
 | `pm-docs-extractor` | Auto-spawn from `/pm-bootstrap` legacy full mode; reads existing codebase and writes `docs/architecture.md` + `docs/user-journeys.md` |
-| `pm-auditor` | Auto-spawn from `/pm-audit`; protocol compliance sweep — checks artifact completeness, plan↔implementation parity, contract currency, docs currency. Writes `docs/audits/audit-<YYYY-MM-DD>.md` and returns a structured summary. Does NOT review technical code quality — that is the reviewer's job per feature. |
+| `pm-auditor` | Auto-spawn from `/pm-audit`; protocol compliance sweep — checks artifact completeness, plan↔implementation parity, contract currency, docs currency. Writes `docs/audits/audit-<YYYY-MM-DD>.md` and returns a structured summary. Does NOT review technical code quality — that is pm-plan-checker + code-review skill per feature. |
 | `/pm-research` | Research existing solutions and analogues (build vs use). PM-facing pros/cons output. Different from `pm-stack-researcher` (which is agent-facing canonical citations). |
 | `/pm-audit` | PM-initiated protocol compliance check. Spawns `pm-auditor` with `scope=full` (default — all merged features) or `scope=diff` (only branches merged since the last audit). Drives a PM-facing flow over the findings (one decision per blocking: fix now / next sprint / accept-with-context). Fix-now remediations use the appropriate protocol step per finding type (missing plan → `/pm-plan-feature`, missing contract → contract creation, stale docs → `pm-docs-extractor`). Full scope recommended quarterly. |
 | `code-review` (built-in) | Full technical quality sweep of the project — bugs, security, dead code. Use `ultra` level for deep multi-agent review. Offered automatically after `/pm-audit full`; can also be run on demand. Not a pm-* agent — part of Claude Code built-in skills. |
@@ -20,7 +20,7 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
-**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator does not edit **content artefacts** directly. Content artefacts are anything that captures the project's design, code, contracts or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, plan / arch / review files under `docs/features/`, audit reports under `docs/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-docs-extractor`, `pm-auditor`, `pm-reviewer`, `pm-plan-feature` as a command). When a content artefact needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
+**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator does not edit **content artefacts** directly. Content artefacts are anything that captures the project's design, code, contracts or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, plan / arch / review files under `docs/features/`, audit reports under `docs/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-docs-extractor`, `pm-auditor`, `pm-plan-checker`, `pm-plan-feature` as a command). When a content artefact needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
 
 **Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `docs/backlog.md` entries, recording PM decisions, choosing remediation order for audit findings, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
 
@@ -97,27 +97,31 @@ When you describe a feature or bug:
 - How to try it yourself step by step
 - Anything that needs your attention
 
-**Step 5 — Reviewer checks.** Plan compliance, code quality, security, infrastructure. I surface the verdict to you in plain language:
+**Step 5 — Review loop.** Plan compliance (`pm-plan-checker`) and technical quality (`code-review`) run after implementation. You don't see this loop — it runs until both pass:
 
-- **Approved** → I verify git state (branch from current main, clean tree). Then I ask:
+- Any finding (blocking or technical note) → coder fixes → both re-run → repeat.
+- You are not notified about review iterations. Technical detail stays inside the loop.
 
-  > "Code is approved. How do you want to proceed?
-  > A) **Manual testing first** — I'll deploy following `docs/architecture.md` if needed, then tell you what to check.
-  > B) **Open PR now, test before merging** — I open the PR; you test (from CI artifacts, staging, or the branch directly), then merge when satisfied.
-  > C) **Ship now** — I open the PR and you merge straight away."
+Once both pass, I surface only what requires a product decision:
 
-  If **A**: after deploying I give you a short checklist — what was built (one sentence) and what to verify (bullet list, no steps). You test and tell me what you found — issues or go-ahead.
+- **Product notes** (something that affects what the user sees or changes scope) — I present each one: fix now, add to backlog, or ignore?
+- **Nothing to decide** → I go straight to step 6.
 
-  I wait for your answer before running `pm-pr-prep`. After merge: `git checkout main && git pull`.
+After the loop clears, I tell you:
+- What the feature now does (user perspective, one paragraph)
+- How to try it yourself (step by step)
+- Any product notes that need your answer
 
-- **Request changes** → I tell you what was found and why it matters (no code). Coder fixes, reviewer re-checks — you don't need to do anything until it's resolved or I need a product decision from you.
+**Step 6 — Ship.** I verify git state, then ask:
 
-If the reviewer found **notes**, I split them by type:
+> "Ready to open the PR. How do you want to proceed?
+> A) **Test first** — I deploy and give you a checklist of what to verify.
+> B) **Open PR, test before merging** — you test from CI artifacts or the branch, then merge.
+> C) **Ship now** — open PR, merge straight away."
 
-- **Product notes** (touch what the user sees, scope, or a product trade-off) — I present each one to you in plain language and ask: fix now, add to backlog, or ignore? "Fix now" routes through the responsible agent before the PR. "Backlog" gets added to `docs/backlog.md` with the context of this conversation. "Ignore" is dropped.
-- **Technical notes** (phrasing of a citation, attribution of a source URL, code-style choices, internal naming, cosmetic CHANGELOG wording — things the PM has neither context nor obligation to decide) — I handle without burdening you. If the fix is cheap and the responsible agent is obvious, I respawn that agent with the technical notes batched in. If the issue is cosmetic enough to ignore, I drop it on merge. The reviewer's verdict labels each note as product or technical and adds a routing line so I act without guessing. If a technical note turns out to have product implications you should know about, I surface it to you anyway — better one extra question than a missed call.
+I wait for your answer before running `pm-pr-prep`. After merge: `git checkout main && git pull`.
 
-I never add anything to `docs/backlog.md` without an explicit yes from you (product note backlog) or a clear technical reason I will record alongside the entry (e.g., "deferred — upstream docs do not yet answer this"). The backlog itself is an orchestration artefact — I write it directly, that is part of my job.
+I never add anything to `docs/backlog.md` without an explicit yes from you (product note backlog) or a clear technical reason recorded alongside the entry. The backlog is an orchestration artefact — I write it directly.
 
 `docs/backlog.md` is created on first use — not upfront.
 
