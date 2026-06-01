@@ -63,6 +63,10 @@ PM can redirect naturally: "just a quick one" → `diff`; "go deep" / "everythin
    - Orphaned implementation → `/pm-plan <topic>` (retroactive)
    - Stale docs → spawn `pm-legacy-reader` or `pm-architect`
 
+   **Plan naming rule.** Topic = what is being fixed, not where it came from. `confed-schema-delivery`, not `audit-fixup-confed-schema-delivery`. The audit finding belongs in the plan's context or git history — not in the filename.
+
+   **Update vs create.** If `docs/features/<area>_plan.md` already exists and the finding is a missing scenario or gap within that feature's scope → add to the existing plan rather than creating a new file. Create a new plan only when the fix is genuinely new standalone work that has no existing plan.
+
    Doc-only remediations (missing plan for already-correct code, stale docs) do not require `pm-coder`.
 
 ## Technical quality (full scope only)
