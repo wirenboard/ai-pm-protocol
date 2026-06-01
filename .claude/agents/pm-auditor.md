@@ -49,13 +49,22 @@ For every feature in the inventory:
 - `.ai-pm/reviews/<topic>_review.md` exists (or pm-plan-checker gave written sign-off) → **blocking** if missing.
 - Plan's Scenarios section mentions user-observable outcomes → `.ai-pm/contracts/<feature>.md` must exist → **blocking** if missing.
 
-  **How to check:** for each scenario in the plan, explicitly identify:
-  1. **Who** — the named role performing the action (end-user, integrator, operator, admin, …). If a human role can be named → contract required.
-  2. **Use case** — what that role does or observes.
+  **How to check — mandatory extraction step:**
 
-  Do not rely on "is there a UI?" alone. A scenario like "integrator runs `apt install`, package places files in `/etc/`" names a user (integrator) with a use case (install and verify placement) → contract required.
+  For every feature, before deciding contract required/not, extract and record the grammatical subject of the first sentence of each scenario. Do this as a text extraction, not a judgment. The feature category (packaging, infrastructure, UI, backend) is irrelevant at this step.
 
-  Does NOT require a contract: internal refactors, doc-only changes, test-only changes, state file migrations where no human role appears in the scenarios.
+  ```
+  <topic>:
+    scenario 1 subject: <first noun/role>
+    scenario 2 subject: <first noun/role>
+    → contract required: yes / no
+  ```
+
+  Rule: if ANY scenario subject is a human role — `integrator`, `operator`, `user`, `admin`, `developer`, `engineer`, or a project-specific role — → contract required. No exceptions based on feature category.
+
+  Example: scenario starts "Integrator runs `apt install`…" → subject = integrator → contract required, regardless of whether the feature is UI or packaging.
+
+  Does NOT require a contract only when ALL scenario subjects are non-human (the system, the package, the service, a process, a file).
 
 Remediation for missing plan: `/pm-plan <topic>` (retroactive — write what was built, not what was intended).
 Remediation for missing review: re-run `pm-plan-checker` on that feature's commits.
