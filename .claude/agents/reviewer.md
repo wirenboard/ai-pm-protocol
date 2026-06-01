@@ -33,6 +33,7 @@ Two levels only:
 **Plan completeness sub-check.** Before checking compliance, check the plan itself:
 - If the feature touches any stack component listed in `docs/stack-notes.md` and the plan omits the "Stack expectations touched" section — plan is incomplete, **blocking**.
 - If the plan has "Stack expectations touched" but lacks source URLs for each cited rule — **blocking**. Unsourced rules cannot be verified.
+- If the feature touches network I/O, connection state, or shared device state and the plan has no **Interaction scenarios** section and no explicit `Provably isolated:` declaration — plan is incomplete, **blocking**.
 
 **Categorical coverage sub-check.** For every categorical element the plan focuses on (a chosen type, mode, role, state, operation, category), the plan must either treat the full set or list each excluded sibling under Out of scope with a one-line reason. A sibling case implemented as a permissive variant of the chosen element (enum that accepts more than the plan says, optional / empty field that silently flips behavior, conditional branch that handles a case the plan placed Out of scope) → **blocking**. An Out of scope sibling appearing in tests, fixtures, or example configs without a plan change → **blocking** by the same rule.
 
@@ -50,6 +51,8 @@ Backend-only changes (refactor, infra, internal-only utility) skip the Product C
 ### 2. Test quality
 
 For each new test — find its description in the plan's "Test plan" and verify it actually exercises that scenario. Flag as blocking if: no assertions, only checks "no exception", mocks away the very thing being tested. Verify no existing test was deleted or weakened without a plan that explicitly changes that behavior.
+
+For each **Interaction scenario** in the plan — verify a test exists that sets up the concurrent or post-condition state described in the scenario. A test that only covers the happy path without the concurrent condition does not satisfy the interaction scenario. Missing test for an interaction scenario → **blocking**.
 
 ### 3. Correctness (security + stability)
 
@@ -127,7 +130,7 @@ Read `docs/architecture.md` deploy section and `docs/stack-notes.md` "Integratio
 When the diff touches platform-specific paths, environment variables, or system-level behavior (filesystem layout, mount points, partition survival rules, systemd unit types, socket paths):
 
 1. **Stack-notes coverage check.** Open `docs/stack-notes.md` and look for a "Platform filesystem layout" entry (or equivalent covering the platform the project targets). If the plan's "Stack expectations touched" cites a platform rule — cross-check the code against it as with any other stack-spec rule.
-   - No entry in stack-notes for the platform constraint the diff depends on → **blocking**. A design decision made without a documented platform rule is unverifiable; fix is `plan-feature audit-fixup-stack-notes-platform-layout` before any path-placement change.
+   - No entry in stack-notes for the platform constraint the diff depends on → **blocking**. A design decision made without a documented platform rule is unverifiable; fix is `/plan-feature <topic>-platform-layout` to document the constraint before any path-placement change.
    - Entry present but code contradicts it (wrong path, wrong partition, wrong lifecycle assumption) → **blocking** with citation to the stack-notes rule and source URL.
 
 2. **Scope.** Only applies when the diff contains a concrete path placement, unit file target directory, package postinst path, or other system-level placement decision. Pure logic changes with no filesystem or env-var references → skip this dimension.

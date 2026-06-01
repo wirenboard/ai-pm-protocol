@@ -88,6 +88,21 @@ Never plan against a missing or stale stack-notes entry. This is not a PM questi
 
   Never write a path placement into a plan without a platform-level reference in stack-notes.
 
+## Interaction scenario check (mandatory before drafting)
+
+Before writing the plan, identify shared state and external events that can occur concurrently with this feature. Check `docs/user-journeys.md` and adjacent plans in `docs/features/` for features that share state with what you're planning: same connection objects, same topic subscriptions, same device state, same in-memory data structures, same timers or polling loops.
+
+For each intersection, write one interaction scenario in the plan's **Interaction scenarios** section.
+
+A feature is **not** provably isolated if it touches any of:
+- Network I/O (connects, reconnects, disconnects)
+- Connection or session state
+- Shared device state (commissioning status, pairing records, device lists)
+- MQTT subscriptions or publish state
+- Timers or polling loops that can fire during another operation
+
+If the feature is provably isolated — no shared state, no concurrent operations, no adjacent feature interference — state this explicitly as `Provably isolated: <reason>` and omit the section.
+
 ## Planning conversation
 
 Ask clarifying questions as needed — grounded in what you read. Typical questions:
@@ -132,11 +147,18 @@ Stop asking when you have enough to write the plan.
 - **<component>**: <quoted constraint>. Source: <URL>
 - **<integration>**: artifact `<path>` delivered via `<mechanism>`, validated by `<command>`
 
+## Interaction scenarios
+(omit only when provably isolated — state why; required if feature touches network I/O, connection state, or shared device state)
+- When <this feature's operation> happens while <concurrent event or adjacent feature state>: <expected outcome>
+- When <external event X> occurs during <this feature's flow>: <expected outcome>
+
 ## Test plan
 - Existing tests that must pass: <list or "all existing tests">
 - New tests:
   - `<test name>`: <one sentence — what scenario this verifies, given/when/then>
   - `<test name>`: <what scenario>
+- Interaction scenario tests (one per Interaction scenario above):
+  - `<test name>`: sets up <concurrent/post-condition state>, verifies <expected outcome>
 - Stack-spec tests (one per stack expectation above):
   - `<test name>`: verifies the code respects "<rule from stack-notes>" — not just self-consistent mapping
 
@@ -152,6 +174,8 @@ Stop asking when you have enough to write the plan.
 ```
 
 **Test plan rule:** each new test must have a one-sentence behavior description — what scenario it verifies (given/when/then style). Not just a file name. This is what reviewer and coder use to write and verify the test.
+
+**Interaction scenario test rule:** each interaction scenario requires a test that sets up the concurrent or post-condition state and verifies the expected outcome. Omitting a test for an interaction scenario is the same protocol violation as omitting a test for a regular scenario. Reviewer dim 2 will block on missing interaction scenario tests.
 
 **Stack-spec test rule:** for every entry in "Stack expectations touched", at least one test must verify behavior against the cited rule, not against the coder's own mapping. Self-consistent property-based tests (e.g., round-trip over the coder's own range) do not count — they can freeze a spec violation as a contract. Stack-spec tests must reference the source URL in a comment.
 
