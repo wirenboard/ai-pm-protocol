@@ -149,6 +149,7 @@ After the extractor finishes:
 - Write `CLAUDE.md` from `.ai-pm/tooling/doc/_templates/CLAUDE.md.tmpl` — fill in all placeholders using the stack and architecture the extractor documented. Pipeline section left as placeholders until `pm-stack-researcher` runs.
 - Create `docs/stack-notes.md` from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl` (empty shell).
 - Spawn `pm-stack-researcher` with the stack components the extractor put in `architecture.md` (mandatory, no PM questions). After it returns: extend the Pipeline block in `CLAUDE.md` with its "New validators"; reflect "Integration contracts" in `architecture.md` deploy section; record "Open questions" for the PM brief below.
+- **Spawn `pm-architect` (Section A)** to finalize `docs/architecture.md` to canonical format. `pm-legacy-reader` produces a raw draft — `pm-architect` is the owner and must walk every template section, fill gaps from `stack-notes.md`, mark N/A sections explicitly, and cite each decision. Wait for it to complete before presenting to PM.
 - Create `docs/features/` directory if it doesn't exist
 - Create `.ai-pm/state/current.md` from template (`Status: idle`), `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` (the docs-extractor already drafted contracts into the contracts/ directory — surface their count and `(needs PM validation)` markers in the PM brief)
 

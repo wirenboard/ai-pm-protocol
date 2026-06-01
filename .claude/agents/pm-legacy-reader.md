@@ -1,6 +1,6 @@
 ---
 name: pm-legacy-reader
-description: Reads a legacy codebase at defined depth and writes docs/architecture.md, docs/user-journeys.md, and optional docs (ui-guide, threat-model). Language-agnostic. Called from /bootstrap full mode or standalone when specific modules changed and docs need updating. Read-only on source code — only writes to docs/.
+description: Reads a legacy codebase and writes a raw draft of docs/architecture.md and docs/user-journeys.md. Called from /pm-bootstrap full mode. Produces a draft — pm-architect finalizes docs/architecture.md to canonical format afterward. Read-only on source code.
 model: sonnet
 ---
 
