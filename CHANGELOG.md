@@ -13,6 +13,23 @@
 
 ---
 
+## [2.0.1] — 2026-06-01
+
+### Fixed
+
+- Устранены 19 проблем по результатам полного ревью шаблона:
+  - **Blocker:** `pm-bootstrap` ссылался на несуществующий `.claude/agents/docs-extractor.md` — legacy full mode падал при попытке spawn агента. Исправлено на `pm-legacy-reader.md`.
+  - **Blocker:** hard rule в `pm-legacy-reader` запрещал запись в `.ai-pm/contracts/` — самопротиворечие с основными инструкциями агента. Правило расширено.
+  - **Blocker:** greenfield и shallow bootstrap не создавали `.ai-pm/research/` и `.ai-pm/audits/` — `/pm-research` падал при первом запуске.
+  - **Deadlock:** DoD item 8 требовал doc updates в ветке, но никто не был назначен их выполнять (pm-coder не трогает `docs/`). `pm-plan` и WORKFLOW теперь явно routing-ят doc updates: после pm-coder оркестратор spawning pm-architect (для `architecture.md`) или pm-legacy-reader (для `user-journeys.md`).
+  - **Gap:** hotfix mode упоминался в WORKFLOW, но `pm-plan` ничего не знал о нём. Добавлена секция hotfix mode: topic `hotfix-<area>` требует раздел `## Incident facts` в плане; pm-plan-checker блокирует при его отсутствии.
+  - **Naming sweep (13 мест):** `plan-feature` → `/pm-plan`, `reviewer` → `pm-plan-checker` / `code-review`, `docs-extractor` → `pm-legacy-reader`, `commands/fixup.md` → `commands/pm-fixup.md`, `Reviewer dim 1/2` → `pm-plan-checker`, `/bootstrap` → `/pm-bootstrap` во всех файлах включая шаблоны `contract.md.tmpl`, `stack-notes.md.tmpl`, `CLAUDE.md.tmpl`.
+  - **Overcomplication:** таблица агентов WORKFLOW разделена на Agents (`.claude/agents/`) и Commands (`.claude/commands/`) — добавлены пропущенные `/pm-bootstrap` и `/pm-plan`; описание `/pm-audit` исправлено (scope решает оркестратор, а не PM).
+  - **Overcomplication:** `pm-pr-prep` step 2 больше не блокирует на подтверждении при наличии других PR — информирует в отчёте.
+  - **Overcomplication:** критерии Architect check в `pm-plan` стали domain-neutral (`new entity type` вместо `new device type`).
+
+---
+
 ## [2.0.0] — 2026-06-01
 
 ### Breaking changes
