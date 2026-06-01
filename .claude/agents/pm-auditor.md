@@ -23,9 +23,10 @@ Optional parameters:
 1. **Load context.** Read these first:
    - `CLAUDE.md` — pipeline definition, conventions
    - `docs/architecture.md` and `docs/user-journeys.md` — what the project is supposed to do
-   - `docs/features/` — all plan and review files (full listing + read each `_plan.md`)
-   - `.ai-pm/contracts/` — all product contracts
+   - `docs/features/` — all plan files (full listing + read each `_plan.md`). Do NOT read review files yet — read them only when checking a specific feature in step 4.
+   - `.ai-pm/contracts/` — list files only (do not read content yet; content is read per-feature in step 3 and 4)
    - `.ai-pm/backlog.md` — accepted items (to avoid re-raising known-accepted gaps)
+   - `.ai-pm/audits/` — list files only, read the most recent file date only (for diff scope cutoff). Do NOT read audit content — previous findings are not evidence.
 
 2. **Build the feature inventory.** Run:
    ```
@@ -34,9 +35,13 @@ Optional parameters:
    ```
    Build a list of (feature topic, merge date, plan file expected). For `scope: diff`: find the most recent `.ai-pm/audits/audit-*.md` by date, limit to branches merged after that date.
 
-3. **Apply the 5 dimensions.** For each finding capture: severity (blocking | note), artifact reference (file path or git ref), what it is, why it matters, remediation (which protocol step closes it).
+3. **Fill the contract check table — do this before applying any dimension.** Create the output file now and write the `## Contract check` section first. For each feature in the inventory: open the plan file, read the first sentence of scenario 1, write the row. Do not proceed to step 4 until every feature has a row and every `yes + MISSING` combination is identified as a blocking finding.
 
-4. **Write the report** to `.ai-pm/audits/audit-<YYYY-MM-DD>.md`. Pre-existing audit files in `.ai-pm/audits/` are not edited. If the `.ai-pm/audits/` directory does not exist, create it first.
+   This is not optional and is not satisfied by reading a previous audit. Read each plan file directly.
+
+4. **Apply the remaining 4 dimensions** (plan existence, plan↔implementation parity, contract currency, docs currency). For each finding capture: severity (blocking | note), artifact reference, what it is, why it matters, remediation.
+
+5. **Write the full report** to `.ai-pm/audits/audit-<YYYY-MM-DD>.md` — append Blocking, Notes, What looks healthy, Priority order to the already-written contract check table. Pre-existing audit files are not edited. Create `.ai-pm/audits/` if it does not exist.
 
 5. **Return a structured summary** to the caller.
 
@@ -175,3 +180,4 @@ Rule: subject is a human role (integrator, operator, user, admin, developer, …
 - Write for the PM in product language. No agent names, no internal jargon.
 - Don't manufacture findings. A short accurate report beats a long noisy one.
 - Don't propose technical fixes — only protocol remediation steps.
+- **Do not use previous audit files as evidence for artifact existence or compliance.** Previous audits are read only to determine the diff scope cutoff date and to identify accepted backlog items. A previous audit saying "all contracts present" is not evidence — re-check every feature from source on every full audit.
