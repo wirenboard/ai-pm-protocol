@@ -2,6 +2,18 @@
 
 Create `docs/features/<topic>_plan.md` for a feature, fix, or non-trivial change.
 
+## Agent dispatch
+
+All agents below are project agents — use the Agent tool with the exact `subagent_type` shown.
+
+| Agent | subagent_type |
+|---|---|
+| pm-architect | `"pm-architect"` |
+| pm-legacy-reader | `"pm-legacy-reader"` |
+| pm-stack-researcher | `"pm-stack-researcher"` |
+| pm-coder | `"pm-coder"` |
+| pm-plan-checker | `"pm-plan-checker"` |
+
 This skill runs in the main session — planning is a conversation with the PM, not an autonomous agent task.
 
 ## Before asking anything
@@ -29,7 +41,7 @@ While reading docs/, identify whether this feature touches areas that are incomp
 
 Three cases — handle each differently:
 
-**1. Documentation missing or marked `[?]`** — do not write to `docs/` directly. Spawn the owning agent with a focused prompt: `pm-architect` for gaps in `docs/architecture.md`, `pm-legacy-reader` for gaps in `docs/user-journeys.md`. Wait for the agent to complete before writing the plan.
+**1. Documentation missing or marked `[?]`** — do not write to `docs/` directly. Spawn the owning agent with a focused prompt: `pm-architect` (`subagent_type: "pm-architect"`) for gaps in `docs/architecture.md`, `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) for gaps in `docs/user-journeys.md`. Wait for the agent to complete before writing the plan.
 
 **2. Documentation exists but incomplete** — same: spawn the owning agent with a focused prompt to fill the missing section. Do not rewrite what's already there.
 
@@ -42,7 +54,7 @@ Also flag anything this feature makes outdated:
 - Does this feature change an existing user journey? → note the update needed in `docs/user-journeys.md`
 - Does this feature add a new architectural constraint or decision? → note the update needed in `docs/architecture.md`
 
-Include any doc updates as explicit steps in the plan — coder does not touch docs. After pm-coder finishes and before spawning pm-plan-checker: if the plan's "Docs to update" section names `docs/architecture.md` — spawn `pm-architect` with a focused prompt to update that section; if it names `docs/user-journeys.md` — spawn `pm-legacy-reader` standalone with a focused prompt. This satisfies DoD item 8 before the review loop runs.
+Include any doc updates as explicit steps in the plan — coder does not touch docs. After pm-coder finishes and before spawning pm-plan-checker: if the plan's "Docs to update" section names `docs/architecture.md` — spawn `pm-architect` (`subagent_type: "pm-architect"`) with a focused prompt to update that section; if it names `docs/user-journeys.md` — spawn `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) standalone with a focused prompt. This satisfies DoD item 8 before the review loop runs.
 
 ## Categorical scope check (mandatory, surfaces a product question to PM)
 
@@ -76,14 +88,14 @@ Before drafting the plan, identify which stack components this feature touches. 
 For each touched component, check `docs/stack-notes.md`:
 
 - **Component already present** with current `Last reviewed` date → read the section, plan must respect its idioms and constraints.
-- **Component missing or stale** (no entry, or entry older than 6 months without re-review) → spawn `pm-stack-researcher` for that component **before** continuing planning. Wait for it to extend `stack-notes.md`. Take its "New validators" list — add to the plan's "Docs to update" section as `CLAUDE.md` Pipeline extension.
+- **Component missing or stale** (no entry, or entry older than 6 months without re-review) → spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) for that component **before** continuing planning. Wait for it to extend `stack-notes.md`. Take its "New validators" list — add to the plan's "Docs to update" section as `CLAUDE.md` Pipeline extension.
 
 Never plan against a missing or stale stack-notes entry. This is not a PM question — PM never sees this step. If a researcher run takes time, tell PM one sentence ("checking stack docs before planning, one moment") and continue.
 
 **Deployment path trigger (mandatory when applicable).** If the plan touches any of: deployment paths, packaging, system-level config file placement, service unit target directories, container image paths, or partition-specific locations on an embedded/opinionated platform — before writing any path in the plan, explicitly check `docs/stack-notes.md` for a "Platform filesystem layout" section (or equivalent) that documents which paths survive system resets, firmware flashes, or OS upgrades.
 
 - **Section present and covers the path in question** → cite the rule in the plan's "Stack expectations touched" section. If the platform rule constrains the path, the plan must use the correct path, not the convenient one.
-- **Section missing or does not cover the specific constraint** → this is not a PM question. Spawn `pm-stack-researcher` to document the platform filesystem layout before continuing. If `pm-stack-researcher` cannot resolve it (platform-specific knowledge requiring human input), add as **the first task in the plan**:
+- **Section missing or does not cover the specific constraint** → this is not a PM question. Spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) to document the platform filesystem layout before continuing. If `pm-stack-researcher` cannot resolve it (platform-specific knowledge requiring human input), add as **the first task in the plan**:
   > `[ ] Document <platform> partition layout and path survival rules in docs/stack-notes.md before implementing any file placement`
 
   Never write a path placement into a plan without a platform-level reference in stack-notes.
@@ -219,7 +231,7 @@ After PM approves the plan, check architect criteria before handing off to coder
 
 If **yes to any** — suggest to PM: "This plan has a structural choice about where the new code lives. I can run an architecture review (5-10 min) to map the options and risks before coding starts. Worth doing?"
 
-If PM says yes — invoke `pm-architect` agent with the plan, then hand off to coder with both plan and arch notes.
+If PM says yes — invoke `pm-architect` (`subagent_type: "pm-architect"`) with the plan, then hand off to coder with both plan and arch notes.
 If PM says no — hand off to coder with plan only.
 If **none apply** — hand off to coder directly without mentioning architect.
 

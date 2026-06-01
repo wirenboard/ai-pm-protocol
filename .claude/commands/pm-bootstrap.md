@@ -2,6 +2,16 @@
 
 Initialize this project with the ai-pm-protocol template.
 
+## Agent dispatch
+
+All agents below are project agents — use the Agent tool with the exact `subagent_type` shown.
+
+| Agent | subagent_type |
+|---|---|
+| pm-stack-researcher | `"pm-stack-researcher"` |
+| pm-architect | `"pm-architect"` |
+| pm-legacy-reader | `"pm-legacy-reader"` |
+
 ## Check for leftover git hooks
 
 Before anything else — check `.git/hooks/` for non-sample hooks:
@@ -62,13 +72,13 @@ Then create from templates:
 - `.ai-pm/research/` directory — research artifacts written by `/pm-research`
 - `.ai-pm/audits/` directory — protocol audit reports
 
-**Stack literacy onboarding (mandatory, no PM questions).** Spawn the `pm-stack-researcher` subagent with the stack components from PM's answers (language, runtime, framework, database, key libraries, target platform). The agent reads canonical docs and spec, writes `docs/stack-notes.md` with cited idioms, constraints, validators and integration contracts.
+**Stack literacy onboarding (mandatory, no PM questions).** Spawn the `pm-stack-researcher` agent (`subagent_type: "pm-stack-researcher"`) with the stack components from PM's answers (language, runtime, framework, database, key libraries, target platform). The agent reads canonical docs and spec, writes `docs/stack-notes.md` with cited idioms, constraints, validators and integration contracts.
 
 After `pm-stack-researcher` returns:
 - Take its "New validators" list and add each command to the `Pipeline` block in `CLAUDE.md` — these are mandatory gates alongside `<test command>` and `<lint command>`.
 - Take its "Open questions" list and surface to PM as a brief technical caveats block (one sentence each, plain language) — PM does not have to act on them now, but they exist on record.
 
-**Spawn `pm-architect` (Section A — canonical architecture.md).** Architect reads PM's stack answers, the freshly-written `docs/stack-notes.md`, and the template at `.ai-pm/tooling/doc/_templates/architecture.md.tmpl`. It walks every template section (Tech stack, Architectural decisions, Architectural constraints, File layout, Integration contract, Release flow), marking N/A sections explicitly (Security, Code conventions, Deploy if not applicable). It cites the bootstrap conversation for each decision rationale. The result replaces the placeholder content created from the template. This is the new owner of `docs/architecture.md` — orchestrator no longer writes architecture inline.
+**Spawn `pm-architect`** (`subagent_type: "pm-architect"`) **(Section A — canonical architecture.md).** Architect reads PM's stack answers, the freshly-written `docs/stack-notes.md`, and the template at `.ai-pm/tooling/doc/_templates/architecture.md.tmpl`. It walks every template section (Tech stack, Architectural decisions, Architectural constraints, File layout, Integration contract, Release flow), marking N/A sections explicitly (Security, Code conventions, Deploy if not applicable). It cites the bootstrap conversation for each decision rationale. The result replaces the placeholder content created from the template. This is the new owner of `docs/architecture.md` — orchestrator no longer writes architecture inline.
 
 Then ask PM: "Want to research existing solutions — libraries, ready products, analogues? Useful at the start so you don't build what already exists. Run /pm-research?"
 
@@ -125,7 +135,7 @@ Write minimal docs — enough to start adding features:
 - `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` directories
 - Optional docs — skip; create only if code clearly requires them (e.g., obvious security constraints)
 
-**Stack literacy onboarding (mandatory, no PM questions).** Once stack components are identified from the code, spawn `pm-stack-researcher` with that list. It fills `docs/stack-notes.md`. Take its "New validators" list and add commands to the Pipeline block in `CLAUDE.md`. Take its "Open questions" — surface to PM as caveats.
+**Stack literacy onboarding (mandatory, no PM questions).** Once stack components are identified from the code, spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) with that list. It fills `docs/stack-notes.md`. Take its "New validators" list and add commands to the Pipeline block in `CLAUDE.md`. Take its "Open questions" — surface to PM as caveats.
 
 Present findings to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms.
 
@@ -145,13 +155,13 @@ Do not ask PM to fill the gaps in detail — `[?]` items get resolved naturally 
 
 ### Full (complete documentation)
 
-Invoke the `pm-legacy-reader` subagent (defined in `.claude/agents/pm-legacy-reader.md`) using the Agent tool. It reads all significant modules at defined depth and writes `docs/architecture.md`, `docs/user-journeys.md`, and optional docs (`ui-guide.md`, `threat-model.md`). Wait for it to complete and read its summary output.
+Invoke the `pm-legacy-reader` agent using the Agent tool with `subagent_type: "pm-legacy-reader"`. It reads all significant modules at defined depth and writes `docs/architecture.md`, `docs/user-journeys.md`, and optional docs (`ui-guide.md`, `threat-model.md`). Wait for it to complete and read its summary output.
 
 After the extractor finishes:
 - Write `CLAUDE.md` from `.ai-pm/tooling/doc/_templates/CLAUDE.md.tmpl` — fill in all placeholders using the stack and architecture the extractor documented. Pipeline section left as placeholders until `pm-stack-researcher` runs.
 - Create `docs/stack-notes.md` from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl` (empty shell).
-- Spawn `pm-stack-researcher` with the stack components the extractor put in `architecture.md` (mandatory, no PM questions). After it returns: extend the Pipeline block in `CLAUDE.md` with its "New validators"; reflect "Integration contracts" in `architecture.md` deploy section; record "Open questions" for the PM brief below.
-- **Spawn `pm-architect` (Section A)** to finalize `docs/architecture.md` to canonical format. `pm-legacy-reader` produces a raw draft — `pm-architect` is the owner and must walk every template section, fill gaps from `stack-notes.md`, mark N/A sections explicitly, and cite each decision. Wait for it to complete before presenting to PM.
+- Spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) with the stack components the extractor put in `architecture.md` (mandatory, no PM questions). After it returns: extend the Pipeline block in `CLAUDE.md` with its "New validators"; reflect "Integration contracts" in `architecture.md` deploy section; record "Open questions" for the PM brief below.
+- **Spawn `pm-architect`** (`subagent_type: "pm-architect"`) **(Section A)** to finalize `docs/architecture.md` to canonical format. `pm-legacy-reader` produces a raw draft — `pm-architect` is the owner and must walk every template section, fill gaps from `stack-notes.md`, mark N/A sections explicitly, and cite each decision. Wait for it to complete before presenting to PM.
 - Create `docs/features/` directory if it doesn't exist
 - Create `.ai-pm/state/current.md` from template (`Status: idle`), `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` (pm-legacy-reader already drafted contracts into the contracts/ directory — surface their count and `(needs PM validation)` markers in the PM brief)
 

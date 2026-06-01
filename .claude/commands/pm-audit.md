@@ -21,9 +21,20 @@ Tell PM one sentence before starting:
 
 PM can redirect naturally: "just a quick one" → `diff`; "go deep" / "everything" / "comprehensive" → `full`.
 
+## Agent dispatch
+
+All agents below are project agents — use the Agent tool with the exact `subagent_type` shown. Never substitute with `wb-development:code-reviewer` or any other agent.
+
+| Agent | subagent_type |
+|---|---|
+| pm-auditor | `"pm-auditor"` |
+| pm-plan-checker | `"pm-plan-checker"` |
+| pm-legacy-reader | `"pm-legacy-reader"` |
+| pm-architect | `"pm-architect"` |
+
 ## Execution
 
-1. **Spawn `pm-auditor`** (`.claude/agents/pm-auditor.md`) with:
+1. **Spawn the `pm-auditor` agent** — Agent tool, `subagent_type: "pm-auditor"`. Pass:
    - Project root
    - Audit date (today, ISO)
    - `scope`: as decided above
@@ -57,11 +68,11 @@ PM can redirect naturally: "just a quick one" → `diff`; "go deep" / "everythin
 
 6. **Run the chosen remediations** in priority order. One at a time:
    - Missing plan → `/pm-plan <topic>` (retroactive)
-   - Missing review → respawn `pm-plan-checker` on that feature's commits
+   - Missing review → respawn `pm-plan-checker` agent (`subagent_type: "pm-plan-checker"`) on that feature's commits
    - Missing contract → PM validates; orchestrator drafts `.ai-pm/contracts/<feature>.md`
    - Stale contract → PM validates update; orchestrator updates the contract
    - Orphaned implementation → `/pm-plan <topic>` (retroactive)
-   - Stale docs → spawn `pm-legacy-reader` or `pm-architect`
+   - Stale docs → spawn `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) or `pm-architect` (`subagent_type: "pm-architect"`)
 
    **Plan naming rule.** Topic = what is being fixed, not where it came from. `confed-schema-delivery`, not `audit-fixup-confed-schema-delivery`. The audit finding belongs in the plan's context or git history — not in the filename.
 
