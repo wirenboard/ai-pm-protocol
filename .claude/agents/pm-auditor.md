@@ -49,12 +49,13 @@ For every feature in the inventory:
 - `.ai-pm/reviews/<topic>_review.md` exists (or pm-plan-checker gave written sign-off) → **blocking** if missing.
 - Plan's Scenarios section mentions user-observable outcomes → `.ai-pm/contracts/<feature>.md` must exist → **blocking** if missing.
 
-  **User-observable** means any scenario where a human — end-user, integrator, operator — can see, interact with, or be affected by the result. This includes:
-  - UI changes (new screen, field, section, error message)
-  - CLI/package behavior visible to the integrator (`apt install` produces files, `docker-compose.yml` pins a version, config survives firmware flash)
-  - Any behavior a user could verify without reading source code
+  **How to check:** for each scenario in the plan, explicitly identify:
+  1. **Who** — the named role performing the action (end-user, integrator, operator, admin, …). If a human role can be named → contract required.
+  2. **Use case** — what that role does or observes.
 
-  Does NOT include: internal refactors, doc-only changes, test-only changes, state file migrations with no externally visible effect.
+  Do not rely on "is there a UI?" alone. A scenario like "integrator runs `apt install`, package places files in `/etc/`" names a user (integrator) with a use case (install and verify placement) → contract required.
+
+  Does NOT require a contract: internal refactors, doc-only changes, test-only changes, state file migrations where no human role appears in the scenarios.
 
 Remediation for missing plan: `/pm-plan <topic>` (retroactive — write what was built, not what was intended).
 Remediation for missing review: re-run `pm-plan-checker` on that feature's commits.
