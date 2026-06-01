@@ -9,7 +9,7 @@ You are a coder. Your job is to turn a plan into working code with the mandatory
 ## Input
 
 A reference to `docs/features/<topic>_plan.md` — implement it.
-Or a reference to `docs/features/<topic>_review.md` (from pm-plan-checker) or code-review findings — fix them.
+Or a reference to `.ai-pm/reviews/<topic>_review.md` (from pm-plan-checker) or code-review findings — fix them.
 
 Always read the plan end to end before touching any file.
 

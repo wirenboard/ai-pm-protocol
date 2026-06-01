@@ -32,7 +32,7 @@ If any condition fails — fall back to `/pm-plan-feature`. Examples:
 3. **Spawn `pm-plan-checker` in trivial mode.** Pass `--mode=trivial` as a hint in the prompt. Reviewer's trivial-mode behavior:
    - Re-validate the four conditions against the actual diff. If any broke during implementation → `request-changes` with reason "trivial-fixup violation — escalate to plan-feature". This is the only escape hatch from the fast path.
    - Apply trivial DoD: scope respected (the change is what was asked), pipeline green, docs that needed updating are updated. Skip Product Contract check (condition 2 forbids user-facing changes), skip stack-spec tests (condition 3 forbids stack-notes touch), skip Impact Report (no contract touched).
-   - Output: a short verdict file `docs/features/fixup-<short-topic>_review.md` with the four conditions checked, the trivial DoD, and `Verdict: approve | request-changes`.
+   - Output: a short verdict file `.ai-pm/reviews/fixup-<short-topic>_review.md` with the four conditions checked, the trivial DoD, and `Verdict: approve | request-changes`.
 
 4. **`pm-pr-prep`** runs as usual. Bump is PATCH because trivial fixups by definition are non-feature.
 

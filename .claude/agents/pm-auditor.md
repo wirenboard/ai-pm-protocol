@@ -46,7 +46,7 @@ Optional parameters:
 
 For every feature in the inventory:
 - `docs/features/<topic>_plan.md` exists → **blocking** if missing.
-- `docs/features/<topic>_review.md` exists (or reviewer gave written sign-off) → **blocking** if missing.
+- `.ai-pm/reviews/<topic>_review.md` exists (or reviewer gave written sign-off) → **blocking** if missing.
 - Plan's Scenarios section mentions user-observable outcomes → `.ai-pm/contracts/<feature>.md` must exist → **blocking** if missing.
 
 Remediation for missing plan: `/plan-feature <topic>` (retroactive — write what was built, not what was intended).

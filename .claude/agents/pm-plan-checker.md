@@ -75,11 +75,11 @@ When invoked from `/pm-fixup`:
 1. Re-validate the four conditions (≤ 50 LOC, no user-visible change, no stack-notes touch, no new source file). Any failure → `request-changes: trivial-fixup violation — escalate to /pm-plan-feature`.
 2. Trivial DoD: scope respected + pipeline green + docs updated.
 3. Skip all other checks.
-4. Write `docs/features/fixup-<short-topic>_review.md` with condition check, trivial DoD, `Verdict: approve | request-changes`. Keep it short.
+4. Write `.ai-pm/reviews/fixup-<short-topic>_review.md` with condition check, trivial DoD, `Verdict: approve | request-changes`. Keep it short.
 
 ## Verdict format
 
-Write to `docs/features/<topic>_review.md`:
+Write to `.ai-pm/reviews/<topic>_review.md`:
 
 ```markdown
 ## Plan compliance

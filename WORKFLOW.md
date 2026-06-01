@@ -20,7 +20,7 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
-**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator does not edit **content artefacts** directly. Content artefacts are anything that captures the project's design, code, contracts or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, plan / arch / review files under `docs/features/`, audit reports under `docs/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-docs-extractor`, `pm-auditor`, `pm-plan-checker`, `pm-plan-feature` as a command). When a content artefact needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
+**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator does not edit **content artefacts** directly. Content artefacts are anything that captures the project's design, code, contracts or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, feature plans under `docs/features/`, review artifacts under `.ai-pm/reviews/`, arch notes under `.ai-pm/arch/`, audit reports under `docs/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-docs-extractor`, `pm-auditor`, `pm-plan-checker`, `pm-plan-feature` as a command). When a content artefact needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
 
 **Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `docs/backlog.md` entries, recording PM decisions, choosing remediation order for audit findings, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
 
@@ -99,12 +99,12 @@ When you describe a feature or bug:
 
 **Step 5 — Review loop.** Two sequential passes. You don't see either — they run until both pass, then you hear the result.
 
-**Pass 1 — Plan compliance** (`pm-plan-checker`): are all plan scenarios implemented and tested? contracts honored? interaction scenarios covered? DoD satisfied? Writes `docs/features/<topic>_review.md`.
+**Pass 1 — Plan compliance** (`pm-plan-checker`): are all plan scenarios implemented and tested? contracts honored? interaction scenarios covered? DoD satisfied? Writes `.ai-pm/reviews/<topic>_review.md`.
 - Blocking → `pm-coder` fixes → pass 1 re-runs. Repeat until clean.
 
 **Pass 2 — Technical quality** (`code-review`): bugs, security, dead code, simplifications. Only starts after pass 1 is clean.
-- Orchestrator runs `code-review`, takes findings from the output, and appends them to `docs/features/<topic>_review.md` as `## Code review findings` — so `pm-coder` has a persistent artifact to read.
-- `pm-coder` reads `docs/features/<topic>_review.md`, fixes the code-review findings, commits.
+- Orchestrator runs `code-review`, takes findings from the output, and appends them to `.ai-pm/reviews/<topic>_review.md` as `## Code review findings` — so `pm-coder` has a persistent artifact to read.
+- `pm-coder` reads `.ai-pm/reviews/<topic>_review.md`, fixes the code-review findings, commits.
 - Orchestrator re-runs `code-review` to verify clean. Repeat until no findings.
 - When clean: orchestrator updates the section to `## Code review: <date> — passed`.
 

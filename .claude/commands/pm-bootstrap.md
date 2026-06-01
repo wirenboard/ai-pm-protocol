@@ -56,6 +56,8 @@ Then create from templates:
 - `docs/features/` directory
 - `.ai-pm/state/current.md` from `state.md.tmpl` — initial state set to `Status: idle`; updated by every coder run thereafter
 - `.ai-pm/state/archive/` directory — completed task states get archived here
+- `.ai-pm/reviews/` directory — review artifacts (plan compliance + code review findings)
+- `.ai-pm/arch/` directory — per-feature architecture analysis notes
 - `.ai-pm/contracts/` directory — Product Contracts get created here as features are planned (one file per user-facing feature)
 
 **Stack literacy onboarding (mandatory, no PM questions).** Spawn the `pm-stack-researcher` subagent with the stack components from PM's answers (language, runtime, framework, database, key libraries, target platform). The agent reads canonical docs and spec, writes `docs/stack-notes.md` with cited idioms, constraints, validators and integration contracts.
@@ -118,7 +120,7 @@ Write minimal docs — enough to start adding features:
 - `docs/user-journeys.md` — write only what's visible from entry points and module names; leave the rest as `[?]`
 - `docs/stack-notes.md` from `stack-notes.md.tmpl` — empty shell
 - `.ai-pm/state/current.md` from `state.md.tmpl` — initial state `Status: idle`
-- `.ai-pm/state/archive/` and `.ai-pm/contracts/` directories
+- `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/` directories
 - Optional docs — skip; create only if code clearly requires them (e.g., obvious security constraints)
 
 **Stack literacy onboarding (mandatory, no PM questions).** Once stack components are identified from the code, spawn `pm-stack-researcher` with that list. It fills `docs/stack-notes.md`. Take its "New validators" list and add commands to the Pipeline block in `CLAUDE.md`. Take its "Open questions" — surface to PM as caveats.
