@@ -14,7 +14,7 @@ Read these first:
 - `docs/user-journeys.md` — existing scenarios (identifies regression risk)
 - `.ai-pm/contracts/` — existing Product Contracts; identifies which features the new work might touch
 - `docs/features/` — existing plans (context for what's already built)
-- `docs/backlog.md` — if it exists, match items against the feature topic: same module, same user journey, same data model, or same area of code
+- `.ai-pm/backlog.md` — if it exists, match items against the feature topic: same module, same user journey, same data model, or same area of code
 
 If matching backlog items exist, surface only those to PM before planning:
 > "There are [N] backlog items in this area: [list in plain language]. Want to fold any of them into this feature?"
@@ -183,7 +183,7 @@ Stop asking when you have enough to write the plan.
 
 ## Retrospective check
 
-Count `feat:` and `fix:` commits since the most recent `docs/audits/audit-*.md` (check file listing by date). If `docs/audits/` does not exist — count all features since project start.
+Count `feat:` and `fix:` commits since the most recent `.ai-pm/audits/audit-*.md` (check file listing by date). If `.ai-pm/audits/` does not exist — count all features since project start.
 
 If **5 or more** features have accumulated since the last audit:
 > "We've completed N features since the last protocol check. Worth a quick audit before we continue — takes a few minutes. Run now?"
@@ -191,7 +191,7 @@ If **5 or more** features have accumulated since the last audit:
 If PM says yes → run `/pm-audit` before proceeding with this feature.
 If PM says no or later → continue with this feature.
 
-If **no audit has ever been run** (docs/audits/ empty or missing):
+If **no audit has ever been run** (.ai-pm/audits/ empty or missing):
 > "This project hasn't had a protocol check yet. Want to run one before we plan this feature? It verifies that all previous work is properly documented."
 
 Don't implement fixes, don't block planning. PM decides.

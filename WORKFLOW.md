@@ -12,7 +12,7 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 | `pm-plan-checker` | Plan compliance after implementation — verifies all scenarios implemented, contracts honored, interaction scenarios tested, DoD satisfied |
 | `pm-pr-prep` | Bump version, generate CHANGELOG, push branch, open or update PR |
 | `pm-docs-extractor` | Auto-spawn from `/pm-bootstrap` legacy full mode; reads existing codebase and writes `docs/architecture.md` + `docs/user-journeys.md` |
-| `pm-auditor` | Auto-spawn from `/pm-audit`; protocol compliance sweep — checks artifact completeness, plan↔implementation parity, contract currency, docs currency. Writes `docs/audits/audit-<YYYY-MM-DD>.md` and returns a structured summary. Does NOT review technical code quality — that is pm-plan-checker + code-review skill per feature. |
+| `pm-auditor` | Auto-spawn from `/pm-audit`; protocol compliance sweep — checks artifact completeness, plan↔implementation parity, contract currency, docs currency. Writes `.ai-pm/audits/audit-<YYYY-MM-DD>.md` and returns a structured summary. Does NOT review technical code quality — that is pm-plan-checker + code-review skill per feature. |
 | `/pm-research` | Research existing solutions and analogues (build vs use). PM-facing pros/cons output. Different from `pm-stack-researcher` (which is agent-facing canonical citations). |
 | `/pm-audit` | PM-initiated protocol compliance check. Spawns `pm-auditor` with `scope=full` (default — all merged features) or `scope=diff` (only branches merged since the last audit). Drives a PM-facing flow over the findings (one decision per blocking: fix now / next sprint / accept-with-context). Fix-now remediations use the appropriate protocol step per finding type (missing plan → `/pm-plan-feature`, missing contract → contract creation, stale docs → `pm-docs-extractor`). Full scope recommended quarterly. |
 | `code-review` (built-in) | Full technical quality sweep of the project — bugs, security, dead code. Use `ultra` level for deep multi-agent review. Offered automatically after `/pm-audit full`; can also be run on demand. Not a pm-* agent — part of Claude Code built-in skills. |
@@ -20,9 +20,9 @@ These agents are part of this project's workflow (from `.claude/agents/`). Use o
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
-**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator does not edit **content artefacts** directly. Content artefacts are anything that captures the project's design, code, contracts or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, feature plans under `docs/features/`, review artifacts under `.ai-pm/reviews/`, arch notes under `.ai-pm/arch/`, audit reports under `docs/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-docs-extractor`, `pm-auditor`, `pm-plan-checker`, `pm-plan-feature` as a command). When a content artefact needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
+**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator does not edit **content artefacts** directly. Content artefacts are anything that captures the project's design, code, contracts or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, feature plans under `docs/features/`, review artifacts under `.ai-pm/reviews/`, arch notes under `.ai-pm/arch/`, audit reports under `.ai-pm/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-docs-extractor`, `pm-auditor`, `pm-plan-checker`, `pm-plan-feature` as a command). When a content artefact needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
 
-**Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `docs/backlog.md` entries, recording PM decisions, choosing remediation order for audit findings, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
+**Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `.ai-pm/backlog.md` entries, recording PM decisions, choosing remediation order for audit findings, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
 
 The line: if it captures product design or technical canon, an agent writes it. If it records the conversation with the PM or moves work through the pipeline, the orchestrator writes it.
 
@@ -127,9 +127,9 @@ After the loop clears, I tell you:
 
 I wait for your answer before running `pm-pr-prep`. After merge: `git checkout main && git pull`.
 
-I never add anything to `docs/backlog.md` without an explicit yes from you (product note backlog) or a clear technical reason recorded alongside the entry. The backlog is an orchestration artefact — I write it directly.
+I never add anything to `.ai-pm/backlog.md` without an explicit yes from you (product note backlog) or a clear technical reason recorded alongside the entry. The backlog is an orchestration artefact — I write it directly.
 
-`docs/backlog.md` is created on first use — not upfront.
+`.ai-pm/backlog.md` is created on first use — not upfront.
 
 After you merge: pull main locally and we're ready for the next feature.
 

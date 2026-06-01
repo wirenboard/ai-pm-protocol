@@ -63,8 +63,8 @@ One of:
 
 ## Output
 
-- **Feature research** (specific feature area): write to `docs/features/<topic>_research.md` — alongside the plan and arch notes for that feature
-- **Project-level research** (whole product or technology choice at bootstrap): write to `docs/research.md`
+- **Feature research** (specific feature area): write to `.ai-pm/research/<topic>_research.md` — alongside the plan and arch notes for that feature
+- **Project-level research** (whole product or technology choice at bootstrap): write to `.ai-pm/research.md`
 
 Format for PM:
 
@@ -94,7 +94,7 @@ Format for PM:
 - [name](url)
 ```
 
-Then tell PM: "Research done. Found N options. Recommendation: [one sentence]. File: `docs/features/<topic>_research.md`" (or `docs/research.md` for project-level research).
+Then tell PM: "Research done. Found N options. Recommendation: [one sentence]. File: `.ai-pm/research/<topic>_research.md`" (or `.ai-pm/research.md` for project-level research).
 
 ## Hard rules
 

@@ -6,8 +6,8 @@ Run when PM says "check the project", "audit", "review the project", or "is ever
 
 Before spawning any agent:
 
-1. Check `docs/audits/` for the most recent `audit-*.md` (by filename date).
-2. If `docs/audits/` is empty or does not exist → first audit → always `full`.
+1. Check `.ai-pm/audits/` for the most recent `audit-*.md` (by filename date).
+2. If `.ai-pm/audits/` is empty or does not exist → first audit → always `full`.
 3. Count `feat:` and `fix:` commits since last audit date:
    ```
    git log --since="<last_audit_date>" --oneline | grep -cE "^[a-f0-9]+ (feat|fix):"
@@ -29,22 +29,22 @@ PM can redirect naturally: "just a quick one" → `diff`; "go deep" / "everythin
    - `scope`: as decided above
    - Optional focus area
 
-   Wait for it to complete. It writes `docs/audits/audit-<YYYY-MM-DD>.md` and returns the structured summary.
+   Wait for it to complete. It writes `.ai-pm/audits/audit-<YYYY-MM-DD>.md` and returns the structured summary.
 
 2. **Read the structured summary** — drives the PM-facing flow below.
 
 ## PM-facing flow
 
 3. **Tell PM the headline:**
-   > "Check complete. Found [N blocking / N notes]. Full report in `docs/audits/audit-<YYYY-MM-DD>.md`."
+   > "Check complete. Found [N blocking / N notes]. Full report in `.ai-pm/audits/audit-<YYYY-MM-DD>.md`."
 
 4. **Walk PM through blocking findings** using the auditor's priority order. For each:
    > "Blocking #<n>: <short title>. **Fix now** (run the remediation step next), **next sprint** (backlog), or **accept-with-context** (note the reason, skip next time)?"
 
    Three valid answers:
    - **Fix now** → run the remediation step after this conversation (step 6).
-   - **Next sprint** → add to `docs/backlog.md` with reference to this audit.
-   - **Accept-with-context** → add to `docs/backlog.md` marked `accepted (auditor-<date>): <reason>`.
+   - **Next sprint** → add to `.ai-pm/backlog.md` with reference to this audit.
+   - **Accept-with-context** → add to `.ai-pm/backlog.md` marked `accepted (auditor-<date>): <reason>`.
 
    Never auto-batch. Each blocking gets its own PM decision.
 
@@ -80,7 +80,7 @@ This step is always offered, never assumed. The protocol check is fast and alway
 
 If the project has artifacts from before this protocol version (old `docs/audit-*.md` files in root, `audit-fixup-*` plans in `docs/features/`):
 - Group them as a single note: "Pre-protocol-migration artifacts: [list]".
-- PM can accept all at once: `accept-with-context: pre-protocol-migration` → add one entry to `docs/backlog.md`.
+- PM can accept all at once: `accept-with-context: pre-protocol-migration` → add one entry to `.ai-pm/backlog.md`.
 - Do NOT surface them as individual blocking findings.
 
 ## What this command does NOT do
