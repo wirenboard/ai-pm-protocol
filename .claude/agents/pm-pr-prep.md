@@ -69,9 +69,10 @@ Prepend to `CHANGELOG.md`:
 - <one line per feat/fix commit>
 ```
 
-Commit:
+Commit (also stage the feature's uncommitted trail artifacts — the `_review.md` written by pm-plan-checker after the coder's commit, and any per-feature arch notes — so they ship with the release instead of being orphaned in the working tree):
 ```bash
 git add CHANGELOG.md <metadata-file>
+git add -- .ai-pm/reviews/ .ai-pm/arch/
 git commit -m "chore(release): vX.Y.Z"
 ```
 
@@ -145,3 +146,4 @@ Include in PR body a migration note:
 - Never merge PRs — that is the PM's job.
 - No `git reset --soft`, no force-push unless orchestrator explicitly instructs.
 - No `git config` changes.
+- Never leave the feature's `_review.md` (or per-feature arch notes) uncommitted — they must ship in the release commit.
