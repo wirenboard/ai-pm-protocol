@@ -13,6 +13,39 @@
 
 ---
 
+## [2.2.0] — 2026-06-02
+
+Realignment of the protocol around best-in-class built-in skills/tools, a contract-centric product map, and a PM-authorized diagnostic-probe mode.
+
+### Added
+- **Agent/skill routing guard** (`PreToolUse`): denies `wb-*` role duplicators (`coder`, `code-reviewer`, `design-review`, `plan-feature`, `pr-prep`, `wb-git:workflow`, `wb-git:pr-author`) with a pointer to the `pm-*` equivalent. Named deny-list — `code-review`, `deep-research`, and `wb-*` knowledge skills stay available.
+- **UserPromptSubmit route reminder**: reasserts the protocol route on change-intent prompts (RU + EN), silent on chit-chat; exempts PM-authorized diagnostic probes.
+- **Explicit `tools:` frontmatter** on all seven `pm-*` agents (read-only reviewers can no longer edit code; Web confined to `pm-stack-researcher`; `Skill` kept for `pm-coder`/`pm-stack-researcher`).
+- **PR-review-response path** (WORKFLOW Step 7): orchestrator-driven loop for review comments on an open PR — fetch, triage, fix via `pm-coder`, reply, resolve.
+- **`verify`/`run` adoption** (WORKFLOW Step 5.5): optionally exercise a feature for real before ship.
+- **`docs/product.md`** — contract-centric product map (group → contract → features + reviews + Infrastructure bucket), generated and audit-verified; **Product map generation procedure**.
+- **`Built/changed by`** section in `contract.md.tmpl`.
+- **`pm-plan-checker` DoD** artifact-completeness item (the per-feature gate that replaced the index).
+- **PM-authorized diagnostic-probe mode** (WORKFLOW Step A.5): a throwaway, runtime/local probe to confirm a hypothesis, proposed to the PM in plain language with before→after, never editing a repo-owned file in place.
+- Design/plan docs: `doc/protocol-vs-builtins-analysis.md` and feature plans for the realignment, product map, and probe mode.
+
+### Changed
+- `pm-*` judgment agents drop pinned `model:` to inherit the orchestrator model; `pm-pr-prep` stays `haiku`.
+- `/pm-research` and `pm-stack-researcher` delegate search + adversarial verification to the built-in `deep-research` engine, keeping only their frame.
+- `pm-coder` may load `wb-*` knowledge skills (codestyle, packaging, platform); WebSearch is tool-locked out.
+- `pm-auditor` dimension 5 checks `docs/product.md` currency instead of the feature index.
+- `pm-bootstrap` / `pm-plan` generate and maintain `docs/product.md`.
+- `README.md` synced to v2.2.0 (product map, diagnostic-probe mode, mechanical route discipline, built-in delegation).
+
+### Removed
+- `docs/features/_index.md` (feature index) — replaced by the contract-centric `docs/product.md`.
+
+### Migration (downstream projects)
+- After `git submodule update --remote`, run the v2.2 migration: tell the agent **«мигрируй на v2.2»** (or re-run `/pm-bootstrap`, which detects it) — it generates `docs/product.md` from your existing contracts / plans / reviews and removes the orphaned `docs/features/_index.md`. One command, nothing else changes. See README § "Миграция на v2.2.0".
+- The agent/skill guard now denies `wb-*` role agents — switch to the `pm-*` equivalents. `wb-*` knowledge skills are unaffected and encouraged.
+
+---
+
 ## [2.1.7] — 2026-06-01
 
 ### Fixed

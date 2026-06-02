@@ -63,6 +63,7 @@ FAIL_COUNT=0
 #   ssh_mut -> .hooks.PreToolUse[1].hooks[2] (matcher "Bash", if "Bash(ssh *)")
 #   git_pf  -> .hooks.PreToolUse[1].hooks[3] (matcher "Bash", if "Bash(git push *)")
 #   git_nv  -> .hooks.PreToolUse[1].hooks[4] (matcher "Bash", if "Bash(git commit *)")
+#   guard   -> .hooks.PreToolUse[2].hooks[0] (matcher "Task|Agent|Skill")
 get_hook_cmd() {
     # $1 = jq path, e.g. ".hooks.PreToolUse[1].hooks[0].command"
     jq -r "$1" "$SETTINGS"
@@ -155,12 +156,53 @@ mk_input_cmd() {
     jq -nc --arg c "$1" '{tool_name:"Bash", tool_input:{command:$c}}'
 }
 
+# Helper to build a PreToolUse-shaped JSON for a subagent spawn (Task/Agent).
+mk_input_agent() {
+    jq -nc --arg t "$1" '{tool_name:"Task", tool_input:{subagent_type:$t}}'
+}
+
+# Helper to build a PreToolUse-shaped JSON for a Skill invocation.
+mk_input_skill() {
+    jq -nc --arg s "$1" '{tool_name:"Skill", tool_input:{skill:$s}}'
+}
+
+# Helper to build a UserPromptSubmit-shaped JSON with a prompt field.
+mk_input_prompt() {
+    jq -nc --arg p "$1" '{prompt:$p}'
+}
+
+# run_ups_case <label> <expected: inject|silent> <input_json>
+# UserPromptSubmit hooks emit hookSpecificOutput.additionalContext rather
+# than a permissionDecision, so they need their own assertion path.
+run_ups_case() {
+    label="$1"
+    expected="$2"
+    input_json="$3"
+    cmd=$(get_hook_cmd "$UPS_HOOK")
+    output=$(printf '%s' "$input_json" | bash -c "$cmd" 2>/dev/null)
+    if [ -z "$output" ]; then
+        actual="silent"
+    else
+        ctx=$(printf '%s' "$output" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
+        if [ -n "$ctx" ]; then actual="inject"; else actual="malformed"; fi
+    fi
+    if [ "$actual" != "$expected" ]; then
+        echo "FAIL: $label — expected=$expected actual=$actual"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        return
+    fi
+    echo "PASS: $label"
+    PASS_COUNT=$((PASS_COUNT + 1))
+}
+
 READ_HOOK='.hooks.PreToolUse[0].hooks[0].command'
 FIND_HOOK='.hooks.PreToolUse[1].hooks[0].command'
 SSH_EDIT_HOOK='.hooks.PreToolUse[1].hooks[1].command'
 SSH_MUT_HOOK='.hooks.PreToolUse[1].hooks[2].command'
 GIT_PUSH_HOOK='.hooks.PreToolUse[1].hooks[3].command'
 GIT_COMMIT_HOOK='.hooks.PreToolUse[1].hooks[4].command'
+AGENT_GUARD_HOOK='.hooks.PreToolUse[2].hooks[0].command'
+UPS_HOOK='.hooks.UserPromptSubmit[0].hooks[0].command'
 
 # ----------------------------------------------------------------------
 # Read boundary hook — denies file paths outside the project root.
@@ -309,6 +351,77 @@ run_case "git-commit: 'git commit -m x' (normal) -> pass" \
     "pass" "$GIT_COMMIT_HOOK" "$(mk_input_cmd 'git commit -m x')"
 run_case "git-commit: 'git commit --amend' (no verify bypass) -> pass" \
     "pass" "$GIT_COMMIT_HOOK" "$(mk_input_cmd 'git commit --amend --no-edit')"
+
+# ----------------------------------------------------------------------
+# agent/skill routing guard — denies spawning/loading class-1 role
+# duplicators (wb-* agents/skills that occupy a protocol seat). Named
+# deny-list, NEVER an "everything but pm-*" pattern: code-review,
+# deep-research and wb knowledge skills must stay available.
+# ----------------------------------------------------------------------
+
+# Positive: class-1 duplicators denied, whether spawned as agent or loaded as skill.
+run_case "guard: spawn wb-development:coder -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_agent wb-development:coder)"
+run_case "guard: spawn wb-development:code-reviewer -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_agent wb-development:code-reviewer)"
+run_case "guard: spawn wb-development:design-review -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_agent wb-development:design-review)"
+run_case "guard: skill wb-development:plan-feature -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-development:plan-feature)"
+run_case "guard: skill wb-git:workflow -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-git:workflow)"
+
+# Negative: protocol agents pass.
+run_case "guard: spawn pm-coder -> pass" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_agent pm-coder)"
+run_case "guard: spawn pm-plan-checker -> pass" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_agent pm-plan-checker)"
+
+# Negative: built-in engines must stay available. code-review (skill) vs
+# code-reviewer (wb agent) is the one-character boundary the guard must honor.
+run_case "guard: skill code-review -> pass  # boundary vs wb code-reviewer" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill code-review)"
+run_case "guard: skill deep-research -> pass" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill deep-research)"
+
+# Negative: wb knowledge skills are capability-providers, not duplicators.
+run_case "guard: skill wb-development:codestyle -> pass (knowledge)" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-development:codestyle)"
+run_case "guard: skill wb-development:package-bootstrap -> pass (knowledge)" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-development:package-bootstrap)"
+run_case "guard: skill wb-network -> pass (platform knowledge, used read-only)" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-network)"
+run_case "guard: skill wiren-board -> pass (platform knowledge)" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wiren-board)"
+
+# Positive: PR-forward duplicators now denied — the protocol grew its own
+# PR-review-response path (WORKFLOW.md Step 7), so pr-author/pr-prep no
+# longer fill a gap.
+run_case "guard: skill wb-git:pr-author -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-git:pr-author)"
+run_case "guard: spawn wb-development:pr-prep -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_agent wb-development:pr-prep)"
+
+# Negative: pr-review (reviewing someone else's PR) has no protocol seat.
+run_case "guard: skill wb-git:pr-review -> pass (no protocol seat)" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-git:pr-review)"
+
+# ----------------------------------------------------------------------
+# UserPromptSubmit route reminder — injects the protocol route on
+# change-intent prompts (RU + EN), stays silent on chit-chat so it does
+# not pollute ordinary conversation.
+# ----------------------------------------------------------------------
+
+run_ups_case "ups: 'поправь баг в коде' -> inject" \
+    "inject" "$(mk_input_prompt 'поправь баг в коде')"
+run_ups_case "ups: 'please implement the feature' -> inject" \
+    "inject" "$(mk_input_prompt 'please implement the feature')"
+run_ups_case "ups: 'добавь поле в форму' -> inject" \
+    "inject" "$(mk_input_prompt 'добавь поле в форму')"
+run_ups_case "ups: 'спасибо, отлично' (chit-chat) -> silent" \
+    "silent" "$(mk_input_prompt 'спасибо, отлично')"
+run_ups_case "ups: 'как это устроено?' (question) -> silent" \
+    "silent" "$(mk_input_prompt 'как это устроено?')"
 
 # ----------------------------------------------------------------------
 # Summary

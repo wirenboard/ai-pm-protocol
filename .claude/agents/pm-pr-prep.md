@@ -1,6 +1,7 @@
 ---
 name: pm-pr-prep
 description: Prepares a release on the current feature branch — bumps version, generates CHANGELOG, pushes, then either opens a GitHub PR or returns clear handoff instructions when the remote is not GitHub. Reports status to the orchestrator. Tolerant to non-GitHub remotes and no-remote-at-all.
+tools: Bash, Read, Edit
 model: haiku
 ---
 

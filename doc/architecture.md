@@ -95,6 +95,16 @@ Four orthogonal optimizations applied together:
 
 ---
 
+### Realignment around best-in-class built-in skills/tools
+
+The protocol predates the maturation of Claude Code's built-in skills. It now delegates *engines* to them and keeps only its protocol-specific frame: technical review → built-in `code-review` (already Pass 2); research → `deep-research` (driven by `/pm-research` and `pm-stack-researcher`); real-run verification → `verify` / `run` (WORKFLOW Step 5.5). Discipline is made mechanical rather than prose-only: every `pm-*` agent has an explicit `tools:` frontmatter (read-only reviewers cannot edit code; Web is confined to `pm-stack-researcher`); judgment agents drop pinned `model:` to inherit the orchestrator model (only `pm-pr-prep` stays `haiku`); a `PreToolUse` guard denies the named `wb-*` role duplicators while letting `code-review` / `deep-research` / `wb-*` knowledge skills through; a `UserPromptSubmit` hook reasserts the route on change-intent prompts. The protocol also grew its own PR-review-response path (WORKFLOW Step 7), closing the gap that made the model reach for `wb-git:pr-author`. **Source:** `doc/protocol-vs-builtins-analysis.md`, `doc/features/protocol-builtins-realignment_plan.md`.
+
+### Contract-centric product map replaces the feature index
+
+`docs/features/_index.md` (component → feature) was a write-only output, useful to no reader. It is replaced by `docs/product.md` (component → contract → the features + reviews that built it, plus an `Infrastructure` bucket for contract-less work) — contracts are the source of truth for behaviour, so the PM-facing view is inverted to lead with them. The map is generated from contracts/plans/reviews/git, never hand-filled, and re-derived by `pm-auditor` from source. The per-feature "did all artefacts appear" checklist the index implicitly served moves to an explicit `pm-plan-checker` DoD item, with `pm-auditor` dimension 1 as the project-wide backstop. **This template repo is a deliberate exception** — it has no user-facing Product Contracts (its "product" is the protocol itself), so a contract-centric `docs/product.md` would degenerate into a plain feature list; it is intentionally not generated here, and the protocol's capabilities are documented in this `architecture.md` and in `doc/features/` instead. **Source:** `doc/features/contract-centric-product-map_plan.md`; self-audit 2026-06-02.
+
+---
+
 ## Architectural constraints
 
 Hard constraints — agents and the orchestrator treat these as non-negotiable without an explicit PM decision.

@@ -4,7 +4,7 @@
 
 ### Agents (`.claude/agents/`)
 
-Spawned by the orchestrator — do not run manually. Use only these — do not substitute with similarly-named agents from other toolsets:
+Spawned by the orchestrator — do not run manually. Use only these — do not substitute with similarly-named agents from other toolsets (a `PreToolUse` guard in `.claude/settings.json` denies the known `wb-*` role duplicators automatically — see **Hook-level enforcement** below):
 
 | Agent | When |
 |---|---|
@@ -65,6 +65,9 @@ In both cases the PM sees what will be fixed before the first `/pm-plan` loads. 
 - `ssh ... systemctl restart / docker compose / docker exec / apt / npm install / kubectl apply / rm / cp / mv / mkdir / touch` on a remote host — **asked** for confirmation (legitimate when it is deployment, PM-initiated maintenance, or runtime-state work; the prompt makes that intent explicit).
 - `git push --force / -f / --force-with-lease` — **asked** (rewrites remote history).
 - `git commit --no-verify / --no-gpg-sign` — **asked** (bypasses pre-commit / signing).
+- Spawning a `wb-*` role agent or loading a `wb-*` role skill that occupies a protocol seat (`wb-development:coder` / `code-reviewer` / `design-review` / `pr-prep` / `plan-feature`, `wb-git:workflow` / `pr-author`) — **denied** automatically, with a pointer to the `pm-*` equivalent. This is the mechanical form of the "use only these agents" rule above. It is a **named deny-list, never an "everything but `pm-*`" block**: built-in engines (`code-review`, `deep-research`) and `wb-*` knowledge skills (`codestyle`, `package-bootstrap`, platform skills) are explicitly not gated — the protocol delegates engines and platform knowledge to them on purpose.
+
+On every change-intent prompt a `UserPromptSubmit` hook injects a one-paragraph reminder of this route (Step 0 → `/pm-plan` → coder → review → pr-prep; orchestrator does not edit content artefacts; use `pm-*`, not `wb-*` role skills). It stays silent on ordinary conversation. This is the soft, every-turn counterpart to the hard PreToolUse guard above — it keeps the protocol asserted without depending on a session re-reading this file.
 
 Read-only ssh diagnostics (`cat` for reading, `ls`, `journalctl`, `systemctl status`, `docker logs`, `docker ps`, native status / audit / info commands) are not gated. Local mutating commands (anything not over ssh) are not gated either — they are normal dev work.
 
@@ -134,6 +137,8 @@ After the loop clears, I tell you:
 - How to try it yourself (step by step)
 - Any product notes that need your answer
 
+**Step 5.5 — Optional: run it for real.** When the feature is runnable locally, before ship I can invoke the built-in `verify` / `run` skill to actually launch the app and exercise the new behaviour — confirming it *works*, not just that tests pass. This catches the "green tests, broken feature" class. I report what I observed. For features that need real hardware or your specific environment I skip this and give you the checklist instead (Step 6 option A).
+
 **Step 6 — Ship.** I verify git state, then ask:
 
 > "Ready to open the PR. How do you want to proceed?
@@ -151,6 +156,18 @@ After you merge: pull main locally and we're ready for the next feature.
 
 **When you're ready to ship** — say "release". I verify git state, run `pm-pr-prep` (version bump + CHANGELOG + PR). You merge — GitHub auto-tags and publishes the release.
 
+**Step 7 — When the PR gets review comments.** A human reviewer (or `code-review --comment`) may leave comments on the open PR. I run a response loop on the **same branch and PR** — you only hear about comments that change product scope:
+
+1. **Fetch the threads** — `gh pr view <n> --comments` plus `gh api repos/{owner}/{repo}/pulls/{n}/comments` for inline threads. I read every unresolved one.
+2. **Triage each** (I decide; I involve you only when product scope is at stake):
+   - **Needs a code change** → I spawn `pm-coder` with the thread as a focused task; it fixes on the same branch, runs the pipeline, commits.
+   - **Question** → I answer in a reply; no code change.
+   - **Reviewer asks for behaviour the plan/contract didn't cover** → that is a product decision: I bring it to you (AskUserQuestion) before acting; it may need a plan update.
+3. **Push and respond** — after the fixes land I push, reply to each thread with what changed (or why not), and resolve the threads I addressed.
+4. **Re-run the review loop** (`pm-plan-checker` + `code-review`) if the fixes were non-trivial, before asking for re-review.
+
+This is the protocol's own PR-review-response path — platform-agnostic, all `gh`. I never cut a new branch for review fixes, and I never reach for `wb-git:pr-author` / `wb-git:pr-review` to do it (they are denied by the agent/skill guard; `pm-pr-prep` owns opening/updating the PR, I own the comment loop).
+
 ---
 
 ## What is mandatory when
@@ -163,6 +180,7 @@ Different change types impose different overhead. This table is the single sourc
 | Backend refactor / infrastructure / build / CI | required, update each step | skip with one-line reason in commit message | yes, items 1, 2, 4, 5, 7 | required if stack touched |
 | Docs-only fix (typo, wording, README, plan, review trail) | optional (set Status: done at end) | skip | yes, items 1, 4, 7 | skip |
 | Trivial fixup (see `/pm-fixup` rules) | skip | skip | trivial DoD: scope + pipeline + docs landed | skip |
+| Diagnostic probe / spike (PM-authorized, runtime/local only) | skip | skip | skip — throwaway, reverted or followed by a pipelined fix | skip |
 
 **"Skip with one-line reason"** means coder writes in the commit message `Skips Product Contract: backend-only refactor, no user-visible behavior change`. `pm-plan-checker` accepts the skip if the line is present and honest; absence of the line on a backend change → blocking.
 
@@ -184,6 +202,8 @@ For user-facing features, a parallel set of files lives in `.ai-pm/contracts/` �
 
 PM never edits state or contracts. PM reads them when curious.
 
+The PM-facing render of all contracts — what the system does, contract by contract, with the features and reviews behind each — is `docs/product.md`. It is generated (group → contract → features), never hand-filled, and regenerated as features land; the contracts and state stay the source of truth. This replaces the old feature index: the per-feature "did all artifacts appear" check now lives in `pm-plan-checker`'s DoD, and `pm-auditor` re-derives `product.md` from source on every audit.
+
 ### Three channels surface to PM, not one
 
 After implementation, PM hears about results through three channels (not just the reviewer verdict):
@@ -202,7 +222,25 @@ If any of the three contradicts the other (e.g., DoD says pass but Impact Report
 
 When you tell me "X doesn't work on the controller / on production / in the deployed environment", I follow a strict diagnose-then-plan flow. I never edit, restart, or re-deploy on the live system in the moment.
 
-**Step A — Read-only diagnostics.** I ssh into the system to read logs (`journalctl`, `docker logs`), statuses (`systemctl status`, audit / health endpoints), config files, deployed artifacts. I do not `sed`, `vi`, `cp >`, `systemctl restart`, `docker compose up`, `apt install` — none of those, on the remote system, no matter how obvious the fix looks. The boundary is hard.
+**Step A — Read-only diagnostics (default).** I ssh in to read logs (`journalctl`, `docker logs`), statuses (`systemctl status`, audit / health endpoints), config files, deployed artifacts. By default I change nothing on the system — no `sed`/`vi` on a repo-owned file, no `systemctl restart`, no `apt install` on my own initiative. The boundary against *silent* changes is hard. The one sanctioned exception is a probe you explicitly authorize — Step A.5.
+
+**Step A.5 — Probe to confirm a hypothesis (only if you authorize it).** Read-only diagnostics usually point to a hypothesis. To confirm it before planning a fix, you can authorize a **diagnostic probe** — a throwaway spike, not the fix.
+
+Before I touch anything I show you a **probe proposal** in plain language and wait for your yes:
+
+> **Problem:** <what's broken, from the user's side>.
+> **My hypothesis:** <the likely cause, plain>.
+> **Probe:** I'll set `<setting>` in `<where>` from `<current value>` to `<new value>` — this controls <plain-language explanation of what that setting does>.
+> **What we'll watch:** <the observable that confirms or refutes the hypothesis>.
+> **After:** I revert it; if it confirms the cause, the real fix goes through the normal pipeline (`/pm-plan` → coder → review → PR → deploy).
+> Authorize this probe?
+
+This is the one place I show you the concrete before→after — you're authorizing a touch on a live system, so you need the specifics — but every technical item gets a plain-language gloss, never a raw dump. Rules of the probe:
+
+- I act only on your explicit yes, and I name it a probe, not the fix.
+- It touches **runtime / local state only** — a runtime setting, a service restart, a value in a live config a redeploy resets, a local dev file. It **never** edits in place a file the repo owns in git (schema, config template, code, unit file); that stays the forbidden silent-fix path even for a probe. The real fix to a repo-owned file always goes through the pipeline.
+- Afterwards I revert it, or — if confirmed — carry the real fix through the pipeline. No silent permanent trace remains.
+- I record what I changed and what I observed; it becomes the plan's **Incident facts**.
 
 **Step B — Formulate findings in product language.** I summarise to you what's broken from the user's perspective. Plain language: "users can open the cart but checkout never confirms the order" — not "POST /checkout returns 502 because the upstream pricing service times out after 30s due to a config drift on the cache layer". The technical detail goes into the fix plan, not into the PM update.
 
