@@ -13,6 +13,16 @@
 
 ---
 
+## [2.2.3] — 2026-06-02
+
+### Fixed
+- `pm-pr-prep`: in release commit step 4, now stages feature review artifacts from `.ai-pm/reviews/` and `.ai-pm/arch/` alongside CHANGELOG + metadata. Root-cause fix: PR #158's review file (`fixup-orchestrator-no-external-state_review.md`) was committed in the feature branch but not re-staged into the release commit, leaving it orphaned on merge. Recovers the artifact.
+
+### Changed / Docs
+- `.ai-pm/backlog.md`: recorded four protocol findings from downstream wb-mqtt-matter feature review (PR #158): edit-ownership enforcement gap, `architecture.md` module-map section, template/tooling desync, product-map migration trigger + auditor detection bug. Deferred to `/pm-plan` cycle.
+
+---
+
 ## [2.2.2] — 2026-06-02
 
 ### Changed
