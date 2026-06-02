@@ -11,6 +11,10 @@
 
 ## [Unreleased]
 
+---
+
+## [2.2.1] — 2026-06-02
+
 ### Changed
 - Docs: updating the template can be requested in plain language ("обнови шаблон" / "bump ai-pm-protocol to vX.Y") — documented in README and WORKFLOW.md as orchestrator chore work (submodule bump on a branch + any pending migration), no `/pm-plan` needed.
 
