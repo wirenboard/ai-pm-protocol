@@ -5,5 +5,6 @@
 # Reviewer local traces (not committed)
 .reviews/
 
-# Claude Code worktree scratch dirs
+# Claude Code worktree + throwaway scratch dirs
 .claude/worktrees/
+.claude/tmp/

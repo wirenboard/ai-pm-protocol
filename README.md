@@ -98,6 +98,8 @@ ln -s ../.ai-pm/tooling/.claude/commands .claude/commands
 ln -s ../.ai-pm/tooling/.claude/settings.json .claude/settings.json
 ```
 
+Оркестратор работает с отключённой авто-памятью (`autoMemoryEnabled: false`) — всё состояние живёт в артефактах проекта (`.ai-pm/`, `doc/`, планы, ревью). Каталог для временных/диагностических скриптов — `.claude/tmp/` (git-ignored), а не `/tmp`.
+
 Первый запуск — скажи Claude: **«начни проект»**.
 
 - **Новый проект** — Claude задаёт вопросы и создаёт документацию
