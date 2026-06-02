@@ -32,7 +32,7 @@ If invoked from `/pm-bootstrap` — `docs/architecture.md` already lists compone
 
 1. **Read the existing `docs/stack-notes.md` if present.** Don't duplicate — extend.
 
-2. **For each component** — research, do not assume:
+2. **For each component** — use the `deep-research` skill as your gathering + adversarial-verification engine, then extract the protocol-specific structure below. `deep-research` fans out across canonical docs, spec, and issue trackers and fact-checks claims — exactly what the "never quote from memory" rule needs. Keep `WebFetch` / `WebSearch` for targeted follow-up (a specific spec anchor, an exact validator command line). Do not assume from model memory. For each component capture:
 
    - **Find the canonical docs URL.** The page the maintainers point at, not a third-party tutorial.
    - **Find the spec / reference.** For protocol-bound components — the actual spec (RFC, IEEE, ISO, vendor-published normative document, framework reference manual), not a blog post about it. Anchor URLs when possible.
@@ -66,7 +66,7 @@ The caller uses **New validators** to extend the Pipeline section in `CLAUDE.md`
 ## Hard rules
 
 - **Never navigate above the project root.** No parent directories, no sibling repositories.
-- Read-only: WebFetch, WebSearch, Read, Grep, Glob, Bash (inspection only).
+- Read-only: WebFetch, WebSearch, Skill (`deep-research`), Read, Grep, Glob, Bash (inspection only).
 - Write only to `docs/stack-notes.md`. Never edit source code, never edit other docs.
 - **Never quote a claim without a source URL.** Quoting from memory or model knowledge is forbidden — the whole point of this agent is to bring external truth into the project.
 - **Prefer the official spec over the library's docs over a blog post.** When the spec and the library disagree, document both with sources and flag in Open questions.

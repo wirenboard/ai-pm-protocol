@@ -25,21 +25,15 @@ From the input and architecture constraints, identify 2-3 search angles:
 - Libraries/frameworks that cover the core problem
 - Open source projects that solved a similar problem
 
-### 2. Search
+### 2. Search — delegate to `deep-research`
 
-Use WebSearch for each angle. Search in English — most technical resources are in English.
+Invoke the built-in `deep-research` skill as the engine. Frame the question from the angles in step 1 and the architecture constraints, so it filters the way you would — e.g. *"Existing open-source solutions and libraries for `<problem>`, constrained to `<stack / license / platform>`; for each: what it does, maturity, license, fit, gaps."* It fans out multi-source search and adversarially verifies its findings — stronger and better-cited than an ad-hoc WebSearch loop.
 
-Good search patterns:
-- `"<technology> <problem>" github`
-- `"<protocol> bridge <platform>" open source`
-- `"<library name>" alternatives`
-- `site:github.com <keyword>`
-
-Read landing pages, READMEs, docs summaries — not source code. You are researching what exists, not how to implement.
+You **frame the question and consume the cited report**; `deep-research` does the searching and fact-checking. Do not run a parallel WebSearch loop. If `deep-research` is unavailable, fall back to WebSearch (`"<technology> <problem>" github`, `"<library>" alternatives`, `site:github.com <keyword>`) — landing pages and READMEs, not source.
 
 ### 3. Analyse each candidate
 
-For each relevant result (aim for 3-5 candidates):
+From `deep-research`'s report, for each relevant candidate (aim for 3-5):
 
 ```
 Name: <project/library name>
