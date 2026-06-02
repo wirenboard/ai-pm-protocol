@@ -23,7 +23,7 @@ If no company standards apply — remove this section.
 | Transport | <...> | <reason> |
 | <other> | <...> | <reason> |
 
-## Key decisions
+## Architectural decisions
 
 Document decisions that are not obvious from the stack choice. Each decision: what was chosen, why, what was rejected and why.
 
@@ -37,13 +37,35 @@ Document decisions that are not obvious from the stack choice. Each decision: wh
 
 ...
 
-## Constraints
+## Architectural constraints
 
 Things that must not be violated without an explicit PM decision. Agents read this and treat constraints as hard boundaries.
 
 - <e.g., "Only Postgres — no additional databases. Reason: operational simplicity, single backup target.">
 - <e.g., "No external services in hot path — everything must work offline. Reason: embedded deployment.">
 - <e.g., "No background threads outside the worker pool — reason: reproducibility in tests.">
+
+## File layout (module map)
+
+Coarse map of the developer/agent-facing source structure: **one row per top-level directory or module → one-line responsibility**. Stay coarse — NOT per-function, NOT a file listing (that drifts the moment code moves). This is the `src/` structure on the *responsibility* axis, distinct from `docs/product.md` "## Документы" (which is PM-facing navigation over `docs/`). This is the section `pm-architect` (A4) cross-checks against `ls` + `git ls-tree -r --name-only HEAD`, and the section `pm-auditor` keys its "major components listed?" check on — keep it honest against the real tree.
+
+| Directory / module | Responsibility |
+|---|---|
+| `<src/api/>` | <one-line responsibility — e.g., "HTTP handlers, request validation"> |
+| `<src/core/>` | <one-line responsibility — e.g., "domain logic, no I/O"> |
+| `<src/store/>` | <one-line responsibility — e.g., "persistence, queries"> |
+
+## Integration contract
+
+How downstream / external consumers integrate with this project — the public surface they depend on (install steps, entry points, exported API, expected paths, env contract). Keep it aligned with the README install instructions: `pm-architect` (A4) cross-checks this section against them, and a diverging description is a self-inflicted finding. Mark `N/A — <reason>` for projects with no external integration surface.
+
+- <e.g., "Installed via `pip install <pkg>`; entry point `<pkg>.run(config)`; reads config from `$XDG_CONFIG_HOME/<pkg>/config.toml`.">
+
+## Release flow
+
+How a commit becomes a published release. Keep it aligned with the CI definition: `pm-architect` (A4) cross-checks this section against `.github/workflows/auto-tag.yml` (or the equivalent CI workflow). Mark `N/A — <reason>` for projects with no automated release.
+
+- <e.g., "Feature branch → PR → squash-merge to main → CI reads top CHANGELOG entry → tags `v<VERSION>` and publishes a GitHub Release.">
 
 ## Security constraints
 

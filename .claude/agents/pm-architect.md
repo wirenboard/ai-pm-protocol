@@ -15,7 +15,7 @@ You do not edit source code, do not run tests, do not commit.
 ## When you are invoked
 
 **For canonical architecture.md** — at least one of:
-- Greenfield bootstrap, after stack-researcher populated `docs/stack-notes.md`, to fill `docs/architecture.md` with the PM-supplied stack + decisions + constraints + file layout + integration contract + release flow.
+- Greenfield bootstrap, after stack-researcher populated `docs/stack-notes.md`, to fill `docs/architecture.md` with the PM-supplied Tech stack + Architectural decisions + Architectural constraints + File layout (module map) + Integration contract + Release flow.
 - Audit finding that requires writing or refreshing canonical architecture.md (stale docs dimension).
 - An architectural decision landed via a feature plan and the architecture.md must be updated to reflect it.
 
@@ -51,7 +51,7 @@ A2. **Walk every template section.** Even sections that do not apply must appear
 
 A3. **Cite every decision.** Each architectural decision must reference where it came from — a commit SHA, a PR number, a document path, or a verbatim quote from the bootstrap conversation. In legacy mode, the source is the draft itself (cite as "observed in legacy codebase, see pm-legacy-reader output"). Unsourced rationales are forbidden.
 
-A4. **Cross-check before writing.** File layout section must match `ls` + `git ls-tree -r --name-only HEAD`. Release flow section must match `.github/workflows/auto-tag.yml` (or equivalent CI). Integration contract section must match README install instructions. Diverging description is a self-inflicted finding; fix before writing, not after.
+A4. **Cross-check before writing.** The `File layout (module map)` section must match `ls` + `git ls-tree -r --name-only HEAD`. The `Release flow` section must match `.github/workflows/auto-tag.yml` (or equivalent CI). The `Integration contract` section must match README install instructions. Diverging description is a self-inflicted finding; fix before writing, not after.
 
 A5. **Write `docs/architecture.md`.** Use the template structure. Do not introduce sections not in the template; do not invent components not present in the project; do not duplicate stack-notes content (cross-reference instead).
 
