@@ -13,7 +13,7 @@ pending migration. The migration procedures themselves (v2.2/v2.3 in
 
 ## Existing behaviors this feature touches
 - `pm-auditor` step 2 "Build the feature inventory" — must not silently consume `_index.md` as the canonical inventory.
-- `pm-auditor` docs-currency product-map check (`:106-107`) — stays; made reliable/early. Greenfield exemption (`:107`) preserved.
+- `pm-auditor` docs-currency product-map check — stays; made reliable/early. The greenfield/feature-less exemption is preserved.
 - `pm-bootstrap.md` "Pending template-upgrade migrations" — gains a named `### Pending-migration detection` subsection (the single source for the conditions, extracted from the existing migration entries); the migration procedures themselves are unchanged.
 - `pm-plan` retrospective check (the existing audit-suggestion block) — gains a sibling "pending migration" check.
 - `pm-audit` command — gains the follow-through offer.
