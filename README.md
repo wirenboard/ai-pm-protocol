@@ -158,6 +158,22 @@ done
 
 **Шаг 5 — запустить аудит:** скажи Claude «проверь проект» — он сгруппирует все pre-migration артефакты в одно finding и предложит принять массово.
 
+## Миграция на v2.2.0
+
+v2.2 заменяет feature index (`docs/features/_index.md`) на контракт-центричную карту `docs/product.md` — что система делает, организовано по контрактам (что каждая фича гарантирует). Миграция — в одну команду.
+
+**Шаг 1 — обновить submodule:**
+
+```bash
+git submodule update --remote .ai-pm/tooling
+git add .ai-pm/tooling
+git commit -m "chore: bump ai-pm-protocol to v2.2"
+```
+
+**Шаг 2 — мигрировать карту:** скажи Claude **«мигрируй на v2.2»**. Он сгенерирует `docs/product.md` из существующих контрактов, планов и ревью и удалит `docs/features/_index.md`. Больше ничего не меняется.
+
+Backend-only проект (без user-facing контрактов) — `docs/product.md` соберётся с одной секцией `Infrastructure`, это нормально.
+
 ## Какие риски шаблон снижает
 
 > Перечень рисков на продуктовом уровне. Точные формулировки правил — в [`WORKFLOW.md`](WORKFLOW.md) и в `.claude/agents/*.md`.

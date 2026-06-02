@@ -41,7 +41,7 @@ Realignment of the protocol around best-in-class built-in skills/tools, a contra
 - `docs/features/_index.md` (feature index) — replaced by the contract-centric `docs/product.md`.
 
 ### Migration (downstream projects)
-- After `git submodule update --remote`: a stale `docs/features/_index.md` is now orphaned — regenerate `docs/product.md` via the Product map generation procedure (run `/pm-audit` or re-bootstrap docs).
+- After `git submodule update --remote`, run the v2.2 migration: tell the agent **«мигрируй на v2.2»** (or re-run `/pm-bootstrap`, which detects it) — it generates `docs/product.md` from your existing contracts / plans / reviews and removes the orphaned `docs/features/_index.md`. One command, nothing else changes. See README § "Миграция на v2.2.0".
 - The agent/skill guard now denies `wb-*` role agents — switch to the `pm-*` equivalents. `wb-*` knowledge skills are unaffected and encouraged.
 
 ---

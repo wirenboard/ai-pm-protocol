@@ -32,9 +32,20 @@ If PM says yes — `rm .git/hooks/<each>`. If PM says no — note it and continu
 
 Check what exists:
 
-- `CLAUDE.md` exists and contains `@.ai-pm/tooling/WORKFLOW.md` → already initialized, confirm and exit
+- `CLAUDE.md` exists and contains `@.ai-pm/tooling/WORKFLOW.md` → already initialized. Check for **pending template-upgrade migrations** (below); if none, confirm and exit.
 - No `CLAUDE.md` but code exists → **legacy adoption**
 - No `CLAUDE.md` and no production code → **greenfield**
+
+### Pending template-upgrade migrations
+
+On an already-initialized project, before confirming-and-exiting, check whether a template upgrade (`git submodule update --remote`) left a migration to run. Trigger on PM request ("migrate", "обнови шаблон", "мигрируй на v2.2") or proactively when detected.
+
+- **v2.2 — feature index → product map.** If `docs/features/_index.md` exists, or `docs/product.md` is missing:
+  1. Generate `docs/product.md` from the existing contracts / plans / reviews using the **Product map generation procedure** below.
+  2. `git rm docs/features/_index.md` — its content is now rendered, contract-centric, in `docs/product.md`.
+  3. Tell the PM in plain language: "Updated the project map to the new format — `docs/product.md` now shows what the system does, organized by what each feature guarantees. The old feature list is gone; nothing else changed."
+
+  If the project is backend-only (no user-facing contracts), `docs/product.md` renders with a single `## Infrastructure (no user-facing contract)` section — that is correct, not an error.
 
 ---
 
