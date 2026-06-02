@@ -101,7 +101,7 @@ For every `.ai-pm/contracts/<feature>.md`:
 
 ### 5. Docs currency
 
-- `docs/architecture.md`: does it list the major components visible in the codebase? Significant component missing → **note**.
+- `docs/architecture.md`: does its `File layout (module map)` section list the major components/modules visible in the codebase? Significant component missing → **note**.
 - `docs/user-journeys.md`: does it cover user-facing flows that are implemented? Missing journey for an implemented user-facing feature → **note**.
 - `docs/product-map.md` (**generated** map): must exist and be current — the PM-facing contract→features map. **The auditor only re-derives and compares `docs/product-map.md`; it never regenerates or writes it (read/compare only), and never touches the authored `docs/product.md`.** Re-derive the map from source (`.ai-pm/contracts/`, `docs/features/`, `.ai-pm/reviews/`, git); do not trust the existing file. Check:
   - Map missing → **note** (remediation: generate via Product map generation procedure in `pm-bootstrap.md`). On a legitimately feature-less greenfield project (no contracts and no plans yet) a missing map is **not** a finding — skip.

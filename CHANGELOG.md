@@ -13,6 +13,20 @@
 
 ---
 
+## [2.4.0] — 2026-06-02
+
+Aligns `architecture.md` template and agents with drifted coherence, addressing backlog findings #2, #3, #5: template enriched with coarse module-map section, integration-contract clarification, and release-flow guidance; agent/auditor prose aligned to match; one self-contradiction in the protocol's own `doc/architecture.md` fixed.
+
+### Added
+- **Template enrichment** (`doc/_templates/architecture.md.tmpl`): new sections `File layout (module map)` (coarse directory/module → responsibility map, not per-function; distinct from PM-facing `docs/product.md` "## Документы"), `Integration contract`, and `Release flow`. Renamed `Key decisions → Architectural decisions` and `Constraints → Architectural constraints` for clarity.
+- **Agent prose alignment**: `pm-architect.md` A4 cross-check section lists, `pm-bootstrap.md` section enumeration now literally match enriched template (no phantom sections, no skips).
+- **Auditor anchor refinement** (`pm-auditor.md` §5 Docs currency): check keys on named `File layout (module map)` section, stopping phantom "components must be listed" soft-requirement the template couldn't satisfy.
+
+### Fixed
+- **`doc/architecture.md:115`**: self-contradiction — absolute claim "hooks are `PreToolUse`-only" replaced with "`PreToolUse` guards plus one `UserPromptSubmit` route reminder", consistent with line 100 and `.claude/settings.json` configuration (which ships both routes).
+
+---
+
 ## [2.3.0] — 2026-06-02
 
 Splits the product documentation into two layers, addressing real-project feedback from wb-mqtt-matter: an authored PM front door (funnel) and a generated contract-to-features map.
