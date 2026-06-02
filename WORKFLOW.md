@@ -4,7 +4,7 @@
 
 ### Agents (`.claude/agents/`)
 
-Spawned by the orchestrator — do not run manually. Use only these — do not substitute with similarly-named agents from other toolsets:
+Spawned by the orchestrator — do not run manually. Use only these — do not substitute with similarly-named agents from other toolsets (a `PreToolUse` guard in `.claude/settings.json` denies the known `wb-*` role duplicators automatically — see **Hook-level enforcement** below):
 
 | Agent | When |
 |---|---|
@@ -65,6 +65,7 @@ In both cases the PM sees what will be fixed before the first `/pm-plan` loads. 
 - `ssh ... systemctl restart / docker compose / docker exec / apt / npm install / kubectl apply / rm / cp / mv / mkdir / touch` on a remote host — **asked** for confirmation (legitimate when it is deployment, PM-initiated maintenance, or runtime-state work; the prompt makes that intent explicit).
 - `git push --force / -f / --force-with-lease` — **asked** (rewrites remote history).
 - `git commit --no-verify / --no-gpg-sign` — **asked** (bypasses pre-commit / signing).
+- Spawning a `wb-*` role agent or loading a `wb-*` role skill that occupies a protocol seat (`wb-development:coder` / `code-reviewer` / `design-review` / `pr-prep` / `plan-feature`, `wb-git:workflow`) — **denied** automatically, with a pointer to the `pm-*` equivalent. This is the mechanical form of the "use only these agents" rule above. It is a **named deny-list, never an "everything but `pm-*`" block**: built-in engines (`code-review`, `deep-research`) and `wb-*` knowledge skills (`codestyle`, `package-bootstrap`, platform skills) are explicitly not gated — the protocol delegates engines and platform knowledge to them on purpose.
 
 Read-only ssh diagnostics (`cat` for reading, `ls`, `journalctl`, `systemctl status`, `docker logs`, `docker ps`, native status / audit / info commands) are not gated. Local mutating commands (anything not over ssh) are not gated either — they are normal dev work.
 

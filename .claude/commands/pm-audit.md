@@ -25,7 +25,7 @@ PM can redirect naturally: "just a quick one" → `diff`; "go deep" / "everythin
 
 ## Agent dispatch
 
-All agents below are project agents — use the Agent tool with the exact `subagent_type` shown. Never substitute with `wb-development:code-reviewer` or any other agent.
+All agents below are project agents — use the Agent tool with the exact `subagent_type` shown. Never substitute with `wb-development:code-reviewer` or any other agent — a `PreToolUse` guard in `.claude/settings.json` denies the known `wb-*` role duplicators automatically (see WORKFLOW.md § Hook-level enforcement).
 
 | Agent | subagent_type |
 |---|---|
