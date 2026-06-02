@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); NAME=$(echo \"$INPUT\" | jq -r '.tool_input.subagent_type // .tool_input.skill // empty'); [ -z \"$NAME\" ] && exit 0; case \"$NAME\" in wb-development:coder|wb-development:code-reviewer|wb-development:design-review|wb-development:plan-feature|wb-git:workflow) jq -nc --arg n \"$NAME\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:(\"\\($n) duplicates a protocol role in this ai-pm project. Use the pm-* equivalent (pm-coder / pm-plan-checker + code-review / pm-architect / /pm-plan / pm-pr-prep / WORKFLOW.md git rules), not a wb-* role agent. code-review, deep-research and wb-knowledge skills stay available.\")}}' ;; esac",
+            "command": "INPUT=$(cat); NAME=$(echo \"$INPUT\" | jq -r '.tool_input.subagent_type // .tool_input.skill // empty'); [ -z \"$NAME\" ] && exit 0; case \"$NAME\" in wb-development:coder|wb-development:code-reviewer|wb-development:design-review|wb-development:plan-feature|wb-development:pr-prep|wb-git:workflow|wb-git:pr-author) jq -nc --arg n \"$NAME\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:(\"\\($n) duplicates a protocol role in this ai-pm project. Use the pm-* equivalent (pm-coder / pm-plan-checker + code-review / pm-architect / /pm-plan / pm-pr-prep / WORKFLOW.md git rules), not a wb-* role agent. code-review, deep-research and wb-knowledge skills stay available.\")}}' ;; esac",
             "statusMessage": "Checking agent/skill routing..."
           }
         ]

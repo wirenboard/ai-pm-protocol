@@ -394,10 +394,15 @@ run_case "guard: skill wb-network -> pass (platform knowledge, used read-only)" 
 run_case "guard: skill wiren-board -> pass (platform knowledge)" \
     "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wiren-board)"
 
-# Negative: pr-author deferred to a later commit (the PR-review capability
-# must land in the protocol first); pr-review has no protocol seat at all.
-run_case "guard: skill wb-git:pr-author -> pass (deferred until PR-review capability lands)" \
-    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-git:pr-author)"
+# Positive: PR-forward duplicators now denied — the protocol grew its own
+# PR-review-response path (WORKFLOW.md Step 7), so pr-author/pr-prep no
+# longer fill a gap.
+run_case "guard: skill wb-git:pr-author -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-git:pr-author)"
+run_case "guard: spawn wb-development:pr-prep -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_agent wb-development:pr-prep)"
+
+# Negative: pr-review (reviewing someone else's PR) has no protocol seat.
 run_case "guard: skill wb-git:pr-review -> pass (no protocol seat)" \
     "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-git:pr-review)"
 

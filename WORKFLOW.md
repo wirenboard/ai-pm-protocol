@@ -65,7 +65,7 @@ In both cases the PM sees what will be fixed before the first `/pm-plan` loads. 
 - `ssh ... systemctl restart / docker compose / docker exec / apt / npm install / kubectl apply / rm / cp / mv / mkdir / touch` on a remote host — **asked** for confirmation (legitimate when it is deployment, PM-initiated maintenance, or runtime-state work; the prompt makes that intent explicit).
 - `git push --force / -f / --force-with-lease` — **asked** (rewrites remote history).
 - `git commit --no-verify / --no-gpg-sign` — **asked** (bypasses pre-commit / signing).
-- Spawning a `wb-*` role agent or loading a `wb-*` role skill that occupies a protocol seat (`wb-development:coder` / `code-reviewer` / `design-review` / `pr-prep` / `plan-feature`, `wb-git:workflow`) — **denied** automatically, with a pointer to the `pm-*` equivalent. This is the mechanical form of the "use only these agents" rule above. It is a **named deny-list, never an "everything but `pm-*`" block**: built-in engines (`code-review`, `deep-research`) and `wb-*` knowledge skills (`codestyle`, `package-bootstrap`, platform skills) are explicitly not gated — the protocol delegates engines and platform knowledge to them on purpose.
+- Spawning a `wb-*` role agent or loading a `wb-*` role skill that occupies a protocol seat (`wb-development:coder` / `code-reviewer` / `design-review` / `pr-prep` / `plan-feature`, `wb-git:workflow` / `pr-author`) — **denied** automatically, with a pointer to the `pm-*` equivalent. This is the mechanical form of the "use only these agents" rule above. It is a **named deny-list, never an "everything but `pm-*`" block**: built-in engines (`code-review`, `deep-research`) and `wb-*` knowledge skills (`codestyle`, `package-bootstrap`, platform skills) are explicitly not gated — the protocol delegates engines and platform knowledge to them on purpose.
 
 On every change-intent prompt a `UserPromptSubmit` hook injects a one-paragraph reminder of this route (Step 0 → `/pm-plan` → coder → review → pr-prep; orchestrator does not edit content artefacts; use `pm-*`, not `wb-*` role skills). It stays silent on ordinary conversation. This is the soft, every-turn counterpart to the hard PreToolUse guard above — it keeps the protocol asserted without depending on a session re-reading this file.
 
@@ -153,6 +153,18 @@ I never add anything to `.ai-pm/backlog.md` without an explicit yes from you (pr
 After you merge: pull main locally and we're ready for the next feature.
 
 **When you're ready to ship** — say "release". I verify git state, run `pm-pr-prep` (version bump + CHANGELOG + PR). You merge — GitHub auto-tags and publishes the release.
+
+**Step 7 — When the PR gets review comments.** A human reviewer (or `code-review --comment`) may leave comments on the open PR. I run a response loop on the **same branch and PR** — you only hear about comments that change product scope:
+
+1. **Fetch the threads** — `gh pr view <n> --comments` plus `gh api repos/{owner}/{repo}/pulls/{n}/comments` for inline threads. I read every unresolved one.
+2. **Triage each** (I decide; I involve you only when product scope is at stake):
+   - **Needs a code change** → I spawn `pm-coder` with the thread as a focused task; it fixes on the same branch, runs the pipeline, commits.
+   - **Question** → I answer in a reply; no code change.
+   - **Reviewer asks for behaviour the plan/contract didn't cover** → that is a product decision: I bring it to you (AskUserQuestion) before acting; it may need a plan update.
+3. **Push and respond** — after the fixes land I push, reply to each thread with what changed (or why not), and resolve the threads I addressed.
+4. **Re-run the review loop** (`pm-plan-checker` + `code-review`) if the fixes were non-trivial, before asking for re-review.
+
+This is the protocol's own PR-review-response path — platform-agnostic, all `gh`. I never cut a new branch for review fixes, and I never reach for `wb-git:pr-author` / `wb-git:pr-review` to do it (they are denied by the agent/skill guard; `pm-pr-prep` owns opening/updating the PR, I own the comment loop).
 
 ---
 
