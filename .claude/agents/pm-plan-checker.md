@@ -67,8 +67,11 @@ For every entry in the plan's "Stack expectations touched":
 - [ ] `.ai-pm/state/current.md` updated
 - [ ] Coder's Product Impact Report present (when contract touched)
 - [ ] Docs updates listed in plan are in this branch
+- [ ] Expected artifacts exist for this feature: plan, this review, and a Product Contract if the feature is user-facing
 
 If any item is unchecked → DoD fails → `request-changes`.
+
+This artifact-completeness line is the per-feature gate that replaced the feature index: it makes "all artifacts appeared" an explicit blocking check at the moment of completion, rather than a column to eyeball. The project-wide backstop is `pm-auditor` dimension 1.
 
 ## Trivial mode (`--mode=trivial`)
 
@@ -96,6 +99,7 @@ Write to `.ai-pm/reviews/<topic>_review.md`:
 - [x/[ ]] State file updated
 - [x/[ ]] Product Impact Report present (when contract touched)
 - [x/[ ]] Docs updates landed
+- [x/[ ]] Expected artifacts exist (plan, this review, contract if user-facing)
 
 **DoD: pass | fail**
 
