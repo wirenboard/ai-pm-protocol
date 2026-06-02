@@ -76,7 +76,8 @@ A green tests + lint with a failing validator is still a failed pipeline. Review
 
 | File | Purpose |
 |---|---|
-| `docs/product.md` | **What the system does** — contract-centric map (group → contract → features + reviews), PM-facing, auto-generated |
+| `docs/product.md` | **Product front door** — authored PM funnel (Зачем это нужно / Что умеет сегодня / Документы / Функции), owned by `pm-architect`, PM-validated. Not generated |
+| `docs/product-map.md` | **Capability map** — contract-centric (group → contract → features + reviews), PM-facing, auto-generated from contracts/plans/reviews |
 | `docs/architecture.md` | Stack, decisions, constraints |
 | `docs/user-journeys.md` | Existing user scenarios |
 | `docs/stack-notes.md` | Stack idioms, constraints, validators, integration contracts (maintained by `pm-stack-researcher`; read by `pm-plan`, `pm-architect`, `pm-coder`, `pm-plan-checker`) |

@@ -50,7 +50,7 @@ One contract per user-facing feature. Backend-only changes (refactors, infra) do
 
 ## Built/changed by
 
-<features (plans) that created or changed this contract — one line each, appended at feature approve. This list is the source for the inverse view in `docs/product.md` (contract → its features). One contract accumulates many features over time.>
+<features (plans) that created or changed this contract — one line each, appended at feature approve. This list is the source for the inverse view in `docs/product-map.md` (contract → its features). One contract accumulates many features over time.>
 
 - [<topic>](../../docs/features/<topic>_plan.md)
 
@@ -62,4 +62,4 @@ One contract per user-facing feature. Backend-only changes (refactors, infra) do
 - **pm-coder** — reads before implementing; the implementation must not break any Must-work or Must-not-break item without a plan that explicitly changes the contract.
 - **pm-plan-checker** — checks the diff against Must-work + Must-not-break + Acceptance checks; runs Acceptance checks if they are runnable; if a Must item is touched without contract update — blocking.
 - **pm-auditor** — flags features with no contract, stale contracts (no review > 90 days while feature changed), contracts that drift from observed code behavior.
-- **product map** — `docs/product.md` inverts these contracts (contract → its **Built/changed by** features + reviews) into the PM-facing view; regenerated whenever a contract or feature lands.
+- **product map** — `docs/product-map.md` inverts these contracts (contract → its **Built/changed by** features + reviews) into the PM-facing generated view; regenerated whenever a contract or feature lands. (The authored `docs/product.md` front door is a separate, hand-authored funnel owned by `pm-architect`.)
