@@ -41,9 +41,10 @@ Check what exists:
 On an already-initialized project, before confirming-and-exiting, check whether a template upgrade (`git submodule update --remote`) left a migration to run. Trigger on PM request ("migrate", "обнови шаблон", "мигрируй на v2.2") or proactively when detected.
 
 - **v2.2 — feature index → product map.** If `docs/features/_index.md` exists, or `docs/product.md` is missing:
-  1. Generate `docs/product.md` from the existing contracts / plans / reviews using the **Product map generation procedure** below.
-  2. `git rm docs/features/_index.md` — its content is now rendered, contract-centric, in `docs/product.md`.
-  3. Tell the PM in plain language: "Updated the project map to the new format — `docs/product.md` now shows what the system does, organized by what each feature guarantees. The old feature list is gone; nothing else changed."
+  1. **Backfill `Built/changed by` from the index first.** Pre-v2.2 contracts have no `Built/changed by` list, so a naive generation would drop every feature into the Infrastructure bucket. The mapping already exists in the index's `Contract` column: read `docs/features/_index.md`, and for each feature row that links a contract, append `- [<topic>](../../docs/features/<topic>_plan.md)` to that contract's `Built/changed by` section. Features with no contract link correctly fall into the Infrastructure bucket.
+  2. Generate `docs/product.md` from the contracts / plans / reviews using the **Product map generation procedure** below.
+  3. `git rm docs/features/_index.md` — its content is now rendered, contract-centric, in `docs/product.md`.
+  4. Tell the PM in plain language: "Updated the project map to the new format — `docs/product.md` now shows what the system does, organized by what each feature guarantees. The old feature list is gone; nothing else changed."
 
   If the project is backend-only (no user-facing contracts), `docs/product.md` renders with a single `## Infrastructure (no user-facing contract)` section — that is correct, not an error.
 
