@@ -389,6 +389,10 @@ run_case "guard: skill wb-development:codestyle -> pass (knowledge)" \
     "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-development:codestyle)"
 run_case "guard: skill wb-development:package-bootstrap -> pass (knowledge)" \
     "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-development:package-bootstrap)"
+run_case "guard: skill wb-network -> pass (platform knowledge, used read-only)" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-network)"
+run_case "guard: skill wiren-board -> pass (platform knowledge)" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wiren-board)"
 
 # Negative: pr-author deferred to a later commit (the PR-review capability
 # must land in the protocol first); pr-review has no protocol seat at all.
