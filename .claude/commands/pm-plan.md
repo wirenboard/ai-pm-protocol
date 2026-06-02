@@ -219,6 +219,11 @@ If PM says no or later → continue with this feature.
 If **no audit has ever been run** (.ai-pm/audits/ empty or missing):
 > "This project hasn't had a protocol check yet. Want to run one before we plan this feature? It verifies that all previous work is properly documented."
 
+**Pending-migration nudge.** If the project shows an un-migrated template structure (per `### Pending-migration detection` in `pm-bootstrap.md` — a lingering `docs/features/_index.md`, or a generated `docs/product.md` with the frozen signature line and no `docs/product-map.md`), surface it before new work:
+> "This project is on an older template structure — `docs/product-map.md` hasn't been generated yet. Worth running the pending `/pm-bootstrap` migration first so we plan against the current format. Run the migration now?"
+
+If PM says yes → run the pending `/pm-bootstrap` migration before proceeding with this feature.
+
 Don't implement fixes, don't block planning. PM decides.
 
 ## Architect check

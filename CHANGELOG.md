@@ -13,6 +13,21 @@
 
 ---
 
+## [2.5.0] — 2026-06-02
+
+Makes detection of an un-migrated template structure reliable and turns the passive "map missing" note into an active offer to run the pending migration (backlog #4).
+
+### Added
+- **Single-sourced detection** (`pm-bootstrap.md` § `Pending-migration detection`): new named subsection consolidates both un-migrated conditions (lingering `docs/features/_index.md`; or generated `docs/product.md` + frozen v2.3 signature with no `docs/product-map.md`) and the frozen signature string in exactly one place. Cited by name from `pm-auditor`, `pm-audit`, `pm-plan` — no re-encoding.
+- **Auditor reliability** (`pm-auditor.md`): inventory sourced from `git log` only (lingering `_index.md` flagged as un-migrated structure, never an inventory source); `product-map.md`-exists check moved to hard early gate (line 110) before re-derivation; greenfield/feature-less exemption made stricter (precondition: no `_index.md` + no contracts + no plans).
+- **Active offer path** (`/pm-audit`): when un-migrated structure is found, auditor flags it read-only; orchestrator offers a remediation branch ("The auditor only flagged it; run `/pm-bootstrap` to migrate"). `/pm-plan` adds a sibling retrospective-check nudge (cloned from 5+-features block), PM-authorized, never auto-runs.
+
+### Changed
+- `pm-bootstrap.md`: migration procedures (v2.2/v2.3 steps) unchanged; detection prose moved to named subsection, procedures now reference by name.
+- `pm-auditor.md`, `pm-audit.md`, `pm-plan.md` — route detection to named subsection; auditor retains read-only, offer/action lives in orchestrator commands.
+
+---
+
 ## [2.4.0] — 2026-06-02
 
 Aligns `architecture.md` template and agents with drifted coherence, addressing backlog findings #2, #3, #5: template enriched with coarse module-map section, integration-contract clarification, and release-flow guidance; agent/auditor prose aligned to match; one self-contradiction in the protocol's own `doc/architecture.md` fixed.

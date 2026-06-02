@@ -35,6 +35,8 @@ Optional parameters:
    ```
    Build a list of (feature topic, merge date, plan file expected). For `scope: diff`: find the most recent `.ai-pm/audits/audit-*.md` by date, limit to branches merged after that date.
 
+   The inventory comes from `git log` and `docs/features/*_plan.md` **only**. `docs/features/_index.md` is **never** an inventory source — if it is present, it is the un-migrated v2.2 template structure (see `### Pending-migration detection` in `pm-bootstrap.md`); do not read it as a feature list. Carry its presence into the Docs currency dimension as a note (see dimension 5) and keep building the inventory from git.
+
 3. **Fill the contract check table — do this before applying any dimension.** Create the output file now and write the `## Contract check` section first. For each feature in the inventory: open the plan file, read the first sentence of scenario 1, write the row. Do not proceed to step 4 until every feature has a row and every `yes + MISSING` combination is identified as a blocking finding.
 
    This is not optional and is not satisfied by reading a previous audit. Read each plan file directly.
@@ -103,8 +105,10 @@ For every `.ai-pm/contracts/<feature>.md`:
 
 - `docs/architecture.md`: does its `File layout (module map)` section list the major components/modules visible in the codebase? Significant component missing → **note**.
 - `docs/user-journeys.md`: does it cover user-facing flows that are implemented? Missing journey for an implemented user-facing feature → **note**.
-- `docs/product-map.md` (**generated** map): must exist and be current — the PM-facing contract→features map. **The auditor only re-derives and compares `docs/product-map.md`; it never regenerates or writes it (read/compare only), and never touches the authored `docs/product.md`.** Re-derive the map from source (`.ai-pm/contracts/`, `docs/features/`, `.ai-pm/reviews/`, git); do not trust the existing file. Check:
-  - Map missing → **note** (remediation: generate via Product map generation procedure in `pm-bootstrap.md`). On a legitimately feature-less greenfield project (no contracts and no plans yet) a missing map is **not** a finding — skip.
+- `docs/product-map.md` (**generated** map): must exist and be current — the PM-facing contract→features map. **The auditor only re-derives and compares `docs/product-map.md`; it never regenerates or writes it (read/compare only), and never touches the authored `docs/product.md`.** Evaluate these in order:
+  - **First, the greenfield/feature-less exemption.** On a legitimately feature-less greenfield project — `docs/features/_index.md` absent AND no contracts AND no plans yet — a missing map is **not** a finding; skip the rest of this map check. (`_index.md` absence is part of the exemption because a lingering `_index.md` is itself evidence of a project that already had features and is therefore not greenfield.)
+  - **Then, a hard existence check** (independent of the re-derivation below — do not re-derive until the file is known to exist): if not exempt and `docs/product-map.md` is missing → **note** (un-migrated template structure / un-generated map; remediation: the orchestrator runs the pending `/pm-bootstrap` migration — `### Pending-migration detection` in `pm-bootstrap.md` defines the trigger). A lingering `docs/features/_index.md` (from step 2) carries this same note and remediation pointer — one note per un-migrated state, not two.
+  - Once the map exists, re-derive it from source (`.ai-pm/contracts/`, `docs/features/`, `.ai-pm/reviews/`, git) and compare; do not trust the existing file:
   - A contract in `.ai-pm/contracts/` not rendered under any component → **note** (stale map).
   - A feature plan in `docs/features/` appearing neither under a contract's table nor in the `## Infrastructure (no user-facing contract)` bucket → **note** (stale map).
   - A contract's `Built/changed by` list out of sync with the features that actually touched it → **note**.

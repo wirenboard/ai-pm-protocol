@@ -81,6 +81,10 @@ All agents below are project agents — use the Agent tool with the exact `subag
    - Stale contract → PM validates update; orchestrator updates the contract
    - Orphaned implementation → `/pm-plan <topic>` (retroactive)
    - Stale docs → spawn `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) or `pm-architect` (`subagent_type: "pm-architect"`)
+   - Un-migrated template structure / missing generated map (a lingering `docs/features/_index.md`, or `docs/product-map.md` missing — per `### Pending-migration detection` in `pm-bootstrap.md`) → offer to run the pending migration now, in plain language:
+     > "This project is still on an older template structure (`docs/product-map.md` hasn't been generated yet). I can run the pending `/pm-bootstrap` migration to bring it up to the current format — nothing else changes. Run it now?"
+
+     PM decides. On yes, invoke the existing (untouched) `/pm-bootstrap` migration procedure, which acts with this consent. The auditor only flagged it; the orchestrator runs it.
 
    **Plan naming rule.** Topic = what is being fixed, not where it came from. `confed-schema-delivery`, not `audit-fixup-confed-schema-delivery`. The audit finding belongs in the plan's context or git history — not in the filename.
 

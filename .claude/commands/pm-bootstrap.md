@@ -40,7 +40,20 @@ Check what exists:
 
 On an already-initialized project, before confirming-and-exiting, check whether a template upgrade (`git submodule update --remote`) left a migration to run. Trigger on PM request ("migrate", "обнови шаблон", "мигрируй на v2.2") or proactively when detected.
 
-- **v2.2 — feature index → product map.** If `docs/features/_index.md` exists (the pre-v2.2 index that this migration replaces):
+### Pending-migration detection
+
+**Single source for "this project is on an older template structure."** These are the only conditions that define an un-migrated state. `pm-auditor`, `pm-audit`, and `pm-plan` reference this subsection **by name** ("`### Pending-migration detection` in `pm-bootstrap.md`") and must never re-encode the conditions — the migration procedures below consume them too.
+
+- **v2.2 not run:** `docs/features/_index.md` is present (the pre-v2.2 index that the v2.2 migration replaces).
+- **v2.3 not run:** a generated `docs/product.md` exists AND carries the frozen pre-split generator signature line — and `docs/product-map.md` does **not** exist:
+
+  > `> Source of truth = contracts. One contract, many features. Generated, not hand-filled.`
+
+  **This literal string is a frozen historical artifact** — it is the exact header the pre-split generator emitted. Do NOT "tidy" or normalize it; the detection of already-deployed projects depends on this exact pre-split text. (The new generator no longer emits it; that is intentional and what makes the two states distinguishable.) An authored `docs/product.md` never carries the signature line, so a greenfield-before-first-feature project with a hand-authored funnel is correctly **not** detected as un-migrated.
+
+The migration procedures themselves are below; they are unchanged.
+
+- **v2.2 — feature index → product map.** Detection: see `### Pending-migration detection` above (`docs/features/_index.md` present). When it applies:
   1. **Backfill `Built/changed by` from the index first.** Pre-v2.2 contracts have no `Built/changed by` list, so a naive generation would drop every feature into the Infrastructure bucket. The mapping already exists in the index's `Contract` column: read `docs/features/_index.md`, and for each feature row that links a contract, append `- [<topic>](../../docs/features/<topic>_plan.md)` to that contract's `Built/changed by` section. Features with no contract link correctly fall into the Infrastructure bucket.
   2. Generate `docs/product-map.md` from the contracts / plans / reviews using the **Product map generation procedure** below. (Pre-v2.3 the target was `docs/product.md`; the v2.3 migration below splits that into the authored front door plus this generated map. If you run both migrations on a project that still has a generated `docs/product.md`, run the v2.3 rename first.)
   3. `git rm docs/features/_index.md` — its content is now rendered, contract-centric, in `docs/product-map.md`.
@@ -48,17 +61,9 @@ On an already-initialized project, before confirming-and-exiting, check whether 
 
   If the project is backend-only (no user-facing contracts), `docs/product-map.md` renders with a single `## Infrastructure (no user-facing contract)` section — that is correct, not an error.
 
-- **v2.3 — `product.md` split into authored front door + generated map.** The single generated `docs/product.md` is split into an **authored** `docs/product.md` (PM front door, owned by `pm-architect`) and a **generated** `docs/product-map.md` (the contract→features map). Detect and migrate:
+- **v2.3 — `product.md` split into authored front door + generated map.** The single generated `docs/product.md` is split into an **authored** `docs/product.md` (PM front door, owned by `pm-architect`) and a **generated** `docs/product-map.md` (the contract→features map). Detection: see `### Pending-migration detection` above (generated `docs/product.md` carrying the frozen signature line AND no `docs/product-map.md`).
 
-  **Detection (pre-split state) — BOTH must hold:**
-  1. `docs/product.md` exists AND its content carries the frozen pre-split generator signature line:
-
-     > `> Source of truth = contracts. One contract, many features. Generated, not hand-filled.`
-
-     **This literal string is a frozen historical artifact** — it is the exact header the pre-split generator emitted. Do NOT "tidy" or normalize it to match the new map header; the detection of already-deployed projects depends on this exact pre-split text. (The new generator no longer emits it; that is intentional and what makes the two states distinguishable.)
-  2. `docs/product-map.md` does **not** exist.
-
-  If either guard fails — do nothing (no-op). This makes the migration idempotent two ways: after a successful run `product-map.md` exists (guard 2 fails on re-run), and an authored `product.md` never carries the signature line (guard 1 fails — e.g. a greenfield-before-first-feature project with a hand-authored funnel is left untouched, no clobber).
+  If either guard fails — do nothing (no-op). This makes the migration idempotent two ways: after a successful run `product-map.md` exists, and an authored `product.md` never carries the signature line — so the migration leaves both already-migrated and greenfield-before-first-feature projects untouched, no clobber.
 
   **Steps when pre-split:**
   1. `git mv docs/product.md docs/product-map.md` — the old generated content is preserved verbatim as the map; no data loss. (The next auditor/`/pm-plan` run rebuilds it wholesale in the new format, signature line included or not is irrelevant — it is overwritten.)
