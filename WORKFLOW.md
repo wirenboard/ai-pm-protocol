@@ -71,6 +71,8 @@ On every change-intent prompt a `UserPromptSubmit` hook injects a one-paragraph 
 
 Read-only ssh diagnostics (`cat` for reading, `ls`, `journalctl`, `systemctl status`, `docker logs`, `docker ps`, native status / audit / info commands) are not gated. Local mutating commands (anything not over ssh) are not gated either — they are normal dev work.
 
+Throwaway/diagnostic scripts go in `.claude/tmp/` (inside the project root, so they pass the path-boundary hooks), not `/tmp`. The directory is git-ignored — it is scratch, never committed.
+
 Hooks themselves are tested by `tests/hooks.sh`, gated by `.github/workflows/lint-hooks.yml` on every PR that touches the hooks or their tests. A regex regression now fails CI rather than silently degrading the gate.
 
 **Git workflow — orchestrator owns this, not subagents:**

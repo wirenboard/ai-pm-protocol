@@ -13,6 +13,16 @@
 
 ---
 
+## [2.2.2] — 2026-06-02
+
+### Changed
+- `.claude/settings.json`: added top-level `"autoMemoryEnabled": false` to disable orchestrator auto-memory (private state store outside project root). All protocol state lives in project artifacts (`.ai-pm/`, `doc/`, plans, reviews).
+- `.gitignore`: added `.claude/tmp/` as sanctioned project-local scratch directory (git-ignored, passes path-boundary hooks).
+- `WORKFLOW.md`: documented `.claude/tmp/` as throwaway/diagnostic scratch dir inside project root (not `/tmp`).
+- `README.md`: noted orchestrator auto-memory is off and `.claude/tmp/` is the scratch directory.
+
+---
+
 ## [2.2.1] — 2026-06-02
 
 ### Changed
