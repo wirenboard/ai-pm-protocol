@@ -2,13 +2,13 @@
 
 This document describes the architecture of the **ai-pm-protocol template repository itself** — not a downstream project that consumes the template. It is a meta-case: the template documents itself in the same shape (`doc/_templates/architecture.md.tmpl`) it expects downstream projects to use. Sections that do not apply to a documentation-and-config repo are kept as headers and marked `N/A — <one-line reason>` so a downstream reader can see the template walked its own structure honestly.
 
-**Last full review:** 2026-05-30
+**Last full review:** 2026-06-03
 
 ---
 
 ## Project
 
-A template for product managers building their product solo or with AI assistance. The PM describes what they want; a fixed set of Markdown-defined agents (`architect`, `coder`, `reviewer`, `pr-prep`, `docs-extractor`, `stack-researcher`, `auditor`) plan, implement, and verify changes against the PM's plan, the downstream project's `docs/architecture.md` constraints, and `docs/stack-notes.md` stack literacy. The PM makes product decisions and does not read code. Marketing-level claims and the natural-language workflow walkthrough live in `README.md` — this document does not duplicate them; it describes the underlying structure.
+A template for product managers building their product solo or with AI assistance. The PM describes what they want; a fixed set of Markdown-defined agents (`pm-architect`, `pm-coder`, `pm-plan-checker`, `pm-pr-prep`, `pm-legacy-reader`, `pm-stack-researcher`, `pm-auditor`) plan, implement, and verify changes against the PM's plan, the downstream project's `docs/architecture.md` constraints, and `docs/stack-notes.md` stack literacy. The PM makes product decisions and does not read code. Marketing-level claims and the natural-language workflow walkthrough live in `README.md` — this document does not duplicate them; it describes the underlying structure.
 
 ---
 
@@ -22,10 +22,10 @@ The template's stack is the small set of CLI tools, file formats, and APIs that 
 | Claude Code hooks API | `.claude/settings.json` registers `PreToolUse` hooks that gate Read / Bash boundary violations, ssh-driven content edits, ssh-driven mutating actions, `git push --force`, `git commit --no-verify`. | `doc/stack-notes.md` § "Claude Code hooks API" |
 | jq | JSON processor used inside hook command strings to parse the `PreToolUse` stdin contract and emit `hookSpecificOutput` JSON on stdout. | `doc/stack-notes.md` § "jq" |
 | git | Branch / commit conventions, `git rev-parse --show-toplevel` (project-root boundary in every hook), submodule semantics (the template ships as `.ai-pm/tooling/` submodule in downstream). | `doc/stack-notes.md` § "git" |
-| gh (GitHub CLI) | Used by `.claude/agents/pr-prep.md` (PR open / edit) and by `.github/workflows/auto-tag.yml` (`gh release view`, `gh release create`). | `doc/stack-notes.md` § "gh (GitHub CLI)" |
+| gh (GitHub CLI) | Used by `.claude/agents/pm-pr-prep.md` (PR open / edit) and by `.github/workflows/auto-tag.yml` (`gh release view`, `gh release create`). | `doc/stack-notes.md` § "gh (GitHub CLI)" |
 | GitHub Actions | `.github/workflows/auto-tag.yml` runs on every push to `main`, reads the top version from `CHANGELOG.md`, creates the tag and GitHub Release if missing. | `doc/stack-notes.md` § "GitHub Actions" |
 
-Components not in the list (Conventional Commits, SemVer, Keep a Changelog) are conventions used by `CHANGELOG.md` and `pr-prep`, not external systems whose idioms or validators the template integrates with — they are intentionally out of scope of stack-notes (see `doc/features/audit-fixup-self-stack-notes_plan.md` scope decision). They are not listed here either, to keep this directory consistent with stack-notes.
+Components not in the list (Conventional Commits, SemVer, Keep a Changelog) are conventions used by `CHANGELOG.md` and `pm-pr-prep`, not external systems whose idioms or validators the template integrates with — they are intentionally out of scope of stack-notes (see `doc/features/audit-fixup-self-stack-notes_plan.md` scope decision). They are not listed here either, to keep this directory consistent with stack-notes.
 
 ---
 
@@ -39,7 +39,7 @@ Persona files at `.claude/agents/*.md` are Markdown documents with YAML frontmat
 
 ### Commands are Markdown procedures
 
-Slash commands at `.claude/commands/*.md` (`bootstrap`, `plan-feature`, `audit`, `research`, `fixup`) are Markdown procedure documents — the same loading mechanism as agents. They are developer-operator shortcuts, not the PM interface. **Source:** `doc/features/template-v2_plan.md` ("Key design decisions" section: "Slash commands are developer shortcuts, not PM interface").
+Slash commands at `.claude/commands/*.md` (`pm-bootstrap`, `pm-plan`, `pm-audit`, `pm-research`, `pm-fixup`) are Markdown procedure documents — the same loading mechanism as agents. They are developer-operator shortcuts, not the PM interface. **Source:** `doc/features/template-v2_plan.md` ("Key design decisions" section: "Slash commands are developer shortcuts, not PM interface").
 
 ### WORKFLOW.md imported into downstream `CLAUDE.md` via `@.ai-pm/tooling/WORKFLOW.md`
 
@@ -53,9 +53,9 @@ Downstream installation creates `.claude/settings.json` as a symlink to `../.ai-
 
 `WORKFLOW.md` documents the remote-edit boundary and the force-push / no-verify gates as prose rules. The same rules are also wired as Claude Code `PreToolUse` hooks in `.claude/settings.json`, so they hold even when a future session does not re-read WORKFLOW.md. The hooks gate Read/Bash path boundaries, `find` outside root, ssh + content edit, ssh + mutating action, `git push --force / -f / --force-with-lease`, `git commit --no-verify / --no-gpg-sign`. **Source:** PR #145, commit `ac5827a feat(hooks): enforce remote-edit boundary + force-push + no-verify gates`. Cross-referenced in `WORKFLOW.md` § "Hook-level enforcement".
 
-### Auditor / stack-researcher / docs-extractor as read-only subagents
+### pm-auditor / pm-stack-researcher / pm-legacy-reader as read-only subagents
 
-Read-only project-wide work (audit sweep, stack research, legacy codebase extraction) runs in subagents with explicit read-only constraints, not in the main session. This keeps the main orchestrator focused on PM conversation while large reads happen in isolation. **Source for auditor:** PR #143, commit `cf889c6 feat(audit): make /audit spawn auditor subagent instead of reading in main`. **Source for docs-extractor:** commit `f767531 Extract docs-extractor subagent for modular codebase reading`. **Source for stack-researcher:** PR #142, commit `6e1bf14 Protocol integrity + stack literacy: close 5 structural gaps`.
+Read-only project-wide work (audit sweep, stack research, legacy codebase extraction) runs in subagents with explicit read-only constraints, not in the main session. This keeps the main orchestrator focused on PM conversation while large reads happen in isolation. **Source for pm-auditor:** PR #143, commit `cf889c6 feat(audit): make /audit spawn auditor subagent instead of reading in main`. **Source for pm-legacy-reader:** commit `f767531 Extract docs-extractor subagent for modular codebase reading`. **Source for pm-stack-researcher:** PR #142, commit `6e1bf14 Protocol integrity + stack literacy: close 5 structural gaps`.
 
 ### Edit-ownership split: content artefacts vs orchestration artefacts
 
@@ -63,7 +63,7 @@ The orchestrator does not edit content artefacts (source code, schemas, manifest
 
 ### Categorical scope check at plan-feature stage
 
-Every feature plan that mentions a categorical concept (type, mode, role, state, operation, category) must explicitly choose: take the whole set or one element. If one element — siblings are listed in "Out of scope" with one-line reason each. Coder cannot extend semantics of the chosen element to cover a sibling case; reviewer blocks. This catches scope drift before code. **Source:** PR #142, commit `6e1bf14 Protocol integrity + stack literacy: close 5 structural gaps`; rule text in `README.md` § "Что гарантирует шаблон" — "Scope без тихой деформации"; full plan in `doc/features/protocol-integrity-and-stack-literacy_plan.md`.
+Every feature plan that mentions a categorical concept (type, mode, role, state, operation, category) must explicitly choose: take the whole set or one element. If one element — siblings are listed in "Out of scope" with one-line reason each. pm-coder cannot extend semantics of the chosen element to cover a sibling case; pm-plan-checker blocks. This catches scope drift before code. **Source:** PR #142, commit `6e1bf14 Protocol integrity + stack literacy: close 5 structural gaps`; rule text in `README.md` § "Что гарантирует шаблон" — "Scope без тихой деформации"; full plan in `doc/features/protocol-integrity-and-stack-literacy_plan.md`.
 
 ### Release flow: CHANGELOG entry → auto-tag → tag + GitHub Release
 
@@ -71,25 +71,25 @@ Every feature plan that mentions a categorical concept (type, mode, role, state,
 
 ### Execution State as the single source of progress
 
-One file — `.ai-pm/state/current.md` (per downstream project) — holds the active task's Status / Done / Remaining / Touched files / Next step / Validation. Every coder run reads it first and writes it last. plan-feature initializes it. Completed tasks are archived to `.ai-pm/state/archive/`. The intent is that any future session — same model, different model, same agent, different agent — can resume from this file alone, without scrolling chat history. **Source:** `doc/features/integrate-consultancy_plan.md` § "Scenarios"; `doc/_templates/state.md.tmpl`.
+One file — `.ai-pm/state/current.md` (per downstream project) — holds the active task's Status / Done / Remaining / Touched files / Next step / Validation. Every pm-coder run reads it first and writes it last. /pm-plan initializes it. Completed tasks are archived to `.ai-pm/state/archive/`. The intent is that any future session — same model, different model, same agent, different agent — can resume from this file alone, without scrolling chat history. **Source:** `doc/features/integrate-consultancy_plan.md` § "Scenarios"; `doc/_templates/state.md.tmpl`.
 
 ### Product Contracts as the product-side complement to stack-notes
 
-Stack-notes describes technical idioms cited from upstream docs. Product Contracts describe user-visible behavior in the project's own words: User value / Who uses it / Must work / Must not break / Acceptance checks / Out of scope. One contract per user-facing feature, in `.ai-pm/contracts/<feature>.md`. Coder reads before implementing; reviewer verifies the diff against the contract (dimension 1, Plan & Contract compliance); auditor flags missing or stale contracts. Backend-only changes (refactor, infra) skip contract checks explicitly. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions"; `doc/_templates/contract.md.tmpl`.
+Stack-notes describes technical idioms cited from upstream docs. Product Contracts describe user-visible behavior in the project's own words: User value / Who uses it / Must work / Must not break / Acceptance checks / Out of scope. One contract per user-facing feature, in `.ai-pm/contracts/<feature>.md`. pm-coder reads before implementing; pm-plan-checker verifies the diff against the contract (dimension 1, Plan & Contract compliance); pm-auditor flags missing or stale contracts. Backend-only changes (refactor, infra) skip contract checks explicitly. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions"; `doc/_templates/contract.md.tmpl`.
 
-### Definition of Done as an explicit reviewer subsection
+### Definition of Done as an explicit pm-plan-checker subsection
 
-Reviewer verdict now contains a "Definition of Done" subsection with 7 hard checks: scope respected; stack expectations honored; Product Contract honored; pipeline green; state updated; Product Impact Report present (when contract touched); plan's docs updates landed. The subsection ends with `DoD: pass | fail`. A pass with any unchecked box is a contradiction; reviewer must re-read its own findings. A fail forces `request-changes` even when Blocking is empty. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions" point 4; `.claude/agents/reviewer.md` § "Verdict format".
+pm-plan-checker verdict now contains a "Definition of Done" subsection with 7 hard checks: scope respected; stack expectations honored; Product Contract honored; pipeline green; state updated; Product Impact Report present (when contract touched); plan's docs updates landed. The subsection ends with `DoD: pass | fail`. A pass with any unchecked box is a contradiction; pm-plan-checker must re-read its own findings. A fail forces `request-changes` even when Blocking is empty. **Source:** `doc/features/integrate-consultancy_plan.md` § "Key design decisions" point 4; `.claude/agents/pm-plan-checker.md` § "Verdict format".
 
 ---
 
 ### Eight review dimensions, decision matrix, trivial fast path, audit scope
 
 Four orthogonal optimizations applied together:
-1. **Reviewer / auditor dimensions reduced from 11 to 8** by merging three overlapping pairs (Plan + Product Contract → Plan & Contract compliance; Security + Stability → Correctness; Docs drift + Stack expectations → Documentation and canon compliance). No defect class lost; only the heading collapses.
-2. **Decision matrix in WORKFLOW.md** (`## What is mandatory when`) — single table covering Execution State, Product Contract, DoD scope, Stack expectations by change type (user-facing / backend / docs-only / trivial). Replaces scattered inline conditions in coder.md and reviewer.md.
-3. **`/fixup` command** for changes meeting four conditions (≤ 50 LOC, no user-visible behavior change, no stack-notes touch, no new source file). Skips plan-feature; reviewer runs in trivial mode (re-validates the four conditions; only escape hatch).
-4. **Auditor `--scope=diff`** mode reads only files changed since the most recent `docs/audit-*.md` + their cross-references. `full` remains default and is explicitly recommended quarterly.
+1. **pm-plan-checker / pm-auditor dimensions reduced from 11 to 8** by merging three overlapping pairs (Plan + Product Contract → Plan & Contract compliance; Security + Stability → Correctness; Docs drift + Stack expectations → Documentation and canon compliance). No defect class lost; only the heading collapses.
+2. **Decision matrix in WORKFLOW.md** (`## What is mandatory when`) — single table covering Execution State, Product Contract, DoD scope, Stack expectations by change type (user-facing / backend / docs-only / trivial). Replaces scattered inline conditions in pm-coder.md and pm-plan-checker.md.
+3. **`/pm-fixup` command** for changes meeting four conditions (≤ 50 LOC, no user-visible behavior change, no stack-notes touch, no new source file). Skips plan-feature; pm-plan-checker runs in trivial mode (re-validates the four conditions; only escape hatch).
+4. **pm-auditor `--scope=diff`** mode reads only files changed since the most recent `docs/audit-*.md` + their cross-references. `full` remains default and is explicitly recommended quarterly.
 
 **Source:** `doc/features/optimize-without-losing-rigor_plan.md`; commits d09ac14, e441949, d563b02, 310695d.
 
@@ -137,14 +137,14 @@ Real top-level paths in this repo (cross-checked against `ls` and `git ls-tree -
 | `CHANGELOG.md` | Release log in Keep-a-Changelog 1.1.0 format; top `## [<VERSION>]` entry drives `auto-tag.yml`. |
 | `LICENSE` | AGPL v3. |
 | `.gitignore` | Excludes `.reviews/`, `.claude/worktrees/`, local-only files. |
-| `.claude/agents/` | Seven persona files (`architect`, `auditor`, `coder`, `docs-extractor`, `pr-prep`, `reviewer`, `stack-researcher`). |
-| `.claude/commands/` | Five slash-command procedures (`audit`, `bootstrap`, `fixup`, `plan-feature`, `research`). |
+| `.claude/agents/` | Seven persona files (`pm-architect`, `pm-auditor`, `pm-coder`, `pm-legacy-reader`, `pm-pr-prep`, `pm-plan-checker`, `pm-stack-researcher`). |
+| `.claude/commands/` | Five slash-command procedures (`pm-audit`, `pm-bootstrap`, `pm-fixup`, `pm-plan`, `pm-research`). |
 | `.claude/settings.json` | `PreToolUse` hooks for path boundary, ssh content-edit, ssh mutating action, force-push, no-verify. |
 | `.claude/settings.local.json` | Local-only settings overlay; not part of the delivered surface. |
 | `.github/workflows/auto-tag.yml` | The release CI workflow — runs on push to `main`. |
 | `.github/workflows/lint-hooks.yml` | The hook-config CI workflow — runs `tests/hooks.sh` on every PR or push that touches `.claude/settings.json`, `tests/hooks.sh`, or the workflow itself. |
 | `tests/hooks.sh` | POSIX-shell unit tests for the `PreToolUse` hook regexes in `.claude/settings.json`. Simulates the documented `{tool_name, tool_input}` stdin contract for each hook and verifies the produced `permissionDecision`. The only test artefact in the repo (see Architectural constraints — meta-infrastructure exception). |
-| `doc/_templates/` | Templates copied / referenced by `/bootstrap` to populate downstream `docs/` (`CLAUDE.md.tmpl`, `README.md.tmpl`, `architecture.md.tmpl`, `stack-notes.md.tmpl`, `state.md.tmpl`, `contract.md.tmpl`, `threat-model.md.tmpl`, `ui-guide.md.tmpl`, `user-journeys.md.tmpl`). |
+| `doc/_templates/` | Templates copied / referenced by `/pm-bootstrap` to populate downstream `docs/` (`CLAUDE.md.tmpl`, `README.md.tmpl`, `architecture.md.tmpl`, `stack-notes.md.tmpl`, `state.md.tmpl`, `contract.md.tmpl`, `threat-model.md.tmpl`, `ui-guide.md.tmpl`, `user-journeys.md.tmpl`). |
 | `doc/features/` | Plans, reviews, audits for the template's own development. |
 | `doc/stack-notes.md` | Template's own stack-notes — citations + idioms for the six components above. |
 | `doc/architecture.md` | This document. |
@@ -169,7 +169,7 @@ How a downstream project consumes the template, and what it commits to in return
 
     Submodule update therefore propagates new agent personas, command procedures, and hooks without any downstream merge.
 3. **WORKFLOW.md imported via `@`-directive.** Downstream `CLAUDE.md` contains the line `@.ai-pm/tooling/WORKFLOW.md` — Claude Code expands it inline at session start. Orchestration rules update with the submodule pointer.
-4. **Templates consumed by `/bootstrap`.** On first `/bootstrap` in a downstream, the command reads `.ai-pm/tooling/doc/_templates/*.tmpl` and writes filled-in counterparts into the downstream's `docs/` (e.g., `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`). After bootstrap the downstream owns those files — they are not symlinked, they live in the downstream's own history.
+4. **Templates consumed by `/pm-bootstrap`.** On first `/pm-bootstrap` in a downstream, the command reads `.ai-pm/tooling/doc/_templates/*.tmpl` and writes filled-in counterparts into the downstream's `docs/` (e.g., `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`). After bootstrap the downstream owns those files — they are not symlinked, they live in the downstream's own history.
 
 **Version bumping:** When downstream wants a newer template version, it runs `git submodule update --remote .ai-pm/tooling`, stages the new submodule pointer, and commits with a `chore: bump ai-pm-protocol to <sha>` message. The submodule pointer is the only thing in the downstream's diff — agent / command / WORKFLOW changes are transparent. **Source:** `README.md` § "Установка" (the inline `git submodule update --remote .ai-pm/tooling` line at the end of the install block) + `WORKFLOW.md` § "Maintenance".
 
@@ -180,7 +180,7 @@ How a downstream project consumes the template, and what it commits to in return
 How a feature commit in this template becomes a published GitHub Release. Cross-checked against `.github/workflows/auto-tag.yml`.
 
 1. **Feature branch + conventional commits.** Orchestrator branches from current `main` (`feature/<topic>`), commits atomically; `WORKFLOW.md` § "Git workflow — orchestrator owns this" documents the shape.
-2. **PR opened by `pr-prep`.** Agent bumps the version, edits `CHANGELOG.md` (adds a `## [<VERSION>] — <DATE>` section under `## [Unreleased]`), pushes the branch, opens (or updates) the PR via `gh pr create` / `gh pr edit`.
+2. **PR opened by `pm-pr-prep`.** Agent bumps the version, edits `CHANGELOG.md` (adds a `## [<VERSION>] — <DATE>` section under `## [Unreleased]`), pushes the branch, opens (or updates) the PR via `gh pr create` / `gh pr edit`.
 3. **PM merges via squash on GitHub.** The squashed commit lands on `main`. Branch / commit message at this step do not matter for the release workflow — `auto-tag.yml` reads `CHANGELOG.md`, not the commit log.
 4. **`auto-tag.yml` runs on push to `main`.**
     - `actions/checkout@v4` with `fetch-depth: 0` (full history — required so `git tag` can see all existing tags; default `fetch-depth: 1` would make tag-existence checks unreliable, gotcha documented in `doc/stack-notes.md` § "GitHub Actions").
@@ -231,4 +231,4 @@ N/A — stateless. The template carries no database, no persistent state, no cac
 
 ## UI guide
 
-N/A — no UI. The PM-facing surface is conversational (Claude Code chat); the developer-operator surface is slash commands (`/bootstrap`, `/plan-feature`, `/audit`, `/research`) and Markdown files. There is no graphical interface to design.
+N/A — no UI. The PM-facing surface is conversational (Claude Code chat); the developer-operator surface is slash commands (`/pm-bootstrap`, `/pm-plan`, `/pm-audit`, `/pm-research`) and Markdown files. There is no graphical interface to design.

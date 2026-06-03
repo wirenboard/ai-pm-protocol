@@ -204,7 +204,7 @@ For user-facing features, a parallel set of files lives in `.ai-pm/contracts/` �
 
 PM never edits state or contracts. PM reads them when curious.
 
-The PM-facing render of all contracts — what the system does, contract by contract, with the features and reviews behind each — is `docs/product.md`. It is generated (group → contract → features), never hand-filled, and regenerated as features land; the contracts and state stay the source of truth. This replaces the old feature index: the per-feature "did all artifacts appear" check now lives in `pm-plan-checker`'s DoD, and `pm-auditor` re-derives `product.md` from source on every audit.
+The PM-facing render of all contracts — what the system does, contract by contract, with the features and reviews behind each — is `docs/product-map.md`. It is generated (group → contract → features), never hand-filled, and regenerated as features land; the contracts and state stay the source of truth. This replaces the old feature index: the per-feature "did all artifacts appear" check now lives in `pm-plan-checker`'s DoD, and `pm-auditor` re-derives `product-map.md` from source on every audit.
 
 ### Three channels surface to PM, not one
 
