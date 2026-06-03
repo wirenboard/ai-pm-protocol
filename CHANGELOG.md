@@ -13,6 +13,17 @@
 
 ---
 
+## [2.11.1] — 2026-06-03
+
+Pure structural refactor, no behavior change. The migration catalogue — the `### Pending-migration detection` conditions plus every per-version migration procedure — is extracted out of `.claude/commands/pm-bootstrap.md` into a new protocol-root reference `MIGRATIONS.md` (sibling to `WORKFLOW.md`), referenced by bare filename so it resolves both in this repo and downstream at `.ai-pm/tooling/MIGRATIONS.md`. `pm-bootstrap.md` keeps a short pointer; the `## Product map generation procedure` stays there (migration procedures cross-reference it). The single-source-of-conditions invariant is preserved — `/pm-plan`, `/pm-audit`, `pm-auditor`, and `pm-plan-checker` reference the one home by name. `tests/hooks.sh` 71/71.
+
+### Changed
+- **Migration catalogue extracted to `MIGRATIONS.md`** (new protocol-root reference; out of `.claude/commands/pm-bootstrap.md`): the `### Pending-migration detection` conditions and the per-version migration procedures now live in one file, sibling to `WORKFLOW.md` and referenced by bare filename (resolves in this repo and downstream at `.ai-pm/tooling/MIGRATIONS.md`). `pm-bootstrap.md` retains a short pointer to it; the `## Product map generation procedure` deliberately stays in `pm-bootstrap.md` because the migration procedures call it.
+- **References re-pointed to the single home** (`.claude/commands/pm-plan.md`, `.claude/commands/pm-audit.md`, `.claude/agents/pm-auditor.md`, `.claude/agents/pm-plan-checker.md`): each now names `### Pending-migration detection` in `MIGRATIONS.md` instead of `pm-bootstrap.md`, preserving the single-source-of-conditions invariant across the move.
+- **Architecture record** (`doc/architecture.md`): added the "Migration catalogue is a single protocol-root reference `MIGRATIONS.md`, sibling to `WORKFLOW.md`" decision and a File-layout row for the new file.
+
+---
+
 ## [2.11.0] — 2026-06-03
 
 Adds a protocol convention: the orchestrator surfaces substantive PM decision-forks — scope choices, accept-vs-fix, which-of-N, prioritization — via the AskUserQuestion tool rather than plain-prose "(A)/(B)?" forks, while simple proceed/confirm gates (merge-authorization, "ready?", plain yes/no) stay prose to avoid tool-spam. The convention is recorded in WORKFLOW.md and reinforced by a short clause appended to the UserPromptSubmit route-reminder. Motivation: the orchestrator drifted to plain-prose forks with nothing nudging it back.
