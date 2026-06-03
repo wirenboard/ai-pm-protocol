@@ -13,6 +13,23 @@
 
 ---
 
+## [2.9.1] — 2026-06-03
+
+Two coupled protocol-enforcement fixes. The `UserPromptSubmit` route-reminder trigger vocabulary in `.claude/settings.json` is broadened to cover removal/edit verbs, closing a gap where requests like "убери ..." fired no reminder. And `pm-pr-prep` no longer pins `model: haiku` — it now inherits the session model like every other `pm-*` agent, after pinned Haiku produced factual errors in PM-facing CHANGELOG entries.
+
+### Fixed
+- **Route-reminder vocabulary** (`.claude/settings.json` `UserPromptSubmit` hook): the keyword gate now also matches removal/edit verbs — `remove`/`delete`/`drop`/`rename`/`extract`/`update` and `убери`/`убрать`/`удали`/`сними`/`вынеси`/`переименуй`/`обнови` — so change requests phrased with an edit/removal verb fire the protocol reminder. The keyword gate is kept (non-change prompts stay silent).
+- **`pm-pr-prep` model unpinned** (`.claude/agents/pm-pr-prep.md`): removed `model: haiku` from the frontmatter; the agent now inherits the session model like every other `pm-*` agent. Pinned Haiku produced repeated factual errors in PM-facing CHANGELOG entries (CHANGELOG authoring is PM-facing text, not pure mechanics). No agent pins `model:` now.
+
+### Changed
+- **Decision-reversal record** (`doc/protocol-vs-builtins-analysis.md`): documented that the prior "keep `haiku` on `pm-pr-prep`" decision is reversed; the model-tier conclusion and Step 0 of the action plan are annotated accordingly.
+- **Architecture currency note** (`doc/architecture.md`): added a dated note recording that `pm-pr-prep` no longer stays `haiku` and that the route-reminder vocabulary was broadened.
+
+### Tests
+- **6 new `UserPromptSubmit` cases** (`tests/hooks.sh`): 5 removal/edit-verb prompts (RU + EN) assert the reminder fires, plus one question phrasing ("как это обновляется?") asserts it stays silent. Suite now 71/71.
+
+---
+
 ## [2.9.0] — 2026-06-03
 
 Makes on-disk artifact strings English-canonical: all scaffolded and regenerated files (`product.md`, product-map, templates, agent/command prose) use English headers and labels. Conversation language unchanged — agents relay artifacts to the PM in the PM's language. Existing downstream projects with Russian headers are offered a headers-only migration (preserving authored prose), with automatic detection preventing false-positive "missing header" flags during transition.
