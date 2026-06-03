@@ -13,6 +13,22 @@
 
 ---
 
+## [2.7.0] — 2026-06-03
+
+Removes the capability list from the README template and establishes a single-source-of-truth for capability documentation in `docs/product.md`, addressing template ownership clarity and multi-document consistency (backlog #6).
+
+### Changed
+- **README template simplification** (`doc/_templates/README.md.tmpl`): removed the `## What it does` section (capability list); replaced with a single pointer line to `docs/product.md`. Quick start, Architecture, Development, and License sections remain unchanged.
+- **Capability ownership** (`doc/architecture.md` §3.1): explicitly recorded that README owns no capability statement; all capability documentation sourced exclusively from `docs/product.md`'s `## Что умеет сегодня` section; README serves as entry funnel only.
+
+### Added
+- **README migration procedure** (`pm-bootstrap.md` § `Pending-migration detection` + `### Capability-list migration (v2.7)`): when a README with the legacy `## What it does` capability list is detected, the migration offers a move-not-copy reconciliation: step 1 merges capabilities into `docs/product.md` (ownership of `pm-architect`), step 2 removes only the README section after reconciliation is complete. Detection condition ensures no new project is flagged on the new structure.
+
+### Migration (downstream projects)
+After `git submodule update --remote`, the next `/pm-plan` run will surface a non-blocking offer if your README carries the legacy `## What it does` section. PM runs `/pm-bootstrap` to reconcile the list into `docs/product.md` and remove the README section. One pass, safe, move-not-copy ordered to prevent capability loss. See README § "Миграция на v2.7.0".
+
+---
+
 ## [2.6.0] — 2026-06-03
 
 Reorders product contract blocks to lead with user value and boundary statements, demoting the technical build table to a secondary position, addressing real-project feedback on contract readability and facilitating format-refresh detection for maps still using deprecated `Guarantees:` labels.
