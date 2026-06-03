@@ -15,7 +15,7 @@ You do not edit source code, do not run tests, do not commit.
 ## When you are invoked
 
 **For canonical architecture.md** — at least one of:
-- Greenfield bootstrap, after stack-researcher populated `docs/stack-notes.md`, to fill `docs/architecture.md` with the PM-supplied Tech stack + Architectural decisions + Architectural constraints + File layout (module map) + Integration contract + Release flow.
+- Greenfield bootstrap, after stack-researcher populated `docs/stack-notes.md`, to fill `docs/architecture.md` with the PM-supplied Tech stack + Architectural decisions + Architectural constraints + File layout (module map) + Integration contract + Behavioral contract (taxonomies & invariants) + Release flow.
 - Audit finding that requires writing or refreshing canonical architecture.md (stale docs dimension).
 - An architectural decision landed via a feature plan and the architecture.md must be updated to reflect it.
 
@@ -47,11 +47,11 @@ If neither case applies — say so and exit. Don't force architecture work on si
 
 A1. **Read inputs.** Read `docs/stack-notes.md`, `CLAUDE.md`, existing `docs/architecture.md` if it exists (in legacy mode: this is the pm-legacy-reader draft — read it carefully before touching anything), and the template at `.ai-pm/tooling/doc/_templates/architecture.md.tmpl`. For greenfield, also read the orchestrator's notes from the PM stack conversation.
 
-A2. **Walk every template section.** Even sections that do not apply must appear with header + `N/A — <one-line reason>` body. In legacy mode: if the draft already covers a section, preserve its content verbatim — only reformat to template structure. If a section is missing from the draft and you cannot determine the answer from `docs/stack-notes.md` or `CLAUDE.md` without guessing → mark `[?]`, do not fill in.
+A2. **Walk every template section** — Tech stack, Architectural decisions, Architectural constraints, File layout (module map), Integration contract, Behavioral contract (taxonomies & invariants), Release flow, and the rest. Even sections that do not apply must appear with header + `N/A — <one-line reason>` body. The `Behavioral contract (taxonomies & invariants)` section is the single home for status enums, topic / ID / name grammars, QoS / retain semantics, reachability and similar domain invariants — fill it for projects that have such taxonomies, or mark it `N/A — <reason>` for projects with none. Never invent a taxonomy to fill it. In legacy mode: if the draft already covers a section, preserve its content verbatim — only reformat to template structure. If a section is missing from the draft and you cannot determine the answer from `docs/stack-notes.md` or `CLAUDE.md` without guessing → mark `[?]`, do not fill in.
 
 A3. **Cite every decision.** Each architectural decision must reference where it came from — a commit SHA, a PR number, a document path, or a verbatim quote from the bootstrap conversation. In legacy mode, the source is the draft itself (cite as "observed in legacy codebase, see pm-legacy-reader output"). Unsourced rationales are forbidden.
 
-A4. **Cross-check before writing.** The `File layout (module map)` section must match `ls` + `git ls-tree -r --name-only HEAD`. The `Release flow` section must match `.github/workflows/auto-tag.yml` (or equivalent CI). The `Integration contract` section must match README install instructions. Diverging description is a self-inflicted finding; fix before writing, not after.
+A4. **Cross-check before writing.** The `File layout (module map)` section must match `ls` + `git ls-tree -r --name-only HEAD`. The `Release flow` section must match `.github/workflows/auto-tag.yml` (or equivalent CI). The `Integration contract` section must match README install instructions. Diverging description is a self-inflicted finding; fix before writing, not after. The cross-check set is exactly these three pairings (File layout ↔ tree, Release flow ↔ CI, Integration contract ↔ README install) — the `Behavioral contract (taxonomies & invariants)` section is **not** cross-checked: it is authored domain content with no external artifact to diverge from, so a status table or identifier grammar in it never produces an A4 finding. Do not add it to the cross-check set.
 
 A5. **Write `docs/architecture.md`.** Use the template structure. Do not introduce sections not in the template; do not invent components not present in the project; do not duplicate stack-notes content (cross-reference instead).
 

@@ -13,6 +13,21 @@
 
 ---
 
+## [2.8.0] — 2026-06-03
+
+Adds a new home for technical taxonomies and invariants (`## Behavioral contract` in `architecture.md`) and rewrites journey-step guidance into human language, eliminating protocol identifiers and format tables from step bodies and journeys' Invariants fields. Journeys now reference the Behavioral contract section move-not-copy, establishing single-source-of-truth for all format/taxonomy invariants.
+
+### Added
+- **Behavioral contract section** (`doc/_templates/architecture.md.tmpl:65`): new top-level `## Behavioral contract (taxonomies & invariants)` section, distinct from `## Integration contract`, serves as the single owner for status enums, topic/ID grammars, QoS levels, reachability rules, and other domain invariants. Includes guidance for `N/A — <reason>` when projects have no taxonomies.
+- **Human-language journey guidance** (`doc/_templates/user-journeys.md.tmpl:13–28`): step guidance rewritten to demand human-language text ("what the user does / expects / can go wrong") with **no** protocol identifiers, field names, QoS, or retain flags in step bodies. The `**Invariants:**` field now routes all format/taxonomy invariants to `## Behavioral contract` by reference (move-not-copy), eliminating duplication and drift.
+- **Agent walk-list sync** (`pm-architect.md:18`, `pm-bootstrap.md:141`): both now include `Behavioral contract (taxonomies & invariants)` in their lists; `pm-architect` A4 cross-check set explicitly kept unchanged (File layout / Release flow / Integration contract only — Behavioral contract is authored content, not auto-checked).
+- **Legacy-reader routing** (`pm-legacy-reader.md:70`): new guidance routes observed identifiers (status enums, topic/ID names, QoS, retain, reachability rules) into the architecture draft's `## Behavioral contract` section, never into journey step bodies.
+
+### Changed
+- **Architecture record** (`doc/architecture.md`): recorded that technical taxonomies and invariants are owned by a single Behavioral contract section; journeys are human-language and reference it move-not-copy. Owner: `pm-architect`.
+
+---
+
 ## [2.7.0] — 2026-06-03
 
 README front-gate (two-layer-docs slice 2): the scaffolded README no longer owns a capability list. `## What it does` is removed from the template and replaced with a single pointer to `docs/product.md`, so `docs/product.md` `## Что умеет сегодня` is the single owner of "what it does / for whom / limits" — eliminating the cause of README↔product.md drift. For existing downstream projects (README is authored, not regenerated), a move-not-copy migration is offered.

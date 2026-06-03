@@ -61,6 +61,23 @@ How downstream / external consumers integrate with this project — the public s
 
 - <e.g., "Installed via `pip install <pkg>`; entry point `<pkg>.run(config)`; reads config from `$XDG_CONFIG_HOME/<pkg>/config.toml`.">
 
+## Behavioral contract (taxonomies & invariants)
+
+The single home for this project's technical taxonomies and domain invariants — the machine-level facts that other docs reference but must never restate. This is **not** the integration surface above (that is *how* consumers integrate); this is *what values are legal and what must always hold*. Status enumerations, topic / ID / name grammars, QoS levels, retain semantics, reachability and ordering rules, state-machine transitions, numeric ranges and units all live here, stated once. `docs/user-journeys.md` and the contracts reference this section by name instead of copying identifiers — that move-not-copy discipline is what stops the classic drift ("6 statuses in the docs, 7 in the code"). Mark `N/A — <reason>` for projects with no taxonomies or format invariants (e.g. "N/A — no enumerations, identifier grammars, or transport-level invariants; all values are free-form user text").
+
+Example — a status enumeration:
+
+| Status | Meaning | Allowed next |
+|---|---|---|
+| `pending` | created, not yet processed | `active`, `cancelled` |
+| `active` | in progress | `done`, `failed` |
+| `done` | terminal success | — |
+
+Example — an identifier grammar and a transport invariant:
+
+- **Export ID grammar:** `export_<8-hex>` — lowercase hex, exactly 8 chars; generated server-side, never user-supplied.
+- **Reachability:** a record is observable by a consumer only after its `active` transition has been published; consumers must tolerate the `pending` state never being visible.
+
 ## Release flow
 
 How a commit becomes a published release. Keep it aligned with the CI definition: `pm-architect` (A4) cross-checks this section against `.github/workflows/auto-tag.yml` (or the equivalent CI workflow). Mark `N/A — <reason>` for projects with no automated release.
