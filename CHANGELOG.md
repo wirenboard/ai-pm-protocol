@@ -13,6 +13,22 @@
 
 ---
 
+## [2.11.2] — 2026-06-03
+
+Mechanical whitespace fix for blank-line correctness on PM-facing rendered markdown — no wording change. PRIMARY: a durable one-paragraph markdown-authoring rule is added to `WORKFLOW.md` ("surround lists/tables/headings with blank lines; never two adjacent soft-break lines"), read by every doc-writing agent so authored and generated markdown stays blank-line-correct going forward. SECONDARY: a one-time fix of 7 already-shipped static/generator instances the rule cannot retroactively reach. `tests/hooks.sh` 71/71.
+
+### Added
+- **Markdown-authoring rule** (`WORKFLOW.md`, near the PM-communication guidance): one paragraph instructing every doc-writing agent to surround block elements — lists, tables, headings — with blank lines and never place two adjacent non-blank soft-break lines, so authored/generated markdown renders correctly in non-CommonMark renderers and passes markdownlint MD022/MD032.
+
+### Fixed
+- **Product-map generation output** (`.claude/commands/pm-bootstrap.md`, the `## Product map generation procedure` Output format and Worked example): a blank line now separates each `### [<contract>]` heading from its `- **User value:**` bullets, so every downstream `product-map.md` renders the list correctly on its next regeneration.
+- **Shipped template whitespace** (`doc/_templates/CLAUDE.md.tmpl`, `doc/_templates/threat-model.md.tmpl`, `doc/_templates/ui-guide.md.tmpl`): added the missing blank line before flagged lists and the Tech-stack table.
+
+### Changed
+- **Architecture record** (`doc/architecture.md`): the contract-centric product-map entry now notes that the generated map keeps lists/tables/headings blank-line-separated per the markdown-authoring rule in `WORKFLOW.md`, and adds `doc/features/markdown-blank-line-sweep_plan.md` to its Source list.
+
+---
+
 ## [2.11.1] — 2026-06-03
 
 Pure structural refactor, no behavior change. The migration catalogue — the `### Pending-migration detection` conditions plus every per-version migration procedure — is extracted out of `.claude/commands/pm-bootstrap.md` into a new protocol-root reference `MIGRATIONS.md` (sibling to `WORKFLOW.md`), referenced by bare filename so it resolves both in this repo and downstream at `.ai-pm/tooling/MIGRATIONS.md`. `pm-bootstrap.md` keeps a short pointer; the `## Product map generation procedure` stays there (migration procedures cross-reference it). The single-source-of-conditions invariant is preserved — `/pm-plan`, `/pm-audit`, `pm-auditor`, and `pm-plan-checker` reference the one home by name. `tests/hooks.sh` 71/71.
