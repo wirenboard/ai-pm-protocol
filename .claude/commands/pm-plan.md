@@ -54,7 +54,7 @@ Also flag anything this feature makes outdated:
 - Does this feature change an existing user journey? → note the update needed in `docs/user-journeys.md`
 - Does this feature add a new architectural constraint or decision? → note the update needed in `docs/architecture.md`
 
-Include any doc updates as explicit steps in the plan — coder does not touch docs. After pm-coder finishes and before spawning pm-plan-checker: if the plan's "Docs to update" section names `docs/architecture.md` — spawn `pm-architect` (`subagent_type: "pm-architect"`) with a focused prompt to update that section; if it names `docs/user-journeys.md` — spawn `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) standalone with a focused prompt. This satisfies DoD item 8 before the review loop runs.
+Include any doc updates as explicit steps in the plan — coder does not touch docs. After pm-coder finishes and before spawning pm-plan-checker: if the plan's "Docs to update" section names `docs/architecture.md` **or `docs/threat-model.md`** — spawn `pm-architect` (`subagent_type: "pm-architect"`) with a focused prompt to update that section (pm-architect owns both); if it names `docs/user-journeys.md` — spawn `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) standalone with a focused prompt. This satisfies DoD item 8 before the review loop runs.
 
 ## Categorical scope check (mandatory, surfaces a product question to PM)
 
@@ -114,6 +114,15 @@ A feature is **not** provably isolated if it touches any of:
 - Events or signals that can arrive during an ongoing operation
 
 If the feature is provably isolated — no shared state, no concurrent operations, no adjacent feature interference — state this explicitly as `Provably isolated: <reason>` and omit the section.
+
+## Security-surface check (mandatory, no PM questions)
+
+Before drafting the plan, check whether this feature touches a security-relevant surface **and** the project is security-bearing:
+
+- **Security-bearing project?** The project is security-bearing exactly when `docs/threat-model.md` is present. If absent → the project is non-security; this check is silent and you skip the rest of it.
+- **Touches a security-relevant surface?** Check the feature against the single-source list — `### Security-relevant surfaces` in `WORKFLOW.md` (referenced by name; never re-list the items here).
+
+If **both** hold: the plan **must** name `docs/threat-model.md` in its "Docs to update" section, with the relevant Threat rows to add or update. After pm-coder finishes, the orchestrator spawns `pm-architect` to update it — this rides the **same** "Docs to update" post-coding handoff already described above for `docs/architecture.md` (same owner, same trigger). `pm-plan-checker` blocks a security-touching plan on a security-bearing project that omits this. This is not a PM question — PM never sees this step.
 
 ## Planning conversation
 
@@ -191,6 +200,7 @@ Everything else follows the normal plan format. The Incident facts section is th
 (omit if none)
 - `docs/user-journeys.md`: <what changes — which journey, how>
 - `docs/architecture.md`: <what new constraint or decision to add>
+- `docs/threat-model.md`: <which Threat rows to add or update> (required on a security-bearing project when the feature touches a `### Security-relevant surfaces` item — see the Security-surface check; updated by `pm-architect` post-coding)
 - `CLAUDE.md` Pipeline section: add `<validator command>` (if stack-researcher discovered a new validator for this feature's components)
 
 ## Out of scope

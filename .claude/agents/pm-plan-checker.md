@@ -25,6 +25,7 @@ Before checking compliance, verify the plan itself is complete:
 - Feature touches a stack component in `docs/stack-notes.md` but plan has no "Stack expectations touched" section → **blocking**.
 - "Stack expectations touched" exists but lacks source URLs → **blocking**.
 - Feature touches shared mutable state, async operations, external I/O, or event-driven behavior and plan has no "Interaction scenarios" section and no `Provably isolated:` declaration → **blocking**.
+- On a **security-bearing project** (one with `docs/threat-model.md`), the feature touches a `### Security-relevant surfaces` item (`WORKFLOW.md` — referenced by name, not re-encoded) but the plan omits `docs/threat-model.md` from "Docs to update" → **blocking** (the same class of block as a missing "Stack expectations touched" section). On a non-security project (no `docs/threat-model.md`) this never fires.
 - Topic is `hotfix-<area>` but plan has no "Incident facts" section → **blocking**.
 
 ### Categorical coverage
