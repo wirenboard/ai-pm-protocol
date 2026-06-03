@@ -13,6 +13,23 @@
 
 ---
 
+## [2.13.0] — 2026-06-04
+
+Adds a full **threat-model lifecycle** as new protocol behaviour, owned by the existing `pm-architect` (no new agent). The lifecycle is gated on security-bearing projects, signalled by the mere presence of `docs/threat-model.md` — the same artifact-driven gating invariant that `MIGRATIONS.md` conditions already use. Bootstrap now drafts the threat-model *populated* (real assets, threats, and mitigations) instead of laying down an empty skeleton; a feature that touches a security-relevant surface must update it, enforced as a `/pm-plan` trigger and a `pm-plan-checker` block; and `pm-auditor` flags an empty threat-model (blocking) or a stale one (note) plus dangling or orphan `SCn` wiring (note). Threats now wire one-way into architecture: a Threats-row Mitigation references `SCn` IDs in `architecture.md` § Security constraints (move-not-copy), and the template gains a dated `Last reviewed` field and an `SCn`-keyed Mitigation column. Origin: real downstream pain — the wb-mqtt-matter "untrusted server" project left its scaffolded threat-model an empty skeleton, so the protocol never made anyone fill it in. The README was also brought to currency in the same release. `tests/hooks.sh` 71/71.
+
+### Added
+
+- **Threat-model lifecycle owned by `pm-architect`** (`WORKFLOW.md`, `.claude/commands/pm-bootstrap.md`, `.claude/commands/pm-plan.md`, `.claude/agents/pm-plan-checker.md`, `.claude/agents/pm-auditor.md`): `docs/threat-model.md` gains a full lifecycle gated on security-bearing projects (signalled by the file's presence), with no new agent. Bootstrap drafts it populated, not an empty skeleton. A feature touching a security-relevant surface must update it — a `/pm-plan` trigger and a `pm-plan-checker` block. `pm-auditor` flags an empty threat-model (blocking) or a stale one (note), and dangling/orphan `SCn` wiring (note).
+- **Single-source "Security-relevant surfaces" list** (`WORKFLOW.md`): one durable list of the surfaces that trigger a threat-model update, referenced by name from `/pm-plan` and `pm-plan-checker` (and keyed off the durable artifact by `pm-auditor`) rather than copied — the same single-source-of-conditions invariant as `MIGRATIONS.md`.
+- **threat → constraint wiring** (`doc/_templates/threat-model.md.tmpl`, `doc/_templates/architecture.md.tmpl`): a Threats-row Mitigation now references `SCn` IDs in `architecture.md` § Security constraints (one-way, move-not-copy). The threat-model template gains a dated `Last reviewed` field and an `SCn`-keyed Mitigation column; `architecture.md.tmpl` § Security constraints gains stable `SC` IDs to anchor the references.
+
+### Changed
+
+- **Architecture decision record** (`doc/architecture.md`): records the threat-model ownership-and-lifecycle decision — `pm-architect` owns `docs/threat-model.md`, gating is by artifact presence, the "Security-relevant surfaces" list is single-sourced in `WORKFLOW.md` and referenced by name, and threat→constraint wiring is one-way via `SCn` IDs.
+- **README brought to currency** (`README.md`): added the threat-model risk-reduction line; condensed the stale per-version migration sections (stuck at v2.3) into the generic "обнови шаблон" path plus a pointer to `MIGRATIONS.md` (the v1.x→v2.0 manual section was kept); added the v2.12 Blast-radius preflight mention; and added `threat-model.md` to the downstream `docs/` tree.
+
+---
+
 ## [2.12.0] — 2026-06-03
 
 Adds a new domain-agnostic protocol behaviour: the **Blast-radius preflight** gate. Before any on-hardware "run it for real" or a diagnostic probe that restarts or structurally mutates a live target, the orchestrator now stops and asks one question — *does the effect reach an external stateful peer whose state a local revert will not undo?* — and if the live target is coupled to such a peer, it surfaces the blast radius to the PM before acting. This guards the trap *reversible locally ≠ reversible for a coupled external peer*: a probe's "throwaway / I revert it afterwards" framing is false when the side effect lives outside, in a paired external system's own record of the target. The gate is defined once in `WORKFLOW.md` and single-sourced from Step 5.5 and Step A.5; the originating wb-mqtt-matter live-paired-bridge incident is named only as the worked example, never as protocol vocabulary. Purely additive — it adds a precondition before acting and relaxes none of the Step A read-only default or the Step A.5 probe rules. `tests/hooks.sh` 71/71.
