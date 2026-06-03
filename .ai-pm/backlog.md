@@ -2,6 +2,10 @@
 
 Observations and follow-ups recorded during reviews/audits.
 
+## From product-map-value-first review — 2026-06-03 (this repo)
+
+- **Markdown soft-break sweep: audit every generator/template for adjacent label lines that collapse on GitHub render.** During the `product-map-value-first` feature, code-review caught that two value lines emitted on adjacent source lines (`Что даёт:` then `Границы:`, no blank line between) collapse into **one** paragraph when rendered on GitHub — CommonMark renders a single (soft) line break as a space, so the two labels run together ("Что даёт: … Границы: …"). Fixed there by switching to a markdown bullet list. **Same class of "source ≠ rendered" gotcha that got `<details>` rejected** — and it almost certainly recurs elsewhere. *Action:* sweep all `doc/_templates/*.tmpl` and every generation/render procedure or agent that emits multi-line **labeled** output (product-map generation procedure, `product.md` funnel, `contract.md.tmpl`, `user-journeys.md.tmpl`, `architecture.md.tmpl`, `README.md.tmpl`, `stack-notes.md.tmpl`, `state.md.tmpl`, and any pm-* agent that prints adjacent `Label:` lines) for blocks where two or more non-blank lines sit adjacent and are *intended* to render on separate lines. Convert each to a bullet list, or separate with a blank line / explicit list — never rely on a bare line break. *Why:* these are the PM-facing rendered docs; a run-on label line is invisible in the source diff but breaks the read on the primary surface (GitHub). Mechanical, low-risk, but real. Likely a `/pm-fixup`-sized sweep unless it turns up structural cases.
+
 ## From architect-owns-architecture-md review v1
 
 - ~~Bootstrap full-mode has the orchestrator writing `docs/architecture.md` inline after the docs-extractor; reconcile the legacy/greenfield asymmetry.~~ **Resolved** (self-audit 2026-06-02): `pm-bootstrap.md` legacy-full now spawns `pm-architect` (Section A) to finalize `docs/architecture.md` — no orchestrator inline edit remains; the two paths are symmetric.
@@ -17,6 +21,116 @@ Source: PM observed orchestrator + auditor behaviour in a downstream project (ma
 - **✓ Resolved (v2.4.0, PR #163 — architecture-doc-coherence).** ~~Tooling is desynced from its own `architecture.md` template (bonus bug found while diagnosing the above).~~ `pm-bootstrap.md:104` and `pm-architect.md` describe template sections as "Tech stack, Architectural decisions, **File layout, Integration contract, Release flow**" — but the actual `.tmpl` has Key decisions, Constraints, Security constraints, Code conventions, Dependencies, and **none** of File layout / Integration contract / Release flow. The agents walk-and-N/A sections that don't exist and skip sections that do. *Remediation:* reconcile template ↔ agent prose in one pass (likely fold into the module-map plan, same file). *Why:* the protocol's own docs-currency check would flag this drift in any project — it should not live in the tooling itself.
 
 - **✓ Resolved (v2.5.0, PR #165 — product-map-migration-detection).** ~~Product map (v2.2) never migrates on a submodule bump, and auditor detection of the missing map is unconfirmed.~~ (Detection reliability + active offer at `/pm-audit` and `/pm-plan` shipped; an auto-trigger on the bump itself stays out of scope — the protocol has no hook surface for it, detection fires at the next audit/plan.) Downstream project is still on the pre-v2.2 doc structure — live `docs/features/_index.md`, no `docs/product.md`, no rendered contract catalogue. Its audit inventoried features from `_index.md` and **never flagged the missing `docs/product.md`**, although current `pm-auditor.md:106-107` mandates "product.md must exist; Map missing → note." Three distinct gaps: (a) **detection (confirmed bug)** — the audit was run *after* the submodule was bumped to v2.2.2 (PM confirmed), so the auditor *had* `pm-auditor.md:106-107` ("product.md must exist; Map missing → note") and still did not flag the absence. Likely mechanism: the auditor inventoried features from the lingering `docs/features/_index.md` (report: "All 17 features in `docs/features/_index.md`") — finding a working inventory source, it never tripped on the fact that under v2.2 `_index.md` should have been `git rm`'d and that `product.md` is required. The checklist item exists but the agent skipped it because a fallback path worked. *Fix direction:* make the `product.md`-exists check a hard, early step, and treat a surviving `docs/features/_index.md` as itself a note (un-migrated structure), not a valid inventory source. (b) **migration trigger (narrower than first thought)** — the migration itself exists and works: re-running `/pm-bootstrap` on an already-initialised project detects and runs it via the "Pending template-upgrade migrations" section (verified live downstream — backfill `Built/changed by` → generate `product.md` → `git rm _index.md`). The real gap is the *trigger*: nothing prompts or reminds anyone to re-run `/pm-bootstrap` after a submodule bump, so a bumped project sits un-migrated until someone happens to know to do it. Fix direction: on submodule-bump (or at the next `/pm-plan` / `/pm-audit`), detect pending template-upgrade migrations and offer to run them. (c) **follow-through** — even when flagged as a note, nothing makes the orchestrator offer to run the Product map generation procedure (PM: "он мне не стал строить каталог контрактов после аудита"). *Remediation:* confirm downstream version; add a migration-on-bump (or `/pm-audit`-driven) offer when `_index.md` exists / `product.md` is missing; wire post-audit follow-through so a missing-map note yields an actionable "generate it now?" prompt. *Why:* `product.md` is the flagship v2.2 PM-facing surface — if it silently never lands downstream, the feature doesn't exist in practice.
+
+## From two-layer-docs proposal — 2026-06-03 (wb-mqtt-matter)
+
+**Source.** PM ran the protocol on a real downstream project (wb-mqtt-matter) and brought back a worked-out proposal: "two-layer docs with a single source of truth" — every product fact has a PM layer (capabilities, logic, boundaries; human language) and a technical layer (topics, ID formats, invariants, taxonomies; dense), with exactly one owning document per class of fact and everyone else referencing, not copying.
+
+**Status.** Recorded, not planned yet (PM decision: backlog first, decide priorities later). These are **protocol changes → `/pm-plan`, not `/pm-fixup`**. Decomposed into independent features below; bring up whichever slice is picked.
+
+**Originating pain (the axis that ranks this list).** A PM opened the project to *understand the features* and drowned. The one doc a PM actually opens for that is `product-map.md` (the `## Функции` target). So this list is ranked on the **PM-value axis**, not the engineering-cost axis: the product-map fix is the headline, and the anti-drift/ownership items — correct as they are — are *plumbing* (engineer-facing, PM-invisible) that must not crowd the PM-value work out of the first wave.
+
+**Already shipped — do NOT reintroduce.** Two-layer principle (`product.md` PM ↔ `architecture.md` tech; contract `## User value` ↔ `## Must work/not break`); single-source + generated render (v2.3 authored `product.md` / generated `product-map.md`, separate writers — `pm-architect.md:64`, `pm-auditor.md:108`); `Integration contract` + module map in `architecture.md` (v2.4, `architecture.md.tmpl:58-62`). The proposal **extends the reach** of single-source-of-truth; it does not introduce it.
+
+### Take — first wave (genuinely new template gaps)
+
+1. **[PM headline] product-map shows tech first, not value.** Today `## Функции` lands the PM in a technical list with duplicated entries and links into plans/reviews. **Cheap slice — take now, NOT the full 4-field model:** make the primary guarantee-row view `## User value` ("что даёт") + `Out of scope` ("границы") — both already pulled from the contract per v2.3 — and demote the plan/review links to a second row / collapsed detail. Not a new generator, not 4 fields: it changes *what is shown first* from fields that already exist. Most of the PM win, small engineering cost. **This is the item that closes the originating pain** — it leads the first wave, it is not deferred.
+2. **README.md.tmpl still invites the README↔product.md duplication.** `README.md.tmpl:11-13` ships a `## What it does` capability list — the exact duplication surface that drifted downstream. Fix: drop the capability list from the README template, keep one paragraph + status line + link into `product.md`. Fixes the *cause* of the drift, not the symptom. Smallest standalone `/pm-plan`. (Plumbing — engineer-facing, PM-invisible; small enough to land beside #1.)
+3. **Technical taxonomies have no single owner.** Status enums, topic/ID grammars, QoS, reachability rules have nowhere to be stated once, so they scatter across `user-journeys` and contracts and drift (downstream symptom: "6 statuses in docs, 7 in code"). Give them one home and make everyone reference it. **Do NOT overload `Integration contract`** — that section is "how external consumers integrate" (install/entry-points/API, `architecture.md.tmpl:60`); behavioural invariants are a different thing. Add a separate `## Behavioral contract (taxonomies & invariants)` section so A4's Integration-contract↔README cross-check doesn't trip on status tables. **PM guard: the machine content must MOVE out of the PM docs, not be copied beside a new link** — a copy-plus-link brings the drift back, just quieter.
+4. **`user-journeys` is unreadable for the PM at the *step* level — not just the Invariants field.** The drowning was in the step bodies (`serialNumber`, `matter_export_<…>`, `fabric`, `retain`, QoS), not in `user-journeys.md.tmpl:22-23` `Invariants:`. So the primary fix is **"steps in human language"** — rewrite "What the user does / expects / can go wrong" without protocol identifiers — *and additionally* push format/taxonomy invariants down to the new Behavioral-contract section (journey references them). Framing it as "move Invariants down" only is insufficient: leave the steps as-is and the PM still can't read the journey.
+
+### Contested — do NOT take as written; wait for proof during planning
+
+- **Full "4-field description model" for `product-map.md`** (adds "По какой логике" as a field beyond the cheap slice in #1). *Only the extra "logic" field is contested* — it has no existing contract source, so it needs either a new contract field or generator inference. Defer the full model; the cheap slice delivers most of the PM win without it. Resolved by the validation point below, not by argument.
+- **Contracts referencing a central taxonomy = coupling.** "Contract doesn't copy a format, it links to architecture.md" reads clean but makes every contract depend on architecture.md staying in sync, and contracts are valued for being read in isolation during a single-feature review. Centralize only the *source enumerations* (status list, topic grammar); let a contract still name its invariant in its own words.
+- **Anti-drift check in pm-auditor — prefer structural dedup over prose policing.** The auditor is explicitly barred from validating `product.md` prose intent (`pm-auditor.md:117-120`). It can only compare "capabilities match" if README has no capability list — which the README fix (#2) already achieves. Right order: eliminate the duplication surface structurally first, then there is little left to police. A "taxonomy not duplicated" check is structural and OK to add; "capabilities match by meaning" is not.
+
+### Out of scope for the template (downstream-only — wb-mqtt-matter's own cycle)
+
+- `deployment.md` "mark as engineering reference" — not a protocol template artifact (no `deployment.md.tmpl`); it exists only in wb-mqtt-matter.
+- Moving the status taxonomy into code and aligning the 6-vs-7 mismatch; splitting wb-mqtt-matter's own `user-journeys`; rebuilding its `product-map.md`.
+
+### Decomposition for planning (PM-value first, plumbing alongside — not ahead)
+
+- **(1) product-map cheap slice [PM headline]** — primary row = User value + Out of scope, links demoted. Closes the originating pain; small generator change over existing v2.3 fields. Current pass — do not defer.
+- **(2) README front-gate** — drop the capability list. Standalone, cheap, root-cause of the README↔product.md drift. Lands beside (1).
+- **(3) Behavioral-contract section + journeys "human steps"** — one feature: add `## Behavioral contract` to `architecture.md`, rewrite journey *steps* into human language (not just invariants down), MOVE (not copy) machine identifiers out. "Human intro paragraph per technical section" rides along here.
+- **(4) Full 4-field model (logic field) + auditor anti-drift (structural only)** — later, only if (1)–(3) prove out.
+
+If (1) is not taken in the current pass, the honest record is: **PM-facing feature description IS the next cycle, explicitly — not "someday".**
+
+### Validation point (resolves the contested tier on fact, not taste)
+
+The cheap slice gets its first live test on the wb-mqtt-matter downstream cycle: when that project regenerates `product-map.md` in the new form, the PM re-reads it as a PM. Decision rule — if "User value + границы" on top actually removes the pain → that is the signal the full 4-field "logic" field is **not** needed yet; if something is still missing to understand a feature → *that specific gap* is the concrete argument for the next field, instead of an abstract one. The protocol template change (1) and the downstream doc-refactor therefore share **one** validation point — sequence them so matter regenerates the map only *after* the template slice lands.
+
+### Design principle (why this stays readable AND doesn't drift — the frame for planning)
+
+The three constraints — PM-readable / strict contract↔doc↔code chain intact / not smeared across many files — are not in tension. They are all served by **one invariant: one fact, one owner; the render *selects* a layer, it never *copies* it.** Two consequences worth carrying into the plans:
+
+**Two parallel funnels, one entry each, linked one-directionally.** The PM never wades back into topics because the technical layer is a *separate* funnel reached only by an explicit "↓ Технически" link — not interleaved into the PM path.
+
+```
+PM funnel:   README (1 para) → product.md (why/for-whom) → product-map (features)
+                                                              │ ↓ Технически
+Tech funnel: architecture.md «## Behavioral contract» ────────┘ + contract Must-work + stack-notes
+```
+
+This adds **zero new files and exactly one new section** (`## Behavioral contract` inside `architecture.md`). The fact-ownership map is itself the anti-smear mechanism: smearing comes from the COPY pattern (a fact in two places), which the move-not-copy guard forbids at every level.
+
+**Single owner applied at every level of the PM funnel — this is what keeps the PM description from drifting:**
+
+| Level | Owns | Defers (links, never copies) |
+|---|---|---|
+| README | nothing about capabilities | → `product.md` |
+| `product.md` `## Что умеет` | "why / for whom" + overall maturity boundary | → the map for the per-feature list |
+| `product-map` | a *projection* of `User value` + `Out of scope` | (generated; re-derived & compared by auditor) |
+| `contract.User value` | the single authored PM sentence per feature | rides the plan-gate + audit |
+
+Drift analysis of the PM layer, level by level:
+- **map ↔ contract: safe by construction** — the map is generated and the auditor re-derives & compares (`pm-auditor.md:111`). The cheap slice *removes* a drift surface: today the map carries a separately-authored guarantee string; making it a pure projection of `User value`/`Out of scope` deletes that extra copy.
+- **`product.md` ↔ map: the real "two PM descriptions" risk** — resolved structurally by the README-fix applied one level down: `product.md` must NOT re-list per-feature capabilities; it owns only why/for-whom + the overall boundary and links to the map for the feature list. (If it re-lists, it will drift exactly as README↔product.md did downstream.)
+- **`contract.User value` ↔ code: the one irreducible authored text** — but it drifts no worse than the technical contract does, because it rides the same enforcement: behaviour changed without a plan = orphaned-implementation **blocking** (auditor dim 3, `:90-95`); behaviour changed with a plan = the plan must touch the contract and its `Out of scope` "must not silently relax Must not break" (`contract.md.tmpl:61`); code changed after `Last reviewed` = stale-contract **note** (dim 4). The only gap no mechanism sees is a feature whose *value framing* changed while its *mechanics* (Must-work) did not — rare, low-harm. Two cheap backstops: a **structural** lint "PM layer contains no machine tokens (`<id>_<…>`, `retain`, `QoS`)" (the legitimate structural anti-drift, NOT prose-policing) and the PM re-reading the map at the validation point above.
+
+Net: the PM description drifts only as much as the technical contract drifts — because it is a projection of the same single-owned source, not a parallel prose. The thing that would make it drift is COPY; the design forbids copy at every level.
+
+## From doc-language proposal — 2026-06-03 (wb-mqtt-matter)
+
+> **PM DECISION (2026-06-03): English-canonical — the language-parameter feature below is REJECTED/superseded.** The real choice was "maintain language as a *parameter* (with all the hardcode-untangling, header-canon split, language-aware role detection, and downstream migration) vs. pick one canonical language." PM picks **one canon = English everywhere** — this *removes* scope rather than adds it: the whole parameterization + both hardcode fixes collapse.
+>
+> **Scope — two independent axes, do not conflate:** (a) **artifact language = English, always** (files, code, commits, and agent-authored doc files like audit reports / reviews — everything persisted to disk/git); (b) **conversation language = the user's language, whatever it is** (the orchestrator talks to the PM, and quotes/summarizes artifacts back, in the PM's language — English-speaking PM gets English, Russian-speaking PM gets Russian, etc.). "English-canonical" governs only (a). When relaying a persisted artifact in chat, render it in the PM's language (translate-on-read); only what is written to disk is English. This belongs as a CLAUDE.md note ("Conversation language: the user's; Artifacts: English") so it is stable across sessions and for subagents reporting to the orchestrator.
+>
+> **What survives as actionable:** migrate the one currently-Russian file `product.md` (template + auditor greps + architect references) to English — a simple one-way migration, NOT a parameterization. The auditor role list (`pm-auditor.md:70`) is already English, so it becomes correct on its own; nothing to untangle there.
+>
+> **Why the cost is acceptable now:** the two-layer cleanup (slices 1/3) already shrank and de-jargoned the PM surface (product-map = "User value + границы"; tokens moved to `§ Behavioral contract`). Machine translation over clean, token-free product prose is cheap and accurate — the trade is far better than it would have been before the cleanup.
+>
+> **Residual the PM accepted:** a translator gives the PM *comprehension* but not *authorship* — validating `product.md` / approving plan `## Scenarios` happens via a translation round-trip, slightly lossy on the exact wording of intent/boundaries (where pm-architect cites the PM as source of truth). Accepted as a small, real cost.
+>
+> **Action item:** `product.md.tmpl` → English headers + English prose placeholders; `pm-auditor.md:119-120` + `pm-architect.md:24,67-70` → English header strings; add a template-upgrade migration (existing pending-migration path, v2.5/PR #165 machinery) that rewrites existing downstream `product.md` Russian headers → English **preserving prose**, so live projects don't break. This is the ONLY part of the analysis below that proceeds; the rest is kept as superseded rationale.
+
+---
+
+_Superseded rationale (kept for the record — the rejected language-parameter design):_
+
+**Source.** PM asked: can documentation be written in the PM's language — set once (e.g. at bootstrap) and applied automatically thereafter? Protocol change → `/pm-plan`. Depends on / sequences after the two-layer slices (1)/(3) above, because the language boundary **is** the layer boundary.
+
+**Core idea — language follows the layer, not the file.** Not "all docs in language X": the **PM layer** (prose of `product.md`, `product-map`, journey *steps*, contract `User value`/`Границы`, **plan `## Scenarios` + plan `## Out of scope`**, auditor reports, README intro) is written in the PM's declared language; the **technical layer** (code, identifiers, `§ Behavioral contract` taxonomies, topic/ID formats, `Must work`/test names, plan `Existing behaviors`/`Contracts`/`Test plan`/`Stack expectations`, stack-notes, commits) **stays English always** — shared with engineers across teams, tooling, and validators, must match code. The feature parameterizes the language of one already-separated layer.
+
+**Plans are mixed, not monolithically technical (PM correction, 2026-06-03).** The plan's `## Scenarios` and `## Out of scope` are the PM-facing layer the PM reviews and approves → PM language. The rest of the plan is technical → English. **Identifiers inside a PM-language scenario stay English tokens in backticks** (e.g. `` `not_commissioned` ``) — they are *references* to the `§ Behavioral contract` taxonomy, not translated; only the surrounding prose + display labels are in the PM language. pm-coder / pm-plan-checker still map scenario→test via the tokens, so nothing breaks.
+
+**Mechanism (set once → automatic):**
+- One bootstrap question: "Documentation language (PM-facing prose)?" — default: detect from the PM's answers and confirm.
+- One home: `CLAUDE.md` (every pm-* agent already reads it) gets a `## Documentation language` line — `PM-facing prose: <lang>. Technical layer: English.`
+- One instruction added to each writing agent (`pm-architect`, `pm-legacy-reader`, the map generator): "PM-facing prose in CLAUDE.md's declared language; technical layer English." No new files.
+
+**Header-canon rule (protects the strict checks — and the migration the PM asked for):**
+- **Section headers stay a fixed canonical language (English); only prose bodies follow the PM language.** Headers are structural anchors that grep-based checks key on (auditor header-existence + move-not-copy, e.g. `pm-auditor.md:119` greps the exact funnel headers). Translating headers would force every such check to become language-aware — fragile. Fixing headers keeps the strict system entirely untouched while the readable bodies localize.
+- **Existing latent bug this exposes & must fix:** `product.md.tmpl` hardcodes **Russian** headers (`## Зачем это нужно`…) and `pm-auditor.md:119` greps those exact Russian strings — so any non-Russian project bootstraps a localized `product.md` whose headers the auditor cannot find → breaks. Fix: migrate `product.md.tmpl` headers to English (with localized prose placeholders) and switch the auditor's greps to the English headers. (Evidence: `product.md.tmpl:1-24` + `pm-auditor.md:119-120` + `pm-architect.md:24,67-70`.)
+- **Second hardcode the "scenarios in PM language" decision exposes — auditor human-role detection.** The auditor decides "contract required?" by extracting the grammatical subject of scenario 1 and matching a **hardcoded English role list** (`pm-auditor.md:70`: `integrator`, `operator`, `user`, `admin`, `developer`, `engineer`). A PM-language scenario ("Интегратор запускает…") has subject "Интегратор" → not in the list → wrong contract-required verdict. Same class of bug as the headers. Fix: make role detection language-aware, or (cleaner) have the auditor reason semantically "is the subject a human role?" instead of matching a fixed word list.
+- **Template-upgrade migration (PM's explicit ask):** flipping the auditor to English-header greps breaks **live downstream projects** whose `product.md` still has Russian headers. So add a header-migration to the existing "Pending template-upgrade migrations" path in `pm-bootstrap.md` (the same machinery v2.5/PR #165 used for `_index.md`→`product.md`, with pending-migration detection): on re-bootstrap after a submodule bump, detect Russian (non-canonical) headers in `product.md`, rewrite them to the English canon **preserving the prose**. Without this step the language feature is a breaking change for every existing project.
+
+**Why it fits the prior constraints:** doesn't break rigor (canonical anchor headers keep grep-checks intact; technical layer untouched); doesn't smear (one CLAUDE.md line + one instruction per agent, zero new files); doesn't drift (language is a single-owner property in CLAUDE.md).
+
+**Sequencing:** after/with two-layer slices (1)/(3) (layer boundary must be drawn first); the header-canon fix + downstream migration ship **together** with the auditor grep change — never the grep change alone.
 
 ## From product-md-front-door arch-doc update — 2026-06-02 (this repo)
 
