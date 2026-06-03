@@ -85,6 +85,10 @@ All agents below are project agents — use the Agent tool with the exact `subag
      > "This project is still on an older template structure (`docs/product-map.md` hasn't been generated yet). I can run the pending `/pm-bootstrap` migration to bring it up to the current format — nothing else changes. Run it now?"
 
      PM decides. On yes, invoke the existing (untouched) `/pm-bootstrap` migration procedure, which acts with this consent. The auditor only flagged it; the orchestrator runs it.
+   - Old-format (pre-value-first) product map — the auditor's non-blocking format-refresh note (an existing `docs/product-map.md` with at least one contract block still carrying the literal `Guarantees:` label, per `### Pending-migration detection` in `pm-bootstrap.md`; a contract-less / infra-only map has no contract blocks and no value lines and is **not** old-format — it gets no note) → offer to regenerate now, in plain language. This is distinct from the missing/un-migrated-map note above: the map exists and is content-current, it is only in the old presentation format. It is **not** a structural migration:
+     > "Your product map is current but in the old format — it leads with a build-history table instead of what each feature gives the user. I can regenerate it to the value-first format now (rebuilt from your contracts, nothing else changes). Regenerate it?"
+
+     PM decides. On yes, regenerate `docs/product-map.md` via the **Product map generation procedure** in `pm-bootstrap.md` (idempotent, overwrite-from-source). The auditor only flagged it; the orchestrator runs it.
 
    **Plan naming rule.** Topic = what is being fixed, not where it came from. `confed-schema-delivery`, not `audit-fixup-confed-schema-delivery`. The audit finding belongs in the plan's context or git history — not in the filename.
 

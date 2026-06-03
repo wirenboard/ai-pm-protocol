@@ -13,6 +13,20 @@
 
 ---
 
+## [2.6.0] — 2026-06-03
+
+Reorders product contract blocks to lead with user value and boundary statements, demoting the technical build table to a secondary position, addressing real-project feedback on contract readability and facilitating format-refresh detection for maps still using deprecated `Guarantees:` labels.
+
+### Added
+- **Value-first contract layout** (`pm-bootstrap.md` §2): product-map contract blocks now lead each feature/non-infra bucket with `Что даёт:` (from `## User value`) and `Границы:` (from `## Out of scope`), placing the technical build table under a plain `Чем построено:` label below. Worked example updated.
+- **Old-format detection** (`pm-bootstrap.md` §2.1 `### Pending-migration detection`): condition for maps using deprecated `Guarantees:` label added (distinguishes content-stale audit finding from format-upgrade offer). Auditor, `/pm-audit`, `/pm-plan` surfaced as non-blocking reminders.
+
+### Changed
+- **Contract block structure** (`pm-bootstrap.md` step 2): technical table moved under `Чем построено:` heading; `Границы:` now omitted when `## Out of scope` is empty per existing rule.
+- **Architecture record** (`doc/architecture.md` §3): documented the value-first rendering pattern (markup-only projection, no HTML `<details>`) and old-format detection route. Owner `pm-architect`.
+
+---
+
 ## [2.5.0] — 2026-06-02
 
 Makes detection of an un-migrated template structure reliable and turns the passive "map missing" note into an active offer to run the pending migration (backlog #4).
