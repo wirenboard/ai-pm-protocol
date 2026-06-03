@@ -219,7 +219,7 @@ If PM says no or later → continue with this feature.
 If **no audit has ever been run** (.ai-pm/audits/ empty or missing):
 > "This project hasn't had a protocol check yet. Want to run one before we plan this feature? It verifies that all previous work is properly documented."
 
-**Pending-migration nudge.** If the project shows an un-migrated template structure (per `### Pending-migration detection` in `pm-bootstrap.md` — a lingering `docs/features/_index.md`, or a generated `docs/product.md` with the frozen signature line and no `docs/product-map.md`), surface it before new work:
+**Pending-migration nudge.** If the project shows an un-migrated template structure (per `### Pending-migration detection` in `MIGRATIONS.md` — a lingering `docs/features/_index.md`, or a generated `docs/product.md` with the frozen signature line and no `docs/product-map.md`), surface it before new work:
 > "This project is on an older template structure — `docs/product-map.md` hasn't been generated yet. Worth running the pending `/pm-bootstrap` migration first so we plan against the current format. Run the migration now?"
 
 If PM says yes → run the pending `/pm-bootstrap` migration before proceeding with this feature.
@@ -232,17 +232,17 @@ If PM says yes → regenerate `docs/product-map.md` via the **Product map genera
 There is also the **pre-English-canonical `product.md`** case in `### Pending-migration detection` (an existing `docs/product.md` whose funnel still carries the Russian headers `## Зачем это нужно` / `## Что умеет сегодня` / `## Документы` / `## Функции`; a `product.md` already on the English headers is not flagged). When that is the detected condition, offer the product.md header-migration before planning:
 > "Your product front door uses the old section titles. I can update just the titles to the canonical English names — the text you wrote stays exactly as is. Run it before planning?"
 
-If PM says yes → run the **product.md header-migration procedure** in `pm-bootstrap.md` before proceeding (headers only, prose preserved, performed by `pm-architect`).
+If PM says yes → run the **product.md header-migration procedure** in `MIGRATIONS.md` before proceeding (headers only, prose preserved, performed by `pm-architect`).
 
 There is also the **old-template-README** case in `### Pending-migration detection` (an existing `README.md` still carrying a `## What it does` capability list — the pre-front-gate structure; a README with no `## What it does` heading is not flagged). When that is the detected condition, offer the README front-gate migration before planning:
 > "Your README keeps its own 'what it does' list, separate from `docs/product.md` — the two can drift. I can run the README front-gate migration: any capability that's only in the README moves into `docs/product.md` first, then the README's list is replaced with a link to it. Install instructions and everything else stay as-is. Run it before planning?"
 
-If PM says yes → run the **README front-gate migration procedure** in `pm-bootstrap.md` before proceeding (move-not-copy, performed by `pm-architect`).
+If PM says yes → run the **README front-gate migration procedure** in `MIGRATIONS.md` before proceeding (move-not-copy, performed by `pm-architect`).
 
 There is also the **token-laden-contract** case in `### Pending-migration detection` (an existing contract whose PM sections `## User value` / `## Out of scope` carry wire-tokens, or whose `## Must work` / `## Must not break` inline machine grammars that belong in `## Behavioral contract`; a token-free contract that references the Behavioral contract is not flagged). When that is the detected condition, offer the contract two-layer migration before planning:
 > "One of your feature contracts mixes technical detail (topic formats, value ranges) into the parts meant for plain product language. I can run the contract two-layer migration: the technical grammar moves into the single architecture reference, the user-facing parts are rephrased in plain language, and every promise the contract makes is preserved. Run it before planning?"
 
-If PM says yes → run the **contract two-layer migration procedure** in `pm-bootstrap.md` before proceeding (move-not-copy, performed by `pm-architect`, preserves every guarantee).
+If PM says yes → run the **contract two-layer migration procedure** in `MIGRATIONS.md` before proceeding (move-not-copy, performed by `pm-architect`, preserves every guarantee).
 
 Don't implement fixes, don't block planning. PM decides.
 
