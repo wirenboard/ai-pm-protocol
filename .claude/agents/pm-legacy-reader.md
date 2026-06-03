@@ -67,6 +67,8 @@ For each journey:
 - **Step table:** `| Step | What user does | What system does | What can go wrong |`
 - Note non-obvious system behavior: auto-matching, background processing, mode switches, split outputs
 
+Write the step bodies in human language — what the user does and observes. Keep machine identifiers out of the steps: a status enumeration, a topic / ID / name grammar, a retain or QoS flag, a reachability rule you observe in the code belongs in the architecture draft's `## Behavioral contract (taxonomies & invariants)` section, not in a journey step. State each such identifier once there and let the journey reference that section by name — do not restate it in the step beside a pointer.
+
 ### docs/ui-guide.md
 
 Only write if the project has a **custom UI**: desktop application (LCL, WinForms, Qt, Electron), web app with custom HTML/CSS/JS, or mobile app. Do NOT create for platform-provided UIs (admin panels, generated forms, Grafana dashboards, etc.).
