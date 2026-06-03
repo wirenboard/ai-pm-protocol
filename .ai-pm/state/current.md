@@ -14,6 +14,7 @@
     - `.claude/agents/pm-auditor.md` — dimension 1: unstamped `## Code review` section == blocking; section-absent exempt.
     - `MIGRATIONS.md` — detection condition (positive presence of unstamped heading) + idempotent loud-marker normalization procedure.
   - `bash tests/hooks.sh` green (71/71; no new hook).
+  - CR1 fixed: `pm-pr-prep` step-0 illustrative snippet now positively tests for the `— passed` stamp (two-branch grep), not just the heading; prose normative rule unchanged.
 - **Remaining:**
   - Post-coding: spawn `pm-architect` to update `doc/architecture.md` § "Edit-ownership split" (carve-out + reframed model + protocol-feedback mechanism) — DoD item 8.
   - Review loop: `pm-plan-checker` (Pass 1) → `code-review` (Pass 2) → stamp.

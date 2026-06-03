@@ -30,7 +30,13 @@ base=$(git merge-base HEAD origin/HEAD 2>/dev/null || git merge-base HEAD main)
 For each in-scope review file, inspect its stamp heading — the `## Code review` line, **not** the separate `## Code review findings` heading (grep the file content, including the working-tree version):
 
 ```bash
-grep -nE '^## Code review(:.*)?$' "$f"   # the stamp line; excludes "## Code review findings"
+# stamped iff a "— passed" stamp line exists; a "## Code review" heading without it = unstamped.
+# the heading-presence test uses ^## Code review(:.*)?$ — which excludes "## Code review findings".
+if grep -qE '^## Code review:.*— passed$' "$f"; then
+  : # stamped — ok
+elif grep -qE '^## Code review(:.*)?$' "$f"; then
+  echo "UNSTAMPED: $f"   # heading present, no passed stamp → block
+fi
 ```
 
 A section is **unstamped** when its `## Code review` line is `## Code review: NOT YET RUN`, a bare `## Code review` heading, or any `## Code review:` line without a trailing `— passed` date.
