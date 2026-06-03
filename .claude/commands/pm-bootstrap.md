@@ -51,7 +51,7 @@ On an already-initialized project, before confirming-and-exiting, check whether 
 
   **This literal string is a frozen historical artifact** — it is the exact header the pre-split generator emitted. Do NOT "tidy" or normalize it; the detection of already-deployed projects depends on this exact pre-split text. (The new generator no longer emits it; that is intentional and what makes the two states distinguishable.) An authored `docs/product.md` never carries the signature line, so a greenfield-before-first-feature project with a hand-authored funnel is correctly **not** detected as un-migrated.
 
-- **Old-format (pre-value-first) generated map:** an existing `docs/product-map.md` whose contract blocks still carry the literal old-format `Guarantees:` label (i.e. no `Что даёт:` value line). This is a generated map produced before the value-first block format. Its remediation is **trivial and not a structural migration**: regenerate `docs/product-map.md` via the **Product map generation procedure** below (idempotent, overwrite-from-source — a no-op on an already-new-format map). There is **no** `git mv` / `git rm` step here — the map is rebuilt wholesale from source, so the new format simply replaces the old one.
+- **Old-format (pre-value-first) generated map:** an existing `docs/product-map.md` that has at least one contract block carrying the literal old-format `Guarantees:` label (the positive anchor — a value-first block leads with `Что даёт:`/`Границы:` bullets and never emits `Guarantees:`). This is a generated map produced before the value-first block format. **A contract-less / infra-only map is NOT old-format:** a backend/infra-only project's map has only the `## Infrastructure (no user-facing contract)` table — no contract blocks, hence no `Guarantees:` label and no value lines — and must not be flagged (regenerating it produces an identical infra-only map). Its remediation is **trivial and not a structural migration**: regenerate `docs/product-map.md` via the **Product map generation procedure** below (idempotent, overwrite-from-source — a no-op on an already-new-format map). There is **no** `git mv` / `git rm` step here — the map is rebuilt wholesale from source, so the new format simply replaces the old one.
 
 The migration procedures themselves are below; they are unchanged.
 
@@ -305,9 +305,9 @@ Used by bootstrap (all modes) and by `/pm-plan` to regenerate `docs/product-map.
 1. **Group** — read `docs/architecture.md`, extract the major components/subsystems. Each becomes a `## <Component>` section.
 2. **Contracts** — for each `.ai-pm/contracts/<name>.md`, place a block under the component it serves (match by the contract's subject / architecture component):
    - Heading is a **clickable markdown link** to the contract file followed by the status label: `### [<Contract name>](../.ai-pm/contracts/<name>.md) — <status>` — status `live` (default) or `deprecated` if the contract says so. Do not print a raw backtick path; the name itself is the link.
-   - **Lead with two product-language value lines, before any table:**
-     - `Что даёт:` one line taken from the contract's `## User value` section (the human, product-language promise — **not** the technical first `Must work` item).
-     - `Границы:` a compact projection of the contract's `## Out of scope` bullets — join them into a short single line (keep up to the first couple of bullets if the list is long). **Omit this line entirely** when the contract has no `## Out of scope` content (empty or absent section) — do not emit an empty `Границы:` line.
+   - **Lead with the product-language value lines as a markdown bullet list, before any table** (bullets render on separate lines in every renderer; two adjacent plain lines would collapse into one paragraph on GitHub):
+     - `- **Что даёт:**` one line taken from the contract's `## User value` section (the human, product-language promise — **not** the technical first `Must work` item).
+     - `- **Границы:**` a compact projection of the contract's `## Out of scope` bullets — join them into a short single line (keep up to the first couple of bullets if the list is long). **Omit this bullet entirely** when the contract has no `## Out of scope` content (empty or absent section) — do not emit an empty `Границы:` bullet.
    - Then the build-history table under a plain `Чем построено:` label line (**pure markdown, no HTML** — no `<details>`): the features that built or changed the contract, read from its **Built/changed by** list. `Done` = `git log --follow --diff-filter=A --format="%Y-%m-%d" -- .ai-pm/reviews/<topic>_review.md` (else `—`); `Review` = `[R](../.ai-pm/reviews/<topic>_review.md)` if it exists, else `—`.
 3. **Infrastructure bucket** — a final `## Infrastructure (no user-facing contract)` section listing every `*_plan.md` in `docs/features/` not referenced by any contract's Built/changed by list (backend / infra features). It has no contract, so it carries **no** `Что даёт` / `Границы` lines and **no** `Чем построено:` label — just its existing plain table.
 4. Sort contracts alphabetically within a component; sort feature rows by `Done` (newest last).
@@ -333,8 +333,8 @@ Do **not** print a generator-mechanics header ("Source of truth = contracts. Gen
 ## <Component>
 
 ### [<Contract name>](../.ai-pm/contracts/<name>.md) — live
-Что даёт: <one line from the contract's `## User value` section>
-Границы: <compact projection of the contract's `## Out of scope` bullets — omit this line when there is no Out of scope>
+- **Что даёт:** <one line from the contract's `## User value` section>
+- **Границы:** <compact projection of the contract's `## Out of scope` bullets — omit this bullet when there is no Out of scope>
 
 Чем построено:
 
@@ -361,8 +361,8 @@ Two contracts (`dimmer-control`, `scene-recall`) live under a "Lighting" compone
 ## Lighting
 
 ### [dimmer-control](../.ai-pm/contracts/dimmer-control.md) — live
-Что даёт: A user can smoothly dim any connected dimmable light from the app, and the brightness it shows always matches the lamp.
-Границы: no RGB or colour-temperature control; non-dimmable fixtures are out of scope.
+- **Что даёт:** A user can smoothly dim any connected dimmable light from the app, and the brightness it shows always matches the lamp.
+- **Границы:** no RGB or colour-temperature control; non-dimmable fixtures are out of scope.
 
 Чем построено:
 
@@ -372,8 +372,8 @@ Two contracts (`dimmer-control`, `scene-recall`) live under a "Lighting" compone
 | [scene-engine](features/scene-engine_plan.md) | 2025-10-15 | [R](../.ai-pm/reviews/scene-engine_review.md) |
 
 ### [scene-recall](../.ai-pm/contracts/scene-recall.md) — live
-Что даёт: A user can save the current lighting as a named scene and bring it back with one tap.
-Границы: no scheduled or location-triggered scenes; scenes are not shared between users.
+- **Что даёт:** A user can save the current lighting as a named scene and bring it back with one tap.
+- **Границы:** no scheduled or location-triggered scenes; scenes are not shared between users.
 
 Чем построено:
 

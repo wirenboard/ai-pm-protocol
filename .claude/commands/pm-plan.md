@@ -224,7 +224,7 @@ If **no audit has ever been run** (.ai-pm/audits/ empty or missing):
 
 If PM says yes → run the pending `/pm-bootstrap` migration before proceeding with this feature.
 
-There is also the lighter **old-format-map** case in `### Pending-migration detection` (an existing `docs/product-map.md` still carrying the literal `Guarantees:` label / lacking `Что даёт:`). When that is the detected condition, the offer is a regeneration, not a structural migration:
+There is also the lighter **old-format-map** case in `### Pending-migration detection` (an existing `docs/product-map.md` with at least one contract block still carrying the literal `Guarantees:` label; a contract-less / infra-only map — no contract blocks, no value lines — is **not** old-format and triggers no nudge). When that is the detected condition, the offer is a regeneration, not a structural migration:
 > "Your product map is in the old format — it leads with a build-history table instead of what each feature gives the user. I can regenerate it to the value-first format now (it's rebuilt from your contracts, nothing else changes). Regenerate before planning?"
 
 If PM says yes → regenerate `docs/product-map.md` via the **Product map generation procedure** in `pm-bootstrap.md` before proceeding. If PM declines, planning proceeds and the `/pm-plan` handoff regenerates the map in the new format anyway.
