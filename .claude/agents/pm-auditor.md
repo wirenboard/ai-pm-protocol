@@ -119,6 +119,7 @@ For every `.ai-pm/contracts/<feature>.md`:
   - File missing or empty → **note**.
   - Missing any of the four funnel headers (`## Зачем это нужно`, `## Что умеет сегодня`, `## Документы`, `## Функции`) → **note**.
   - **Never validate the prose content** — product intent is the PM's, not the auditor's. The auditor cannot know whether "Зачем" is right or whether "Что умеет сегодня" is complete, and must not flag stale-looking prose; refreshing the funnel on coverage changes is `pm-architect`'s job, not a finding here.
+- `README.md` (**old-template front-gate check**) — **structure-only, non-blocking.** If `README.md` still carries a `## What it does` capability list, it is on the pre-front-gate template structure (detected by the **positive presence** of a `## What it does` heading, per `### Pending-migration detection` in `pm-bootstrap.md`) → **note** (the README owns a second capability statement parallel to `docs/product.md`; remediation: run the **README front-gate migration** — a move-not-copy reconcile-then-remove performed by `pm-architect`, per `pm-bootstrap.md`). A README with no `## What it does` heading is **not** flagged. **Detect the structural capability-list section only — never prose-police the README's wording** (whether the bullets are well-written or current is the PM's / `pm-architect`'s call, not a finding here).
 
 Notes, not blocking — docs can lag slightly, but the same gap flagged in two consecutive full audits upgrades to blocking.
 

@@ -89,6 +89,10 @@ All agents below are project agents — use the Agent tool with the exact `subag
      > "Your product map is current but in the old format — it leads with a build-history table instead of what each feature gives the user. I can regenerate it to the value-first format now (rebuilt from your contracts, nothing else changes). Regenerate it?"
 
      PM decides. On yes, regenerate `docs/product-map.md` via the **Product map generation procedure** in `pm-bootstrap.md` (idempotent, overwrite-from-source). The auditor only flagged it; the orchestrator runs it.
+   - Old-template README (front-gate not applied) — the auditor's non-blocking note (an existing `README.md` still carrying a `## What it does` capability list, per `### Pending-migration detection` in `pm-bootstrap.md`; a README with no `## What it does` heading is not flagged) → offer the README front-gate migration now, in plain language. The README keeps its own capability list parallel to `docs/product.md`, which drifts; the fix is move-not-copy, not a blind delete:
+     > "Your README keeps its own 'what it does' list, separate from `docs/product.md` — the two can drift. I can run the README front-gate migration: any capability that's only in the README moves into `docs/product.md` first, then the README's list is replaced with a link to it. Install instructions and everything else stay as-is. Run it now?"
+
+     PM decides. On yes, run the **README front-gate migration procedure** in `pm-bootstrap.md` (move-not-copy, performed by `pm-architect`). The auditor only flagged it; the orchestrator runs it.
 
    **Plan naming rule.** Topic = what is being fixed, not where it came from. `confed-schema-delivery`, not `audit-fixup-confed-schema-delivery`. The audit finding belongs in the plan's context or git history — not in the filename.
 

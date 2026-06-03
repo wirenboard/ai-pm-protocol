@@ -229,6 +229,11 @@ There is also the lighter **old-format-map** case in `### Pending-migration dete
 
 If PM says yes → regenerate `docs/product-map.md` via the **Product map generation procedure** in `pm-bootstrap.md` before proceeding. If PM declines, planning proceeds and the `/pm-plan` handoff regenerates the map in the new format anyway.
 
+There is also the **old-template-README** case in `### Pending-migration detection` (an existing `README.md` still carrying a `## What it does` capability list — the pre-front-gate structure; a README with no `## What it does` heading is not flagged). When that is the detected condition, offer the README front-gate migration before planning:
+> "Your README keeps its own 'what it does' list, separate from `docs/product.md` — the two can drift. I can run the README front-gate migration: any capability that's only in the README moves into `docs/product.md` first, then the README's list is replaced with a link to it. Install instructions and everything else stay as-is. Run it before planning?"
+
+If PM says yes → run the **README front-gate migration procedure** in `pm-bootstrap.md` before proceeding (move-not-copy, performed by `pm-architect`).
+
 Don't implement fixes, don't block planning. PM decides.
 
 ## Architect check

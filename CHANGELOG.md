@@ -13,6 +13,20 @@
 
 ---
 
+## [2.7.0] — 2026-06-03
+
+README front-gate (two-layer-docs slice 2): the scaffolded README no longer owns a capability list. `## What it does` is removed from the template and replaced with a single pointer to `docs/product.md`, so `docs/product.md` `## Что умеет сегодня` is the single owner of "what it does / for whom / limits" — eliminating the cause of README↔product.md drift. For existing downstream projects (README is authored, not regenerated), a move-not-copy migration is offered.
+
+### Added
+- **README template front-gate** (`doc/_templates/README.md.tmpl`): the `## What it does` capability list is removed and replaced with a one-line pointer to `docs/product.md`; Quick start / Architecture / Development / License unchanged. New scaffolds carry no capability list. No status line.
+- **Old-template README migration** (`pm-bootstrap.md` → `### Pending-migration detection` + the README front-gate migration procedure): an existing `README.md` carrying a `## What it does` list is detected (positive presence of the heading; new-structure READMEs not flagged) and offered a **move-not-copy** migration — `pm-architect` reconciles the README's capabilities into `docs/product.md` `## Что умеет сегодня` first, then removes the README list and inserts the pointer. Install / Quick start preserved (pm-architect A4 cross-check stays valid). Precondition: an authored `docs/product.md` must exist (run the v2.3 migration first if absent).
+- **Detection surfaces** (`pm-auditor.md`, `pm-plan.md`, `pm-audit.md`): a non-blocking structure-only note and migration nudge for the old-template README, each referencing `### Pending-migration detection` by name (the condition is not re-encoded).
+
+### Changed
+- **Architecture record** (`doc/architecture.md`): documented that the README owns no capability statements, `docs/product.md` is the single owner, and existing projects are migrated move-not-copy. Owner: `pm-architect`.
+
+---
+
 ## [2.6.0] — 2026-06-03
 
 Reorders product contract blocks to lead with user value and boundary statements, demoting the technical build table to a secondary position, addressing real-project feedback on contract readability and facilitating format-refresh detection for maps still using deprecated `Guarantees:` labels.
