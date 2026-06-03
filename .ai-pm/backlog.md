@@ -52,10 +52,10 @@ Source: PM observed orchestrator + auditor behaviour in a downstream project (ma
 
 ### Decomposition for planning (PM-value first, plumbing alongside — not ahead)
 
-- **(1) product-map cheap slice [PM headline]** — primary row = User value + Out of scope, links demoted. Closes the originating pain; small generator change over existing v2.3 fields. Current pass — do not defer.
-- **(2) README front-gate** — drop the capability list. Standalone, cheap, root-cause of the README↔product.md drift. Lands beside (1).
-- **(3) Behavioral-contract section + journeys "human steps"** — one feature: add `## Behavioral contract` to `architecture.md`, rewrite journey *steps* into human language (not just invariants down), MOVE (not copy) machine identifiers out. "Human intro paragraph per technical section" rides along here.
-- **(4) Full 4-field model (logic field) + auditor anti-drift (structural only)** — later, only if (1)–(3) prove out.
+- **✓ Shipped (v2.6.0, PR #168). (1) product-map cheap slice [PM headline]** — primary row = User value + Out of scope, links demoted. Closes the originating pain; small generator change over existing v2.3 fields. _Delivered as `product-map-value-first`: `Что даёт:` + `Границы:` lead (bullets), build table demoted under `Чем построено:`, pure markdown; plus a proactive format-refresh nudge for old-format maps._
+- **✓ Shipped (v2.7.0, PR #169). (2) README front-gate** — drop the capability list. Standalone, cheap, root-cause of the README↔product.md drift. _Delivered as `readme-front-gate`: `## What it does` removed from `README.md.tmpl`, single `product.md` pointer; existing projects migrated move-not-copy (pm-architect reconciles into `## Что умеет сегодня` before dropping the list)._
+- **✓ Shipped (v2.8.0, PR #170). (3) Behavioral-contract section + journeys "human steps"** — one feature: add `## Behavioral contract` to `architecture.md`, rewrite journey *steps* into human language (not just invariants down), MOVE (not copy) machine identifiers out. "Human intro paragraph per technical section" rides along here. _Delivered as `behavioral-contract-and-human-journeys`: new `## Behavioral contract (taxonomies & invariants)` section (distinct from Integration contract, not A4-cross-checked), human-language journey-step guidance, identifiers routed move-not-copy._
+- **(4) Full 4-field model (logic field) + auditor anti-drift (structural only)** — later, only if (1)–(3) prove out. **Still deferred** behind the Validation point below: (1)–(3) shipped, but the live re-read of the regenerated map on wb-mqtt-matter has not happened yet — take (4) only if that re-read surfaces a concrete missing field.
 
 If (1) is not taken in the current pass, the honest record is: **PM-facing feature description IS the next cycle, explicitly — not "someday".**
 
