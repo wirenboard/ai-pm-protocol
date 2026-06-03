@@ -86,10 +86,12 @@ How a commit becomes a published release. Keep it aligned with the CI definition
 
 ## Security constraints
 
-- <e.g., "Passwords: bcrypt min cost 12, never stored plain, never logged">
-- <e.g., "API keys: env vars only, never in source, never in response bodies or headers">
-- <e.g., "User input: validated and sanitized before any DB query or shell invocation">
-- <e.g., "Tokens: short-lived, not stored client-side beyond session">
+The enforceable implementation rules — the **rule layer**. On a security-bearing project (one with `docs/threat-model.md`) each rule carries a stable `SCn` ID so the threat-model's Threats-table Mitigation column can reference it (`threat → constraint`, one-way, by ID — no rule text is duplicated into the threat-model). IDs are assigned once and never renumbered; a new rule gets the next free `SCn`.
+
+- **SC1** — <e.g., "Passwords: bcrypt min cost 12, never stored plain, never logged">
+- **SC2** — <e.g., "User input: validated and sanitized before any DB query or shell invocation (parameterized queries)">
+- **SC3** — <e.g., "API keys: env vars only, never in source, never in response bodies or headers">
+- **SC4** — <e.g., "Tokens: short-lived, not stored client-side beyond session">
 
 ## Code conventions
 
