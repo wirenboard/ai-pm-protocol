@@ -48,6 +48,10 @@ For every user-facing feature touched by the diff:
 - Diff changes user-visible behavior but contract not updated → **blocking**.
 - User-facing feature touched but no contract exists → **blocking**.
 
+**Structural token note (non-blocking).** When the plan/contract change introduces a **wire-token** into a contract's PM-facing sections — `## User value` or `## Out of scope` → **note (product)** (structural). Wire-tokens are: topic paths (`/devices/.../on`), `<x>_<y>` / `<…>_<…>` id/format grammars (`matter_export_<…>`), dotted config keys (`bridge.*`, `mqtt.socketPath`), protocol flags (`retain`, `QoS`), raw wire value-ranges (`0..254`). Domain vocabulary the PM uses as product language (`DimmableLight`, `Matter`, `fabric`) is **never** flagged. Remediation: relocate the grammar to `docs/architecture.md` `## Behavioral contract` and reference it, or rephrase the line in product language. **This is a STRUCTURAL pattern match on token shapes, not prose-policing** — it matches the *shape* of a wire-token, it never judges whether the prose is right, complete, or well-written. Non-blocking: it never blocks a PR, only surfaces the token + its location to the PM.
+
+**Migration guarantee-preservation (blocking).** When the change is a **contract two-layer migration** (`### Pending-migration detection` in `pm-bootstrap.md` — wire grammars relocated to `docs/architecture.md` `## Behavioral contract`, PM sections rephrased token-free), compare the migrated contract against the original (`git show` the pre-migration version). Every `## Must work` and `## Must not break` guarantee in the original must map to a surviving guarantee in the migrated contract. If ANY guarantee was **dropped or weakened** → **blocking**. The migration relocates technical detail (the grammar's exact shape moves to the Behavioral contract and is referenced); it never removes or softens a promise. Reproduce the dropped/weakened guarantee in the verdict.
+
 Backend-only changes skip Product Contract — state "no Product Contract touched" explicitly.
 
 ### Stack expectations compliance

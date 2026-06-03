@@ -239,6 +239,11 @@ There is also the **old-template-README** case in `### Pending-migration detecti
 
 If PM says yes → run the **README front-gate migration procedure** in `pm-bootstrap.md` before proceeding (move-not-copy, performed by `pm-architect`).
 
+There is also the **token-laden-contract** case in `### Pending-migration detection` (an existing contract whose PM sections `## User value` / `## Out of scope` carry wire-tokens, or whose `## Must work` / `## Must not break` inline machine grammars that belong in `## Behavioral contract`; a token-free contract that references the Behavioral contract is not flagged). When that is the detected condition, offer the contract two-layer migration before planning:
+> "One of your feature contracts mixes technical detail (topic formats, value ranges) into the parts meant for plain product language. I can run the contract two-layer migration: the technical grammar moves into the single architecture reference, the user-facing parts are rephrased in plain language, and every promise the contract makes is preserved. Run it before planning?"
+
+If PM says yes → run the **contract two-layer migration procedure** in `pm-bootstrap.md` before proceeding (move-not-copy, performed by `pm-architect`, preserves every guarantee).
+
 Don't implement fixes, don't block planning. PM decides.
 
 ## Architect check

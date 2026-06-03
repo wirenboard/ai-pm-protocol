@@ -97,6 +97,10 @@ All agents below are project agents — use the Agent tool with the exact `subag
      > "Your README keeps its own 'what it does' list, separate from `docs/product.md` — the two can drift. I can run the README front-gate migration: any capability that's only in the README moves into `docs/product.md` first, then the README's list is replaced with a link to it. Install instructions and everything else stay as-is. Run it now?"
 
      PM decides. On yes, run the **README front-gate migration procedure** in `pm-bootstrap.md` (move-not-copy, performed by `pm-architect`). The auditor only flagged it; the orchestrator runs it.
+   - Token-laden contract (two-layer not applied) — the auditor's non-blocking structural token note (a contract whose PM sections `## User value` / `## Out of scope` carry wire-tokens, or whose `## Must work` / `## Must not break` inline machine grammars that belong in `## Behavioral contract`, per `### Pending-migration detection` in `pm-bootstrap.md`; a token-free contract that references the Behavioral contract is not flagged) → offer the contract two-layer migration now, in plain language. The contract mixes technical tokens into the product-language sections; the fix is move-not-copy, preserving every guarantee:
+     > "One of your feature contracts mixes technical detail (topic formats, value ranges) into the parts meant for plain product language. I can run the contract two-layer migration: the technical grammar moves into the single architecture reference, the user-facing parts are rephrased in plain language, and every promise the contract makes is preserved. Nothing the user sees changes. Run it now?"
+
+     PM decides. On yes, run the **contract two-layer migration procedure** in `pm-bootstrap.md` (move-not-copy, performed by `pm-architect`, preserves every guarantee). The auditor only flagged it; the orchestrator runs it.
 
    **Plan naming rule.** Topic = what is being fixed, not where it came from. `confed-schema-delivery`, not `audit-fixup-confed-schema-delivery`. The audit finding belongs in the plan's context or git history — not in the filename.
 

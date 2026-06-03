@@ -57,6 +57,8 @@ On an already-initialized project, before confirming-and-exiting, check whether 
 
 - **Old-template README (front-gate not applied):** an existing downstream `README.md` that still contains a `## What it does` capability list (the pre-front-gate template structure — the README owned a second, drift-prone capability statement parallel to `docs/product.md`'s `## What it does today`). The current template carries no `## What it does` section; instead the README has a one-paragraph intro plus a single `docs/product.md` pointer line. Detect by the **positive presence** of a `## What it does` heading in `README.md`. A project already on the new structure (no `## What it does` heading) is **not** flagged. The remediation is the **README front-gate migration procedure** below — a **move-not-copy** reconcile-then-remove, never a blind delete of the authored README.
 
+- **Token-laden contract (two-layer not applied):** an existing downstream `.ai-pm/contracts/<feature>.md` whose **PM-facing sections** (`## User value` / `## Out of scope`) carry **wire-tokens**, OR whose `## Must work` / `## Must not break` **inline machine grammars** that belong in `docs/architecture.md` `## Behavioral contract`. Wire-tokens are: topic paths (`/devices/.../on`), `<x>_<y>` / `<…>_<…>` id/format grammars (`matter_export_<…>`), dotted config keys (`bridge.*`, `mqtt.socketPath`), protocol flags (`retain`, `QoS`), raw wire value-ranges (`0..254`). Domain vocabulary the PM uses as product language (`DimmableLight`, `Matter`, `fabric`) is **not** a wire-token and does **not** trigger this condition. Detect by the **positive presence** of a wire-token shape in a PM-facing section, or an inlined grammar in a Must-work / Must-not-break item. A contract whose PM sections are token-free and whose guarantees reference (not restate) the Behavioral contract is **not** flagged. The remediation is the **contract two-layer migration procedure** below — a **move-not-copy** performed by `pm-architect` that preserves every guarantee.
+
 The migration procedures themselves are below; they are unchanged.
 
 - **v2.2 — feature index → product map.** Detection: see `### Pending-migration detection` above (`docs/features/_index.md` present). When it applies:
@@ -94,6 +96,48 @@ The migration procedures themselves are below; they are unchanged.
 
   1. **Rewrite the four headers (pm-architect).** Spawn `pm-architect` (`subagent_type: "pm-architect"`). It rewrites only the four funnel headers in place: `## Зачем это нужно` → `## Why this exists`, `## Что умеет сегодня` → `## What it does today`, `## Документы` → `## Documents`, `## Функции` → `## Features`. The authored prose under each header is left exactly as written (the PM's content, in whatever language). Soft-break-safe (headers stay blank-line-separated). New prose `pm-architect` authors afterward is English (per the language canon).
   2. Tell the PM in plain language: "Updated your product front door's section titles to the canonical English names — the text you wrote underneath is untouched. Nothing else changed."
+
+- **Contract two-layer migration — wire grammars relocated to `## Behavioral contract`, PM sections rephrased token-free.** A downstream contract carrying wire-tokens in its PM sections, or inline machine grammars in Must-work / Must-not-break, is brought onto the two-layer structure. Detection: see `### Pending-migration detection` above (token-laden contract). When it applies:
+
+  **This is a move-not-copy migration, performed by `pm-architect`** (the sole owner of `docs/architecture.md` `## Behavioral contract`) — not by the orchestrator and not by a text-replace script. The technical detail (the grammar's exact shape) **moves** to the Behavioral contract; the contract keeps a reference. **Every Must-work / Must-not-break guarantee is preserved** — the set of promises is unchanged; only the location and phrasing of the technical detail moves. Nothing user-visible changes.
+
+  **Precondition — `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` must exist** (slice 3 / v2.8.0). It is the relocation target. If absent, the project is pre-v2.8.0 and the contract two-layer migration cannot run until that section exists.
+
+  1. **Relocate + rephrase (pm-architect).** Spawn `pm-architect` (`subagent_type: "pm-architect"`). It:
+     - **Moves** each wire grammar/taxonomy out of the contract and into `docs/architecture.md` `## Behavioral contract` as a **single owner**. A grammar shared by several contracts converges on **one** Behavioral-contract entry referenced by all — **not** N copies (single-owner; avoids re-introducing drift).
+     - **Replaces** the grammar in the contract's `## Must work` / `## Must not break` with a reference to that Behavioral-contract entry.
+     - **Rephrases** `## User value` / `## Out of scope` into token-free product language.
+     - **Preserves every guarantee** — each original Must-work / Must-not-break promise maps to a surviving promise in the migrated contract; the migration relocates technical detail, it never removes or weakens a promise.
+
+     This step writes `docs/architecture.md` and the contract; it does not touch code.
+
+  2. **Verify nothing broke (3-part).**
+     - The contract's **Acceptance-check tests still pass** — code is untouched, only contract prose moved.
+     - **`pm-plan-checker` confirms no guarantee was dropped or weakened** — it compares the migrated contract against the original and emits **blocking** if any guarantee is missing or softened (the migration guarantee-preservation block in `pm-plan-checker.md`).
+     - The **regenerated product-map's PM layer is token-free** — regenerate `docs/product-map.md` via the **Product map generation procedure** below; once the contract's PM sections are token-free, the map's `- **User value:**` / `- **Out of scope:**` lines carry no wire-tokens (no generator change needed).
+
+  3. Tell the PM in plain language: "Your feature contract kept exactly the same promises — the technical detail (topic formats, value ranges) moved into the single architecture reference, and the user-facing parts are now in plain product language. Nothing the user sees changed."
+
+  **Worked before/after example** (a wire-token in `## Out of scope` relocated to `## Behavioral contract` and referenced):
+
+  *Before* — contract `matter-export.md`:
+  ```markdown
+  ## Out of scope
+  - export ids outside the `matter_export_<type_slug>_<endpoint_id>` grammar are not produced
+  ```
+
+  *After* — the grammar moves to `docs/architecture.md` `## Behavioral contract` (single owner):
+  ```markdown
+  ## Behavioral contract (taxonomies & invariants)
+  - **Matter export id grammar:** `matter_export_<type_slug>_<endpoint_id>` — `<type_slug>` is the device type, `<endpoint_id>` the Matter endpoint.
+  ```
+  and the contract references it in product language:
+  ```markdown
+  ## Out of scope
+  - export ids outside the documented export-id grammar (see `docs/architecture.md` `## Behavioral contract`) are not produced
+  ```
+
+  The guarantee ("ids outside the grammar are not produced") is unchanged; only the grammar's exact shape moved to its single owner.
 
 ---
 

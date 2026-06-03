@@ -8,6 +8,8 @@ One contract per user-facing feature. Backend-only changes (refactors, infra) do
 
 ## User value
 
+> **PM layer — token-free.** Write in plain product language only. No wire-tokens: no topic paths (`/devices/.../on`), no `<x>_<y>` id/format grammars (`matter_export_<…>`), no dotted config keys (`bridge.*`, `mqtt.socketPath`), no protocol flags (`retain`, `QoS`), no raw wire value-ranges (`0..254`). Domain vocabulary the PM uses (`DimmableLight`, `Matter`, `fabric`) is fine — it is product language, not a wire-token. Any machine grammar/taxonomy referenced here lives in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` — reference it, do not restate it.
+
 <one paragraph in plain product language — what value does this feature give the user; why does it exist>
 
 ## Who uses it
@@ -16,6 +18,8 @@ One contract per user-facing feature. Backend-only changes (refactors, infra) do
 
 ## Must work
 
+> **Reference grammars, don't restate them.** When an item depends on a machine grammar or taxonomy (topic conventions, id/name formats, enums, value ranges), reference the single owner in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` instead of inlining the grammar here. The guarantee is the promise to the user; the grammar's exact shape lives once in the Behavioral contract.
+
 <bulleted list — concrete user-visible behaviors that the feature delivers. Each item is something the user can do or expect.>
 
 - <user can …>
@@ -23,6 +27,8 @@ One contract per user-facing feature. Backend-only changes (refactors, infra) do
 - <result of … is …>
 
 ## Must not break
+
+> **Reference grammars, don't restate them.** As in `## Must work`: invariants that depend on a machine grammar or taxonomy (topic conventions, id/name formats, enums, value ranges) reference the single owner in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` rather than restating the grammar inline. The invariant is the promise that must stay true; its exact wire shape lives once in the Behavioral contract.
 
 <bulleted list — invariants that must hold even after future changes. Each item is something that must remain true.>
 
@@ -38,6 +44,8 @@ One contract per user-facing feature. Backend-only changes (refactors, infra) do
 - `<test name>` — verifies …
 
 ## Out of scope
+
+> **PM layer — token-free.** Like `## User value`, write the boundaries in plain product language. No wire-tokens (topic paths, `<x>_<y>` grammars, dotted config keys, protocol flags, raw value-ranges); domain vocabulary (`DimmableLight`, `Matter`, `fabric`) is fine. If a boundary is defined by a machine grammar/taxonomy, reference `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` — do not restate the grammar here.
 
 <bulleted list — what the feature explicitly does NOT do. Prevents scope-creep and silent expansion.>
 
