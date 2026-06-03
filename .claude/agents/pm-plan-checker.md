@@ -117,17 +117,23 @@ Write to `.ai-pm/reviews/<topic>_review.md`:
 ## Verdict
 approve | request-changes
 
-<!-- orchestrator appends after code-review pass: -->
+<!-- The trail below is the ONE review section the orchestrator owns, not pm-plan-checker.
+     See WORKFLOW.md "Edit-ownership rule" — the Pass-2 code-review trail is the single
+     carve-out to "orchestrator does not edit content artefacts". -->
 ## Code review findings
 (populated by orchestrator from code-review output; pm-coder reads and fixes these)
 
-## Code review
-(updated by orchestrator to "passed — <date>" when code-review clears)
+## Code review: NOT YET RUN
+<!-- The orchestrator replaces THIS WHOLE LINE with `## Code review: <date> — passed`
+     only when code-review clears. Until then the section is UNSTAMPED: `pm-pr-prep`
+     refuses to release it (step 0) and `pm-auditor` blocks on it (dimension 1).
+     Never ship an empty `## Code review` heading — an empty section reads as
+     "no findings / passed" to a quick eye or grep; `NOT YET RUN` reads as "not done". -->
 ```
 
 **Routing rule:** blocking findings and technical notes go to `pm-coder` automatically — no PM involvement. Only product notes surface to PM.
 
-**File ownership:** pm-plan-checker writes everything through `## Verdict`. The orchestrator owns `## Code review findings` and `## Code review` — it appends findings before spawning pm-coder for pass 2, and updates to "passed" when clean. This file is the single persistent artifact for both review passes; pm-coder always reads it to know what to fix.
+**File ownership:** pm-plan-checker writes everything through `## Verdict`, **plus** the loud `## Code review: NOT YET RUN` marker as part of the template — the file is born honest, never with an empty `## Code review` heading (a skeleton that looks filled is worse than an absent one). The orchestrator owns the Pass-2 trail below `## Verdict`: it appends `## Code review findings` before spawning pm-coder for pass 2, and replaces the `## Code review: NOT YET RUN` line with `## Code review: <date> — passed` when code-review clears. Until that replacement, the section reads `NOT YET RUN` — which both `pm-pr-prep` (its step 0 gate) and `pm-auditor` (dimension 1) treat as **unstamped** and block on. This file is the single persistent artifact for both review passes; pm-coder always reads it to know what to fix.
 
 ## Hard rules
 

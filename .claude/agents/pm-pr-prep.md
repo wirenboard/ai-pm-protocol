@@ -10,6 +10,50 @@ The orchestrator has already verified the git state (correct branch, clean tree,
 
 ## What to do
 
+### 0. Pre-flight: code-review stamp gate
+
+Before bumping version, committing, or pushing, verify that every feature shipping in this release carries a **stamped** code-review trail. This is the hard gate that makes the Pass-2 stamp load-bearing instead of by-discipline (`WORKFLOW.md` Step 5 Pass 2: *a manual step with no gate degrades silently — this step 0 is that gate*).
+
+Check every `.ai-pm/reviews/*_review.md` that is new or modified on this branch — committed **or** still in the working tree (the same set step 4 stages):
+
+```bash
+base=$(git merge-base HEAD origin/HEAD 2>/dev/null || git merge-base HEAD main)
+{ git diff --name-only "$base"...HEAD -- .ai-pm/reviews/
+  git status --porcelain -- .ai-pm/reviews/ | sed 's/^...//'; } | sort -u
+```
+
+**The rule is keyed on `## Code review` section PRESENCE — no filename special-casing:**
+
+- A review file that **contains** a `## Code review` section must have it **stamped**: `## Code review: <date> — passed`.
+- A review file with **no** `## Code review` section (e.g. a trivial-fixup `fixup-*_review.md`) is **exempt** — nothing to stamp.
+
+For each in-scope review file, inspect its stamp heading — the `## Code review` line, **not** the separate `## Code review findings` heading (grep the file content, including the working-tree version):
+
+```bash
+# stamped iff a "— passed" stamp line exists; a "## Code review" heading without it = unstamped.
+# the heading-presence test uses ^## Code review(:.*)?$ — which excludes "## Code review findings".
+if grep -qE '^## Code review:.*— passed$' "$f"; then
+  : # stamped — ok
+elif grep -qE '^## Code review(:.*)?$' "$f"; then
+  echo "UNSTAMPED: $f"   # heading present, no passed stamp → block
+fi
+```
+
+A section is **unstamped** when its `## Code review` line is `## Code review: NOT YET RUN`, a bare `## Code review` heading, or any `## Code review:` line without a trailing `— passed` date.
+
+If **any** in-scope review file's `## Code review` section is unstamped → **STOP**: do not bump the version, do not commit, do not push. Return a clear **BLOCKED** report naming the feature(s) and the remedy:
+
+```
+BLOCKED: unstamped code-review trail — release not prepared.
+
+Unstamped: <topic>_review.md (## Code review: NOT YET RUN)
+Remedy: run review-loop Pass 2 — orchestrator runs `code-review`, then replaces the
+        `## Code review: NOT YET RUN` line with `## Code review: <date> — passed`
+        (WORKFLOW.md Step 5 Pass 2). Re-invoke pr-prep once every trail is stamped.
+```
+
+Only when every in-scope review file is either stamped or section-absent (exempt) do you continue to step 1.
+
 ### 1. Detect remote shape
 
 Before anything else, classify the remote:
@@ -146,3 +190,4 @@ Include in PR body a migration note:
 - No `git reset --soft`, no force-push unless orchestrator explicitly instructs.
 - No `git config` changes.
 - Never leave the feature's `_review.md` (or per-feature arch notes) uncommitted — they must ship in the release commit.
+- **Never prepare a release past an unstamped code-review trail** (step 0). A review file with a `## Code review` section that is not `## Code review: <date> — passed` blocks the release; report BLOCKED and stop.

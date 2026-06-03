@@ -32,11 +32,13 @@ Run in the main orchestrator session:
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
-**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator does not edit **content artefacts** directly. Content artefacts are anything that captures the project's design, code, contracts or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, feature plans under `docs/features/`, review artifacts under `.ai-pm/reviews/`, arch notes under `.ai-pm/arch/`, audit reports under `.ai-pm/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-legacy-reader`, `pm-auditor`, `pm-plan-checker`, `pm-plan` as a command). When a content artefact needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
+**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator legitimately writes the **outputs of the processes it drives** — the PM conversation produces the backlog and (via `/pm-plan`) the contracts; `/pm-plan` produces the plan; running `code-review` produces the Pass-2 code-review trail; finding a structural protocol gap produces a protocol-feedback report. What it never does is **freehand-edit canon owned by an autonomous agent**. Agent-owned content artefacts are anything that captures the project's design, code, or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, feature plans under `docs/features/`, the **plan-compliance verdict** of a review artifact under `.ai-pm/reviews/` (everything through `## Verdict`, owned by `pm-plan-checker`), arch notes under `.ai-pm/arch/`, audit reports under `.ai-pm/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-legacy-reader`, `pm-auditor`, `pm-plan-checker`, `pm-plan` as a command). When one needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
 
-**Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `.ai-pm/backlog.md` entries, recording PM decisions, choosing remediation order for audit findings, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
+**The one carve-out inside `.ai-pm/reviews/<topic>_review.md`:** `pm-plan-checker` owns everything through `## Verdict`; the orchestrator owns ONLY the `## Code review findings` / `## Code review` trail below it — the Pass-2 code-review record it writes in Step 5 Pass 2. This is the **single** review section the orchestrator writes and the **only** exception to "the orchestrator does not edit content artefacts". It is the output of a process the orchestrator drives (it runs `code-review` and already holds the findings) — routing that data through an agent would pay a hop for data already in hand. The exception is made safe by a **gate, not by discipline**: `pm-pr-prep` refuses to release a feature whose `## Code review` section is unstamped (step 0), and `pm-auditor` blocks an unstamped trail (dimension 1). A manual step with no gate degrades silently — so this one has a gate.
 
-The line: if it captures product design or technical canon, an agent writes it. If it records the conversation with the PM or moves work through the pipeline, the orchestrator writes it.
+**Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `.ai-pm/backlog.md` entries, recording PM decisions, the Pass-2 code-review trail just described, protocol-gap reports under `.ai-pm/protocol-feedback/` (see "When the protocol itself has a gap"), choosing remediation order for audit findings, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
+
+The line: if it captures product design or technical canon an autonomous agent owns, that agent writes it. If it is the output of a process the orchestrator drives — the conversation with the PM, the plan, the code-review trail, a protocol-gap report — or moves work through the pipeline, the orchestrator writes it.
 
 **Remote-system boundary rule (applies to all agents and the orchestrator):** the rule is about **the source of truth**, not about whether ssh-with-write is allowed at all. Production code, configs, schemas, manifests and infrastructure files that **the project owns in git** must change through git — never by editing the file in place on a remote system. Everything else (runtime state, deployment actions, dev experiments, PM-initiated maintenance) is fair game.
 
@@ -124,10 +126,12 @@ After coder (and any doc agents) finish, I tell you:
 - Blocking → `pm-coder` fixes → pass 1 re-runs. Repeat until clean.
 
 **Pass 2 — Technical quality** (`code-review`): bugs, security, dead code, simplifications. Only starts after pass 1 is clean.
+- The review file is **born with a loud marker** — `pm-plan-checker` writes the section as `## Code review: NOT YET RUN`, never an empty `## Code review` heading. An empty section reads as "no findings / passed" to a quick eye or `grep`; a loud marker reads as "not done". A skeleton that looks filled is worse than an absent one.
 - Orchestrator runs `code-review`, takes findings from the output, and appends them to `.ai-pm/reviews/<topic>_review.md` as `## Code review findings` — so `pm-coder` has a persistent artifact to read.
 - `pm-coder` reads `.ai-pm/reviews/<topic>_review.md`, fixes the code-review findings, commits.
 - Orchestrator re-runs `code-review` to verify clean. Repeat until no findings.
-- When clean: orchestrator updates the section to `## Code review: <date> — passed`.
+- When clean: orchestrator **replaces the `## Code review: NOT YET RUN` line** with `## Code review: <date> — passed`.
+- **Pass 2 is NOT complete until the stamp is written.** This is load-bearing, not by-discipline: `pm-pr-prep` refuses to release a feature whose `## Code review` section is unstamped (Step 6 / `pm-pr-prep` step 0) and `pm-auditor` blocks on it (dimension 1). The binary "is the trail done?" is therefore checked at the **gate — after the last action** — not folded into the Pass-1 Definition of Done, which is signed *before* this trail exists. A manual step with no gate degrades silently; this is that gate.
 
 Once both passes clear, I surface only what requires a product decision:
 
@@ -300,6 +304,23 @@ I involve you when:
 **Every question to you must use the AskUserQuestion tool** — never ask as plain text. This keeps decisions explicit and traceable.
 
 Everything else flows automatically.
+
+---
+
+## When the protocol itself has a gap
+
+Sometimes the thing that breaks is not your project — it is the protocol spec itself: a **structural gap** in the tooling under `.ai-pm/tooling`. A contradiction between two rules, a manual step with no gate, a deceptive-empty template that reads as "done", an ordering bug, an artefact nobody owns. When I hit one of these, I do **not** silently work around it — a workaround leaves the next session to trip over the same gap.
+
+Instead I write a structured **protocol-gap report** to `.ai-pm/protocol-feedback/<topic>.md` (the directory is created on first use). This is an orchestration artefact I write directly — record it, route it upstream — the same way I write the backlog. The report has a fixed shape, in English:
+
+- **Symptom** — what degraded or confused, expected-vs-actual.
+- **Root cause** — where in the spec, by file + section; name the mechanism (the contradiction, the ungated step, the deceptive template, the ordering bug, the ownerless artefact).
+- **Minimal fixes** — the smallest concrete edits, each naming its file; mark the one I recommend.
+- **Protocol files touched** — the `.ai-pm/tooling` files a fix would change.
+
+Then I surface it to you in plain language — *"this is a structural gap in the protocol itself, not your project: <one line>. I wrote a report at `.ai-pm/protocol-feedback/<topic>.md` so it can go upstream to `ai-pm-protocol`."* If the upstream remote is known and you want it, I open an issue there. I **never** edit `.ai-pm/tooling` in place — that submodule is canon owned upstream, the same source-of-truth discipline as the remote-system rule. Fixes to it flow upstream through a report, not a local patch that the next template bump silently reverts.
+
+(This very feedback — the review-stamp gate — is the worked example of the format: a deceptive-empty template plus an ungated manual step, reported and fixed upstream.)
 
 ---
 

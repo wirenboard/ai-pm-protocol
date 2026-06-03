@@ -13,6 +13,26 @@
 
 ---
 
+## [2.14.0] — 2026-06-04
+
+Makes the Pass-2 code-review stamp **load-bearing** instead of by-discipline, across two linked themes. **Theme 1 — the stamp now gates the release.** Review files are born with a loud `## Code review: NOT YET RUN` marker (never a deceptively-empty heading), so an unstamped trail is visible rather than silently passing as "done". `pm-pr-prep` gains a pre-flight step 0 that refuses to prepare a release for any feature whose `## Code review` section is unstamped; `pm-auditor` blocks an unstamped trail in dimension 1; and `MIGRATIONS.md` adds a downstream migration to detect and normalize old empty placeholders into the loud marker. The `WORKFLOW.md` edit-ownership rule gains an explicit carve-out — the orchestrator owns the Pass-2 `## Code review` trail — reframed under the general model "the orchestrator writes the outputs of processes it drives". **Theme 2 — protocol-gap feedback obligation.** A new `WORKFLOW.md` section, "When the protocol itself has a gap", requires the orchestrator to write a structured report to `.ai-pm/protocol-feedback/<topic>.md` for upstreaming on discovering a structural protocol-spec gap, instead of silently working around it. This release is also the gate's first live test — it ships through its own newly-added step 0.
+
+### Added
+
+- **Born-honest code-review trail** (`.claude/agents/pm-plan-checker.md`): every new review file is created with a loud `## Code review: NOT YET RUN` marker rather than an empty heading, so an unstamped trail is conspicuous and the downstream gates have an unambiguous unstamped state to key on.
+- **`pm-pr-prep` pre-flight stamp gate** (`.claude/agents/pm-pr-prep.md`, new step 0): before bumping the version, committing, or pushing, `pm-pr-prep` verifies every in-scope `_review.md` whose `## Code review` section is present is stamped `## Code review: <date> — passed`; an unstamped trail returns a BLOCKED report and stops the release. The rule is keyed on section presence (no filename special-casing); section-absent trails are exempt.
+- **`pm-auditor` blocks unstamped trails** (`.claude/agents/pm-auditor.md`): dimension 1 now treats an unstamped `## Code review` section as a blocking finding, so an audit catches a load-bearing-stamp gap independently of the release gate.
+- **Migration: normalize unstamped code-review trails** (`MIGRATIONS.md`): a downstream migration detects old empty `## Code review` placeholders and normalizes them to the loud `## Code review: NOT YET RUN` marker so existing projects gain the conspicuous-unstamped state.
+- **Protocol-gap feedback section** (`WORKFLOW.md`, "When the protocol itself has a gap"): on discovering a structural protocol-spec gap, the orchestrator writes a structured report to `.ai-pm/protocol-feedback/<topic>.md` for upstreaming instead of silently working around it.
+
+### Changed
+
+- **Edit-ownership carve-out for the Pass-2 trail** (`WORKFLOW.md`): the edit-ownership rule gains an explicit carve-out — the orchestrator owns the Pass-2 `## Code review` trail — reframed under the general "the orchestrator writes the outputs of processes it drives" model, making the load-bearing stamp consistent with the edit-ownership invariant.
+- **stamp-grep tightened** (`.claude/agents/pm-pr-prep.md`): the step 0 stamp detection greps `^## Code review(:.*)?$` so it tests the stamp line and its `— passed` date, excluding the separate `## Code review findings` heading from the gate.
+- **Architecture decision record** (`doc/architecture.md`): records the edit-ownership carve-out (orchestrator owns the Pass-2 `## Code review` trail) and the protocol-gap feedback obligation.
+
+---
+
 ## [2.13.0] — 2026-06-04
 
 Adds a full **threat-model lifecycle** as new protocol behaviour, owned by the existing `pm-architect` (no new agent). The lifecycle is gated on security-bearing projects, signalled by the mere presence of `docs/threat-model.md` — the same artifact-driven gating invariant that `MIGRATIONS.md` conditions already use. Bootstrap now drafts the threat-model *populated* (real assets, threats, and mitigations) instead of laying down an empty skeleton; a feature that touches a security-relevant surface must update it, enforced as a `/pm-plan` trigger and a `pm-plan-checker` block; and `pm-auditor` flags an empty threat-model (blocking) or a stale one (note) plus dangling or orphan `SCn` wiring (note). Threats now wire one-way into architecture: a Threats-row Mitigation references `SCn` IDs in `architecture.md` § Security constraints (move-not-copy), and the template gains a dated `Last reviewed` field and an `SCn`-keyed Mitigation column. Origin: real downstream pain — the wb-mqtt-matter "untrusted server" project left its scaffolded threat-model an empty skeleton, so the protocol never made anyone fill it in. The README was also brought to currency in the same release. `tests/hooks.sh` 71/71.
