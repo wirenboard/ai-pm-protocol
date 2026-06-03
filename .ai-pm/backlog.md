@@ -2,6 +2,10 @@
 
 Observations and follow-ups recorded during reviews/audits.
 
+## From orchestrator-discipline gap — 2026-06-03 (this repo)
+
+- **Add a "surface PM decisions via `AskUserQuestion`, not plain prose" rule to the protocol's enforcement surface.** Observed live: the orchestrator repeatedly presented A/B decision-forks to the PM as plain-text "(A) … / (B) …?" instead of using the `AskUserQuestion` tool — the protocol's intended way to surface a choice. Nothing in the protocol nudges this, so it drifts. *Action:* (1) record the convention in `WORKFLOW.md` — when the orchestrator needs a PM decision/fork (scope choice, accept-vs-fix, which-option), use `AskUserQuestion`, not prose; reserve prose for status/explanation. (2) Add a short clause to the `UserPromptSubmit` route-reminder in `.claude/settings.json` (the every-change-turn nudge) pointing at it, so it is reinforced on each change request. *Why:* `AskUserQuestion` gives the PM structured, comparable options (and previews) — plain-prose forks are easy to skim past and produce lower-quality answers; the protocol already treats the reminder as its soft enforcement surface, so this is the natural home. Small `/pm-fixup` or `/pm-plan` (settings.json reminder + WORKFLOW.md). Sequence **after** the contract-two-layer-token-lint PR lands (PM decision 2026-06-03).
+
 ## From full audit — 2026-06-03 (this repo)
 
 - **accepted (auditor-2026-06-03): pre-protocol-migration.** Four foundational plans have no matching `.ai-pm/reviews/` review — `template-v2`, `contract-centric-product-map`, `diagnostic-probe-mode`, `protocol-builtins-realignment`. These predate the current plan→review→audit trail discipline (pre-protocol-migration bundle). Accepted as-is, not retroactively reviewed — the work they describe is long since shipped and superseded by later cycles. Recorded once so future audits skip re-raising it. Audit notes 1-3 (WORKFLOW.md / architecture.md doc-currency) were fixed in the audit-2026-06-03 remediation PR; note 5 (`doc/protocol-vs-builtins-analysis.md` is a Russian internal analysis doc) is intentionally out of scope of English-canonical — no action.
