@@ -24,7 +24,7 @@ Adds a new home for technical taxonomies and invariants (`## Behavioral contract
 - **Legacy-reader routing** (`pm-legacy-reader.md:70`): new guidance routes observed identifiers (status enums, topic/ID names, QoS, retain, reachability rules) into the architecture draft's `## Behavioral contract` section, never into journey step bodies.
 
 ### Changed
-- **Architecture record** (`doc/architecture.md` §5): recorded that technical taxonomies and invariants are owned by a single Behavioral contract section; journeys are human-language and reference it move-not-copy. Owner: `pm-architect`.
+- **Architecture record** (`doc/architecture.md`): recorded that technical taxonomies and invariants are owned by a single Behavioral contract section; journeys are human-language and reference it move-not-copy. Owner: `pm-architect`.
 
 ---
 
