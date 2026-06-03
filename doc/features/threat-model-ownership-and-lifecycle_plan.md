@@ -50,9 +50,12 @@ update + audit + plan-checker gate), gated on **security-bearing projects only**
    spawn `pm-architect` to draft / refresh it (including backfilling from threat-driven
    decisions already recorded in `architecture.md`).
 6. The list of **security-relevant surfaces is defined once** (single-source) and
-   referenced by name from `/pm-plan`, `pm-plan-checker`, and `pm-auditor` — never
-   re-encoded, mirroring the single-source-of-conditions invariant used for the
-   migration conditions in `MIGRATIONS.md`.
+   referenced by name from `/pm-plan` and `pm-plan-checker` — never re-encoded,
+   mirroring the single-source-of-conditions invariant used for the migration
+   conditions in `MIGRATIONS.md`. `pm-auditor` does **not** need the list at all: it
+   keys off the durable artifact instead — a feature is "security-touching" when its
+   plan named `docs/threat-model.md` in "Docs to update" (which the plan-checker gate
+   guarantees) — so the list still appears in exactly one place.
 7. **Non-security projects are unaffected** — no threat-model is required and nothing
    is flagged.
 
