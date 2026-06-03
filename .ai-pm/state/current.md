@@ -1,24 +1,5 @@
 # Execution State
 
-- **Task:** Make the code-review (Pass 2) stamp load-bearing — loud marker + `pm-pr-prep` gate + `pm-auditor` backstop, edit-ownership carve-out + reframed orchestrator-writes model, DoD ordering fix, downstream migration; plus the protocol-gap feedback obligation.
-- **Status:** coding — pm-coder done; ready for review loop
-- **Plan:** `doc/features/review-stamp-gate_plan.md`
-- **Branch:** `feature/review-stamp-gate`
-- **Done:**
-  - Plan written and PM-approved (carve-out writer choice, no `main`/`Edit|Write` guard in scope).
-  - Backlog line 33 re-opened with corrected rejection basis + 2026-06-04 recurrence (orchestration artefact).
-  - `pm-coder` implemented all 7 scenarios:
-    - `WORKFLOW.md` — edit-ownership carve-out + reframed "outputs of processes it drives" model; Step 5 Pass 2 loud `NOT YET RUN` marker + load-bearing stamp tied to the gate; new "When the protocol itself has a gap" section before Maintenance.
-    - `.claude/agents/pm-plan-checker.md` — template now writes loud `## Code review: NOT YET RUN` (never empty heading); File-ownership text reflects born-honest marker + carve-out.
-    - `.claude/agents/pm-pr-prep.md` — new step 0 pre-flight stamp gate (keyed on `## Code review` section presence; fixup exempt); Hard-rule reference.
-    - `.claude/agents/pm-auditor.md` — dimension 1: unstamped `## Code review` section == blocking; section-absent exempt.
-    - `MIGRATIONS.md` — detection condition (positive presence of unstamped heading) + idempotent loud-marker normalization procedure.
-  - `bash tests/hooks.sh` green (71/71; no new hook).
-  - CR1 fixed: `pm-pr-prep` step-0 illustrative snippet now positively tests for the `— passed` stamp (two-branch grep), not just the heading; prose normative rule unchanged.
-- **Remaining:**
-  - Post-coding: spawn `pm-architect` to update `doc/architecture.md` § "Edit-ownership split" (carve-out + reframed model + protocol-feedback mechanism) — DoD item 8.
-  - Review loop: `pm-plan-checker` (Pass 1) → `code-review` (Pass 2) → stamp.
-  - `pm-pr-prep` (MINOR bump).
-- **Touched files:** `WORKFLOW.md`, `MIGRATIONS.md`, `.claude/agents/pm-plan-checker.md`, `.claude/agents/pm-pr-prep.md`, `.claude/agents/pm-auditor.md`, `.ai-pm/state/current.md`.
-- **Next step:** review (spawn `pm-architect` for `doc/architecture.md`, then run the review loop).
-- **Validation:** `bash tests/hooks.sh` stays green (no new hook); editorial scenario coverage by `pm-plan-checker` + `code-review`.
+- **Status:** idle
+- **Last shipped:** `review-stamp-gate` — Pass-2 code-review stamp made load-bearing (loud `NOT YET RUN` marker, `pm-pr-prep` step-0 gate, `pm-auditor` backstop, edit-ownership carve-out, downstream migration) + protocol-gap feedback obligation. Released v2.14.0, PR #185 merged 2026-06-04. Archived: `.ai-pm/state/archive/review-stamp-gate-2026-06-04.md`.
+- **Next up (in `.ai-pm/backlog.md`):** EPIC "technical-over-product bias" — anchor `pm-product-advocate` (independent product referee; likely `/pm-research` then `/pm-plan`), then bootstrap journey asymmetry, product-lag auditor note, cross-document consistency auditor. "Завтра пойдём прогать."
