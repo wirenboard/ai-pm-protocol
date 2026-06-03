@@ -54,6 +54,7 @@ Optional parameters:
 For every feature in the inventory:
 - `docs/features/<topic>_plan.md` exists → **blocking** if missing.
 - `.ai-pm/reviews/<topic>_review.md` exists (or pm-plan-checker gave written sign-off) → **blocking** if missing.
+- `.ai-pm/reviews/<topic>_review.md` **contains** a `## Code review` section that is **unstamped** — `## Code review: NOT YET RUN`, an empty `## Code review` heading, or a `## Code review:` line with no trailing `— passed` date → **blocking** (encodes "empty == unstamped == blocker"; this is the backstop for anything that bypassed the `pm-pr-prep` step-0 gate). A review file with **no** `## Code review` section (a trivial-fixup `fixup-*_review.md`) is **not** flagged on this rule — section-absence is the exemption, no filename special-casing. Remediation: re-run review-loop Pass 2 — the orchestrator runs `code-review`, then stamps the section `## Code review: <date> — passed`; if review genuinely never ran, that missing run is the gap this rule exists to catch.
 - Plan's Scenarios section mentions user-observable outcomes → `.ai-pm/contracts/<feature>.md` must exist → **blocking** if missing.
 
   **How to check — mandatory extraction step:**
