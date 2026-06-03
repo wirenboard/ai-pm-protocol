@@ -15,6 +15,7 @@
 ## Architecture
 
 ### Tech stack
+
 | Layer | Choice | Why |
 |---|---|---|
 | Language | <...> | <reason> |
@@ -30,12 +31,14 @@ Agents must not violate these without an explicit PM decision:
 - <add constraints specific to this project>
 
 ### Security constraints
+
 - <e.g., "Passwords: bcrypt only, never stored plain or logged">
 - <e.g., "API keys and tokens: env vars only, never in code, logs, or response headers">
 - <e.g., "User input: always validated before use — no raw strings to DB or shell">
 
 ### Code conventions
 AI-specific minimums (adjust in linter config if needed for this project):
+
 - Max file length: 300 lines
 - Max function/method length: 50 lines
 - Cyclomatic complexity: max 10

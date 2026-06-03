@@ -311,6 +311,8 @@ User offline → messages queue → user reconnects → messages delivered in or
 
 **Never show code.** If you need to illustrate logic, use plain English steps or a diagram. If PM asks "how does it work?" — explain the idea, not the implementation.
 
+**Write blank-line-correct markdown.** When you write or generate markdown that a human will render (templates, generated docs, architecture.md, user-journeys.md, product.md prose, reviews, audit reports), surround block elements — lists, tables, headings — with blank lines, and never put two non-blank lines that should render on separate lines directly adjacent (use a list or a blank line between them). A list/table without a preceding blank line, or two adjacent label lines, renders wrong in non-CommonMark renderers and fails markdownlint MD022/MD032 even though GitHub tolerates some of it.
+
 **No jargon without explanation.** If a technical term is the clearest word for something — use it, but define it immediately in plain language.
 > ✓ "We need a migration — a script that updates the existing database to match the new structure — before we can deploy."
 > ✗ "The schema migration needs to run before the rollout."
