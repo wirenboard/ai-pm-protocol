@@ -301,6 +301,7 @@ Do **not** print a generator-mechanics header ("Source of truth = contracts. Gen
 ## <Component>
 
 ### [<Contract name>](../.ai-pm/contracts/<name>.md) — live
+
 - **User value:** <one line from the contract's `## User value` section>
 - **Out of scope:** <compact projection of the contract's `## Out of scope` bullets — omit this bullet when there is no Out of scope>
 
@@ -329,6 +330,7 @@ Two contracts (`dimmer-control`, `scene-recall`) live under a "Lighting" compone
 ## Lighting
 
 ### [dimmer-control](../.ai-pm/contracts/dimmer-control.md) — live
+
 - **User value:** A user can smoothly dim any connected dimmable light from the app, and the brightness it shows always matches the lamp.
 - **Out of scope:** no RGB or colour-temperature control; non-dimmable fixtures are out of scope.
 
@@ -340,6 +342,7 @@ Built by:
 | [scene-engine](features/scene-engine_plan.md) | 2025-10-15 | [R](../.ai-pm/reviews/scene-engine_review.md) |
 
 ### [scene-recall](../.ai-pm/contracts/scene-recall.md) — live
+
 - **User value:** A user can save the current lighting as a named scene and bring it back with one tap.
 - **Out of scope:** no scheduled or location-triggered scenes; scenes are not shared between users.
 
