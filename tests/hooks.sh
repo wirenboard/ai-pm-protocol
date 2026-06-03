@@ -423,6 +423,22 @@ run_ups_case "ups: 'спасибо, отлично' (chit-chat) -> silent" \
 run_ups_case "ups: 'как это устроено?' (question) -> silent" \
     "silent" "$(mk_input_prompt 'как это устроено?')"
 
+# Removal/rename/extract/update verbs (RU + EN) — the broadened vocabulary
+# that closes the route-enforcement gap (repo-change requests phrased with an
+# edit/removal verb now fire the reminder).
+run_ups_case "ups: 'убери модель хайку у агента' -> inject" \
+    "inject" "$(mk_input_prompt 'убери модель хайку у агента')"
+run_ups_case "ups: 'remove the haiku model' -> inject" \
+    "inject" "$(mk_input_prompt 'remove the haiku model')"
+run_ups_case "ups: 'удали старый шаблон' -> inject" \
+    "inject" "$(mk_input_prompt 'удали старый шаблон')"
+run_ups_case "ups: 'переименуй файл конфигурации' -> inject" \
+    "inject" "$(mk_input_prompt 'переименуй файл конфигурации')"
+run_ups_case "ups: 'обнови README' -> inject" \
+    "inject" "$(mk_input_prompt 'обнови README')"
+run_ups_case "ups: 'как это обновляется?' (question) -> silent" \
+    "silent" "$(mk_input_prompt 'как это обновляется?')"
+
 # ----------------------------------------------------------------------
 # Summary
 # ----------------------------------------------------------------------
