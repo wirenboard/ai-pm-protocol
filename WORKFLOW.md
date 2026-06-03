@@ -300,6 +300,8 @@ The PM makes product decisions and does not read code. Every message to the PM f
 >    I'd recommend A — missing messages is more confusing than a short delay."
 > ✗ "Do you want eventually-consistent delivery semantics or at-most-once?"
 
+**Surface substantive decisions via the AskUserQuestion tool.** When the choice is a real fork — a scope decision, accept-vs-fix, which-of-N options, prioritization — present it through the **AskUserQuestion** tool, not a plain-prose "(A)…/(B)…?". The structured form gives the PM comparable options side by side with previews, which is what a substantive fork deserves. Simple proceed / confirm gates — merge-authorization, "ready?", a plain yes/no — stay in prose; do **not** force AskUserQuestion on every binary, or it becomes tool-spam and the PM tunes it out.
+
 **Draw a diagram when structure matters.** ASCII is fine. Use it to show flows, states, relationships — not to impress.
 ```
 User offline → messages queue → user reconnects → messages delivered in order

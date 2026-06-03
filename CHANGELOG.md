@@ -13,6 +13,19 @@
 
 ---
 
+## [2.11.0] — 2026-06-03
+
+Adds a protocol convention: the orchestrator surfaces substantive PM decision-forks — scope choices, accept-vs-fix, which-of-N, prioritization — via the AskUserQuestion tool rather than plain-prose "(A)/(B)?" forks, while simple proceed/confirm gates (merge-authorization, "ready?", plain yes/no) stay prose to avoid tool-spam. The convention is recorded in WORKFLOW.md and reinforced by a short clause appended to the UserPromptSubmit route-reminder. Motivation: the orchestrator drifted to plain-prose forks with nothing nudging it back.
+
+### Added
+- **AskUserQuestion convention for PM decision-forks** (`WORKFLOW.md`, near the PM-communication guidance): substantive forks — scope, accept-vs-fix, which-of-N, prioritization — are presented through the AskUserQuestion tool (structured, side-by-side options with previews); simple proceed/confirm gates (merge-auth, "ready?", plain yes/no) stay prose so the structured form does not become tool-spam.
+
+### Changed
+- **Route-reminder clause** (`.claude/settings.json`, `UserPromptSubmit` hook): the `additionalContext` text now carries a short clause pointing at the AskUserQuestion convention. Text-only addition — the matcher, the trigger regex, and the `hookSpecificOutput.additionalContext` output shape are unchanged.
+- **Architecture currency note** (`doc/architecture.md`): added a dated note recording that the route reminder now points at the AskUserQuestion convention, with the convention itself owned by `WORKFLOW.md`.
+
+---
+
 ## [2.10.0] — 2026-06-03
 
 Extends the two-layer docs split into feature contracts (slice 4). A contract's `## User value` / `## Out of scope` are now the token-free PM layer (plain product language), while machine grammars — topic conventions, `<x>_<y>` id/format grammars, status enums, dotted config keys, `retain` / `QoS` flags, raw wire ranges — are single-owned in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` and referenced from `## Must work` / `## Must not break`, never restated inline. A structural wire-token lint backs the split, and existing token-laden contracts get a move-not-copy migration that preserves every guarantee. Motivation: caught live on wb-mqtt-matter 2026-06-03 — wire-tokens leaked through a contract's `## Out of scope` into the PM-facing product-map.
