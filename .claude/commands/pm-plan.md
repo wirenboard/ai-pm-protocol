@@ -252,6 +252,8 @@ If PM says no or later → continue with this feature.
 If **no audit has ever been run** (.ai-pm/audits/ empty or missing):
 > "This project hasn't had a protocol check yet. Want to run one before we plan this feature? It verifies that all previous work is properly documented."
 
+**Autonomous branch.** When the effective authority is `autonomous`, the retrospective/audit nudge is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): auto-decide — run `/pm-audit` when the 5-since-last threshold trips — and **announce**, instead of asking. The PM interrupts to override.
+
 **Pending-migration nudge.** If the project shows an un-migrated template structure (per `### Pending-migration detection` in `MIGRATIONS.md` — a lingering `docs/features/_index.md`, or a generated `docs/product.md` with the frozen signature line and no `docs/product-map.md`), surface it before new work:
 > "This project is on an older template structure — `docs/product-map.md` hasn't been generated yet. Worth running the pending `/pm-bootstrap` migration first so we plan against the current format. Run the migration now?"
 
@@ -276,6 +278,8 @@ There is also the **token-laden-contract** case in `### Pending-migration detect
 > "One of your feature contracts mixes technical detail (topic formats, value ranges) into the parts meant for plain product language. I can run the contract two-layer migration: the technical grammar moves into the single architecture reference, the user-facing parts are rephrased in plain language, and every promise the contract makes is preserved. Run it before planning?"
 
 If PM says yes → run the **contract two-layer migration procedure** in `MIGRATIONS.md` before proceeding (move-not-copy, performed by `pm-architect`, preserves every guarantee).
+
+**Autonomous branch (all pending-migration nudges above).** When the effective authority is `autonomous`, a pending-migration nudge is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): run the detected pending migration + **announce**, instead of asking. The PM interrupts to override.
 
 Don't implement fixes, don't block planning. PM decides.
 
@@ -308,9 +312,13 @@ If PM says yes — invoke `pm-architect` (`subagent_type: "pm-architect"`) with 
 If PM says no — hand off to coder with plan only.
 If **none apply** — hand off to coder directly without mentioning architect.
 
+**Autonomous branch.** When the effective authority is `autonomous`, the architect-review offer is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): the orchestrator decides itself — run the arch review when the criteria above match, skip it otherwise — and **announces** the decision, instead of asking. The PM interrupts to override.
+
 ## Handoff
 
 Show the draft to PM. Iterate until PM says ok.
+
+**Autonomous branch.** When the effective authority is `autonomous`, plan-approval is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): announce the plan summary + proceed to the next step instead of relaying "approve the plan?" — the product-readiness advocate gate and `pm-plan-checker` **still run** (auto-proceed advances the pipeline, it does not skip the genuine-fork checks below). The PM interrupts the announce to steer or stop.
 
 Save to `docs/features/<topic>_plan.md`.
 
@@ -341,6 +349,8 @@ If yes and the feature does not yet have a contract: draft `.ai-pm/contracts/<fe
 If yes and the contract exists: surface it to PM ("this touches contract X — Must work / Must not break items will be re-verified by reviewer").
 
 If no (backend-only): skip silently; note "no contract — change is backend-only" in the plan handoff message.
+
+**Autonomous branch.** When the effective authority is `autonomous`, the contract-existence question is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): derive user-facing from the existing human-role-subject extraction (the same rule the Product-readiness gate uses) + **announce** the result, instead of asking the PM — then draft the contract (user-facing) or skip silently (backend-only) as above. The PM interrupts to override.
 
 Tell PM the plan is saved, state is initialized. Then, before the coder handoff, run the **Product-readiness gate** above (user-facing features only — exempt and silent for backend-only changes by the same human-role-subject extraction) and the **Architect check** above. The coder handoff stays blocked until the product-readiness gate is resolved (`clean`, or every gap answered/descoped).
 
