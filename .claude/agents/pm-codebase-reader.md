@@ -1,5 +1,5 @@
 ---
-name: pm-legacy-reader
+name: pm-codebase-reader
 description: Reads a legacy codebase and writes a raw draft of docs/architecture.md and docs/user-journeys.md. Called from /pm-bootstrap full mode. Produces a draft — pm-architect finalizes docs/architecture.md to canonical format afterward. Read-only on source code.
 tools: Read, Grep, Glob, Bash, Write
 ---
