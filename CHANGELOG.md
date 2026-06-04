@@ -13,6 +13,23 @@
 
 ---
 
+## [2.22.0] — 2026-06-04
+
+Ships **taxonomy-drift-sweep** — slice 2 of the cross-document-consistency auditor EPIC (slice 1 = `invariants-index`, v2.21.0). `pm-auditor` dimension 5 gains a **journey identifier-restatement check**: when a journey is moved (not copied) into the Behavioral contract, the auditor verifies the journey's identifier is restated at its single home and flags drift where a backticked token names a journey that no longer lives where it is referenced. The check is **gated to backticked tokens** (so prose mentions never false-trigger) and **exempts the Behavioral-contract reference** itself. The move-not-copy rule is backstopped by `pm-auditor`, with `pm-architect` carrying a one-line note pointing at that backstop. Additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **`pm-auditor` dimension-5 journey identifier-restatement check** — verifies that a journey moved into the Behavioral contract restates its identifier at its single home, and flags drift when a backticked token names a journey no longer co-located with its reference. The check is gated to backticked tokens (sc1) and exempts the Behavioral-contract reference; the silent-condition (sc3) was corrected in-pass.
+- **`pm-architect` move-not-copy backstop note** — a one-line note recording that the journey move-not-copy rule is backstopped by `pm-auditor` dimension 5.
+- **Architecture decision record** — the taxonomy-drift-sweep decision (gate sc1 to backticked tokens, exempt the Behavioral-contract reference) recorded in `doc/architecture.md`.
+
+### Notes
+
+- Back-compat: additive only — projects with no moved journeys are unaffected. **No migration.**
+- Slice 2 of the cross-document-consistency auditor EPIC; builds on the v2.21.0 `### System invariants` index.
+
+---
+
 ## [2.21.0] — 2026-06-04
 
 Ships **invariants-index** — the first slice of the cross-document-consistency auditor EPIC. The `## Behavioral contract (taxonomies & invariants)` section in `architecture.md` gains a single **`### System invariants`** index: one entry point for cross-cutting system invariants, each listed **by reference to its single home** (inline, an `SCn` by ID, or a journey by name). `SCn` invariants are indexed by ID and **never relocated** — mirroring the existing threat→constraint-by-ID pattern, so there is no duplication. `pm-architect` authors the index; `pm-auditor` dimension 5 gains a **structural, presence-conditional note** (triggered only when there is ≥1 `SCn` and/or ≥1 journey `**Invariants:**` block — it is not security-bearing) that flags unindexed invariants **without blocking**. Additive, fully back-compatible, **no migration**.

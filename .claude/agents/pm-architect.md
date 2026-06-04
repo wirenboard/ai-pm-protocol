@@ -104,7 +104,7 @@ For each journey:
 - **Step table:** `| Step | What user does | What system does | What can go wrong |`
 - Note non-obvious system behavior: auto-matching, background processing, mode switches, split outputs
 
-**Format rule (move-not-copy, carried from the journeys template and the former owner).** Write the step bodies in **human language** — what the user does and observes. Keep **machine identifiers out of the steps**: a status enumeration, a topic / ID / name grammar, a retain or QoS flag, a reachability rule belongs in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)`, not in a journey step. State each such identifier **once** there and let the journey **reference that section by name** — do not restate it in the step beside a pointer.
+**Format rule (move-not-copy, carried from the journeys template and the former owner).** Write the step bodies in **human language** — what the user does and observes. Keep **machine identifiers out of the steps**: a status enumeration, a topic / ID / name grammar, a retain or QoS flag, a reachability rule belongs in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)`, not in a journey step. State each such identifier **once** there and let the journey **reference that section by name** — do not restate it in the step beside a pointer. This discipline is now **backstopped by `pm-auditor`** (dimension 5, the journey identifier-restatement check), so a restated identifier earns an audit note rather than going unnoticed.
 
 **Language canon:** English on disk, same as the rest of Section A.
 
