@@ -392,7 +392,9 @@ This pass forces the **questions** only. It does **not** auto-draft a populated 
 
 Tell PM: "Project initialized. Describe a feature and I'll help plan it."
 
-Do NOT start planning a feature until PM explicitly asks.
+Do NOT start planning a feature until PM explicitly asks (interactive mode — in autonomous mode the first feature is derived and announced, see the autonomous branch below).
+
+**Autonomous branch (`### Decision authority` in `WORKFLOW.md`).** When the effective authority is `autonomous`, the first feature is not relayed: derive it from the bootstrap mandate (and any seeded backlog), announce it on the announce-before-act line, and proceed into `/pm-plan` — per the feature-selection scope of `### Decision authority` (referenced by name; do not re-encode the enum/default or the selection rule). Escalate (one `AskUserQuestion`) only when the mandate yields no derivable first feature — an expected, healthy bootstrap escalation, not a defect.
 
 ---
 
