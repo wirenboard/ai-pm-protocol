@@ -45,6 +45,14 @@ Things that must not be violated without an explicit PM decision. Agents read th
 - <e.g., "No external services in hot path — everything must work offline. Reason: embedded deployment.">
 - <e.g., "No background threads outside the worker pool — reason: reproducibility in tests.">
 
+## Operational limits & budgets
+
+The project's quantified **resource and scale budget** — the sized engineering bounds the system must stay within: RAM ceiling, boot-time budget, CPU headroom, system-level max-N (e.g. max devices / endpoints / connections the system handles). This is the sibling of `## Architectural constraints` for *numbers*: constraints state qualitative don't-violate rules, this section states quantified bounds with a unit and a scope. **Quantified engineering bounds only** — a *user-facing* limit the product promises (max devices the product supports, perceived throughput) is a promise to the user and lives in the feature's Product Contract `## Must not break`, not here. Record a budget you cannot quantify without real platform knowledge as `[?]` for the PM to confirm — **never invent a number** (a confabulated "RAM ≤ 64 MB" reads as authoritative and is worse than `[?]`). Mark `N/A — <reason>` for projects with no quantified budget (the common case — this section is born `N/A`, like every other conditional section).
+
+- <e.g., "RAM ≤ 64 MB resident — reason: embedded controller with 128 MB total.">
+- <e.g., "Boot to ready ≤ 8 s — reason: watchdog reset window.">
+- <e.g., "≤ 200 endpoints per instance — reason: single-threaded poll loop headroom.">
+
 ## File layout (module map)
 
 Coarse map of the developer/agent-facing source structure: **one row per top-level directory or module → one-line responsibility**. Stay coarse — NOT per-function, NOT a file listing (that drifts the moment code moves). This is the `src/` structure on the *responsibility* axis, distinct from `docs/product.md` "## Documents" (which is PM-facing navigation over `docs/`). This is the section `pm-architect` (A4) cross-checks against `ls` + `git ls-tree -r --name-only HEAD`, and the section `pm-auditor` keys its "major components listed?" check on — keep it honest against the real tree.

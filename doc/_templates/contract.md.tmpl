@@ -29,6 +29,8 @@ One contract per user-facing feature. Backend-only changes (refactors, infra) do
 ## Must not break
 
 > **Reference grammars, don't restate them.** As in `## Must work`: invariants that depend on a machine grammar or taxonomy (topic conventions, id/name formats, enums, value ranges) reference the single owner in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` rather than restating the grammar inline. The invariant is the promise that must stay true; its exact wire shape lives once in the Behavioral contract.
+>
+> **A quantified user-facing limit belongs here.** A limit the product promises the user — max devices / endpoints the product supports, perceived throughput — is a Must-not-break item; this is its home. (The engineering bound behind it — RAM ceiling, boot time, system-level max-N — is a resource budget and lives in `docs/architecture.md` `## Operational limits & budgets`, not here.)
 
 <bulleted list — invariants that must hold even after future changes. Each item is something that must remain true.>
 

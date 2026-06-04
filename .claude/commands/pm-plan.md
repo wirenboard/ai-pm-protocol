@@ -125,6 +125,22 @@ Before drafting the plan, check whether this feature touches a security-relevant
 
 If **both** hold: the plan **must** name `docs/threat-model.md` in its "Docs to update" section, with the relevant Threat rows to add or update. After pm-coder finishes, the orchestrator spawns `pm-architect` to update it — this rides the **same** "Docs to update" post-coding handoff already described above for `docs/architecture.md` (same owner, same trigger). `pm-plan-checker` blocks a security-touching plan on a security-bearing project that omits this. This is not a PM question — PM never sees this step.
 
+## NFR / operational-limits check (conditional, judgment-triggered)
+
+Before drafting the plan, judge whether this feature or its platform carries a **resource and scale budget** worth recording. The check fires when **either** of these holds — silent otherwise:
+
+- **Scale-bearing feature?** The feature's core scales with a count the system must bound — devices / endpoints / connections / sessions / subscriptions / messages-per-second / queue depth. This is a judgement about *this* feature, re-made each plan against that concrete bounded-count list — not "any feature that touches more than one thing".
+- **Resource-constrained platform?** The platform is resource-constrained — read the signal from the **two named sources only**: an embedded / limited-RAM / Docker-on-controller note in `docs/stack-notes.md`, or an "embedded / offline / must-fit-X" boundary in `docs/architecture.md` `## Architectural constraints`. This can fire for the **system's** budget (RAM, boot time, CPU headroom) even when the individual feature is not itself scale-bearing.
+
+The trigger is a **semantic judgement a regex cannot make** — so there is **no hook** and no mandatory plan section, exactly like the product-readiness gate. If **neither** holds — the check is **silent**, no budget question, like the Security-surface check on a non-security project (proportional, never blanket-mandatory on every tiny project).
+
+When it fires, surface *"what is this feature's / the system's resource and scale budget?"* and route the answer to its audience-split home — never a new parallel document:
+
+- **User-facing limits → the Product Contract `## Must not break`.** A limit the PM cares about — max devices / endpoints the product supports, throughput the user perceives — is a promise to the user, so it belongs in the feature's Product Contract `## Must not break` as a quantified invariant. This half is a **product question** for the PM, surfaced per the **product vs technical** rule below (what the product promises to support is product; the engineering number behind it is not).
+- **Resource budgets → `docs/architecture.md` `## Operational limits & budgets`.** An engineering bound — RAM ceiling, boot-time budget, CPU headroom, system-level max-N — goes to the new conditional `## Operational limits & budgets` section in `docs/architecture.md` (referenced by name; never re-encode its content here). Name it in the plan's "Docs to update"; `pm-architect` authors/refreshes it on the post-coding "Docs to update" handoff, the **same** trigger as a decision record.
+
+Record a budget the orchestrator cannot quantify without real platform knowledge as `[?]` for the PM to confirm — **never invent a number** (the same "never invent to fill" discipline `pm-architect` applies to the Behavioral contract). There is no hard gate this slice: the prompt degrades silently if the trigger is misjudged, and the homes make a recorded budget recoverable at the next refresh.
+
 ## Planning conversation
 
 Ask clarifying questions as needed — grounded in what you read. Typical questions:
