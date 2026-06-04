@@ -13,6 +13,24 @@
 
 ---
 
+## [2.20.0] — 2026-06-04
+
+Adds **automode** — a decision-authority mode that lets the protocol resolve advocate gaps on its own when the canon already answers them, instead of stopping to ask the PM for every fork. The mode is `autonomous | interactive`, **defaults to interactive**, and is graded and capped: autonomy applies only to deriving a decision from cited canon — **merge and ship stay manual in both modes**. Two scopes share one engine: a project-wide setting in a dedicated `.ai-pm/decision-authority.md`, and a per-feature override on the plan's `Decision authority:` line. Fully back-compatible — an absent file or an unrecognized value falls back to `interactive`, and there is **no migration**.
+
+### Added
+
+- **Decision-authority engine (single source + autonomous branch)** — `### Decision authority` defines the `autonomous | interactive` mode and the Step 3.5 autonomous branch. When autonomous, an advocate gap runs a **derive-from-cited-canon-or-escalate** gate: if the answer is derivable from cited canon the protocol resolves it; otherwise it escalates to the PM. Every autonomous decision is **announced in the console** and recorded as an `auto` or `escalated` entry under `## Resolutions`.
+- **Two scopes, one engine** — project-wide authority lives in `.ai-pm/decision-authority.md`; a per-feature override lives on the plan's `Decision authority:` line. Same gate, same trail, two homes.
+- **Citation-presence backstops** — `pm-plan-checker` and `pm-auditor` now guard that every `auto`-resolution entry carries a citation, so an autonomous decision cannot land uncited.
+- **`veto-window-seconds`** is **recorded** alongside autonomous resolutions for honesty/auditability. Note (timer-honesty caveat): in v1 this value is recorded only — it is **not** enforced as a live countdown.
+
+### Notes
+
+- Back-compat: an **absent** `.ai-pm/decision-authority.md` or an **unrecognized** mode value ⇒ `interactive`. No migration is required.
+- Scope of autonomy is intentionally narrow: deriving a resolution from cited canon. Merge and ship remain a manual PM action in both modes.
+
+---
+
 ## [2.19.0] — 2026-06-04
 
 Generalizes the v2.18.0 process flavor (which shipped **too narrow** — deliverable = a single rigid SOP) into a broader **documentation** flavor. The protocol now develops documentation projects of any shape — SOPs/runbooks, guides, specs, diagrams — not only a single SOP. The kind axis becomes `software | documentation`, the deliverable is open (one or several documents in a dedicated `deliverable/` directory), and the v2.18 dry-run stamp generalizes into one `## Validation` stamp with a declared method. Backward-compatible (`absent OR unrecognized ⇒ software`); reuse-not-new-surface — no new command, agent, or hook. This template repo stays software-kind (the machinery is dormant here except as the template it ships).
