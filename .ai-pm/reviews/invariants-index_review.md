@@ -70,9 +70,8 @@ surfaced one real (minor) finding, confirmed:
    the check exists to catch. Low severity (a real project's `pm-architect` replaces template
    examples at bootstrap), but the template sets the standard.
 
-## Code review: NOT YET RUN
-<!-- The orchestrator replaces THIS WHOLE LINE with `## Code review: <date> — passed`
-     only when code-review clears. Until then the section is UNSTAMPED: `pm-pr-prep`
-     refuses to release it (step 0) and `pm-auditor` blocks on it (dimension 1).
-     Never ship an empty `## Code review` heading — an empty section reads as
-     "no findings / passed" to a quick eye or grep; `NOT YET RUN` reads as "not done". -->
+## Code review: 2026-06-04 — passed
+<!-- Pass 2 clean after fix (`cb1d0f1`). Finding 1 (template example modelled a dangling `SCn`)
+     resolved: the index example now references an in-range illustrative `SC3` framed as
+     "whichever `SCn` you assigned" — self-consistent, no longer dangling, still shows all
+     three reference forms. Finder 2 was clean (0). tests/hooks.sh 71/71. -->
