@@ -13,6 +13,26 @@
 
 ---
 
+## [2.24.0] — 2026-06-04
+
+Ships **automode-procedural-gates** — generalizes the shipped automode (`### Decision authority` engine) from a single-gate capability into a **graded procedural-gate progression**. In autonomous mode the routine procedural gates — feature-selection, plan-approval, arch-offer, retrospective / migration nudges, contract-existence — become **announce-and-proceed**: the orchestrator states the call and continues without a stop. A **genuine product fork** still derives-or-escalates (no silent product decision), and **merge / ship stays manual** regardless of mode. The autonomous branches cite their basis (a `Source:` line) so an announced call remains auditable. Additive over the existing engine, fully back-compatible, **no migration**.
+
+### Added
+
+- **`### Decision authority` generalized + autonomous rider (`WORKFLOW.md`)** — the engine grows from feature-selection alone to the full set of routine procedural gates; an autonomous-mode rider makes each an announce-and-proceed call while genuine product forks still derive-or-escalate, and Step 6 reflects that merge / ship remains a manual gate.
+- **5 autonomous procedural-gate branches in `/pm-plan`** — feature-selection, plan-approval, arch-offer, retrospective / migration nudge, and contract-existence each gain an autonomous branch that announces the call and proceeds, every branch carrying a `Source:` line so the basis of the call is auditable.
+- **Autonomous first-feature selection in `/pm-bootstrap`** — the bootstrap first-feature gate honors autonomous mode, announcing and proceeding from canon instead of stopping for selection.
+- **Selection-citation backstop in `pm-plan-checker`** — verifies an announced autonomous selection cites its source, so an announce-and-proceed call cannot ship without a recorded basis.
+- **Architecture decision record** — the procedural-gate generalization recorded in `doc/architecture.md` (graded scope of the Decision authority engine, announce-and-proceed vs derive-or-escalate vs manual merge / ship).
+
+### Notes
+
+- Back-compat: additive only — the engine still behaves exactly as before in interactive mode; autonomous mode gains the announce-and-proceed progression. **No migration.**
+- The manual / autonomous boundary is deliberate: routine procedural gates proceed announced, genuine product forks derive-or-escalate, and merge / ship stays a manual gate in every mode.
+- Renamed mid-flight from `automode-feature-selection` to `automode-procedural-gates` once the scope broadened from a single gate to the procedural-gate progression; all branch commits ship under the final name.
+
+---
+
 ## [2.23.0] — 2026-06-04
 
 Ships **nfr-operational-limits-prompt** — slice 3 of the cross-document-consistency auditor EPIC (slice 1 = `invariants-index`, v2.21.0; slice 2 = `taxonomy-drift-sweep`, v2.22.0). Closes the **NFR / operational-limits** gap the downstream review found: a resource-constrained / scale-bearing project that writes its resource and scale budget **nowhere**, because the protocol had no prompt forcing *"what is this feature's / the system's resource and scale budget?"*. `/pm-plan` gains a **conditional NFR / operational-limits check** that fires only when the orchestrator judges the feature **scale-bearing** or the platform **resource-constrained** (signal from `docs/stack-notes.md` / `docs/architecture.md` `## Architectural constraints`) — silent otherwise, beside the existing Stack-component / Interaction-scenario / Security-surface conditional checks. NFRs get a **home split by audience**: user-facing limits → the Product Contract `## Must not break`; resource budgets → a **new conditional `## Operational limits & budgets`** section in `architecture.md`. Conditional / proportional, judgment-not-regex, no hook and no hard gate; additive, fully back-compatible, **no migration**.
