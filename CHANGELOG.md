@@ -13,6 +13,22 @@
 
 ---
 
+## [2.26.0] — 2026-06-05
+
+Ships **readme-template-canonical-shape** — bakes the canonical README front-door shape (что → зачем → install → details → license) into the downstream template `doc/_templates/README.md.tmpl` and adds a `pm-architect` authoring rule so newly-scaffolded projects start from the right shape. Follow-up to `readme-rewrite` (v2.24.1), which fixed this protocol's own README; this slice carries that shape into the template that downstream projects inherit. The template's front-gate stays intact and the install / License / `product.md`-pointer blocks are byte-preserved. Template/doc capability only; additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **Canonical-shape guidance into `doc/_templates/README.md.tmpl`** — a top guidance comment plus a front-gate prohibition encoding the что → зачем → install → details → license ordering, so downstream-scaffolded READMEs open with the canonical front-door shape. Front-gate intact; install / License / `product.md`-pointer blocks byte-preserved.
+- **`pm-architect` authoring rule** (`.claude/agents/pm-architect.md`) — directs README authoring to follow the canonical shape baked into the template.
+
+### Notes
+
+- Editorial code-review: 2 LOW (1 latent observation, 1 blank-line nit fixed); plan-check approve; verdict approve (`.ai-pm/reviews/readme-template-canonical-shape_review.md` — stamped `2026-06-05 — passed`).
+- `tests/hooks.sh` 74/74. Back-compat: additive only — existing template content (install / License / pointer) unchanged. **No migration.**
+
+---
+
 ## [2.25.1] — 2026-06-05
 
 Ships **deny-review-orchestrator** — a surgical hardening of the shipped `.claude/settings.json` routing hook so the wb-* skill `wb-development:code-review-orchestrator` no longer auto-intercepts this protocol's own `/code-review` (Pass-2). Its broad auto-trigger would silently hijack the protocol's review loop in every downstream project (the hook ships via the submodule), so the hook now **denies** that one skill by name with a clear "use `/code-review` instead" reason. For the rare case where the skill is genuinely wanted, a narrowly-scoped per-skill env-escape **`WB_ALLOW_REVIEW_ORCHESTRATOR=1`** bypasses only this single deny — every other hook and every other wb-* deny stays active. Tooling/config only; additive, fully back-compatible, **no migration**.
