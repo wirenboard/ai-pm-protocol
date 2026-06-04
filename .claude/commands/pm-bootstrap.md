@@ -47,7 +47,7 @@ Check what exists:
 
 Ask the PM these questions (one conversation, not a form):
 
-0. **Project kind** — is the deliverable **software** (source code) or a **process** (a human SOP / runbook / documentation artefact with no executable code — e.g. integrating a device into the company ecosystem, diagnosing a crashed server, soldering a board)? See `### Project kind` in `WORKFLOW.md` (the single source of the enum and the `absent ⇒ software` default — do not re-state them here). The answer is stored single-source as the `## Project kind:` line in `CLAUDE.md` (default `software`). On `kind = process`, follow the **Process-kind scaffolding** note below instead of the software-only scaffolding.
+0. **Project kind** — is the deliverable **software** (source code) or **documentation** (one or several human-facing documents with no executable code — an SOP, a runbook, a guide, a spec, diagrams — e.g. integrating a device into the company ecosystem, diagnosing a crashed server, soldering a board, a user guide)? See `### Project kind` in `WORKFLOW.md` (the single source of the enum and the `absent OR unrecognized ⇒ software` default — do not re-state them here). The answer is stored single-source as the `## Project kind:` line in `CLAUDE.md` (default `software`). On `kind = documentation`, follow the **Documentation-kind scaffolding** note below instead of the software-only scaffolding.
 1. What does this product do? (one sentence)
 2. Who uses it? (be specific — role, context)
 3. What problem does it replace or eliminate?
@@ -70,7 +70,7 @@ Ask the PM these questions (one conversation, not a form):
 
 Then create from templates:
 
-- `CLAUDE.md` from `CLAUDE.md.tmpl` — fill in all placeholders, **including the `## Project kind:` line** from Q0 (default `software` if unanswered). Pipeline section is left with `<test command>` and `<lint command>` as placeholders for now — extended after `pm-stack-researcher` runs. (On `kind = process` there is no test/build pipeline to populate — see **Process-kind scaffolding** below.)
+- `CLAUDE.md` from `CLAUDE.md.tmpl` — fill in all placeholders, **including the `## Project kind:` line** from Q0 (default `software` if unanswered). Pipeline section is left with `<test command>` and `<lint command>` as placeholders for now — extended after `pm-stack-researcher` runs. (On `kind = documentation` there is no test/build pipeline to populate — see **Documentation-kind scaffolding** below.)
 - `README.md` from `README.md.tmpl`
 - `docs/architecture.md` from `architecture.md.tmpl`
 - `docs/user-journeys.md` from `user-journeys.md.tmpl` — leave as guided skeleton for PM to fill
@@ -88,12 +88,12 @@ Then create from templates:
 - `.ai-pm/research/` directory — research artifacts written by `/pm-research`
 - `.ai-pm/audits/` directory — protocol audit reports
 
-**Process-kind scaffolding (only when Q0 = `process`).** On a `process`-kind project (`### Project kind` in `WORKFLOW.md`), the deliverable is an SOP, not code. Adjust the scaffolding:
+**Documentation-kind scaffolding (only when Q0 = `documentation`).** On a `documentation`-kind project (`### Project kind` in `WORKFLOW.md`), the deliverable is one or several human-facing documents, not code. Adjust the scaffolding:
 
-- **Scaffold the SOP artefact:** create `process.md` from `.ai-pm/tooling/doc/_templates/process.md.tmpl` — the project's implementation artefact (authored later by `pm-coder` per feature; left as the guided skeleton at bootstrap).
-- **Keep the shared pillars:** `docs/product.md`, `docs/stack-notes.md` (the company systems & standards the process must respect), `docs/architecture.md` (constraints / behavioral contract for any token a step names), `docs/user-journeys.md` (operator experience flow), and `docs/threat-model.md` **only if** Q7 mentioned security — all created exactly as above.
-- **Skip the software-only scaffolding that has no process meaning:** the `CLAUDE.md` `## Pipeline` block carries no `<test command>` / build validators (markdownlint is the structural pre-gate — record it as the validator); the stack-researcher step still runs but documents the company systems/standards the SOP must respect, not language idioms. `docs/ui-guide.md` is created only on the same UI rule as software (a process project rarely has one).
-- The `## Project kind: process` line in `CLAUDE.md` is what makes the mandatory-table rider, the Pass-2 routing, and the dry-run gate fire downstream (all reference `### Project kind` by name).
+- **Create the deliverable location, not a forced template:** create the `deliverable/` directory (the `src/`-analogue where the produced document(s) / diagrams / images live — per `### Project kind`). Do **not** author any deliverable file at bootstrap and do **not** drop a template into it — the deliverable is open. **Offer** the optional starters under `.ai-pm/tooling/doc/_templates/starters/` (`sop.md.tmpl` for an SOP / runbook, `guide.md.tmpl` for a reference doc) as a "pick one if it fits, or none"; the first feature's plan decides whether to seed from a starter (then `pm-coder` copies it into `deliverable/` and authors freely).
+- **Keep the shared pillars:** `docs/product.md`, `docs/stack-notes.md` (here the **what / who / tools** — the people, instruments, company systems & standards the document must respect, not language idioms), `docs/architecture.md` (constraints / behavioral contract for any token the document names), `docs/user-journeys.md` (reader / operator experience flow), and `docs/threat-model.md` **only if** Q7 mentioned security — all created exactly as above.
+- **Skip the software-only scaffolding that has no documentation meaning:** the `CLAUDE.md` `## Pipeline` block carries no `<test command>` / build validators (markdownlint is the structural pre-gate — record it as the validator); the stack-researcher step still runs but documents the what / who / tools the document must respect, not language idioms. `docs/ui-guide.md` is created only on the same UI rule as software (a documentation project rarely has one).
+- The `## Project kind: documentation` line in `CLAUDE.md` is what makes the mandatory-table rider, the Pass-2 routing, and the `## Validation` gate fire downstream (all reference `### Project kind` by name).
 
 **Stack literacy onboarding (mandatory, no PM questions).** Spawn the `pm-stack-researcher` agent (`subagent_type: "pm-stack-researcher"`) with the stack components from PM's answers (language, runtime, framework, database, key libraries, target platform). The agent reads canonical docs and spec, writes `docs/stack-notes.md` with cited idioms, constraints, validators and integration contracts.
 
