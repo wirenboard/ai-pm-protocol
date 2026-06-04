@@ -54,7 +54,21 @@ approve
      See WORKFLOW.md "Edit-ownership rule" — the Pass-2 code-review trail is the single
      carve-out to "orchestrator does not edit content artefacts". -->
 ## Code review findings
-(populated by orchestrator from code-review output; pm-coder reads and fixes these)
+
+Pass 2 (`code-review`, prose-protocol: 2 targeted finders — coherence/no-relocation/reference-integrity
++ wiring-completeness/auditor-conditionality/no-prose-policing). Finder 2 confirmed clean (0). Finder 1
+surfaced one real (minor) finding, confirmed:
+
+1. **(fix) The template's own `### System invariants` example models a dangling `SCn`.** In
+   `doc/_templates/architecture.md.tmpl`, the index example references `SC5` ("enforced by `SC5`")
+   while the same template's `## Security constraints` example block defines only `SC1`–`SC4`. The
+   canonical scaffold therefore literally contains the dangling-`SCn` anti-pattern that this
+   feature's own new `pm-auditor` dimension-5 check flags — a teaching defect. *Fix:* make the
+   example self-consistent — frame the referenced ID as one the project defines in its own
+   `## Security constraints` (a brief annotation), or align the example's ID with an `SCn` shown in
+   the template's constraint block — so the canonical example does not model the very anti-pattern
+   the check exists to catch. Low severity (a real project's `pm-architect` replaces template
+   examples at bootstrap), but the template sets the standard.
 
 ## Code review: NOT YET RUN
 <!-- The orchestrator replaces THIS WHOLE LINE with `## Code review: <date> — passed`
