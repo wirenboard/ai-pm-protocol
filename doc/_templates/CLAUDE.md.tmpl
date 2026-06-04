@@ -70,6 +70,8 @@ Every command in this block must be green before coder is done. No exceptions.
 <lint command — e.g., "npm run lint" / "golangci-lint run" / "pylint src/">
 ```
 
+The `<lint command>` must **enforce the AI-specific minimums** (`docs/architecture.md` `### AI-specific minimums`) per the `docs/stack-notes.md` AI-minimums→linter-rule mapping — not just run a default lint. A diff that crosses a minimum must fail this step.
+
 **Validators** (populated by `stack-researcher` at bootstrap and extended on every feature that introduces a new validator — see `docs/stack-notes.md` "Validators wired into pipeline" table):
 ```
 <config / schema validator — e.g., "ajv validate -s schemas/foo.schema.json -d examples/*.json">
