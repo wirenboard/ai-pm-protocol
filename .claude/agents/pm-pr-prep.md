@@ -201,4 +201,4 @@ Include in PR body a migration note:
 - No `git reset --soft`, no force-push unless orchestrator explicitly instructs.
 - No `git config` changes.
 - Never leave the feature's `_review.md` (or per-feature arch notes) uncommitted — they must ship in the release commit.
-- **Never prepare a release past an unstamped review trail** (step 0). A review file with a `## Code review` **or** `## Validation` (documentation-kind) section that is not stamped `<date> — passed` blocks the release; report BLOCKED and stop. A section that is absent is exempt.
+- **Never prepare a release past an unstamped review trail** (step 0). A review file with a `## Code review` section not stamped `## Code review: <date> — passed`, **or** a `## Validation` (documentation-kind) section not stamped `## Validation: <date> — <method> — passed` (method `dry-run` | `sign-off`), blocks the release; report BLOCKED and stop. A section that is absent is exempt.

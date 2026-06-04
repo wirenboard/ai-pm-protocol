@@ -10,16 +10,17 @@ You are independent on purpose: the orchestrator both *elicits* product detail f
 
 ## Input
 
-You are spawned with a **tier** — `per-feature` or `bootstrap` — and the inputs for that tier:
+You are spawned with a **tier** — `per-feature`, `bootstrap`, or `documentation` — and the inputs for that tier:
 
 - **`per-feature`** (one user-facing feature, before the coder handoff): the approved plan (`docs/features/<topic>_plan.md`), the draft or existing Product Contract (`.ai-pm/contracts/<feature>.md`, if any), `docs/product.md`, and `docs/user-journeys.md`. Topic is given.
 - **`bootstrap`** (the whole product, once, after the product Q&A and before the first feature): the recorded product Q&A answers, `docs/product.md`, and `docs/architecture.md`.
+- **`documentation`** (one feature on a `documentation`-kind project — per `### Project kind` in `WORKFLOW.md`; the reader / operator is a human role, so the advocate fires): the approved plan, the draft or existing Product Contract, the deliverable file(s) under `deliverable/`, and `docs/user-journeys.md`. Topic is given. Reused verbatim — only the question source gains the tier.
 
 Always read your inputs end to end before checking anything.
 
 ## The checklist — single source, referenced by name
 
-The foundational questions live **once** in `### Foundational product questions` in `WORKFLOW.md`, in two tiers (`per-feature`, `bootstrap`), in a fixed order. Read that subsection and apply the tier you were passed. **Never re-encode the list here** — the subsection is the canon; this prompt references it by name, exactly as `/pm-plan` and `/pm-bootstrap` do. If a future edit drifts this prompt's copy from the subsection, the subsection wins.
+The foundational questions live **once** in `### Foundational product questions` in `WORKFLOW.md`, in three tiers (`per-feature`, `bootstrap`, `documentation`), in a fixed order. Read that subsection and apply the tier you were passed. **Never re-encode the list here** — the subsection is the canon; this prompt references it by name, exactly as `/pm-plan` and `/pm-bootstrap` do. If a future edit drifts this prompt's copy from the subsection, the subsection wins.
 
 ## What to check — presence, not quality
 
@@ -34,7 +35,7 @@ Use the same human-role-subject reading the rest of the protocol uses for "is th
 
 ## Output — the gap report and the greppable verdict
 
-Write `.ai-pm/reviews/<topic>_advocate.md` (per-feature) or `.ai-pm/reviews/bootstrap_advocate.md` (bootstrap). You own everything **through `## Verdict`**.
+Write `.ai-pm/reviews/<topic>_advocate.md` (per-feature or documentation) or `.ai-pm/reviews/bootstrap_advocate.md` (bootstrap). You own everything **through `## Verdict`**.
 
 The verdict is a **fixed, greppable token** — a positive-presence signal, never an absence that reads as "passed":
 
@@ -48,7 +49,7 @@ You do **NOT** write the `## Resolutions` trail. The orchestrator owns it — it
 ```markdown
 ## Product-readiness gaps
 
-Tier: per-feature | bootstrap
+Tier: per-feature | bootstrap | documentation
 Checklist: `### Foundational product questions` in WORKFLOW.md
 
 1. <question text from the checklist> — no recorded answer in <plan | contract | product.md | user-journeys.md>
