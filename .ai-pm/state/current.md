@@ -1,7 +1,7 @@
 # Execution State
 
-- **Status:** idle
-- **Touched files (this slice):** `WORKFLOW.md` (new `### Review typology` subsection), `.claude/commands/pm-audit.md` (`## Technical quality` → smell/hygiene sweep), `.ai-pm/state/current.md`.
+- **Status:** review-complete → pr-prep (ai-minimums-linter-wiring). plan-check approve; code-review 1 finding fixed (decision-record single-source via pm-architect 723b950); stamp `## Code review: 2026-06-05 — passed`. **Next step:** pr-prep (bump → v2.28.0, CHANGELOG, push, PR) → merge. (Running queue autonomously incl. merge.)
+- **Touched files (this slice):** `.claude/agents/pm-stack-researcher.md`, `.claude/commands/pm-bootstrap.md`, `doc/_templates/CLAUDE.md.tmpl`, `doc/_templates/architecture.md.tmpl`, `.claude/agents/pm-plan-checker.md`, `.claude/agents/pm-auditor.md`, `.ai-pm/state/current.md`.
 - **Decision authority:** `autonomous` (project-wide, `.ai-pm/decision-authority.md`) — routine procedural gates announce-and-proceed (v2.24.0); merge/ship stays manual.
 - **Last shipped:** `review-typology-framework` (v2.27.0, PR #223) — EPIC review-typology slice 1 (registry + smell/hygiene sweep). Archived: `.ai-pm/state/archive/review-typology-framework-2026-06-05.md`. Running the PM-flagged queue autonomously (merge included, per PM 2026-06-05).
 - **This session shipped:** v2.15.0–v2.25.1 (EPIC slices invariants-index / taxonomy-drift-sweep / nfr-operational-limits-prompt / state-model-section; automode + automode-procedural-gates; readme-rewrite; deny-review-orchestrator) + full audit + install/docs PRs #204–#206 + backlog notes #210/#211/#218.

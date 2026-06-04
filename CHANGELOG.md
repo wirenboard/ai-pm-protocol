@@ -13,6 +13,25 @@
 
 ---
 
+## [2.28.0] — 2026-06-05
+
+Ships **ai-minimums-linter-wiring** — makes the `### AI-specific minimums` deterministically **enforced by the downstream project's own linter** instead of self-policed by prose discipline. `pm-stack-researcher` now produces a per-stack AI-minimum→linter-rule mapping (doc-URL cited) that `/pm-bootstrap` wires into the project's `<lint command>` config across all three stack-setup paths, so a diff crossing a minimum fails the Pipeline lint step. Numbers stay single-sourced (the linter **encodes**, never re-declares); minimums a linter cannot express are recorded **convention-only**, honestly, and routed to the `### Review typology` smell type. The deterministic half of backlog #211, sharpened by DriveBox #224. Discipline + agent capability only; additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **AI-minimums→linter-rule mapping** (`.claude/agents/pm-stack-researcher.md`) — step 6 produces a per-stack mapping from each expressible `### AI-specific minimum` to a concrete linter rule (e.g. `max-module-lines=300`), with the rule's documentation URL cited. Per-stack rules appear as **examples only**, never a fixed protocol list. Unexpressible minimums (cross-file / accumulated) are recorded **convention-only**, explicitly, and tied by name to the `### Review typology` smell type.
+- **Bootstrap wiring of the AI-minimums into the linter** (`.claude/commands/pm-bootstrap.md`) — the researcher mapping is wired into the project's `<lint command>` config across **all three** stack-setup paths (greenfield, legacy stack-literacy, legacy codebase-reader), so a diff crossing an expressible minimum fails the Pipeline lint step deterministically.
+- **dim-9 validator discipline extended to AI-minimums encoding, both cadences** (`.claude/agents/pm-plan-checker.md`, `.claude/agents/pm-auditor.md`) — Variant A: the plan-checker's Pipeline-green DoD is extended **in place** to confirm the linter encodes the expressible minimums; pm-auditor dim-5 gains a periodic, **non-blocking** note for the un-wired-project case. No new gate, no new dimension; `code-review` is explicitly **not** made a third owner.
+- **Template notes — AI-minimums are linter-enforced, not self-policed** (`doc/_templates/CLAUDE.md.tmpl`, `doc/_templates/architecture.md.tmpl`) — a pointer added next to the existing single-source home; the five minimum number-lines are **unchanged** (pointer only, no number re-declared).
+- **Architecture decision record** (`doc/architecture.md`) — records linter-enforcement as the deterministic half of the AI-minimums discipline, the researcher↔bootstrap↔dim-9 ownership split, the honest convention-only boundary (#211), and the smell-type handoff. References `### AI-specific minimums` by name rather than re-listing the numbers.
+
+### Notes
+
+- Code-review: 1 finding fixed in-pass (`723b950`) — a single-source violation in the decision record itself (a five-number prose enumeration → a reference to `### AI-specific minimums`); plan-check approve; verdict approve (`.ai-pm/reviews/ai-minimums-linter-wiring_review.md` — stamped `2026-06-05 — passed`).
+- `tests/hooks.sh` 74/74. `.claude/settings.json` + `tests/hooks.sh` byte-unchanged — no hook added; enforcement lives in the downstream project's linter, not this repo's hooks. Additive only. **No migration.**
+
+---
+
 ## [2.27.0] — 2026-06-05
 
 Ships **review-typology-framework** (EPIC review-typology, slice 1) — a single-sourced `### Review typology` registry in `WORKFLOW.md` that names the protocol's distinct review **types**, each with its own cadence · depth · scope · deterministic-half · AI-half, mirroring the `### Decision authority` single-source discipline. The protocol already reviews every change by diff and audits compliance periodically, but had no layered review **typology**. Research-backed (`.ai-pm/research/review-typology_research.md`), validating the layered model, the **"review new/changed code, not already-clean code"** (Clean-as-You-Code) cadence rule, and the structural→deterministic / semantic→LLM split (backlog #211). This slice lays the framework (5 types — 2 built, 3 registered as later slices) and implements the first, lightest type: **smell / hygiene**, operationalized through `/pm-audit`'s `## Technical quality` hook. Discipline + `/pm-audit` capability only; additive, fully back-compatible, **no migration**.
