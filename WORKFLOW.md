@@ -10,6 +10,7 @@ Spawned by the orchestrator — do not run manually. Use only these — do not s
 |---|---|
 | `pm-stack-researcher` | Auto-spawn from `/pm-bootstrap` (initial stack onboarding) or from `/pm-plan` (when a feature touches a stack component not yet in `docs/stack-notes.md`). Reads canonical docs + spec, writes cited rules into stack-notes |
 | `pm-architect` | Structural choice in the plan — where does new code live? Plus: owns canonical `docs/architecture.md` (creates at bootstrap, refreshes on audit findings, updates on architectural decisions, fills doc gaps spawned from `/pm-plan`). |
+| `pm-product-advocate` | Pre-coding product-readiness gate on **user-facing** features — spawned from `/pm-plan` after the plan is approved and the contract drafted, before the coder handoff. Also the `/pm-bootstrap` foundational-question pass. Independent product-axis referee (the `code-review` twin): matches the plan/contract/product docs against `### Foundational product questions` and reports the gaps; never talks to the PM, never judges answer quality. |
 | `pm-coder` | Implement the plan |
 | `pm-plan-checker` | Plan compliance after implementation — verifies all scenarios implemented, contracts honored, interaction scenarios tested, DoD satisfied |
 | `pm-pr-prep` | Bump version, generate CHANGELOG, push branch, open or update PR |
@@ -32,9 +33,11 @@ Run in the main orchestrator session:
 
 **Project boundary rule (applies to all agents):** every agent must stay within the project root (`git rev-parse --show-toplevel`). Never search, read, or write outside it — no parent directories, no sibling repositories. When the orchestrator spawns an agent, include the absolute project root in the prompt if the working directory may be a subdirectory.
 
-**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator legitimately writes the **outputs of the processes it drives** — the PM conversation produces the backlog and (via `/pm-plan`) the contracts; `/pm-plan` produces the plan; running `code-review` produces the Pass-2 code-review trail; finding a structural protocol gap produces a protocol-feedback report. What it never does is **freehand-edit canon owned by an autonomous agent**. Agent-owned content artefacts are anything that captures the project's design, code, or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, feature plans under `docs/features/`, the **plan-compliance verdict** of a review artifact under `.ai-pm/reviews/` (everything through `## Verdict`, owned by `pm-plan-checker`), arch notes under `.ai-pm/arch/`, audit reports under `.ai-pm/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-legacy-reader`, `pm-auditor`, `pm-plan-checker`, `pm-plan` as a command). When one needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
+**Edit-ownership rule (applies to the orchestrator inside the local repo):** the orchestrator legitimately writes the **outputs of the processes it drives** — the PM conversation produces the backlog and (via `/pm-plan`) the contracts; `/pm-plan` produces the plan; running `code-review` produces the Pass-2 code-review trail; finding a structural protocol gap produces a protocol-feedback report. What it never does is **freehand-edit canon owned by an autonomous agent**. Agent-owned content artefacts are anything that captures the project's design, code, or canon — source code, schemas, manifests, `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`, feature plans under `docs/features/`, the **plan-compliance verdict** of a review artifact under `.ai-pm/reviews/` (everything through `## Verdict`, owned by `pm-plan-checker`), the **product-readiness gap report** `.ai-pm/reviews/<topic>_advocate.md` / `bootstrap_advocate.md` (everything through `## Verdict`, owned by `pm-product-advocate`), arch notes under `.ai-pm/arch/`, audit reports under `.ai-pm/audits/`. Each of those has an agent that owns it (`pm-coder`, `pm-architect`, `pm-stack-researcher`, `pm-legacy-reader`, `pm-auditor`, `pm-plan-checker`, `pm-product-advocate`, `pm-plan` as a command). When one needs to change — even by one line — the orchestrator respawns the responsible agent with a focused prompt, not picks up the editor itself.
 
 **The one carve-out inside `.ai-pm/reviews/<topic>_review.md`:** `pm-plan-checker` owns everything through `## Verdict`; the orchestrator owns ONLY the `## Code review findings` / `## Code review` trail below it — the Pass-2 code-review record it writes in Step 5 Pass 2. This is the **single** review section the orchestrator writes and the **only** exception to "the orchestrator does not edit content artefacts". It is the output of a process the orchestrator drives (it runs `code-review` and already holds the findings) — routing that data through an agent would pay a hop for data already in hand. The exception is made safe by a **gate, not by discipline**: `pm-pr-prep` refuses to release a feature whose `## Code review` section is unstamped (step 0), and `pm-auditor` blocks an unstamped trail (dimension 1). A manual step with no gate degrades silently — so this one has a gate.
+
+**A second carve-out, in `.ai-pm/reviews/<topic>_advocate.md` (and `bootstrap_advocate.md`):** `pm-product-advocate` owns everything through `## Verdict`; the orchestrator owns ONLY the `## Resolutions` trail below it — the recorded PM answer / descope-with-rationale for each gap, one numbered entry per gap, the output of the one `AskUserQuestion` pass it drives. Like the Pass-2 code-review trail, it is the output of a process the orchestrator drives (it holds the PM's answers in hand from that pass), and it is made safe by a **gate, not by discipline**: `pm-plan-checker` (DoD) and `pm-auditor` (dimension 1) block a user-facing feature whose advocate gate is unresolved. A `clean` verdict (zero gaps) needs **no** `## Resolutions` trail — `clean` and `gaps: N`-with-N-resolutions are the two resolved states.
 
 **Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `.ai-pm/backlog.md` entries, recording PM decisions, the Pass-2 code-review trail just described, protocol-gap reports under `.ai-pm/protocol-feedback/` (see "When the protocol itself has a gap"), choosing remediation order for audit findings, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
 
@@ -110,6 +113,15 @@ When you describe a feature or bug:
 **Step 2 — We plan together.** I ask clarifying questions grounded in the architecture and existing scenarios. Then I show you the plan in plain language — scenarios, what changes for users, what must not break — and ask: does this match what you want?
 
 **Step 3 — I show you the architecture decision (if one was needed).** If the plan had a structural question (where does new code live?), I'll explain what was decided and why — in plain language, with a diagram if it helps. You can push back.
+
+**Step 3.5 — Product-readiness gate (user-facing features only).** After the plan is approved and the Product Contract drafted, and before the coder handoff, I run an independent product check on user-facing features. "User-facing" is decided by the same human-role-subject extraction `pm-auditor` uses (the grammatical subject of the scenarios is a human role); backend / infrastructure / docs-only / trivial-fixup / diagnostic-probe changes are **exempt** — the gate does not run at all, no advocate spawn, no artifact required.
+
+For a user-facing feature I spawn `pm-product-advocate` (tier `per-feature`). It matches the plan + contract + `docs/product.md` + `docs/user-journeys.md` against `### Foundational product questions` (below) and writes its gap report with a `gaps: N` / `clean` verdict.
+
+- **Zero gaps (`clean`)** — silent pass. I record the resolved artifact and proceed to Step 4; no `AskUserQuestion`, no ceremony.
+- **Gaps (`gaps: N`)** — I relay all N gap questions to you in **one** `AskUserQuestion` pass. For each gap you either answer it or consciously descope it with a rationale. I record each answer/descope as a numbered entry in the artifact's `## Resolutions` trail. The coder handoff stays **blocked** until every gap is answered or descoped — never a silent skip, never a permanent veto.
+
+A bootstrap variant of this gate runs once at `/pm-bootstrap` (tier `bootstrap`) — see that command. This is soft enforcement, backstopped (not by-discipline): `pm-plan-checker`'s DoD blocks a user-facing feature whose advocate gate is unresolved, and `pm-auditor` blocks a merged user-facing feature with no resolved advocate artifact. There is **no hook** — "is this user-facing / is the product under-specified" is a semantic judgement a regex cannot make.
 
 **Step 4 — Coder implements.** Works on a feature branch, commits atomically as it goes, runs pipeline, never touches existing tests.
 
@@ -192,6 +204,8 @@ Different change types impose different overhead. This table is the single sourc
 
 **"Set Status: done at end"** means coder writes the state file once in the closing commit, doesn't update it mid-task. For docs-only fixes the state is essentially a record that the change happened.
 
+**Product-readiness rider:** a **user-facing feature** (the first row — its scenario subjects are a human role, the `pm-auditor` extraction) additionally requires the **product-readiness gate** to be resolved before the coder handoff — `pm-product-advocate` run (tier `per-feature`), every `### Foundational product questions` gap answered or descoped, the `.ai-pm/reviews/<topic>_advocate.md` artifact carrying a `clean` or `gaps: N`-with-N-resolutions verdict. See **Step 3.5** above. The other rows — backend / infrastructure / CI, docs-only, trivial fixup, diagnostic probe — are **exempt** by the same human-role-subject extraction (no human-role scenario subject → no gate, no advocate spawn, no artifact required); there is no feature-category special-casing.
+
 **Threat-model rider:** on a security-bearing project (one with `docs/threat-model.md`), a feature that touches a `### Security-relevant surfaces` item additionally requires a `docs/threat-model.md` update in "Docs to update" — see **Threat-model lifecycle** below. This is orthogonal to the row above (it applies on top of whatever the change type requires).
 
 Trivial-fixup rules and the `/pm-fixup` command are in `.claude/commands/pm-fixup.md`.
@@ -207,6 +221,28 @@ Trivial-fixup rules and the `/pm-fixup` command are in `.claude/commands/pm-fixu
 - **User input** — anything externally supplied that reaches a query, command, parser, or rendering path.
 - **PII** — personally identifiable or otherwise sensitive personal data.
 - **Access control** — who may do what; roles, permissions, authorization checks.
+
+### Foundational product questions
+
+**Single source for the product-readiness gate.** This is the only list of foundational product questions. `pm-product-advocate`, `/pm-plan`, and `/pm-bootstrap` reference this subsection **by name** ("`### Foundational product questions` in `WORKFLOW.md`") and pass a **tier** (`per-feature` | `bootstrap`); they must never re-encode the list — mirroring how `### Security-relevant surfaces` is the single source for security-touching surfaces. The advocate reports only the questions with **no recorded answer** in its inputs, in the fixed order below; it never judges whether an answer is good (the PM owns meaning). Use cross-domain language — onboarding / discovery / recovery — never a domain-specific example baked in as vocabulary.
+
+**Tier: per-feature** (one user-facing feature; inputs = the plan + the Product Contract + `docs/product.md` + `docs/user-journeys.md`):
+
+1. Value — who is this for, and what job does it do for them?
+2. Value — why this, and not the way they do it today (the incumbent)?
+3. Usability — how does a user reach or discover this feature?
+4. Usability — what does the first successful use look like (the zero-to-working step)?
+5. Scope boundary — what does this feature explicitly NOT do (the No-Gos)?
+
+**Tier: bootstrap** (the whole product, once; inputs = the product Q&A answers + `docs/product.md` + `docs/architecture.md`):
+
+1. Discovery — how does a new user find out the product exists?
+2. Onboarding — what are the first steps from nothing to a working state?
+3. Invite / multi-party — if others are involved, how do they join?
+4. Recovery & key-loss — what happens when a user loses access, a key, or a device?
+5. Device-change / continuity — how does use carry across devices or sessions?
+6. Value — why this product, and not the incumbent?
+7. Viability — who runs it, who funds it, what legal or operational constraints bind it?
 
 ### Threat-model lifecycle
 

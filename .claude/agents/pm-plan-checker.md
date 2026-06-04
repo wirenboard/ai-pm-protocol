@@ -73,8 +73,16 @@ For every entry in the plan's "Stack expectations touched":
 - [ ] Coder's Product Impact Report present (when contract touched)
 - [ ] Docs updates listed in plan are in this branch
 - [ ] Expected artifacts exist for this feature: plan, this review, and a Product Contract if the feature is user-facing
+- [ ] **(user-facing only)** Product-readiness gate resolved — advocate artifact present and every foundational gap answered or descoped
 
 If any item is unchecked → DoD fails → `request-changes`.
+
+**Product-readiness gate item (user-facing only).** This applies **only** to a user-facing feature — decided by the same human-role-subject extraction this checker uses elsewhere (the grammatical subject of the scenarios is a human role). A non-user-facing feature (every scenario subject is the system / package / service / process / file) is **exempt with no special-casing** — mark the item `n/a` and move on; no advocate artifact is required. For a user-facing feature, the gate is **resolved** when `.ai-pm/reviews/<topic>_advocate.md` exists and carries one of the two resolved states, keyed on its greppable verdict token:
+
+- **`clean`** — zero gaps; resolved with no `## Resolutions` trail required. A `clean` verdict is never mis-flagged as missing resolutions.
+- **`gaps: N`** with N numbered entries under `## Resolutions` — every gap answered or descoped.
+
+**Unresolved** (`gaps: N` with fewer than N resolution entries) or **absent** (no advocate artifact at all, the gate was skipped) → **blocking**. Remediation: the orchestrator runs the `/pm-plan` Step 3.5 gate — spawn `pm-product-advocate`, relay the gaps in one `AskUserQuestion` pass, record the resolutions. This is the load-bearing backstop for the pre-coding gate (a manual step with no gate degrades silently; this is that gate — the same shape as the review-stamp gate, deliberately not redundant with the pre-coding step).
 
 This artifact-completeness line is the per-feature gate that replaced the feature index: it makes "all artifacts appeared" an explicit blocking check at the moment of completion, rather than a column to eyeball. The project-wide backstop is `pm-auditor` dimension 1.
 
@@ -105,6 +113,7 @@ Write to `.ai-pm/reviews/<topic>_review.md`:
 - [x/[ ]] Product Impact Report present (when contract touched)
 - [x/[ ]] Docs updates landed
 - [x/[ ]] Expected artifacts exist (plan, this review, contract if user-facing)
+- [x/[ ]/n/a] Product-readiness gate resolved (user-facing only — advocate artifact `clean` or `gaps: N` with N resolutions)
 
 **DoD: pass | fail**
 

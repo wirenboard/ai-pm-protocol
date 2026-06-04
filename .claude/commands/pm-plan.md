@@ -11,6 +11,7 @@ All agents below are project agents — use the Agent tool with the exact `subag
 | pm-architect | `"pm-architect"` |
 | pm-legacy-reader | `"pm-legacy-reader"` |
 | pm-stack-researcher | `"pm-stack-researcher"` |
+| pm-product-advocate | `"pm-product-advocate"` |
 | pm-coder | `"pm-coder"` |
 | pm-plan-checker | `"pm-plan-checker"` |
 
@@ -256,6 +257,21 @@ If PM says yes → run the **contract two-layer migration procedure** in `MIGRAT
 
 Don't implement fixes, don't block planning. PM decides.
 
+## Product-readiness gate (user-facing features only)
+
+After the Product Contract is drafted (Handoff below) and before the coder handoff, run the independent product-readiness check. This is the product-axis twin of the post-coding `code-review` pass; it runs **pre-coding** and **only on user-facing features**.
+
+**Reach — user-facing only, by the human-role-subject extraction.** Apply the same rule `pm-auditor` uses in its dimension-1 artifact-completeness check (extract the grammatical subject of the first sentence of each scenario; a human role — integrator / operator / user / admin / developer / … — means user-facing). Do **not** re-encode the role list here — reference `pm-auditor`'s established extraction. If every scenario subject is non-human (the system / package / service / process / file), the feature is **exempt**: do not spawn the advocate, do not require an artifact, skip the rest of this section silently. `/pm-fixup` never reaches this step.
+
+For a user-facing feature:
+
+1. **Spawn `pm-product-advocate`** (`subagent_type: "pm-product-advocate"`) with tier `per-feature`, the approved plan, the drafted/existing contract, `docs/product.md`, and `docs/user-journeys.md`. It matches them against `### Foundational product questions` in `WORKFLOW.md` (referenced by name; never re-list the questions here) and writes `.ai-pm/reviews/<topic>_advocate.md` with a `gaps: N` / `clean` verdict.
+2. **`clean` → silent pass.** Record the resolved artifact and proceed to the coder handoff. No `AskUserQuestion`, no ceremony (scenario 3).
+3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** `AskUserQuestion` pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical (the orchestrator owns this trail — see the second carve-out in `WORKFLOW.md`'s Edit-ownership rule).
+4. **Block the coder handoff** until every gap is answered or descoped — never a silent skip, never a permanent veto. The block is overridable by a recorded descope, not only by an answer.
+
+This is soft enforcement, backstopped: `pm-plan-checker`'s DoD blocks a user-facing feature whose advocate gate is unresolved, and `pm-auditor` blocks a merged one with no resolved artifact. There is no hook (the trigger is a semantic judgement a regex cannot make). A manual step with no gate degrades silently; the DoD + auditor are that gate.
+
 ## Architect check
 
 After PM approves the plan, check architect criteria before handing off to coder:
@@ -304,7 +320,7 @@ If yes and the contract exists: surface it to PM ("this touches contract X — M
 
 If no (backend-only): skip silently; note "no contract — change is backend-only" in the plan handoff message.
 
-Tell PM the plan is saved, state is initialized, and run architect check above.
+Tell PM the plan is saved, state is initialized. Then, before the coder handoff, run the **Product-readiness gate** above (user-facing features only — exempt and silent for backend-only changes by the same human-role-subject extraction) and the **Architect check** above. The coder handoff stays blocked until the product-readiness gate is resolved (`clean`, or every gap answered/descoped).
 
 ## What the plan does NOT include
 

@@ -11,6 +11,7 @@ All agents below are project agents — use the Agent tool with the exact `subag
 | pm-stack-researcher | `"pm-stack-researcher"` |
 | pm-architect | `"pm-architect"` |
 | pm-legacy-reader | `"pm-legacy-reader"` |
+| pm-product-advocate | `"pm-product-advocate"` |
 
 ## Check for leftover git hooks
 
@@ -116,6 +117,8 @@ Present a brief to PM summarizing what was captured. Follow the PM communication
 
 Then ask: "Does this match your vision? Anything wrong or missing before we start?"
 
+Then run the **Foundational-question pass** (below) before the project is ready for its first feature.
+
 **Initial commit:** commit the created docs files with a normal `git commit -m "chore: bootstrap project docs"`. If pre-commit hooks run and fail because no test framework exists yet, that is expected — tell PM:
 
 > "The commit failed because the pipeline requires code that doesn't exist yet. Run this once to create the initial documentation commit:
@@ -175,6 +178,8 @@ Then ask: "Does this match the project? Anything critically wrong?"
 
 Do not ask PM to fill the gaps in detail — `[?]` items get resolved naturally as work on the project progresses.
 
+Then run the **Foundational-question pass** (below) before the project is ready for its first feature.
+
 ### Full (complete documentation)
 
 Invoke the `pm-legacy-reader` agent using the Agent tool with `subagent_type: "pm-legacy-reader"`. It reads all significant modules at defined depth and writes `docs/architecture.md`, `docs/user-journeys.md`, and optional docs (`ui-guide.md`, `threat-model.md`). Wait for it to complete and read its summary output.
@@ -211,7 +216,7 @@ After PM validates — tell PM:
 
 > "Documentation is ready. We can either start working on the project with the current stack, or port to a new one — that's a significant separate undertaking. What's next?"
 
-If PM says porting — run the porting procedure below.
+If PM says porting — run the porting procedure below. Otherwise run the **Foundational-question pass** (below) before the project is ready for its first feature.
 
 ---
 
@@ -362,6 +367,16 @@ Built by:
 ```
 
 ---
+
+## Foundational-question pass (after the product Q&A, before the first feature)
+
+After the product Q&A is captured and `pm-architect` has authored `docs/product.md` (and `docs/architecture.md`), and **before** the project is treated as ready for its first feature, run the bootstrap product-readiness check. This is the project-birth, once-per-project counterpart to the `/pm-plan` Step 3.5 gate — it forces the zero-to-working story rather than letting an under-specified product proceed straight to feature work.
+
+1. **Spawn `pm-product-advocate`** (`subagent_type: "pm-product-advocate"`) with tier `bootstrap`, the recorded product Q&A answers, `docs/product.md`, and `docs/architecture.md`. It matches them against the **bootstrap tier** of `### Foundational product questions` in `WORKFLOW.md` (referenced by name; never re-list the questions here) and writes `.ai-pm/reviews/bootstrap_advocate.md` with a `gaps: N` / `clean` verdict.
+2. **`clean` → silent pass.** Record the resolved artifact and continue to "After initialization".
+3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** `AskUserQuestion` pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical. The answers belong in the bootstrap product docs — their owners record them (`pm-architect` for `docs/product.md` / `docs/architecture.md`); re-spawn the owner with the PM's answers when an answer should land in a doc.
+
+This pass forces the **questions** only. It does **not** auto-draft a populated `docs/user-journeys.md` from the answers — that is a separate deferred feature; keep it out of scope here.
 
 ## After initialization
 

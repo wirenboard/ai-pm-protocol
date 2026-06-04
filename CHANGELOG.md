@@ -13,6 +13,24 @@
 
 ---
 
+## [2.15.0] — 2026-06-04
+
+Adds the **product axis its first independent referee**. Until now the technical axis had four checks (plan-checker, code-review, architect, auditor) while the product axis had none — every product question was self-checked by the same role that wrote the plan, which research shows is undermined by self-preference bias. `pm-product-advocate` is the product-axis twin of `code-review`: an independent referee that generates the foundational product-question gaps and **blocks the coder handoff on user-facing features** until the PM answers each gap or consciously descopes it. The gate is **block-but-sovereign** (it stops the handoff but the PM can always override by resolving or descoping — never a permanent veto) and **proportional** (backend, docs, trivial, and diagnostic-probe changes stay un-gated). It runs at two points: a pre-coding gate in `/pm-plan` (Step 3.5, user-facing changes only, scoped via human-role-subject extraction) and a foundational-question pass in `/pm-bootstrap` (forcing the zero-to-working story: discovery / onboarding / invite / recovery / device-change / why-not-incumbent / viability). The checklist lives single-source as `### Foundational product questions` in `WORKFLOW.md` (two tiers), referenced by name. Enforcement is soft (no hook) with load-bearing backstops keyed on a greppable `gaps: N` / `clean` verdict token: `pm-plan-checker` carries it as a DoD item and `pm-auditor` as dimension 1. This is the **anchor of the "technical-over-product bias" epic**.
+
+### Added
+
+- **`pm-product-advocate` — independent product-axis referee** (`.claude/agents/pm-product-advocate.md`): a read-only referee, the product-axis twin of `code-review`. It surfaces foundational product-question gaps on user-facing features and blocks the coder handoff until the PM answers or consciously descopes each gap — block-but-sovereign (never a permanent veto). Emits a greppable `gaps: N` / `clean` verdict token; owns its `## Resolutions` trail under a second edit-ownership carve-out.
+- **Product-readiness gate in `/pm-plan` and `/pm-bootstrap`** (`.claude/commands/pm-plan.md`, `.claude/commands/pm-bootstrap.md`): `/pm-plan` runs the advocate as a pre-coding gate at Step 3.5 for user-facing changes only (scoped via human-role-subject extraction); `/pm-bootstrap` runs it as a foundational-question pass forcing the zero-to-working story (discovery / onboarding / invite / recovery / device-change / why-not-incumbent / viability).
+- **Single-source foundational checklist** (`WORKFLOW.md`, `### Foundational product questions`): a two-tier checklist referenced by name, the single source the gate and both backstops draw from.
+
+### Changed
+
+- **Load-bearing backstops for the product-readiness gate** (`.claude/agents/pm-plan-checker.md`, `.claude/agents/pm-auditor.md`): `pm-plan-checker` carries the gate as a DoD item and `pm-auditor` as dimension 1, both keyed on the greppable `gaps: N` / `clean` verdict token so the soft (hook-less) gate has independent enforcement.
+- **Edit-ownership carve-out for the advocate's resolution trail** (`WORKFLOW.md`): a second carve-out under "the role that drives a process owns its outputs" — the advocate owns its `## Resolutions` trail.
+- **Architecture decision record** (`doc/architecture.md`): records the `pm-product-advocate` decision and grows the agent roster 7→8.
+
+---
+
 ## [2.14.0] — 2026-06-04
 
 Makes the Pass-2 code-review stamp **load-bearing** instead of by-discipline, across two linked themes. **Theme 1 — the stamp now gates the release.** Review files are born with a loud `## Code review: NOT YET RUN` marker (never a deceptively-empty heading), so an unstamped trail is visible rather than silently passing as "done". `pm-pr-prep` gains a pre-flight step 0 that refuses to prepare a release for any feature whose `## Code review` section is unstamped; `pm-auditor` blocks an unstamped trail in dimension 1; and `MIGRATIONS.md` adds a downstream migration to detect and normalize old empty placeholders into the loud marker. The `WORKFLOW.md` edit-ownership rule gains an explicit carve-out — the orchestrator owns the Pass-2 `## Code review` trail — reframed under the general model "the orchestrator writes the outputs of processes it drives". **Theme 2 — protocol-gap feedback obligation.** A new `WORKFLOW.md` section, "When the protocol itself has a gap", requires the orchestrator to write a structured report to `.ai-pm/protocol-feedback/<topic>.md` for upstreaming on discovering a structural protocol-spec gap, instead of silently working around it. This release is also the gate's first live test — it ships through its own newly-added step 0.

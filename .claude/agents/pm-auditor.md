@@ -74,6 +74,8 @@ For every feature in the inventory:
 
   Does NOT require a contract only when ALL scenario subjects are non-human (the system, the package, the service, a process, a file).
 
+- **(user-facing only) Product-readiness gate resolved.** A merged **user-facing** feature — same human-role-subject extraction as the contract check just above; reuse the result, do not re-extract — must have a **resolved** advocate artifact `.ai-pm/reviews/<topic>_advocate.md`. Resolved means one of the two states, keyed on its greppable verdict token: `clean` (zero gaps, no `## Resolutions` trail required), or `gaps: N` with **N** numbered entries under `## Resolutions`. **Unresolved** (`gaps: N` with fewer than N resolution entries) or **absent** (no advocate artifact — the pre-coding gate was skipped) → **blocking**. A **non-user-facing** feature (every scenario subject is the system / package / service / process / file) with **no** advocate artifact is **clean** — not flagged, no special-casing. Remediation: spawn `pm-product-advocate` (tier `per-feature`), then the orchestrator relays gaps in one `AskUserQuestion` pass and records the `## Resolutions` trail. This is the artifact-completeness backstop for the `/pm-plan` Step 3.5 gate, the product-axis twin of the `## Code review` unstamped-trail check above.
+
 Remediation for missing plan: `/pm-plan <topic>` (retroactive — write what was built, not what was intended).
 Remediation for missing review: re-run `pm-plan-checker` on that feature's commits.
 Remediation for missing contract: PM validates and saves `.ai-pm/contracts/<feature>.md`.
