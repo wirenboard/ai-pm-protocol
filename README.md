@@ -180,6 +180,8 @@ done
 
 **Архитектурные ограничения нарушаются — реже.** Агенты читают `docs/architecture.md` — не добавят SQLite в Postgres-проект без явного решения PM.
 
+**Продукт остаётся недо-определённым — реже.** Перед кодом пользовательских фич независимый референт `pm-product-advocate` сверяет план с базовыми продуктовыми вопросами (ценность, путь пользователя, границы) и блокирует передачу coder'у, пока PM не ответит на пробелы или осознанно их не отложит.
+
 **Уязвимости проходят незамеченными — реже.** code-review проверяет каждый diff: injection, hardcoded secrets, auth bypass, утечки данных.
 
 **Угрозы остаются непромоделированными — реже.** На проектах с security-поверхностью `docs/threat-model.md` ведёт pm-architect: модель заполняется при bootstrap, а не лежит пустым скелетом. Любая фича, затрагивающая security-релевантную поверхность, обязана её обновить (иначе pm-plan-checker блокирует), а pm-auditor отмечает пустую или устаревшую.
@@ -217,7 +219,8 @@ done
 ```
 WORKFLOW.md           — правила работы агентов (импортируется в CLAUDE.md проекта)
 .claude/agents/       — pm-architect, pm-coder, pm-plan-checker, pm-pr-prep,
-                        pm-legacy-reader, pm-stack-researcher, pm-auditor
+                        pm-legacy-reader, pm-stack-researcher, pm-auditor,
+                        pm-product-advocate
 .claude/commands/     — pm-bootstrap, pm-plan, pm-research, pm-audit, pm-fixup
 doc/_templates/       — шаблоны документов проекта
 ```
