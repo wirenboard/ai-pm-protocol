@@ -10,9 +10,9 @@ The orchestrator has already verified the git state (correct branch, clean tree,
 
 ## What to do
 
-### 0. Pre-flight: code-review stamp gate
+### 0. Pre-flight: Pass-2 stamp gate
 
-Before bumping version, committing, or pushing, verify that every feature shipping in this release carries a **stamped** code-review trail. This is the hard gate that makes the Pass-2 stamp load-bearing instead of by-discipline (`WORKFLOW.md` Step 5 Pass 2: *a manual step with no gate degrades silently — this step 0 is that gate*).
+Before bumping version, committing, or pushing, verify that every feature shipping in this release carries a **stamped** Pass-2 trail — `## Code review` for a software feature, `## Dry-run` for a `process`-kind feature (`### Project kind` in `WORKFLOW.md`). This is the hard gate that makes the Pass-2 stamp load-bearing instead of by-discipline (`WORKFLOW.md` Step 5 Pass 2: *a manual step with no gate degrades silently — this step 0 is that gate*).
 
 Check every `.ai-pm/reviews/*_review.md` that is new or modified on this branch — committed **or** still in the working tree (the same set step 4 stages):
 
@@ -22,37 +22,47 @@ base=$(git merge-base HEAD origin/HEAD 2>/dev/null || git merge-base HEAD main)
   git status --porcelain -- .ai-pm/reviews/ | sed 's/^...//'; } | sort -u
 ```
 
-**The rule is keyed on `## Code review` section PRESENCE — no filename special-casing:**
+**The rule is keyed on stamp-section PRESENCE — no filename special-casing.** It covers two stamp sections of the same shape:
 
-- A review file that **contains** a `## Code review` section must have it **stamped**: `## Code review: <date> — passed`.
-- A review file with **no** `## Code review` section (e.g. a trivial-fixup `fixup-*_review.md`) is **exempt** — nothing to stamp.
+- `## Code review` — the software Pass-2 stamp.
+- `## Dry-run` — the `process`-kind Pass-2 stamp (the no-code validation gate; `### Project kind` in `WORKFLOW.md`). A `process`-kind feature's review file carries this **instead of** `## Code review`.
 
-For each in-scope review file, inspect its stamp heading — the `## Code review` line, **not** the separate `## Code review findings` heading (grep the file content, including the working-tree version):
+For each stamp section the rule is identical:
+
+- A review file that **contains** the section must have it **stamped** with a trailing `— passed` date: `## Code review: <date> — passed` / `## Dry-run: <date> — passed`.
+- A review file with **no** such section (e.g. a trivial-fixup `fixup-*_review.md`, which has neither; or a software feature, which has no `## Dry-run`) is **exempt** for the absent section — nothing to stamp. Section-absence is the exemption.
+
+For each in-scope review file, inspect each stamp heading — the `## Code review` / `## Dry-run` line, **not** the separate `## Code review findings` / `## Dry-run findings` heading (grep the file content, including the working-tree version):
 
 ```bash
-# stamped iff a "— passed" stamp line exists; a "## Code review" heading without it = unstamped.
-# the heading-presence test uses ^## Code review(:.*)?$ — which excludes "## Code review findings".
-if grep -qE '^## Code review:.*— passed$' "$f"; then
-  : # stamped — ok
-elif grep -qE '^## Code review(:.*)?$' "$f"; then
-  echo "UNSTAMPED: $f"   # heading present, no passed stamp → block
-fi
+# stamped iff a "— passed" stamp line exists; the heading without it = unstamped.
+# the heading-presence test uses ^## <Section>(:.*)?$ — which excludes "... findings".
+for section in 'Code review' 'Dry-run'; do
+  if grep -qE "^## ${section}:.*— passed$" "$f"; then
+    : # stamped — ok
+  elif grep -qE "^## ${section}(:.*)?$" "$f"; then
+    echo "UNSTAMPED: $f (## ${section})"   # heading present, no passed stamp → block
+  fi
+done
 ```
 
-A section is **unstamped** when its `## Code review` line is `## Code review: NOT YET RUN`, a bare `## Code review` heading, or any `## Code review:` line without a trailing `— passed` date.
+A section is **unstamped** when its `## Code review` / `## Dry-run` line is `NOT YET RUN`, a bare heading, or any `:`-line without a trailing `— passed` date.
 
-If **any** in-scope review file's `## Code review` section is unstamped → **STOP**: do not bump the version, do not commit, do not push. Return a clear **BLOCKED** report naming the feature(s) and the remedy:
+If **any** in-scope review file has an unstamped `## Code review` **or** `## Dry-run` section → **STOP**: do not bump the version, do not commit, do not push. Return a clear **BLOCKED** report naming the feature(s) and the remedy:
 
 ```
-BLOCKED: unstamped code-review trail — release not prepared.
+BLOCKED: unstamped review trail — release not prepared.
 
-Unstamped: <topic>_review.md (## Code review: NOT YET RUN)
-Remedy: run review-loop Pass 2 — orchestrator runs `code-review`, then replaces the
-        `## Code review: NOT YET RUN` line with `## Code review: <date> — passed`
-        (WORKFLOW.md Step 5 Pass 2). Re-invoke pr-prep once every trail is stamped.
+Unstamped: <topic>_review.md (## Code review: NOT YET RUN | ## Dry-run: NOT YET RUN)
+Remedy: run review-loop Pass 2 — for a software feature the orchestrator runs
+        `code-review`, then replaces `## Code review: NOT YET RUN` with
+        `## Code review: <date> — passed`; for a process-kind feature it runs the
+        dry-run/tabletop, then replaces `## Dry-run: NOT YET RUN` with
+        `## Dry-run: <date> — passed` (WORKFLOW.md Step 5 Pass 2 / `### Project kind`).
+        Re-invoke pr-prep once every trail is stamped.
 ```
 
-Only when every in-scope review file is either stamped or section-absent (exempt) do you continue to step 1.
+Only when every in-scope review file is either stamped or section-absent (exempt) — for **both** the `## Code review` and `## Dry-run` sections — do you continue to step 1.
 
 ### 1. Detect remote shape
 
@@ -190,4 +200,4 @@ Include in PR body a migration note:
 - No `git reset --soft`, no force-push unless orchestrator explicitly instructs.
 - No `git config` changes.
 - Never leave the feature's `_review.md` (or per-feature arch notes) uncommitted — they must ship in the release commit.
-- **Never prepare a release past an unstamped code-review trail** (step 0). A review file with a `## Code review` section that is not `## Code review: <date> — passed` blocks the release; report BLOCKED and stop.
+- **Never prepare a release past an unstamped review trail** (step 0). A review file with a `## Code review` **or** `## Dry-run` (process-kind) section that is not stamped `<date> — passed` blocks the release; report BLOCKED and stop. A section that is absent is exempt.

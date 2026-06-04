@@ -47,6 +47,7 @@ Check what exists:
 
 Ask the PM these questions (one conversation, not a form):
 
+0. **Project kind** — is the deliverable **software** (source code) or a **process** (a human SOP / runbook / documentation artefact with no executable code — e.g. integrating a device into the company ecosystem, diagnosing a crashed server, soldering a board)? See `### Project kind` in `WORKFLOW.md` (the single source of the enum and the `absent ⇒ software` default — do not re-state them here). The answer is stored single-source as the `## Project kind:` line in `CLAUDE.md` (default `software`). On `kind = process`, follow the **Process-kind scaffolding** note below instead of the software-only scaffolding.
 1. What does this product do? (one sentence)
 2. Who uses it? (be specific — role, context)
 3. What problem does it replace or eliminate?
@@ -69,7 +70,7 @@ Ask the PM these questions (one conversation, not a form):
 
 Then create from templates:
 
-- `CLAUDE.md` from `CLAUDE.md.tmpl` — fill in all placeholders. Pipeline section is left with `<test command>` and `<lint command>` as placeholders for now — extended after `pm-stack-researcher` runs.
+- `CLAUDE.md` from `CLAUDE.md.tmpl` — fill in all placeholders, **including the `## Project kind:` line** from Q0 (default `software` if unanswered). Pipeline section is left with `<test command>` and `<lint command>` as placeholders for now — extended after `pm-stack-researcher` runs. (On `kind = process` there is no test/build pipeline to populate — see **Process-kind scaffolding** below.)
 - `README.md` from `README.md.tmpl`
 - `docs/architecture.md` from `architecture.md.tmpl`
 - `docs/user-journeys.md` from `user-journeys.md.tmpl` — leave as guided skeleton for PM to fill
@@ -86,6 +87,13 @@ Then create from templates:
 - `.ai-pm/contracts/` directory — Product Contracts get created here as features are planned (one file per user-facing feature)
 - `.ai-pm/research/` directory — research artifacts written by `/pm-research`
 - `.ai-pm/audits/` directory — protocol audit reports
+
+**Process-kind scaffolding (only when Q0 = `process`).** On a `process`-kind project (`### Project kind` in `WORKFLOW.md`), the deliverable is an SOP, not code. Adjust the scaffolding:
+
+- **Scaffold the SOP artefact:** create `process.md` from `.ai-pm/tooling/doc/_templates/process.md.tmpl` — the project's implementation artefact (authored later by `pm-coder` per feature; left as the guided skeleton at bootstrap).
+- **Keep the shared pillars:** `docs/product.md`, `docs/stack-notes.md` (the company systems & standards the process must respect), `docs/architecture.md` (constraints / behavioral contract for any token a step names), `docs/user-journeys.md` (operator experience flow), and `docs/threat-model.md` **only if** Q7 mentioned security — all created exactly as above.
+- **Skip the software-only scaffolding that has no process meaning:** the `CLAUDE.md` `## Pipeline` block carries no `<test command>` / build validators (markdownlint is the structural pre-gate — record it as the validator); the stack-researcher step still runs but documents the company systems/standards the SOP must respect, not language idioms. `docs/ui-guide.md` is created only on the same UI rule as software (a process project rarely has one).
+- The `## Project kind: process` line in `CLAUDE.md` is what makes the mandatory-table rider, the Pass-2 routing, and the dry-run gate fire downstream (all reference `### Project kind` by name).
 
 **Stack literacy onboarding (mandatory, no PM questions).** Spawn the `pm-stack-researcher` agent (`subagent_type: "pm-stack-researcher"`) with the stack components from PM's answers (language, runtime, framework, database, key libraries, target platform). The agent reads canonical docs and spec, writes `docs/stack-notes.md` with cited idioms, constraints, validators and integration contracts.
 
@@ -148,7 +156,7 @@ Read:
 From this, determine: language, framework, database, key abstractions.
 
 Write minimal docs — enough to start adding features:
-- `CLAUDE.md` — fill what's clear from reading; mark gaps as `[?]`
+- `CLAUDE.md` — fill what's clear from reading; mark gaps as `[?]`. **Write `## Project kind: software`** (legacy adoption reads an existing codebase — `software`; see `### Project kind` in `WORKFLOW.md`).
 - `docs/architecture.md` — stack and key decisions extracted from code; mark gaps as `[?]`
 - `docs/user-journeys.md` — write only what's visible from entry points and module names; leave the rest as `[?]`
 - `docs/stack-notes.md` from `stack-notes.md.tmpl` — empty shell

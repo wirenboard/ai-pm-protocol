@@ -1,0 +1,58 @@
+# <Process name> — Standard Operating Procedure
+
+The deliverable of a `process`-kind project (see `### Project kind` in `WORKFLOW.md`) — a human process / SOP with no executable code. Written for the operator and read by agents before planning any change to the process.
+
+> Operator **experience flow** lives in `docs/user-journeys.md` (what the person does / expects / what can go wrong) — this SOP is **additive**, not a replacement: a journey references, the SOP specifies. The **good-outcome bar** lives in the feature's Product Contract (Must work / Must not break / Acceptance checks); this SOP's `## Inputs and outputs` and its dry-run acceptance map onto that bar. Any status enumeration / identifier grammar a step would name lives **once** in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` and is referenced here, never restated.
+>
+> **Section-set methodology — confirm against primary sources.** The sections below follow standard SOP methodology (BPMN process modelling, ISO 9001 documented information, SIPOC, RACI, Toyota standard work). Treat the exact set as design guidance to confirm against the primary references your domain cites, not as verified fact.
+>
+> Scale ceremony to the stakes (the `### Project kind` proportionality note): a high-stakes, repeated, multi-role process earns every section; a low-stakes one-off marks the sections that do not apply `N/A — <reason>` rather than deleting them.
+
+## Purpose
+
+<why this process exists, in one or two sentences — the outcome it produces>
+
+## Scope
+
+<what this procedure covers, and what it explicitly does NOT cover (the No-Gos)>
+
+## Roles (RACI)
+
+| Role | Responsible | Accountable | Consulted | Informed |
+|---|---|---|---|---|
+| <role> | <x> | <x> | <x> | <x> |
+
+## Inputs and outputs (SIPOC)
+
+- **Inputs / prerequisites:** <what must exist before step 1 — the SIPOC inputs>
+- **Outputs:** <the finished artefact / state this produces — the good-outcome the contract defines>
+
+## Procedure (standard work)
+
+| Step | Actor | Action | Expected result |
+|---|---|---|---|
+| 1. | <role> | <action in plain language> | <observable result> |
+| 2. | <role> | <action> | <result> |
+| N. | <role> | <completion> | <done state> |
+
+## Decision points
+
+| At step | Condition | If yes | If no |
+|---|---|---|---|
+| <step> | <condition> | <branch> | <branch> |
+
+## Exceptions / failure handling and recovery
+
+| Failure | Detected by | Recovery action | Who |
+|---|---|---|---|
+| <what can go wrong> | <signal> | <how to recover> | <role> |
+
+## References
+
+<standards, systems, and related SOPs the process must respect — e.g. cited `docs/stack-notes.md` standards>
+
+## Revision history
+
+| Date | Version | Change | Author |
+|---|---|---|---|
+| <YYYY-MM-DD> | <vX> | <what changed> | <role> |

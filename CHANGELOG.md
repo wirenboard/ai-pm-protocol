@@ -13,6 +13,26 @@
 
 ---
 
+## [2.18.0] — 2026-06-04
+
+The protocol can now develop **process/documentation projects** (SOPs, runbooks) — not only software. A whole-project `kind = software | process` axis splits the pipeline: `process`-kind projects ship a written deliverable artefact with no executable code, validated by a no-code gate instead of a code build. The split is additive and reuses existing surfaces — no new command, agent, or hook — and is fully back-compatible: a project with no `## Project kind` line behaves exactly as before (software). This is the v1 slice; the full per-feature artifact-kind axis and the automation-opportunity scanner are deferred to the backlog.
+
+### Added
+
+- **`### Project kind` single-source rule** (`WORKFLOW.md`): a `kind = software | process` enum with a load-bearing `absent ⇒ software` default, carried as `## Project kind:` in `CLAUDE.md.tmpl` — the one place that defines what a project kind is and how it routes the pipeline.
+- **`doc/_templates/process.md.tmpl`** — a Standard-Operating-Procedure artefact (purpose, scope, roles/RACI, inputs+outputs/SIPOC, procedure, decision points, exceptions+recovery, references, revision history), additive to `user-journeys.md` and contracts.
+- **No-code validation gate** — a dry-run/tabletop load-bearing stamp (`## Dry-run: <date> — passed`), cloned from the review-stamp triad, gated by `pm-pr-prep` step 0 and `pm-auditor` dimension 1, plus a markdownlint pre-gate and a DoD/sign-off checklist. Pass 2 routes on project kind: a `process`-kind feature runs editorial + dry-run instead of code-review.
+- **`process` tier in `### Foundational product questions`** so `pm-product-advocate` finds gaps in an SOP (roles, prerequisites, decision points, failure/recovery, zero-to-done).
+
+### Changed
+
+- **"What is mandatory when" table gains a project-kind rider** (`WORKFLOW.md`): for `process` kind, tests + code-review + build are inert, while plan/journeys/contracts/threat-model/audit/state still apply — existing software rows unchanged.
+- **`pm-coder` remit generalized** to "author the plan's deliverable artefact" (the `docs/` ban is preserved).
+- **`/pm-bootstrap` asks the project kind** and scaffolds accordingly.
+- **Architecture decision record** (`doc/architecture.md`): records the whole-project kind split for v1, the reuse-not-new-surface shape (kind rider, dry-run stamp cloned from the review triad, advocate process tier), and the deferral of the full per-feature artifact-kind axis + automation-opportunity scanner.
+
+---
+
 ## [2.17.0] — 2026-06-04
 
 The **semantic complement** to the mechanical `### Pending-migration detection`. A template-version bump can introduce not just structural changes but new *content disciplines* (a populated threat-model lifecycle, foundational user-journeys, a value-first product story) — and the existing `pm-auditor` dimension-5 docs-currency check already detects when those disciplines are missing or stale. This release wires that detection into a PM-collaborative semantic remediation: when a docs-currency finding maps to a discipline a new template version introduced, `/pm-audit`'s fix-now relays that discipline's foundational questions so `pm-architect` can author the content with the PM, rather than leaving "your product story fell behind the template" as an untracked gap. Shipped **remediation-only** after a code-review rework removed a duplicate detector — no new command, agent, dimension, or hook; detection reuses the unchanged dimension 5.

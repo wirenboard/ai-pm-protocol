@@ -74,6 +74,7 @@ For every entry in the plan's "Stack expectations touched":
 - [ ] Docs updates listed in plan are in this branch
 - [ ] Expected artifacts exist for this feature: plan, this review, and a Product Contract if the feature is user-facing
 - [ ] **(user-facing only)** Product-readiness gate resolved — advocate artifact present and every foundational gap answered or descoped
+- [ ] **(process-kind only)** Dry-run gate resolved — `## Dry-run` in this review file stamped `— passed`; structural lint (markdownlint) green
 
 If any item is unchecked → DoD fails → `request-changes`.
 
@@ -85,6 +86,8 @@ If any item is unchecked → DoD fails → `request-changes`.
 **Unresolved** (`gaps: N` with fewer than N resolution entries) or **absent** (no advocate artifact at all, the gate was skipped) → **blocking**. Remediation: the orchestrator runs the `/pm-plan` Step 3.5 gate — spawn `pm-product-advocate`, relay the gaps in one `AskUserQuestion` pass, record the resolutions. This is the load-bearing backstop for the pre-coding gate (a manual step with no gate degrades silently; this is that gate — the same shape as the review-stamp gate, deliberately not redundant with the pre-coding step).
 
 This artifact-completeness line is the per-feature gate that replaced the feature index: it makes "all artifacts appeared" an explicit blocking check at the moment of completion, rather than a column to eyeball. The project-wide backstop is `pm-auditor` dimension 1.
+
+**Dry-run gate item (process-kind only).** On a `process`-kind project (`### Project kind` in `WORKFLOW.md` — read the `## Project kind:` line in `CLAUDE.md`; absent ⇒ `software`), a `process`-kind feature has no code Pass-2 — its load-bearing gate is the **dry-run / tabletop** (the no-code validation discipline under `### Project kind`). Write the review file **born loud** with a `## Dry-run: NOT YET RUN` marker (mirroring `## Code review: NOT YET RUN`) and emit the kind-conditioned DoD line above. The orchestrator stamps `## Dry-run: <date> — passed` after the tabletop clears; until then the section is **unstamped** and `pm-pr-prep` step 0 + `pm-auditor` dimension 1 block on it. A **`software`-kind (or kind-absent)** feature emits **no** `## Dry-run` section — its review file is unchanged, and the dry-run DoD line is marked `n/a`. **Pass-2 reinterpretation:** on a `process`-kind feature Pass 2 is **editorial review + structural lint**, not code-quality (`code-review`); the dry-run is the Step-5.5 load-bearing gate. The `software` Pass-2 branch is untouched.
 
 ## Trivial mode (`--mode=trivial`)
 
@@ -114,6 +117,7 @@ Write to `.ai-pm/reviews/<topic>_review.md`:
 - [x/[ ]] Docs updates landed
 - [x/[ ]] Expected artifacts exist (plan, this review, contract if user-facing)
 - [x/[ ]/n/a] Product-readiness gate resolved (user-facing only — advocate artifact `clean` or `gaps: N` with N resolutions)
+- [x/[ ]/n/a] Dry-run gate resolved (process-kind only — `## Dry-run` stamped `— passed`; markdownlint green)
 
 **DoD: pass | fail**
 
@@ -140,9 +144,23 @@ approve | request-changes
      "no findings / passed" to a quick eye or grep; `NOT YET RUN` reads as "not done". -->
 ```
 
+**Process-kind addendum — the `## Dry-run` stamp (emit ONLY on a `process`-kind project).** On a `process`-kind feature (`### Project kind` in `WORKFLOW.md`), Pass 2 is the dry-run/tabletop, not `code-review`. Replace the `## Code review` block in the template above with the dry-run pair below — the analogue, cloned from the same born-loud + greppable-stamp shape. On a `software`-kind (or kind-absent) feature, do **not** emit these — the review file is exactly as templated above.
+
+```markdown
+## Dry-run findings
+(populated by the orchestrator from the tabletop/pilot walkthrough; pm-coder reads and addresses these)
+
+## Dry-run: NOT YET RUN
+<!-- The orchestrator replaces THIS WHOLE LINE with `## Dry-run: <date> — passed`
+     only when the tabletop/pilot clears. Until then the section is UNSTAMPED:
+     `pm-pr-prep` (step 0) and `pm-auditor` (dimension 1) treat a `## Dry-run`
+     section without a `— passed` stamp as blocking, exactly as for `## Code review`.
+     Never ship an empty `## Dry-run` heading — `NOT YET RUN` reads as "not done". -->
+```
+
 **Routing rule:** blocking findings and technical notes go to `pm-coder` automatically — no PM involvement. Only product notes surface to PM.
 
-**File ownership:** pm-plan-checker writes everything through `## Verdict`, **plus** the loud `## Code review: NOT YET RUN` marker as part of the template — the file is born honest, never with an empty `## Code review` heading (a skeleton that looks filled is worse than an absent one). The orchestrator owns the Pass-2 trail below `## Verdict`: it appends `## Code review findings` before spawning pm-coder for pass 2, and replaces the `## Code review: NOT YET RUN` line with `## Code review: <date> — passed` when code-review clears. Until that replacement, the section reads `NOT YET RUN` — which both `pm-pr-prep` (its step 0 gate) and `pm-auditor` (dimension 1) treat as **unstamped** and block on. This file is the single persistent artifact for both review passes; pm-coder always reads it to know what to fix.
+**File ownership:** pm-plan-checker writes everything through `## Verdict`, **plus** the loud `## Code review: NOT YET RUN` marker as part of the template — the file is born honest, never with an empty `## Code review` heading (a skeleton that looks filled is worse than an absent one). The orchestrator owns the Pass-2 trail below `## Verdict`: it appends `## Code review findings` before spawning pm-coder for pass 2, and replaces the `## Code review: NOT YET RUN` line with `## Code review: <date> — passed` when code-review clears. Until that replacement, the section reads `NOT YET RUN` — which both `pm-pr-prep` (its step 0 gate) and `pm-auditor` (dimension 1) treat as **unstamped** and block on. This file is the single persistent artifact for both review passes; pm-coder always reads it to know what to fix. On a **`process`-kind** feature the same shape applies to the `## Dry-run` pair instead of `## Code review` (see the Process-kind addendum above): pm-plan-checker writes the born-loud `## Dry-run: NOT YET RUN`, the orchestrator stamps `## Dry-run: <date> — passed` after the tabletop, and the same two gates block until it is stamped.
 
 ## Hard rules
 
