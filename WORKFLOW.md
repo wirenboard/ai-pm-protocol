@@ -137,7 +137,7 @@ After coder (and any doc agents) finish, I tell you:
 **Pass 1 — Plan compliance** (`pm-plan-checker`): are all plan scenarios implemented and tested? contracts honored? interaction scenarios covered? DoD satisfied? Writes `.ai-pm/reviews/<topic>_review.md`.
 - Blocking → `pm-coder` fixes → pass 1 re-runs. Repeat until clean.
 
-**Pass 2 — Technical quality** (`code-review`): bugs, security, dead code, simplifications. Only starts after pass 1 is clean.
+**Pass 2 — Technical quality** (`code-review`): bugs, security, dead code, simplifications. Only starts after pass 1 is clean. **Pass 2 routes on project kind** (`### Project kind` in `WORKFLOW.md`): on a `software` project (and every kind-absent project) it runs `code-review` exactly as described below — unchanged. On a `process`-kind project it instead runs **editorial review + the structural-lint pre-gate + the dry-run gate** (see the **No-code validation discipline** under `### Project kind`); the `## Dry-run: NOT YET RUN → — passed` stamp replaces the `## Code review` stamp as the load-bearing marker, enforced at the same `pm-pr-prep` step 0 / `pm-auditor` dimension 1 gates.
 - The review file is **born with a loud marker** — `pm-plan-checker` writes the section as `## Code review: NOT YET RUN`, never an empty `## Code review` heading. An empty section reads as "no findings / passed" to a quick eye or `grep`; a loud marker reads as "not done". A skeleton that looks filled is worse than an absent one.
 - Orchestrator runs `code-review`, takes findings from the output, and appends them to `.ai-pm/reviews/<topic>_review.md` as `## Code review findings` — so `pm-coder` has a persistent artifact to read.
 - `pm-coder` reads `.ai-pm/reviews/<topic>_review.md`, fixes the code-review findings, commits.
@@ -210,6 +210,30 @@ Different change types impose different overhead. This table is the single sourc
 
 Trivial-fixup rules and the `/pm-fixup` command are in `.claude/commands/pm-fixup.md`.
 
+### Project kind
+
+**Single source for "what kind of project is this."** A project is one of two kinds:
+
+- **`software`** — the deliverable is source code (the default, and everything the protocol did before this rule existed).
+- **`process`** — the deliverable is a human process / documentation artefact with no executable code (an SOP, a runbook — e.g. "integrate a new device into the company ecosystem", "diagnose a crashed server", "solder components onto a board"). The implementation artefact is a `process.md` (the SOP), authored from `doc/_templates/process.md.tmpl`.
+
+The per-project value is declared **once**, single-source, as a `## Project kind: software | process` line in the downstream **`CLAUDE.md`** (every agent already reads `CLAUDE.md`). `/pm-bootstrap` writes it from the project-kind question; `CLAUDE.md.tmpl` carries it defaulting to `software`.
+
+**Load-bearing default — `absent ⇒ software`.** A project with **no** `## Project kind` line is treated as `software`. This is what keeps every existing downstream project unaffected: the process machinery is dormant unless `process` is explicitly declared.
+
+Every conditional below that branches on project kind — the mandatory-table rider, the Step 5 Pass-2 routing, the no-code validation discipline, the dry-run stamp gate, the `process` tier of `### Foundational product questions` — **references this `### Project kind` subsection by name** ("`### Project kind` in `WORKFLOW.md`") and **never re-encodes the enum or the `absent ⇒ software` default** — mirroring how `### Security-relevant surfaces` and `### Pending-migration detection in MIGRATIONS.md` are single-sourced. Re-encoding the default in any consumer would reintroduce the back-compat drift this single rule exists to prevent.
+
+**Project-kind rider (mandatory-table dimension — a rider, not a new column or row-duplication).** On a `process`-kind project (per `### Project kind` above), the **code-only obligations are inert**: automated tests, the Pass-2 `code-review`, and the build pipeline have no process analogue and do not apply. What **still applies** (shared across both kinds): the plan, `docs/user-journeys.md` (operator experience flow), Product Contracts (as the good-outcome definition), the threat-model where security is in play, `pm-auditor`, and `.ai-pm/state/current.md`. In place of the inert code Pass-2, a `process`-kind feature runs the **no-code validation discipline** (below). On a `software` project (and every kind-absent project) **nothing changes** — the existing change-type rows above are byte-unchanged; this rider adds the kind dimension orthogonally, exactly as the Product-readiness and Threat-model riders do. Proportionality still scales through the existing change-type matrix and the per-section `N/A` discipline — no process-specific stakes mechanism.
+
+**No-code validation discipline (`process` kind only).** A `process`-kind feature has no `code-review`/test analogue, so its validation is layered, with one **load-bearing gate**:
+
+- **Load-bearing gate — the dry-run / tabletop, mapped onto Step 5.5.** "Run it for real" (Step 5.5) becomes a human-driven **dry-run / tabletop walkthrough** of the SOP — the real "tests pass" for a process. Its outcome is recorded as a **stamped artifact** in the feature's review file, cloning the review-stamp pattern: `pm-plan-checker` writes a born-loud **`## Dry-run: NOT YET RUN`** marker (never an empty `## Dry-run` heading — an empty section greps as "passed"); after the tabletop clears, the orchestrator **replaces that whole line** with `## Dry-run: <date> — passed` and records observations as `## Dry-run findings` above it. Enforced at the **same downstream gates** as the code-review stamp (presence-keyed, no new gate): `pm-pr-prep` step 0 and `pm-auditor` dimension 1 block a `## Dry-run` section that is not stamped `— passed`. A skipped dry-run is therefore non-silent.
+- **Structural-lint pre-gate.** markdownlint (already in the repo's authoring discipline — MD022/MD032) is the cheap form gate the process artefact must pass. Vale is noted as an optional future prose-lint — not added in v1.
+- **DoD / sign-off — a checklist, never a lone rubber-stamp.** `pm-plan-checker` carries a kind-conditioned DoD line — the dry-run gate resolved for the feature, structural lint green — so the sign-off is a checklist item, not a bare signature.
+- **Pass-2 routes on kind.** Step 5 Pass 2 routes on `### Project kind`: `software` (and kind-absent) ⇒ `code-review` (the existing path, untouched, byte-for-byte); `process` ⇒ **editorial review + the structural-lint pre-gate + the dry-run gate** (no bug/security/dead-code analogue).
+
+**Composition is optional.** A `process`-kind project's `process.md` MAY be consumed by another project as a cited `stack-notes` standard (the same shape as software respecting a spec — and its versioning rides the existing doc-migration staleness machinery). It may equally be a **terminal** human artefact (solder / diagnose) that stands alone. v1 documents the path; it does not require downstream consumption.
+
 ### Security-relevant surfaces
 
 **Single source for "this feature touches security."** These are the only surfaces that mark a feature as security-touching. `/pm-plan`, `pm-plan-checker`, and `pm-auditor` reference this subsection **by name** ("`### Security-relevant surfaces` in `WORKFLOW.md`") and must never re-encode the list — mirroring how `### Pending-migration detection in MIGRATIONS.md` is the single source for un-migrated state. A feature touches a security-relevant surface when it touches any of:
@@ -224,7 +248,7 @@ Trivial-fixup rules and the `/pm-fixup` command are in `.claude/commands/pm-fixu
 
 ### Foundational product questions
 
-**Single source for the product-readiness gate.** This is the only list of foundational product questions. `pm-product-advocate`, `/pm-plan`, and `/pm-bootstrap` reference this subsection **by name** ("`### Foundational product questions` in `WORKFLOW.md`") and pass a **tier** (`per-feature` | `bootstrap`); they must never re-encode the list — mirroring how `### Security-relevant surfaces` is the single source for security-touching surfaces. The advocate reports only the questions with **no recorded answer** in its inputs, in the fixed order below; it never judges whether an answer is good (the PM owns meaning). Use cross-domain language — onboarding / discovery / recovery — never a domain-specific example baked in as vocabulary.
+**Single source for the product-readiness gate.** This is the only list of foundational product questions. `pm-product-advocate`, `/pm-plan`, and `/pm-bootstrap` reference this subsection **by name** ("`### Foundational product questions` in `WORKFLOW.md`") and pass a **tier** (`per-feature` | `bootstrap` | `process`); they must never re-encode the list — mirroring how `### Security-relevant surfaces` is the single source for security-touching surfaces. The advocate reports only the questions with **no recorded answer** in its inputs, in the fixed order below; it never judges whether an answer is good (the PM owns meaning). Use cross-domain language — onboarding / discovery / recovery — never a domain-specific example baked in as vocabulary.
 
 **Tier: per-feature** (one user-facing feature; inputs = the plan + the Product Contract + `docs/product.md` + `docs/user-journeys.md`):
 
@@ -243,6 +267,16 @@ Trivial-fixup rules and the `/pm-fixup` command are in `.claude/commands/pm-fixu
 5. Device-change / continuity — how does use carry across devices or sessions?
 6. Value — why this product, and not the incumbent?
 7. Viability — who runs it, who funds it, what legal or operational constraints bind it?
+
+**Tier: process** (one feature on a `process`-kind project — per `### Project kind`; the operator is a human role, so the advocate fires; inputs = the plan + the Product Contract + `process.md` + `docs/user-journeys.md`). The questions map to the SOP's canonical sections (`doc/_templates/process.md.tmpl`); the advocate reports only the questions with no recorded answer, never grading the prose:
+
+1. Roles — who performs this, and who is accountable / consulted / informed (RACI)?
+2. Prerequisites / inputs — what must be in place before step 1 (the SIPOC inputs)?
+3. Decision points — where does the operator branch, and on what condition?
+4. Exception / failure handling + recovery — what happens when a step fails, and how does the operator recover?
+5. Zero-to-done — what does the operator's first complete run, from nothing to a finished outcome, look like?
+
+The advocate, its relay (the one `AskUserQuestion` pass), and its backstops (`pm-plan-checker` DoD, `pm-auditor` dimension 1) are reused **verbatim** for this tier — only the question source gains the tier. A process project is human-facing — the **operator is a human role** — so the human-role-subject extraction that gates the per-feature advocate **fires** on a `process`-kind feature; the advocate is the natural referee that finds holes in the instruction before it ships.
 
 ### Threat-model lifecycle
 
