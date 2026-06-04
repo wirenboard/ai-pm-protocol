@@ -1,6 +1,6 @@
 # Execution State
 
-- **Status:** idle
+- **Status:** planning → coding (ai-minimums-linter-wiring). PM-flagged #218/#211 + DriveBox #224 evidence. Make the AI-specific minimums deterministically enforced by the project's linter (per-stack mapping = pm-stack-researcher) + a reviewer/auditor check that the linter encodes them; numbers stay single-sourced; honest partial for unexpressible minimums (#211). Plan: `doc/features/ai-minimums-linter-wiring_plan.md`. Branch `feature/ai-minimums-linter-wiring`. **Next step:** arch-review (reviewer-check owner) → pm-coder → review loop → pr-prep → merge. Target ~v2.28.0. (Running queue autonomously incl. merge.)
 - **Touched files (this slice):** `WORKFLOW.md` (new `### Review typology` subsection), `.claude/commands/pm-audit.md` (`## Technical quality` → smell/hygiene sweep), `.ai-pm/state/current.md`.
 - **Decision authority:** `autonomous` (project-wide, `.ai-pm/decision-authority.md`) — routine procedural gates announce-and-proceed (v2.24.0); merge/ship stays manual.
 - **Last shipped:** `review-typology-framework` (v2.27.0, PR #223) — EPIC review-typology slice 1 (registry + smell/hygiene sweep). Archived: `.ai-pm/state/archive/review-typology-framework-2026-06-05.md`. Running the PM-flagged queue autonomously (merge included, per PM 2026-06-05).
