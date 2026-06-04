@@ -13,6 +13,27 @@
 
 ---
 
+## [2.25.1] — 2026-06-05
+
+Ships **deny-review-orchestrator** — a surgical hardening of the shipped `.claude/settings.json` routing hook so the wb-* skill `wb-development:code-review-orchestrator` no longer auto-intercepts this protocol's own `/code-review` (Pass-2). Its broad auto-trigger would silently hijack the protocol's review loop in every downstream project (the hook ships via the submodule), so the hook now **denies** that one skill by name with a clear "use `/code-review` instead" reason. For the rare case where the skill is genuinely wanted, a narrowly-scoped per-skill env-escape **`WB_ALLOW_REVIEW_ORCHESTRATOR=1`** bypasses only this single deny — every other hook and every other wb-* deny stays active. Tooling/config only; additive, fully back-compatible, **no migration**.
+
+### Changed
+
+- **Routing hook denies `wb-development:code-review-orchestrator` by name** (`.claude/settings.json`) — added as a dedicated `case` arm with a "would auto-intercept this project's own `/code-review` (Pass-2); use `/code-review` instead" reason, separate from the existing wb-* role-duplication deny list.
+
+### Added
+
+- **Per-skill env-escape `WB_ALLOW_REVIEW_ORCHESTRATOR=1`** — when set, the hook exits early for `wb-development:code-review-orchestrator` only, bypassing this one deny without touching any other hook or deny. Must be set on the Claude Code process (`WB_ALLOW_REVIEW_ORCHESTRATOR=1 claude` or `export` before start), documented in `README.md`.
+- **README install/usage note** — a new "Скилл `code-review-orchestrator` отключён по умолчанию" section documenting the deny, the downstream-via-submodule reach, and the env-escape semantics.
+- **3 hook tests** (`tests/hooks.sh`) covering the new deny and the env-escape — suite at **74/74**.
+
+### Notes
+
+- `.claude/settings.json` is a security-relevant hook: this change adds a deny-by-default with a single narrowly-scoped env-escape, independently reviewed and confirmed correctly scoped (`.ai-pm/reviews/deny-review-orchestrator_review.md` — code-review no defects, stamped `2026-06-05 — passed`).
+- Back-compat: additive only — existing routing behavior is unchanged except for the new deny. **No migration.**
+
+---
+
 ## [2.25.0] — 2026-06-04
 
 Ships **state-model-section** — slice 4 of the cross-document-consistency auditor EPIC (slice 1 = `invariants-index`, v2.21.0; slice 2 = `taxonomy-drift-sweep`, v2.22.0; slice 3 = `nfr-operational-limits-prompt`, v2.23.0), the third whole-system-property gap. Closes the **state-model** gap: a stateful project that scatters its lifecycle states, transitions, and terminal/illegal states across feature docs with **no single authority**, because the protocol had no prompt forcing *"what are this system's states, and which transitions are legal?"*. `/pm-plan` gains a **conditional State-model check** that fires only when the orchestrator judges the feature **state-bearing** (a lifecycle / status field / explicit state machine), silent otherwise, beside the existing Stack-component / Interaction-scenario / Security-surface / NFR conditional checks. The state model gets a **home**: a **new conditional `## State model`** section in `architecture.md` (states, legal transitions, terminal & illegal states), with `pm-architect` walking it (A2) and excluding it from the default skeleton (A4) so it appears only when warranted. Conditional / proportional, judgment-not-regex, no hook and no hard gate; additive, fully back-compatible, **no migration**.

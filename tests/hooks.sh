@@ -406,6 +406,30 @@ run_case "guard: spawn wb-development:pr-prep -> deny" \
 run_case "guard: skill wb-git:pr-review -> pass (no protocol seat)" \
     "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-git:pr-review)"
 
+# code-review-orchestrator: broad auto-trigger wb skill that would intercept the
+# protocol's own /code-review Pass-2. Denied by default, with a surgical per-skill
+# env-escape (WB_ALLOW_REVIEW_ORCHESTRATOR=1) that lets ONLY this skill through —
+# exit-0-no-output / "no decision; normal permission flow applies", per the Claude
+# Code hooks API (doc/stack-notes.md § Claude Code hooks API; the deny enum value
+# and the no-decision let-through form are both from
+# <https://code.claude.com/docs/en/hooks>). The flag must NOT short-circuit any
+# other skill's deny — proven by the third case below.
+# WB_ALLOW_REVIEW_ORCHESTRATOR is unset by default for the whole suite; we only
+# export it around the one case that needs it, then unset it again, so it never
+# leaks into other cases (run_case invokes the hook via `bash -c "$cmd"`, which
+# inherits this shell's environment).
+unset WB_ALLOW_REVIEW_ORCHESTRATOR
+run_case "routing: code-review-orchestrator without flag -> deny" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-development:code-review-orchestrator)"
+
+export WB_ALLOW_REVIEW_ORCHESTRATOR=1
+run_case "routing: code-review-orchestrator with WB_ALLOW_REVIEW_ORCHESTRATOR=1 -> pass" \
+    "pass" "$AGENT_GUARD_HOOK" "$(mk_input_skill wb-development:code-review-orchestrator)"
+# Escape is per-skill: a role skill stays denied even with the flag set.
+run_case "routing: wb-development:coder stays denied even with WB_ALLOW_REVIEW_ORCHESTRATOR=1" \
+    "deny" "$AGENT_GUARD_HOOK" "$(mk_input_agent wb-development:coder)"
+unset WB_ALLOW_REVIEW_ORCHESTRATOR
+
 # ----------------------------------------------------------------------
 # UserPromptSubmit route reminder — injects the protocol route on
 # change-intent prompts (RU + EN), stays silent on chit-chat so it does

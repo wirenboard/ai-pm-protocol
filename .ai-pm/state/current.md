@@ -1,6 +1,9 @@
 # Execution State
 
-- **Status:** idle
+- **Status:** review-complete → pr-prep (deny-review-orchestrator). pm-coder hook+tests (74/74), pm-architect README note; plan-check approve; code-review NO defects (security-sensitive deny-bypass verified scoped via mutation test); stamp `## Code review: 2026-06-05 — passed`. **Next step:** pr-prep → STOP. Target ~v2.25.1.
+  - **Done (pm-coder):** `.claude/settings.json` routing hook extended — env-escape FIRST (per-skill `WB_ALLOW_REVIEW_ORCHESTRATOR=1` → exit-0-no-output let-through), orchestrator added as its OWN deny branch with its own `permissionDecisionReason`; the 7 role skills' case + message unchanged, no escape. `tests/hooks.sh` +3 cases (orchestrator-no-flag→deny, orchestrator-flag→pass, coder-with-flag→deny proving per-skill scope), cited to hooks API. Suite **74/74** green; `.claude/settings.json` valid JSON.
+  - **Touched files:** `.claude/settings.json`, `tests/hooks.sh`, `.ai-pm/state/current.md`.
+  - **Remaining / Next step:** pm-architect → README install note (Scenario 4 / "Docs to update"); then review loop → pr-prep → STOP. Target ~v2.25.1.
 - **Decision authority:** `autonomous` (project-wide, `.ai-pm/decision-authority.md`) — routine procedural gates announce-and-proceed (v2.24.0); merge/ship stays manual.
 - **Last shipped:** `state-model-section` (v2.25.0, PR #214) — EPIC cross-document-consistency auditor slice 4, the third whole-system gap; conditional `## State model` section + `/pm-plan` check. Also shipped this round: `readme-rewrite` (v2.24.1, PR #215) — PM-directed front-door rewrite. Archived: `.ai-pm/state/archive/state-model-section-2026-06-04.md`, `.ai-pm/state/archive/readme-rewrite-2026-06-04.md`.
 - **This session shipped:** v2.15.0–v2.25.0 (incl. EPIC slices invariants-index / taxonomy-drift-sweep / nfr-operational-limits-prompt / state-model-section; automode + automode-procedural-gates; readme-rewrite) + full audit + install/docs PRs #204–#206 + backlog notes #210/#211.
