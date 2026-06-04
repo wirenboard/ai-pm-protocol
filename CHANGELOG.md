@@ -13,6 +13,26 @@
 
 ---
 
+## [2.23.0] — 2026-06-04
+
+Ships **nfr-operational-limits-prompt** — slice 3 of the cross-document-consistency auditor EPIC (slice 1 = `invariants-index`, v2.21.0; slice 2 = `taxonomy-drift-sweep`, v2.22.0). Closes the **NFR / operational-limits** gap the downstream review found: a resource-constrained / scale-bearing project that writes its resource and scale budget **nowhere**, because the protocol had no prompt forcing *"what is this feature's / the system's resource and scale budget?"*. `/pm-plan` gains a **conditional NFR / operational-limits check** that fires only when the orchestrator judges the feature **scale-bearing** or the platform **resource-constrained** (signal from `docs/stack-notes.md` / `docs/architecture.md` `## Architectural constraints`) — silent otherwise, beside the existing Stack-component / Interaction-scenario / Security-surface conditional checks. NFRs get a **home split by audience**: user-facing limits → the Product Contract `## Must not break`; resource budgets → a **new conditional `## Operational limits & budgets`** section in `architecture.md`. Conditional / proportional, judgment-not-regex, no hook and no hard gate; additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **`/pm-plan` conditional NFR / operational-limits check** — a judgment-triggered pre-draft check that fires when the feature is scale-bearing **or** the platform is resource-constrained, surfaces the resource and scale budget question, and routes the answer to its audience-split homes. Silent on a non-scale feature / non-constrained platform (proportional, no hook); an unquantifiable budget is recorded as `[?]`, never invented.
+- **New conditional `## Operational limits & budgets` section in `architecture.md`** — resource budgets (RAM ceiling, boot-time, CPU headroom, system-level max-N) get a home, placed beside `## Architectural constraints` and born `N/A — <reason>` for projects with no quantified budget. Added to the architecture template (`doc/_templates/architecture.md.tmpl`) and authored/refreshed by `pm-architect` on the post-coding "Docs to update" handoff.
+- **`pm-architect` ownership of the new section** — added to the Section A **A2 walk-list** and refresh triggers, and **A4-EXCLUDED** (authored engineering content with no source-tree artifact to diverge from — same cross-check exclusion the `## Behavioral contract` section carries) so an authored budget never manufactures a self-inflicted "diverges from the tree" finding.
+- **Contract template note** — a one-line note in `doc/_templates/contract.md.tmpl` `## Must not break` that a quantified **user-facing limit** (max devices / endpoints supported, perceived throughput) is a valid Must-not-break item — its home.
+- **Architecture decision record** — the NFR / operational-limits prompt recorded in `doc/architecture.md` as EPIC slice 3 (fire-rule, audience-split homes, proportional / judgment-not-regex / no-hard-gate), with this repo's own section carried as `N/A`.
+
+### Notes
+
+- Back-compat: additive only — existing projects gain the prompt at their next `/pm-plan` and the `N/A` section at their next architecture refresh; nothing retroactive. **No migration.**
+- Slice 3 of the cross-document-consistency auditor EPIC; the state/event-model slice and other NFR classes (reliability, latency SLOs) are deferred to later slices.
+- No hard gate by design: the fire-condition is a semantic judgement no regex can evaluate, so the prompt degrades silently if misjudged — the audience-split homes make a *recorded* budget durable and auditable.
+
+---
+
 ## [2.22.0] — 2026-06-04
 
 Ships **taxonomy-drift-sweep** — slice 2 of the cross-document-consistency auditor EPIC (slice 1 = `invariants-index`, v2.21.0). `pm-auditor` dimension 5 gains a **journey identifier-restatement check**: when a journey is moved (not copied) into the Behavioral contract, the auditor verifies the journey's identifier is restated at its single home and flags drift where a backticked token names a journey that no longer lives where it is referenced. The check is **gated to backticked tokens** (so prose mentions never false-trigger) and **exempts the Behavioral-contract reference** itself. The move-not-copy rule is backstopped by `pm-auditor`, with `pm-architect` carrying a one-line note pointing at that backstop. Additive, fully back-compatible, **no migration**.
