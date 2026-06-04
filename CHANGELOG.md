@@ -13,6 +13,23 @@
 
 ---
 
+## [2.21.0] — 2026-06-04
+
+Ships **invariants-index** — the first slice of the cross-document-consistency auditor EPIC. The `## Behavioral contract (taxonomies & invariants)` section in `architecture.md` gains a single **`### System invariants`** index: one entry point for cross-cutting system invariants, each listed **by reference to its single home** (inline, an `SCn` by ID, or a journey by name). `SCn` invariants are indexed by ID and **never relocated** — mirroring the existing threat→constraint-by-ID pattern, so there is no duplication. `pm-architect` authors the index; `pm-auditor` dimension 5 gains a **structural, presence-conditional note** (triggered only when there is ≥1 `SCn` and/or ≥1 journey `**Invariants:**` block — it is not security-bearing) that flags unindexed invariants **without blocking**. Additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **`### System invariants` index in the Behavioral contract** — a single home-by-reference index for cross-cutting system invariants in `architecture.md`. Each invariant points to its one home (inline / `SCn` by ID / journey by name); `SCn` invariants are listed by ID and stay where they live — no duplication, no relocation.
+- **`pm-architect` owns index authoring** — the architect writes and maintains the System-invariants index as a subsection of the Behavioral contract.
+- **`pm-auditor` dimension-5 presence-conditional note** — a structural check that fires only when the project actually carries invariants (≥1 `SCn` and/or ≥1 journey `**Invariants:**` block). It surfaces unindexed invariants as a **note, not a blocker**, and is explicitly not a security gate.
+
+### Notes
+
+- Back-compat: additive only — existing projects with no System-invariants index are unaffected. **No migration.**
+- First slice of the cross-document-consistency auditor EPIC; later slices build on this index.
+
+---
+
 ## [2.20.0] — 2026-06-04
 
 Adds **automode** — a decision-authority mode that lets the protocol resolve advocate gaps on its own when the canon already answers them, instead of stopping to ask the PM for every fork. The mode is `autonomous | interactive`, **defaults to interactive**, and is graded and capped: autonomy applies only to deriving a decision from cited canon — **merge and ship stay manual in both modes**. Two scopes share one engine: a project-wide setting in a dedicated `.ai-pm/decision-authority.md`, and a per-feature override on the plan's `Decision authority:` line. Fully back-compatible — an absent file or an unrecognized value falls back to `interactive`, and there is **no migration**.
