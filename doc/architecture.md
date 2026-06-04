@@ -282,7 +282,7 @@ N/A — the ai-pm-protocol template is documentation + config, not a resource-co
 
 ## State model
 
-N/A — the ai-pm-protocol template is documentation + config, not a state machine / protocol: it has no status ladder with defined transitions, no named-state lifecycle, and no wire / connection protocol with message / connection states to model. (The section is born `N/A` here exactly as it is for any project whose core is not a state machine; this repo carries it to stay self-consistent with the `## State model` section the shipped `doc/_templates/architecture.md.tmpl` now defines after `## Behavioral contract` — A2-walked, A4-excluded.)
+N/A — the ai-pm-protocol template is documentation + config, not a state machine / protocol: it has no status ladder with defined transitions, no named-state lifecycle, and no wire / connection protocol with message / connection states to model. (The section is born `N/A` here exactly as it is for any project whose core is not a state machine; this repo carries it among the conditional engineering sections — clustered after `## Operational limits & budgets`, sibling to `## Architectural constraints` — to stay self-consistent with the `## State model` section the shipped `doc/_templates/architecture.md.tmpl` now defines (the template places it after `## Behavioral contract`, a section this repo has no top-level instance of). A2-walked, A4-excluded.)
 
 ---
 
