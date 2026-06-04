@@ -27,6 +27,33 @@ On an already-initialized project, before confirming-and-exiting, check whether 
 
 The migration procedures themselves are below; they are unchanged.
 
+### Expected-discipline manifest
+
+**Single source for "this template version introduced a content discipline that may need PM-authored content."** The semantic sibling of `### Pending-migration detection` above: that section lists *structural* stale-artifact conditions remediated mechanically; this section lists *content disciplines* remediated by PM-authored content. `pm-auditor` references this subsection **by name** ("`### Expected-discipline manifest` in `MIGRATIONS.md`") and must never re-encode the entries. The two lists are **disjoint** — no entry here duplicates a `### Pending-migration detection` condition (those are greppable stale artifacts; these are absent/under-filled content).
+
+Each entry's **satisfied-check is a presence/structure test, never a quality judgment** — it asks whether the required structure is absent / `<placeholder>` / skeletal, never whether the prose is good (the PM owns meaning; same shape-not-meaning rule as the wire-token notes in `pm-auditor.md` dimension 5). A discipline is flagged only when it **applies** to the project AND its satisfied-check shows the gap; applicable-and-satisfied, or not-applicable → silent.
+
+#### Populated threat-model lifecycle
+
+- **Introduced in:** v2.13.
+- **Applicability:** the project is security-bearing — `docs/threat-model.md` is **present** (the durable signal, per `### Threat-model lifecycle` in `WORKFLOW.md`). Absent → not applicable → silent.
+- **Satisfied-check (presence):** the threat-model's Assets and Threats carry **no** `<placeholder>` tokens AND the Threats table has ≥1 data row. A `<placeholder>` remaining, or an empty Threats table → gap. (This is the same skeleton test dimension 5 already runs; the manifest entry names it as a discipline so the bump-driven sweep covers it under one rule.)
+- **Question source:** the bootstrap **threat-model Q-set** (the Q7 security answers named in `### Threat-model lifecycle` in `WORKFLOW.md`).
+
+#### Foundational user-journeys
+
+- **Introduced in:** v2.16 (the version that consolidated `docs/user-journeys.md` under `pm-architect` as an owned content discipline; the product-readiness gate that forces the journey story shipped one version earlier in v2.15).
+- **Applicability:** the project has ≥1 **user-facing** feature — by the **human-role-subject extraction** (`pm-auditor.md` dimension 1: any merged feature whose scenario-1 subject is a human role). Zero user-facing features → not applicable → silent. (Reuses the dimension-1 extraction; never re-derived.) This generalizes the epic's "product story fell behind" note — "N substrate features shipped while `user-journeys.md` is still skeletal" is exactly this entry unsatisfied.
+- **Satisfied-check (presence):** `docs/user-journeys.md` exists AND contains ≥1 journey block with a populated step table (a journey heading plus a non-empty `| Step | What user does | … |` table) — i.e. a foundational zero-to-working journey is present, not the bare template skeleton.
+- **Question source:** `### Foundational product questions` in `WORKFLOW.md`, **per-feature tier** (the value/usability/scope-boundary set).
+
+#### Value-first product story
+
+- **Introduced in:** v2.3 (the version that split `docs/product.md` into the authored PM front door funnel; the value-first map format followed in v2.6 and the English-canonical funnel headers below in v2.9).
+- **Applicability:** the project has ≥1 user-facing feature (same human-role-subject extraction as journeys). A backend/infra-only project → not applicable → silent.
+- **Satisfied-check (presence):** `docs/product.md` exists with its funnel headers (`## Why this exists` / `## What it does today`) present AND each carries non-skeleton body (not the empty `product.md.tmpl` placeholder text). Structure/placeholder test only — never whether the value story is persuasive.
+- **Question source:** `### Foundational product questions` in `WORKFLOW.md`, **bootstrap tier** (discovery / onboarding / value / viability).
+
 - **v2.2 — feature index → product map.** Detection: see `### Pending-migration detection` above (`docs/features/_index.md` present). When it applies:
   1. **Backfill `Built/changed by` from the index first.** Pre-v2.2 contracts have no `Built/changed by` list, so a naive generation would drop every feature into the Infrastructure bucket. The mapping already exists in the index's `Contract` column: read `docs/features/_index.md`, and for each feature row that links a contract, append `- [<topic>](../../docs/features/<topic>_plan.md)` to that contract's `Built/changed by` section. Features with no contract link correctly fall into the Infrastructure bucket.
   2. Generate `docs/product-map.md` from the contracts / plans / reviews using the **Product map generation procedure** in `pm-bootstrap.md`. (Pre-v2.3 the target was `docs/product.md`; the v2.3 migration below splits that into the authored front door plus this generated map. If you run both migrations on a project that still has a generated `docs/product.md`, run the v2.3 rename first.)
