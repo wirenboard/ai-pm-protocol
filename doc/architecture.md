@@ -2,7 +2,7 @@
 
 This document describes the architecture of the **ai-pm-protocol template repository itself** — not a downstream project that consumes the template. It is a meta-case: the template documents itself in the same shape (`doc/_templates/architecture.md.tmpl`) it expects downstream projects to use. Sections that do not apply to a documentation-and-config repo are kept as headers and marked `N/A — <one-line reason>` so a downstream reader can see the template walked its own structure honestly.
 
-**Last full review:** 2026-06-03
+**Last full review:** 2026-06-04
 
 ---
 
@@ -217,7 +217,7 @@ Real top-level paths in this repo (cross-checked against `ls` and `git ls-tree -
 | `.github/workflows/auto-tag.yml` | The release CI workflow — runs on push to `main`. |
 | `.github/workflows/lint-hooks.yml` | The hook-config CI workflow — runs `tests/hooks.sh` on every PR or push that touches `.claude/settings.json`, `tests/hooks.sh`, or the workflow itself. |
 | `tests/hooks.sh` | POSIX-shell unit tests for the `PreToolUse` hook regexes in `.claude/settings.json`. Simulates the documented `{tool_name, tool_input}` stdin contract for each hook and verifies the produced `permissionDecision`. The only test artefact in the repo (see Architectural constraints — meta-infrastructure exception). |
-| `doc/_templates/` | Templates copied / referenced by `/pm-bootstrap` to populate downstream `docs/` (`CLAUDE.md.tmpl`, `README.md.tmpl`, `architecture.md.tmpl`, `stack-notes.md.tmpl`, `state.md.tmpl`, `contract.md.tmpl`, `process.md.tmpl`, `threat-model.md.tmpl`, `ui-guide.md.tmpl`, `user-journeys.md.tmpl`). |
+| `doc/_templates/` | Templates copied / referenced by `/pm-bootstrap` to populate downstream `docs/` (`CLAUDE.md.tmpl`, `README.md.tmpl`, `architecture.md.tmpl`, `stack-notes.md.tmpl`, `state.md.tmpl`, `contract.md.tmpl`, `process.md.tmpl`, `product.md.tmpl`, `threat-model.md.tmpl`, `ui-guide.md.tmpl`, `user-journeys.md.tmpl`). |
 | `doc/features/` | Plans, reviews, audits for the template's own development. |
 | `doc/stack-notes.md` | Template's own stack-notes — citations + idioms for the six components above. |
 | `doc/architecture.md` | This document. |
