@@ -110,16 +110,15 @@ Example — a states×transitions table (states referenced from the `## Behavior
 
 | State | Allowed transitions → | Trigger / event | Notes |
 |---|---|---|---|
-| `pairing` | `paired`, `failed` | commissioning succeeds / times out | 30 s window |
-| `paired` | `active`, `lost` | first publish received / heartbeat gap | — |
-| `active` | `lost` | heartbeat gap > 3 intervals | debounce 10 s before declaring `lost` |
-| `lost` | `active` | heartbeat resumes | — |
-| `failed` | — | — | terminal |
+| `pending` | `active`, `failed` | worker leases the record / admission check rejects | initial state on creation |
+| `active` | `done`, `failed` | processing completes / processing errors | — |
+| `done` | — | — | terminal success |
+| `failed` | `active` | operator requeues for retry | terminal unless explicitly retried |
 
 Triggers / debounce:
 
-- <e.g., "`active → lost`: declared only after 3 consecutive missed heartbeats (10 s debounce) to absorb transient gaps.">
-- <e.g., "`pairing → failed`: on the 30 s commissioning-window timeout.">
+- <e.g., "`pending → active`: when a worker leases the record; the lease is the trigger, not a timer.">
+- <e.g., "`active → failed`: on the first unrecoverable processing error; `failed → active` only on an explicit operator retry.">
 
 ## Release flow
 
