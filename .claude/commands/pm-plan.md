@@ -9,7 +9,7 @@ All agents below are project agents — use the Agent tool with the exact `subag
 | Agent | subagent_type |
 |---|---|
 | pm-architect | `"pm-architect"` |
-| pm-legacy-reader | `"pm-legacy-reader"` |
+| pm-codebase-reader | `"pm-codebase-reader"` |
 | pm-stack-researcher | `"pm-stack-researcher"` |
 | pm-product-advocate | `"pm-product-advocate"` |
 | pm-coder | `"pm-coder"` |
@@ -42,7 +42,7 @@ While reading docs/, identify whether this feature touches areas that are incomp
 
 Three cases — handle each differently:
 
-**1. Documentation missing or marked `[?]`** — do not write to `docs/` directly. Spawn the owning agent with a focused prompt: `pm-architect` (`subagent_type: "pm-architect"`) for gaps in `docs/architecture.md`, `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) for gaps in `docs/user-journeys.md`. Wait for the agent to complete before writing the plan.
+**1. Documentation missing or marked `[?]`** — do not write to `docs/` directly. Spawn the owning agent with a focused prompt: `pm-architect` (`subagent_type: "pm-architect"`) for gaps in `docs/architecture.md` **or `docs/user-journeys.md`** (pm-architect owns both). Wait for the agent to complete before writing the plan.
 
 **2. Documentation exists but incomplete** — same: spawn the owning agent with a focused prompt to fill the missing section. Do not rewrite what's already there.
 
@@ -55,7 +55,7 @@ Also flag anything this feature makes outdated:
 - Does this feature change an existing user journey? → note the update needed in `docs/user-journeys.md`
 - Does this feature add a new architectural constraint or decision? → note the update needed in `docs/architecture.md`
 
-Include any doc updates as explicit steps in the plan — coder does not touch docs. After pm-coder finishes and before spawning pm-plan-checker: if the plan's "Docs to update" section names `docs/architecture.md` **or `docs/threat-model.md`** — spawn `pm-architect` (`subagent_type: "pm-architect"`) with a focused prompt to update that section (pm-architect owns both); if it names `docs/user-journeys.md` — spawn `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) standalone with a focused prompt. This satisfies DoD item 8 before the review loop runs.
+Include any doc updates as explicit steps in the plan — coder does not touch docs. After pm-coder finishes and before spawning pm-plan-checker: if the plan's "Docs to update" section names `docs/architecture.md`, `docs/user-journeys.md`, **or `docs/threat-model.md`** — spawn `pm-architect` (`subagent_type: "pm-architect"`) with a focused prompt to update that section (pm-architect owns all three). This satisfies DoD item 8 before the review loop runs.
 
 ## Categorical scope check (mandatory, surfaces a product question to PM)
 

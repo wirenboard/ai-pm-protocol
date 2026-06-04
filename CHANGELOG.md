@@ -13,6 +13,22 @@
 
 ---
 
+## [2.16.0] — 2026-06-04
+
+Two coupled, backward-compatible structural moves on the protocol surface. First, the bootstrap raw-drafter agent is renamed `pm-legacy-reader` → `pm-codebase-reader`: "legacy" mis-narrowed the role — a pre-existing codebase may be perfectly modern, just not greenfield — and the agent's job is to read code while writing doc drafts, which "codebase-reader" names accurately. Second, ownership of `docs/user-journeys.md` is consolidated under `pm-architect`, completing the established "reader drafts raw → pm-architect finalizes and owns" pattern (already in force for `architecture.md` and `threat-model.md`) for the one doc where it was still missing. `pm-codebase-reader` continues to draft journeys from code at bootstrap; `pm-architect` now owns per-feature updates, gap-fill, stale remediation, and finalizing that bootstrap draft. No downstream migration is required and the agent roster count is unchanged at 8.
+
+### Changed
+
+- **Renamed agent `pm-legacy-reader` → `pm-codebase-reader`** (`.claude/agents/pm-codebase-reader.md`): a pure existing-codebase raw-drafter at bootstrap. "Legacy" mis-narrowed the role — the codebase may be modern, just pre-existing — and the agent reads code while writing doc drafts, which the new name reflects.
+- **`docs/user-journeys.md` ownership consolidated under `pm-architect`**: `pm-architect` now owns per-feature updates, gap-fill, stale remediation, and finalizing the reader's bootstrap journeys draft — completing the established "reader drafts raw → pm-architect finalizes/owns" pattern (already in force for `architecture.md` and `threat-model.md`) for the one doc where it was missing. `pm-codebase-reader` still drafts journeys from code at bootstrap.
+- **Architecture decision record** (`doc/architecture.md`): records the rename and ownership move; agent roster name updated, count unchanged at 8.
+
+### Migration
+
+- **No downstream migration required.** The agent reaches downstream via the symlinked `.claude/agents/` plus `subagent_type`; no template names the old agent, so no downstream copy is stale. Historical artifacts retain the old name.
+
+---
+
 ## [2.15.0] — 2026-06-04
 
 Adds the **product axis its first independent referee**. Until now the technical axis had four checks (plan-checker, code-review, architect, auditor) while the product axis had none — every product question was self-checked by the same role that wrote the plan, which research shows is undermined by self-preference bias. `pm-product-advocate` is the product-axis twin of `code-review`: an independent referee that generates the foundational product-question gaps and **blocks the coder handoff on user-facing features** until the PM answers each gap or consciously descopes it. The gate is **block-but-sovereign** (it stops the handoff but the PM can always override by resolving or descoping — never a permanent veto) and **proportional** (backend, docs, trivial, and diagnostic-probe changes stay un-gated). It runs at two points: a pre-coding gate in `/pm-plan` (Step 3.5, user-facing changes only, scoped via human-role-subject extraction) and a foundational-question pass in `/pm-bootstrap` (forcing the zero-to-working story: discovery / onboarding / invite / recovery / device-change / why-not-incumbent / viability). The checklist lives single-source as `### Foundational product questions` in `WORKFLOW.md` (two tiers), referenced by name. Enforcement is soft (no hook) with load-bearing backstops keyed on a greppable `gaps: N` / `clean` verdict token: `pm-plan-checker` carries it as a DoD item and `pm-auditor` as dimension 1. This is the **anchor of the "technical-over-product bias" epic**.

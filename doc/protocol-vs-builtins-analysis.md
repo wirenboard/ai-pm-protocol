@@ -85,7 +85,7 @@
 | `pm-auditor` | наследует | **сильно** (свип проекта) | read-only + `Write`→audit-файл | **нет** (закалён) |
 | `pm-architect` | наследует | да | `Read,Grep,Glob,Bash` + `Write`→architecture.md/.ai-pm/arch | низкий |
 | `pm-stack-researcher` | наследует | да | **`WebFetch,WebSearch`**`,Read,Grep,Glob,Bash,Write,Skill` (Skill — вызвать deep-research) | — (идёт в REWORK) |
-| `pm-legacy-reader` | наследует | **сильно** (весь кодбейс) | `Read,Grep,Glob,Bash` + `Write`→docs | низкий |
+| `pm-codebase-reader` | наследует | **сильно** (весь кодбейс при bootstrap) | `Read,Grep,Glob,Bash` + `Write`→docs (raw-drafter) | низкий |
 | `pm-pr-prep` | ~~**haiku** (оставить)~~ → **наследует** (см. ⚠ Reversal ниже) | слабо | `Bash,Read,Edit` | низкий |
 
 > ⚠ **Reversal — 2026-06-03 (supersedes the «оставить `haiku` у `pm-pr-prep`» decision recorded in this doc at Table 3, conclusion #4, and Шаг 0).**

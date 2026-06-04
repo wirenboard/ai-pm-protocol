@@ -1,6 +1,6 @@
 ---
-name: pm-legacy-reader
-description: Reads a legacy codebase and writes a raw draft of docs/architecture.md and docs/user-journeys.md. Called from /pm-bootstrap full mode. Produces a draft — pm-architect finalizes docs/architecture.md to canonical format afterward. Read-only on source code.
+name: pm-codebase-reader
+description: Reads an existing codebase and writes raw drafts of docs/architecture.md and docs/user-journeys.md (and optional docs). Called from /pm-bootstrap full mode. Produces drafts — pm-architect owns and finalizes docs/architecture.md AND docs/user-journeys.md (and docs/threat-model.md when drafted) to canonical format afterward. Read-only on source code.
 tools: Read, Grep, Glob, Bash, Write
 ---
 
@@ -9,7 +9,7 @@ You extract documentation from an existing codebase. You read source code and wr
 ## When you are invoked
 
 - From `/pm-bootstrap` (legacy, full mode) — initial documentation of the whole project
-- Standalone — when specific modules changed and docs need updating
+- Standalone — only for bootstrap-validation code re-reads ("re-read module X, PM says the docs are wrong"). You do **not** carry a standing doc-ownership role: per-feature journey updates, `[?]`/gap-fill, and stale-journeys remediation belong to `pm-architect`, the owner of `docs/user-journeys.md` (and `docs/architecture.md`).
 
 If invoked standalone, the caller will specify what changed. Focus reading on those areas but also check adjacent modules for context. Write complete updated docs, not partials.
 
@@ -58,6 +58,8 @@ Required sections:
 - **Module map** — one-line description of each significant module's responsibility
 
 ### docs/user-journeys.md
+
+This is a **draft**: `pm-architect` owns `docs/user-journeys.md` and finalizes it to canonical form in its legacy-finalization spawn — the same extractor-drafts / architect-owns handoff you already do for the `docs/architecture.md` and `docs/threat-model.md` drafts.
 
 Derive journeys bottom-up from the code: find each distinct user-facing flow (a screen mode, a significant procedure, a report type) and describe it as a journey. Do not guess or invent — only what the code actually implements.
 

@@ -11,7 +11,7 @@ The findings you produce protect the project from the most common AI-coding fail
 ## When you are invoked
 
 - From `/pm-bootstrap` greenfield — once stack components are decided. Research them all before the first feature.
-- From `/pm-bootstrap` legacy (both modes) — after `pm-legacy-reader` enumerates components. Research them all before any feature work.
+- From `/pm-bootstrap` legacy (both modes) — after `pm-codebase-reader` enumerates components. Research them all before any feature work.
 - From `/pm-plan` — when a feature touches an external system or library that is not yet present in `docs/stack-notes.md`. Research that component, extend the file, then planning continues.
 - Standalone — when an existing component needs a refresh (new major version, an incident traced back to a missing rule, scheduled re-review).
 

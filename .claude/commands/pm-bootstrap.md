@@ -10,7 +10,7 @@ All agents below are project agents — use the Agent tool with the exact `subag
 |---|---|
 | pm-stack-researcher | `"pm-stack-researcher"` |
 | pm-architect | `"pm-architect"` |
-| pm-legacy-reader | `"pm-legacy-reader"` |
+| pm-codebase-reader | `"pm-codebase-reader"` |
 | pm-product-advocate | `"pm-product-advocate"` |
 
 ## Check for leftover git hooks
@@ -182,17 +182,17 @@ Then run the **Foundational-question pass** (below) before the project is ready 
 
 ### Full (complete documentation)
 
-Invoke the `pm-legacy-reader` agent using the Agent tool with `subagent_type: "pm-legacy-reader"`. It reads all significant modules at defined depth and writes `docs/architecture.md`, `docs/user-journeys.md`, and optional docs (`ui-guide.md`, `threat-model.md`). Wait for it to complete and read its summary output.
+Invoke the `pm-codebase-reader` agent using the Agent tool with `subagent_type: "pm-codebase-reader"`. It reads all significant modules at defined depth and writes raw drafts of `docs/architecture.md`, `docs/user-journeys.md`, and optional docs (`ui-guide.md`, `threat-model.md`). Wait for it to complete and read its summary output.
 
 After the extractor finishes:
 - Write `CLAUDE.md` from `.ai-pm/tooling/doc/_templates/CLAUDE.md.tmpl` — fill in all placeholders using the stack and architecture the extractor documented. Pipeline section left as placeholders until `pm-stack-researcher` runs.
 - Create `docs/stack-notes.md` from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl` (empty shell).
 - Spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) with the stack components the extractor put in `architecture.md` (mandatory, no PM questions). After it returns: extend the Pipeline block in `CLAUDE.md` with its "New validators"; reflect "Integration contracts" in `architecture.md` deploy section; record "Open questions" for the PM brief below.
-- **Spawn `pm-architect`** (`subagent_type: "pm-architect"`) **(Section A)** to finalize `docs/architecture.md` to canonical format, and — passing the PM's product front-door answers (ask the two product questions: why this exists / deliberately out of scope for now) — to author `docs/product.md`. `pm-legacy-reader` produces a raw architecture draft — `pm-architect` is the owner and must walk every template section, fill gaps from `stack-notes.md`, mark N/A sections explicitly, and cite each decision. For `docs/product.md`, it authors the funnel from the PM answers, deriving `## What it does today` from the drafted contracts and architecture. pm-architect is the sole writer of the authored `docs/product.md`; it never writes the generated `docs/product-map.md`. **If `pm-legacy-reader` drafted `docs/threat-model.md`** (security artifacts present in the code — see `pm-legacy-reader.md`), pm-architect **finalizes that draft** to canonical form in this same spawn — the identical handoff it already does for the `architecture.md` draft (extractor drafts, architect owns). Wait for it to complete before presenting to PM.
+- **Spawn `pm-architect`** (`subagent_type: "pm-architect"`) **(Section A)** to finalize `docs/architecture.md` **and `docs/user-journeys.md`** to canonical format, and — passing the PM's product front-door answers (ask the two product questions: why this exists / deliberately out of scope for now) — to author `docs/product.md`. `pm-codebase-reader` produces raw architecture and user-journeys drafts — `pm-architect` is the owner of both and must walk every template section, fill gaps from `stack-notes.md`, mark N/A sections explicitly, and cite each decision; for the journeys it finalizes the draft to canonical form (the draft is the source of truth for facts, the same extractor-drafts / architect-owns handoff as the architecture draft). For `docs/product.md`, it authors the funnel from the PM answers, deriving `## What it does today` from the drafted contracts and architecture. pm-architect is the sole writer of the authored `docs/product.md`; it never writes the generated `docs/product-map.md`. **If `pm-codebase-reader` drafted `docs/threat-model.md`** (security artifacts present in the code — see `pm-codebase-reader.md`), pm-architect **finalizes that draft** to canonical form in this same spawn — the identical handoff it already does for the `architecture.md` draft (extractor drafts, architect owns). Wait for it to complete before presenting to PM.
 - Create `docs/features/` directory if it doesn't exist
 - Create `docs/product.md` — the **authored** front door. Scaffold from `product.md.tmpl` (no generator signature line) so `pm-architect` (above) can author it.
 - Create `docs/product-map.md` — the **generated** map; generate using the **Product map generation procedure** below.
-- Create `.ai-pm/state/current.md` from template (`Status: idle`), `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` (pm-legacy-reader already drafted contracts into the contracts/ directory — surface their count and `(needs PM validation)` markers in the PM brief)
+- Create `.ai-pm/state/current.md` from template (`Status: idle`), `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` (pm-codebase-reader already drafted contracts into the contracts/ directory — surface their count and `(needs PM validation)` markers in the PM brief)
 
 Present to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
 
@@ -208,7 +208,7 @@ Present to PM. Follow the PM communication rules from WORKFLOW.md: plain languag
 
 Then ask: "Does this match how you understand the system? What's wrong or missing?"
 
-PM's role is validation only — confirming accuracy, not filling gaps. If PM points out something wrong — re-invoke `pm-legacy-reader` with a focused prompt: "Re-read [module], current docs say X but PM says Y."
+PM's role is validation only — confirming accuracy, not filling gaps. If PM points out something wrong — re-invoke `pm-codebase-reader` with a focused prompt: "Re-read [module], current docs say X but PM says Y."
 
 Result: docs complete enough to plan porting without opening the legacy codebase again.
 

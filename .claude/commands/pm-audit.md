@@ -31,7 +31,7 @@ All agents below are project agents — use the Agent tool with the exact `subag
 |---|---|
 | pm-auditor | `"pm-auditor"` |
 | pm-plan-checker | `"pm-plan-checker"` |
-| pm-legacy-reader | `"pm-legacy-reader"` |
+| pm-codebase-reader | `"pm-codebase-reader"` |
 | pm-architect | `"pm-architect"` |
 
 ## Execution
@@ -80,7 +80,7 @@ All agents below are project agents — use the Agent tool with the exact `subag
    - Missing contract → PM validates; orchestrator drafts `.ai-pm/contracts/<feature>.md`
    - Stale contract → PM validates update; orchestrator updates the contract
    - Orphaned implementation → `/pm-plan <topic>` (retroactive)
-   - Stale docs → spawn `pm-legacy-reader` (`subagent_type: "pm-legacy-reader"`) or `pm-architect` (`subagent_type: "pm-architect"`)
+   - Stale docs → spawn `pm-architect` (`subagent_type: "pm-architect"`) for `docs/architecture.md`, `docs/user-journeys.md`, or `docs/threat-model.md` (pm-architect owns all three); spawn `pm-codebase-reader` (`subagent_type: "pm-codebase-reader"`) only for a bootstrap-validation code re-read (re-read module X, the docs are wrong)
    - Un-migrated template structure / missing generated map (a lingering `docs/features/_index.md`, or `docs/product-map.md` missing — per `### Pending-migration detection` in `MIGRATIONS.md`) → offer to run the pending migration now, in plain language:
      > "This project is still on an older template structure (`docs/product-map.md` hasn't been generated yet). I can run the pending `/pm-bootstrap` migration to bring it up to the current format — nothing else changes. Run it now?"
 

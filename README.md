@@ -219,7 +219,7 @@ done
 ```
 WORKFLOW.md           — правила работы агентов (импортируется в CLAUDE.md проекта)
 .claude/agents/       — pm-architect, pm-coder, pm-plan-checker, pm-pr-prep,
-                        pm-legacy-reader, pm-stack-researcher, pm-auditor,
+                        pm-codebase-reader, pm-stack-researcher, pm-auditor,
                         pm-product-advocate
 .claude/commands/     — pm-bootstrap, pm-plan, pm-research, pm-audit, pm-fixup
 doc/_templates/       — шаблоны документов проекта
