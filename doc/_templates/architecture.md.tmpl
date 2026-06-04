@@ -102,6 +102,25 @@ Example — a System-invariants index:
 - **One commissioning window at a time:** enforced by whichever `SCn` you assigned this rule in your own `## Security constraints` (reference that ID here — e.g. `SC3` — never restate the rule text).
 - **Pre-paired controller:** the *Commission a device* journey requires a paired controller before any device write (see `docs/user-journeys.md`).
 
+## State model
+
+The single home for this project's **state machine / protocol** — a states×transitions table plus the triggers/debounce that drive each edge, so a reader finds the lifecycle in one place instead of reverse-engineering it from prose. This section is for a project whose **core is a state machine / protocol** — a status ladder with defined transitions, a named-state lifecycle plus the events that move between states, or a wire/connection protocol with message/connection states. **Column-level ownership keeps this from restating the enum:** the **`## Behavioral contract` status enum owns the value set** — which states exist and what each means — and the table's State column is a *reference into* that enum (the source of truth for "is `failed` a legal state?"), never an independent re-declaration. The table's **own new datum is the transitions and their triggers** — the edges, with the *why/when* (event, condition, debounce) the enum's terse "Allowed next" does not capture; they live nowhere else. **Reference the enum, add the edges, never re-declare or re-mean a state here.** Reference the existing prose for the "why" justification rather than re-deriving it. A transition / trigger / debounce you cannot determine without real system knowledge is `[?]` for the PM to confirm — **never invent an edge** (the same "never invent to fill" discipline as the Behavioral contract; never reverse-engineer the model from code). Mark `N/A — <reason>` for a project whose core is not a state machine / protocol (the common case — this section is born `N/A`, like every other conditional section).
+
+Example — a states×transitions table (states referenced from the `## Behavioral contract` enum above; only the edges and triggers are new here):
+
+| State | Allowed transitions → | Trigger / event | Notes |
+|---|---|---|---|
+| `pairing` | `paired`, `failed` | commissioning succeeds / times out | 30 s window |
+| `paired` | `active`, `lost` | first publish received / heartbeat gap | — |
+| `active` | `lost` | heartbeat gap > 3 intervals | debounce 10 s before declaring `lost` |
+| `lost` | `active` | heartbeat resumes | — |
+| `failed` | — | — | terminal |
+
+Triggers / debounce:
+
+- <e.g., "`active → lost`: declared only after 3 consecutive missed heartbeats (10 s debounce) to absorb transient gaps.">
+- <e.g., "`pairing → failed`: on the 30 s commissioning-window timeout.">
+
 ## Release flow
 
 How a commit becomes a published release. Keep it aligned with the CI definition: `pm-architect` (A4) cross-checks this section against `.github/workflows/auto-tag.yml` (or the equivalent CI workflow). Mark `N/A — <reason>` for projects with no automated release.

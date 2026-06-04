@@ -141,6 +141,22 @@ When it fires, surface *"what is this feature's / the system's resource and scal
 
 Record a budget the orchestrator cannot quantify without real platform knowledge as `[?]` for the PM to confirm — **never invent a number** (the same "never invent to fill" discipline `pm-architect` applies to the Behavioral contract). There is no hard gate this slice: the prompt degrades silently if the trigger is misjudged, and the homes make a recorded budget recoverable at the next refresh.
 
+## State-model check (conditional, judgment-triggered)
+
+Before drafting the plan, judge whether this feature's **core is a state machine or protocol** worth modeling. The check fires only when that judgement holds — silent otherwise. The trigger is a **concrete list**, re-judged each plan from the feature description — *not* "any feature with a status field":
+
+- a **status ladder with defined transitions** (a status field whose values move between each other on events, not a flat label);
+- a **named-state lifecycle plus the events that move between states** (`pairing → paired → active → lost`, with the triggers for each edge);
+- a **wire / connection protocol with message or connection states** (handshake / session / link states and the transitions between them).
+
+The trigger is a **semantic judgement a regex cannot make** — so there is **no hook** and no mandatory plan section, exactly like the NFR/operational-limits and product-readiness checks. If the feature's core is **not** a state machine / protocol — the check is **silent**, no state-model question, like the NFR check on a non-scale feature and the Security-surface check on a non-security project (proportional, never blanket-mandatory). A **status enum alone does not trigger it** — many projects carry a status field without their feature core being a lifecycle; an enum is the value set the model *references*, not what fires the check.
+
+When it fires, surface *"what are this feature's states, the transitions between them, and the triggers / debounce that drive each edge?"* and route the answer to its home — never a new parallel document:
+
+- **The model → `docs/architecture.md` `## State model`.** Record the captured machine in the new conditional `## State model` section in `docs/architecture.md` (referenced by name; never re-encode its content here) — a **states×transitions table + a triggers/debounce list**. The table **references** the status taxonomy in `## Behavioral contract` (the state *names* live there once, as the source of truth for which states exist — the State model never restates the enum) and **references the existing prose** (the paragraph-form "why" justification stays where it is — the State model never re-derives it). Its own new datum is the **transitions and their triggers** — the edges, which live nowhere else. **Reference the enum, add the edges, never re-declare a state.** Name the section in the plan's "Docs to update"; `pm-architect` authors/refreshes it on the post-coding "Docs to update" handoff, the **same** trigger as a decision record.
+
+Record a transition / trigger / debounce the orchestrator cannot determine without real system knowledge as `[?]` for the PM to confirm — **never invent an edge** (the same "never invent to fill" discipline `pm-architect` applies to the Behavioral contract; never reverse-engineer the model from code). Like the NFR system-budget guard: once the `## State model` section captures the machine (a non-`N/A` / `[?]` table), stay **silent** on the already-modeled states and fire only for a feature that introduces a *new* state / transition / trigger not yet in the section. There is no hard gate this slice: the prompt degrades silently if the trigger is misjudged, and the home makes a recorded model recoverable at the next refresh.
+
 ## Planning conversation
 
 Ask clarifying questions as needed — grounded in what you read. Typical questions:
