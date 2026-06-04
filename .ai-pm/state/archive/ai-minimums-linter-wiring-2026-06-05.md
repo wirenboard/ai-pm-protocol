@@ -1,0 +1,3 @@
+# Execution State (archived)
+
+- **Shipped:** `ai-minimums-linter-wiring` (v2.28.0, PR #231 merged 2026-06-05) — makes the AI-specific minimums deterministically enforced by the downstream project's linter (per-stack mapping via pm-stack-researcher, examples-only/stack-agnostic; pm-plan-checker Pipeline-green DoD + pm-auditor dim-5 extend the dim-9 validator discipline, no new gate; numbers single-sourced; honest convention-only for unexpressible minimums, smell-type-backstopped). The deterministic half of #211, sharpened by DriveBox #224. plan-check approve; code-review 1 finding fixed (decision-record single-source). Ran autonomous.
