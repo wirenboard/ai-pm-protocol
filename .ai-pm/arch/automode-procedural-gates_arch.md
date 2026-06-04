@@ -1,4 +1,6 @@
-# automode-feature-selection — design notes
+# automode-procedural-gates — design notes
+
+> Note: the body below predates the broadening to the general procedural-gate rule (it was authored as `automode-feature-selection`). The design principles still hold; see the plan + the `doc/architecture.md` decision record for the broadened scope.
 
 > Arch-review BEFORE coding (the `doc/architecture.md` decision record is a post-coding handoff,
 > not this note). The feature extends the shipped `automode` (`### Decision authority`, `WORKFLOW.md`)
