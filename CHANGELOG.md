@@ -13,6 +13,25 @@
 
 ---
 
+## [2.25.0] — 2026-06-04
+
+Ships **state-model-section** — slice 4 of the cross-document-consistency auditor EPIC (slice 1 = `invariants-index`, v2.21.0; slice 2 = `taxonomy-drift-sweep`, v2.22.0; slice 3 = `nfr-operational-limits-prompt`, v2.23.0), the third whole-system-property gap. Closes the **state-model** gap: a stateful project that scatters its lifecycle states, transitions, and terminal/illegal states across feature docs with **no single authority**, because the protocol had no prompt forcing *"what are this system's states, and which transitions are legal?"*. `/pm-plan` gains a **conditional State-model check** that fires only when the orchestrator judges the feature **state-bearing** (a lifecycle / status field / explicit state machine), silent otherwise, beside the existing Stack-component / Interaction-scenario / Security-surface / NFR conditional checks. The state model gets a **home**: a **new conditional `## State model`** section in `architecture.md` (states, legal transitions, terminal & illegal states), with `pm-architect` walking it (A2) and excluding it from the default skeleton (A4) so it appears only when warranted. Conditional / proportional, judgment-not-regex, no hook and no hard gate; additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **Conditional State-model check in `/pm-plan`** — fires only when the orchestrator judges the feature state-bearing (lifecycle / status field / explicit state machine); silent otherwise, beside the existing Stack-component / Interaction-scenario / Security-surface / NFR conditional checks.
+- **New conditional `## State model` section in `architecture.md.tmpl`** — the home for a system's states, legal transitions, and terminal / illegal states, with a worked example obeying its own column-level drift-bound.
+- **`pm-architect` State-model handling** — A2 walks the State-model section, A4 excludes it from the default skeleton so it appears only when warranted, plus authoring guidance.
+- **Architecture decision record + repo's own `N/A` section** — the state-model gap and its conditional-section resolution recorded in `doc/architecture.md`, including the repo's own `N/A` State-model placement grounded to an existing anchor.
+
+### Notes
+
+- Conditional / proportional and judgment-not-regex: no hook, no hard gate — the check fires on orchestrator judgment of state-bearing features, stays silent otherwise.
+- This feature was **selected autonomously** per `### Decision authority` (shipped in v2.24.0, `automode-procedural-gates`); the plan carries a `Source:` line recording the basis of the selection.
+- Back-compat: additive only — the new `## State model` section and the `/pm-plan` check appear only when warranted. **No migration.**
+
+---
+
 ## [2.24.0] — 2026-06-04
 
 Ships **automode-procedural-gates** — generalizes the shipped automode (`### Decision authority` engine) from a single-gate capability into a **graded procedural-gate progression**. In autonomous mode the routine procedural gates — feature-selection, plan-approval, arch-offer, retrospective / migration nudges, contract-existence — become **announce-and-proceed**: the orchestrator states the call and continues without a stop. A **genuine product fork** still derives-or-escalates (no silent product decision), and **merge / ship stays manual** regardless of mode. The autonomous branches cite their basis (a `Source:` line) so an announced call remains auditable. Additive over the existing engine, fully back-compatible, **no migration**.
