@@ -64,9 +64,28 @@ approve
      See WORKFLOW.md "Edit-ownership rule" — the Pass-2 code-review trail is the single
      carve-out to "orchestrator does not edit content artefacts". -->
 ## Code review findings
-(populated by orchestrator from code-review output; pm-coder reads and fixes these)
 
-## Code review: NOT YET RUN
+Pass 2 (`code-review`, high effort, prose-protocol: 3 targeted finders — single-source
+coherence / back-compat / wiring completeness). Two finders confirmed clean (zero defects);
+the back-compat and wiring-completeness sweeps verified every load-bearing requirement is
+wired (timer-honesty caveat at the single source + no live countdown; file-not-required;
+citation guard fires only on `auto` entries in both backstops; merge stays manual in both
+scopes; the autonomous Step 3.5 branch announce→derive-or-escalate with empty-set-silent; all
+three escalate-regardless triggers; two scopes / one engine).
+
+**Considered, not surfaced (1 — refuted):** the single-source finder flagged `pm-bootstrap.md`
+Q8 (`Default interactive if the PM skips`) + the `.ai-pm/decision-authority.md` write step
+(`default interactive` / `absence elsewhere ⇒ interactive`) as re-encoding the default. Refuted:
+it is **byte-identical to the established `### Project kind` bootstrap precedent** (Q0,
+`pm-bootstrap.md:50`/`:74`: `default software if unanswered` + by-name reference + "do not
+re-state them here"), which the plan and arch note explicitly mandated mirroring. The "(default
+…)" phrasing is the bootstrap question's own UX behaviour (what to write when the PM abstains),
+not a second *operative* copy of the consumption-time default — the canonical `absent ⇒
+interactive` rule is referenced by name. Consistent with accepted convention, not a regression.
+
+## Code review: 2026-06-04 — passed
+<!-- Pass 2 clean: 0 confirmed findings (1 candidate considered + refuted as matching the
+     `### Project kind` bootstrap precedent). tests/hooks.sh 71/71. -->
 <!-- The orchestrator replaces THIS WHOLE LINE with `## Code review: <date> — passed`
      only when code-review clears. Until then the section is UNSTAMPED: `pm-pr-prep`
      refuses to release it (step 0) and `pm-auditor` blocks on it (dimension 1).
