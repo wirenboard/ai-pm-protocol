@@ -13,6 +13,27 @@
 
 ---
 
+## [2.19.0] — 2026-06-04
+
+Generalizes the v2.18.0 process flavor (which shipped **too narrow** — deliverable = a single rigid SOP) into a broader **documentation** flavor. The protocol now develops documentation projects of any shape — SOPs/runbooks, guides, specs, diagrams — not only a single SOP. The kind axis becomes `software | documentation`, the deliverable is open (one or several documents in a dedicated `deliverable/` directory), and the v2.18 dry-run stamp generalizes into one `## Validation` stamp with a declared method. Backward-compatible (`absent OR unrecognized ⇒ software`); reuse-not-new-surface — no new command, agent, or hook. This template repo stays software-kind (the machinery is dormant here except as the template it ships).
+
+### Added
+
+- **`MIGRATIONS.md` detection + procedure** that renames a stale downstream `## Project kind: process` line → `documentation`.
+
+### Changed
+
+- **Project-kind flavor `process` → `documentation`** (`WORKFLOW.md` `### Project kind`): the enum is now `kind = software | documentation`, and the default is extended to a load-bearing `absent OR unrecognized ⇒ software` for back-compat. The protocol now develops documentation projects of any shape — SOPs/runbooks, guides, specs, diagrams — not only a single SOP.
+- **Open deliverable**: one or several documents (md / diagrams / images) in a dedicated `deliverable/` directory, distinct from the dev-docs in `docs/`. `process.md.tmpl` is demoted to an optional `doc/_templates/starters/sop.md.tmpl`, joined by a new `starters/guide.md.tmpl`; no mandated deliverable scaffold.
+- **Validation stamp generalized**: the v2.18 `## Dry-run` stamp becomes one `## Validation: <date> — <method> — passed` stamp (method `dry-run` for actionable docs, `sign-off` for reference docs; the plan declares the method, default by doc type), gated by `pm-pr-prep` step 0 and `pm-auditor` dimension 1. The software `## Code review` path is unchanged.
+- **Advocate tier generalized**: the `process` foundational-questions tier becomes a general `documentation` tier (audience / scope / coverage / decision-points / exceptions+recovery / zero-to-done); `pm-product-advocate` reused.
+
+### Notes
+
+- This template repo stays software-kind (the machinery is dormant here except as the template it ships). The full per-feature artifact-kind axis and the automation-opportunity scanner remain deferred (backlog).
+
+---
+
 ## [2.18.0] — 2026-06-04
 
 The protocol can now develop **process/documentation projects** (SOPs, runbooks) — not only software. A whole-project `kind = software | process` axis splits the pipeline: `process`-kind projects ship a written deliverable artefact with no executable code, validated by a no-code gate instead of a code build. The split is additive and reuses existing surfaces — no new command, agent, or hook — and is fully back-compatible: a project with no `## Project kind` line behaves exactly as before (software). This is the v1 slice; the full per-feature artifact-kind axis and the automation-opportunity scanner are deferred to the backlog.
