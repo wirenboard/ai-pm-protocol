@@ -63,7 +63,7 @@ Remedy: run review-loop Pass 2 — for a software feature the orchestrator runs
         Re-invoke pr-prep once every trail is stamped.
 ```
 
-Only when every in-scope review file is either stamped or section-absent (exempt) — for **both** the `## Code review` and `## Dry-run` sections — do you continue to step 1.
+Only when every in-scope review file is either stamped or section-absent (exempt) — for **both** the `## Code review` and `## Validation` sections — do you continue to step 1.
 
 ### 1. Detect remote shape
 
