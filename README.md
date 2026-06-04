@@ -148,7 +148,7 @@ git add .ai-pm/tooling
 git commit -m "chore: bump ai-pm-protocol"
 ```
 
-Агенты, команды и `WORKFLOW.md` обновляются автоматически — они symlinks внутри submodule. `CLAUDE.md` и `docs/` проекта остаются нетронутыми.
+Агенты, команды, `settings.json` и `WORKFLOW.md` обновляются автоматически — они symlinks внутри submodule. `CLAUDE.md` и `docs/` проекта остаются нетронутыми.
 
 **Если ставил копированием** (вариант для shared folder / SFS выше) — symlinks нет, поэтому после бампа `.claude/*` нужно перекопировать (с `rm -rf`, чтобы убрать удалённые в новой версии агенты/команды):
 
