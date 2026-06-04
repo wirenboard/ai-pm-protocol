@@ -45,6 +45,33 @@ features shipped while `user-journeys.md` is still skeletal" is simply *one mani
 
 ## Key design decisions
 
+> **DESIGN CORRECTION (post-code-review, 2026-06-04, PM-approved).** The first build added a
+> **parallel detection** sub-check that duplicated existing `pm-auditor` dimension-5 findings
+> (the skeleton-threat-model check is verbatim the existing one; the journeys / product.md
+> checks overlap the existing "missing journey for an implemented user-facing feature" /
+> "product.md missing/empty" notes) → double-flagging. **The only genuinely-new value is the
+> PM-collaborative remediation** (relay the discipline's foundational questions →
+> `pm-architect` authors). Corrected shape:
+>
+> 1. **No parallel detector.** The **existing** dimension-5 doc findings (missing journey,
+>    missing/empty `product.md` funnel, skeleton `threat-model`) already detect these gaps and
+>    are **unchanged**. The added "Expected-discipline gap" sub-check is **removed**.
+> 2. **`### Expected-discipline manifest` is reframed as a question-source + introduced-in
+>    registry** — per discipline: `Introduced in: vX.Y`, the **existing dimension-5 finding**
+>    that detects it, and the **question source** for remediation. It carries **no
+>    satisfied-checks** (detection lives in dimension 5); it is referenced by the remediation,
+>    not by a detector.
+> 3. **The net-new value lands on the existing findings' remediation** in `pm-audit.md`: when a
+>    dimension-5 doc finding maps to a manifest discipline, the remediation **relays that
+>    discipline's foundational questions in one `AskUserQuestion`** (the manifest's
+>    question-source) → spawns `pm-architect` to author — instead of the old bare "spawn
+>    pm-architect to refresh."
+> 4. "Run `/pm-audit` after a bump" (WORKFLOW Maintenance) and the README line are unchanged.
+>
+> Everything below is read **through this correction** — where it says "new dimension /
+> sub-check / detector," substitute "enhanced remediation on the existing dimension-5
+> findings + the manifest-as-registry."
+
 (settled; recorded so coder/reviewer don't re-litigate — the manifest's exact representation
 goes to the arch review)
 
