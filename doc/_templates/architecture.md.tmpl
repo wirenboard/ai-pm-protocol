@@ -78,6 +78,22 @@ Example — an identifier grammar and a transport invariant:
 - **Export ID grammar:** `export_<8-hex>` — lowercase hex, exactly 8 chars; generated server-side, never user-supplied.
 - **Reachability:** a record is observable by a consumer only after its `active` transition has been published; consumers must tolerate the `pending` state never being visible.
 
+### System invariants
+
+The single index / entry point for this project's cross-cutting **system invariants** — the rules that must always hold across the whole system, gathered in one list so a top-down reader finds them once instead of three partial lists keyed differently. Each invariant is listed **by reference to its single home**, never restated:
+
+- **inline** here, when the Behavioral contract is itself the home (a format / taxonomy / transport invariant it already states above — name it and let the statement above carry the rule);
+- **by `SCn` ID**, when the invariant is enforced as a security constraint (the rule text stays in `## Security constraints` — reference the ID with a short human hint, exactly the threat → constraint Mitigation pattern; never copy the rule text down here);
+- **by journey name**, when it is a journey-level precondition (the rule lives in that journey's `**Invariants:**` block in `docs/user-journeys.md` — name the journey, do not restate the precondition).
+
+Reference-don't-duplicate, one-way-by-ID — the same discipline as threat → constraint: the index points *out* at each home, the home keeps **no back-link** to the index, and **no rule text is duplicated** (the only cross-doc datum is the `SCn` ID or the journey name). Mark `N/A — <reason>` for projects with no cross-cutting system invariants (e.g. "N/A — no cross-cutting invariants beyond the taxonomies above").
+
+Example — a System-invariants index:
+
+- **Reachability:** a record is observable only after its `active` transition is published — stated inline above (Behavioral contract is the home).
+- **One commissioning window at a time:** enforced by `SC5` (see `## Security constraints`).
+- **Pre-paired controller:** the *Commission a device* journey requires a paired controller before any device write (see `docs/user-journeys.md`).
+
 ## Release flow
 
 How a commit becomes a published release. Keep it aligned with the CI definition: `pm-architect` (A4) cross-checks this section against `.github/workflows/auto-tag.yml` (or the equivalent CI workflow). Mark `N/A — <reason>` for projects with no automated release.
