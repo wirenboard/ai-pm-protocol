@@ -37,7 +37,7 @@ Run in the main orchestrator session:
 
 **The one carve-out inside `.ai-pm/reviews/<topic>_review.md`:** `pm-plan-checker` owns everything through `## Verdict`; the orchestrator owns ONLY the `## Code review findings` / `## Code review` trail below it — the Pass-2 code-review record it writes in Step 5 Pass 2. This is the **single** review section the orchestrator writes and the **only** exception to "the orchestrator does not edit content artefacts". It is the output of a process the orchestrator drives (it runs `code-review` and already holds the findings) — routing that data through an agent would pay a hop for data already in hand. The exception is made safe by a **gate, not by discipline**: `pm-pr-prep` refuses to release a feature whose `## Code review` section is unstamped (step 0), and `pm-auditor` blocks an unstamped trail (dimension 1). A manual step with no gate degrades silently — so this one has a gate.
 
-**A second carve-out, in `.ai-pm/reviews/<topic>_advocate.md` (and `bootstrap_advocate.md`):** `pm-product-advocate` owns everything through `## Verdict`; the orchestrator owns ONLY the `## Resolutions` trail below it — the recorded PM answer / descope-with-rationale for each gap, one numbered entry per gap, the output of the one `AskUserQuestion` pass it drives. Like the Pass-2 code-review trail, it is the output of a process the orchestrator drives (it holds the PM's answers in hand from that pass), and it is made safe by a **gate, not by discipline**: `pm-plan-checker` (DoD) and `pm-auditor` (dimension 1) block a user-facing feature whose advocate gate is unresolved. A `clean` verdict (zero gaps) needs **no** `## Resolutions` trail — `clean` and `gaps: N`-with-N-resolutions are the two resolved states.
+**A second carve-out, in `.ai-pm/reviews/<topic>_advocate.md` (and `bootstrap_advocate.md`):** `pm-product-advocate` owns everything through `## Verdict`; the orchestrator owns ONLY the `## Resolutions` trail below it — the recorded PM answer / descope-with-rationale for each gap, one numbered entry per gap, the output of the one `AskUserQuestion` pass it drives. Like the Pass-2 code-review trail, it is the output of a process the orchestrator drives (it holds the PM's answers in hand from that pass), and it is made safe by a **gate, not by discipline**: `pm-plan-checker` (DoD) and `pm-auditor` (dimension 1) block a user-facing feature whose advocate gate is unresolved. A `clean` verdict (zero gaps) needs **no** `## Resolutions` trail — `clean` and `gaps: N`-with-N-resolutions are the two resolved states. In `autonomous` mode (`### Decision authority` in `WORKFLOW.md`) each entry additionally carries an **`auto` | `escalated`** marker (an interactive answer is the unmarked baseline); the trail stays orchestrator-owned and gate-backed, the `gaps: N` ↔ N-resolutions count-match is unchanged, and a `clean` verdict still needs no trail.
 
 **Orchestration artefacts** are different: they are the by-products of the orchestrator's own job of talking to the PM and routing work. `.ai-pm/backlog.md` entries, recording PM decisions, the Pass-2 code-review trail just described, protocol-gap reports under `.ai-pm/protocol-feedback/` (see "When the protocol itself has a gap"), choosing remediation order for audit findings, kicking off git operations (commits, branches, tags, push), and invoking the project's own deployment script — all of these are normal orchestrator work. Spawning a separate "backlog-curator" agent for these would be overhead with no upside.
 
@@ -120,6 +120,15 @@ For a user-facing feature I spawn `pm-product-advocate` (tier `per-feature`). It
 
 - **Zero gaps (`clean`)** — silent pass. I record the resolved artifact and proceed to Step 4; no `AskUserQuestion`, no ceremony.
 - **Gaps (`gaps: N`)** — I relay all N gap questions to you in **one** `AskUserQuestion` pass. For each gap you either answer it or consciously descope it with a rationale. I record each answer/descope as a numbered entry in the artifact's `## Resolutions` trail. The coder handoff stays **blocked** until every gap is answered or descoped — never a silent skip, never a permanent veto.
+
+**Autonomous branch (additive — fires only when the effective authority is `autonomous`; see `### Decision authority` in `WORKFLOW.md`).** The advocate spawn is **unchanged** — same prompt, same `clean` / `gaps: N` verdict. When the effective authority for this feature is `autonomous` (per-feature plan `Decision authority:` line → `.ai-pm/decision-authority.md` `mode:` → `interactive`), the orchestrator handles a `gaps: N` verdict differently:
+
+- For each gap I run the **derivability test** (`### Decision authority`): is the answer derivable from cited project canon + the bootstrap mandate?
+- **Derivable** → I **announce** it (fork · chosen option · rationale citing the canon ref · invariants · `(proceeding — interrupt to override)`), then record an `auto` `## Resolutions` entry carrying the cited passage + rationale, committed before acting. No `AskUserQuestion` for this gap.
+- **Not derivable, OR a `### Security-relevant surfaces` item on a security-bearing project, OR a PM-marked irreversible / high-stakes fork** → I escalate it (the cap): record an `escalated` `## Resolutions` entry and add it to the escalation set.
+- The **escalation set** is what reaches the existing **one** `AskUserQuestion` pass (the interactive path, narrowed to just the escalations). An **empty escalation set ⇒ fully silent** — announcements only, no `AskUserQuestion`.
+
+The interactive branch above is **byte-unchanged** (and is every existing project, by the default). This autonomous path is purely additive, and merge/ship still stays manual in both scopes.
 
 A bootstrap variant of this gate runs once at `/pm-bootstrap` (tier `bootstrap`) — see that command. This is soft enforcement, backstopped (not by-discipline): `pm-plan-checker`'s DoD blocks a user-facing feature whose advocate gate is unresolved, and `pm-auditor` blocks a merged user-facing feature with no resolved advocate artifact. There is **no hook** — "is this user-facing / is the product under-specified" is a semantic judgement a regex cannot make.
 
@@ -237,6 +246,57 @@ Every conditional below that branches on project kind — the mandatory-table ri
 - **Pass-2 routes on kind.** Step 5 Pass 2 routes on `### Project kind`: `software` (and kind-absent) ⇒ `code-review` (the existing path, untouched, byte-for-byte); `documentation` ⇒ **editorial review + the structural-lint pre-gate + the `## Validation` gate** (no bug/security/dead-code analogue).
 
 **Composition is optional.** A `documentation`-kind project's deliverable MAY be consumed by another project as a cited `stack-notes` standard (the same shape as software respecting a spec — and its versioning rides the existing doc-migration staleness machinery). It may equally be a **terminal** human artefact (solder / diagnose / a guide read once) that stands alone. v1 documents the path; it does not require downstream consumption.
+
+### Decision authority
+
+**Single source for "who resolves a product fork."** A feature's product forks are resolved under one of two authority modes:
+
+- **`interactive`** — the PM answers each product fork, every time (the default, and everything the protocol did before this rule existed). Every existing downstream project behaves exactly this way.
+- **`autonomous`** — the pipeline resolves a product fork from the PM's bootstrap mandate + the project's canon, **announcing** each decision and recording it with a cited rationale, escalating only a fork the canon does not cover, and **always stopping before merge**.
+
+This is a graded, capped redirect of the existing product-readiness gate, not a new engine: in `autonomous` mode the orchestrator routes `pm-product-advocate`'s existing gap output through an *announce + derive-from-cited-canon-or-escalate* gate instead of blanket-relaying every gap to the PM.
+
+**Load-bearing default — `absent file OR unrecognized ⇒ interactive`.** When no authority value is declared (no `.ai-pm/decision-authority.md`), **or** the declared `mode:` is not in the current enum (`autonomous | interactive`), the effective authority is `interactive`. This keeps every existing project byte-identical: the autonomous machinery is dormant unless `autonomous` is explicitly declared, an unrecognized value never hard-errors and never silently picks a random branch, and no consumer may *require* the file to exist — its absence is the safe default, never an error. This mirrors the `absent OR unrecognized ⇒ software` rule of `### Project kind`; **no migration** is introduced.
+
+**Value home — a dedicated `.ai-pm/decision-authority.md`.** The per-project value lives in a dedicated durable file holding two keys:
+
+```markdown
+mode: autonomous | interactive   # default interactive
+veto-window-seconds: 15
+```
+
+**Why a dedicated file and not a `CLAUDE.md` line** (the home `### Project kind` uses): authority is a **PM-flippable mid-flight toggle** that must survive edits, whereas project-kind is **set-once**. A flip-often value buried as one line in a frequently-edited multi-purpose `CLAUDE.md` is a clobber surface — an unrelated edit could silently drop it, and `absent ⇒ interactive` would make that drop a *silent revert*. A single-purpose `.ai-pm/` file isolates the toggle (read natively downstream, the same shape as `.ai-pm/state/current.md`) so a clobber is far less likely and, if it happens, is visible as a missing file rather than a missing line. Different lifecycle, different home — the *semantics* (the enum + default) stay single-sourced here, exactly as project-kind's do.
+
+**Per-feature override.** A feature's plan may carry an optional `Decision authority: autonomous | interactive` line (see `pm-plan.md`). It overrides the project value for that one feature only.
+
+**Effective-authority resolution order.** For any given fork the effective authority is computed as: **per-feature plan `Decision authority:` line** (if present) → else **`.ai-pm/decision-authority.md` `mode:`** → else **`interactive`**.
+
+**Two scopes, one engine.** Project-wide (the file's `mode: autonomous` — every feature runs autonomously) and per-feature (the plan's `Decision authority: autonomous` line on an otherwise-interactive project) are two **reads of the effective-authority value**, not two engines. The only scope-dependent step is *computing the effective-authority value*; everything downstream of that value (announce → derivability test → auto-resolve-or-escalate) is scope-agnostic and exists once.
+
+**The derivability test.** In `autonomous` mode, for each advocate gap the orchestrator asks one question: *is the gap's answer **derivable from cited project canon** (`docs/product.md` / `docs/architecture.md` / `.ai-pm/contracts/` / prior `## Resolutions` entries / declared standards) + the bootstrap mandate?*
+
+- **Derivable** → **auto-resolve**: announce it (below), then record a `## Resolutions` entry marked `auto`, carrying the **cited canon passage** (a `file` / `### section` reference) + a one-line rationale, **committed before acting**. No blocking `AskUserQuestion`.
+- **Not derivable** → **escalate** (see the cap below). Automode therefore **never confabulates** a product direction the baseline never implied — no canon passage ⇒ no auto-decision.
+
+**Escalate-regardless cap (autonomy is an upper bound, never required).** Even in `autonomous` mode, a gap is **escalated** — recorded as a `## Resolutions` entry marked `escalated` and relayed in the existing one `AskUserQuestion` pass — when any of these holds:
+
+- it is **not derivable** from canon (above); OR
+- it touches a `### Security-relevant surfaces` item on a security-bearing project; OR
+- it belongs to a fork the PM marked **irreversible / high-stakes**.
+
+An empty escalation set ⇒ fully silent (announcements only, no `AskUserQuestion`).
+
+**Announce-before-act.** Before acting on any autonomous decision the orchestrator prints a brief console line — fork · chosen option · brief rationale (citing the canon ref) · invariants kept · `(proceeding — interrupt to override)` — then proceeds. The PM can interrupt at any moment to override or switch modes.
+
+**Advisory veto window — recorded, NOT enforced as a countdown in v1.** `veto-window-seconds` (default 15) is the *intended* pause length. **In v1 it is recorded but not enforced as a literal countdown:** the actual behavior is announce-then-proceed + always-interruptible — there is no Claude Code primitive that waits N seconds for *optional* input, so a hard countdown is a future hook. The console announce line **must never render a live countdown** (it says it is proceeding, not "waiting 15s"). This caveat lives here, at the single source, so every consumer that reads the field also reads it.
+
+**Merge/ship stays manual in BOTH scopes.** Even in `autonomous` mode, Step 6 (the A/B/C ship gate) is **unchanged** — automode carries a feature to a finished, reviewed result and stops before merge; it never opens or merges a PR. Autonomy relaxes only the *product-fork* questions, never merge/release.
+
+**Change authority mid-flight.** The PM interrupts and changes the mode at any time — editing `.ai-pm/decision-authority.md` or telling the orchestrator (project scope), or simply not setting the plan line for the next feature (per-feature scope). The new mode governs all **subsequent** forks; already-recorded `auto` decisions stand in the trail for batch review.
+
+**The `## Resolutions` markers.** Each entry the orchestrator records in the advocate trail carries a marker: **`auto`** (the orchestrator resolved it from canon in autonomous mode) or **`escalated`** (relayed to the PM); an interactive answer is the unmarked baseline. **Every `auto` entry must carry a cited canon reference** (a `file` / `### section` token) — this is the anti-confabulation requirement the `pm-plan-checker` DoD and `pm-auditor` dimension 1 presence-check enforces (shape, not meaning — the PM owns whether the citation truly supports the decision, at batch review).
+
+Every consumer of decision authority — Step 3.5, the "How to talk to the PM" autonomous rider, `pm-bootstrap.md`, `pm-plan.md`, `pm-plan-checker.md`, `pm-auditor.md` — **references this `### Decision authority` subsection by name** ("`### Decision authority` in `WORKFLOW.md`") and **never re-encodes the enum or the `absent file OR unrecognized ⇒ interactive` default**, mirroring how `### Project kind` is single-sourced. Re-encoding the default in any consumer would reintroduce the back-compat drift this single rule exists to prevent.
 
 ### Security-relevant surfaces
 
@@ -437,6 +497,8 @@ The PM makes product decisions and does not read code. Every message to the PM f
 > ✗ "Do you want eventually-consistent delivery semantics or at-most-once?"
 
 **Surface substantive decisions via the AskUserQuestion tool.** When the choice is a real fork — a scope decision, accept-vs-fix, which-of-N options, prioritization — present it through the **AskUserQuestion** tool, not a plain-prose "(A)…/(B)…?". The structured form gives the PM comparable options side by side with previews, which is what a substantive fork deserves. Simple proceed / confirm gates — merge-authorization, "ready?", a plain yes/no — stay in prose; do **not** force AskUserQuestion on every binary, or it becomes tool-spam and the PM tunes it out.
+
+**Autonomous-mode rider (`### Decision authority` in `WORKFLOW.md`).** When the effective authority is `autonomous`, before raising a product fork via `AskUserQuestion` I first announce the fork + chosen option + brief rationale + invariants and apply the **derivability test**: if the answer is derivable from cited canon I proceed (recording an `auto` resolution with the citation) instead of asking; if it is not derivable — or the fork is high-stakes / irreversible — I escalate and ask. I never auto-merge: merge/ship stays manual in both scopes. The load-bearing enforcement of this is the gated Step 3.5 (the advocate gaps); this rider covers ad-hoc forks that arise outside the gate.
 
 **Draw a diagram when structure matters.** ASCII is fine. Use it to show flows, states, relationships — not to impress.
 ```
