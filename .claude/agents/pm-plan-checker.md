@@ -68,7 +68,7 @@ For every entry in the plan's "Stack expectations touched":
 - [ ] Interaction scenarios have concurrent-state tests
 - [ ] Stack expectations respected; stack-spec tests pass
 - [ ] Product Contract (if any) honored; Acceptance checks pass; no silent behavior change
-- [ ] Pipeline (tests + lint + validators from `CLAUDE.md`) green
+- [ ] Pipeline (tests + lint + validators from `CLAUDE.md`) green — and the `<lint command>` **encodes** the AI-specific minimums per the `docs/stack-notes.md` mapping (not just a default lint); the AI-minimums rules are validators, covered by the existing present-+-run discipline once the mapping wires them
 - [ ] `.ai-pm/state/current.md` updated
 - [ ] Coder's Product Impact Report present (when contract touched)
 - [ ] Docs updates listed in plan are in this branch
