@@ -67,6 +67,7 @@ Ask the PM these questions (one conversation, not a form):
    - **UI planned but not started** → add a note to CLAUDE.md `## Docs` table: `docs/ui-guide.md — not created yet, create when UI work starts`. Do NOT create the file now.
    - **No UI** → skip entirely
 7. Any known security requirements? (auth, payments, PII, encryption)
+8. **Decision authority** — neutral, default interactive. Ask: "Who makes the product decisions on this project — you, each time (**interactive**), or the pipeline, from your bootstrap + the project's canon (**autonomous**)? Either way, opening and merging PRs always stays with you." Default **interactive** if the PM skips or abstains. See `### Decision authority` in `WORKFLOW.md` (the single source of the enum and the `absent file OR unrecognized ⇒ interactive` default — do not re-state them here).
 
 Then create from templates:
 
@@ -80,6 +81,7 @@ Then create from templates:
 - `docs/features/` directory
 - `docs/product.md` — the **authored** product front door. Scaffold from `product.md.tmpl` (the funnel skeleton: `## Why this exists`, `## What it does today`, `## Documents`, `## Features`). It is **not** generated and carries **no** generator signature line. `pm-architect` fills it from the PM's product Q&A answers (see below) — the orchestrator does not hand-write the prose.
 - `docs/product-map.md` — the **generated** contract→features map. On a fresh greenfield project there are no contracts yet, so it renders with just the component sections (from `docs/architecture.md`) plus a final `## Infrastructure (no user-facing contract)` section; rows appear as features are planned. Generate via the **Product map generation procedure** below.
+- `.ai-pm/decision-authority.md` — write from Q8 (the decision-authority answer): `mode: autonomous | interactive` (default `interactive`) + `veto-window-seconds: 15`. See `### Decision authority` in `WORKFLOW.md` for the keys, the default, and the timer-honesty caveat — do not re-encode the default here. This file is created at bootstrap, but no consumer may *require* it: its absence elsewhere ⇒ `interactive` (so every older project is unaffected and no migration is introduced).
 - `.ai-pm/state/current.md` from `state.md.tmpl` — initial state set to `Status: idle`; updated by every coder run thereafter
 - `.ai-pm/state/archive/` directory — completed task states get archived here
 - `.ai-pm/reviews/` directory — review artifacts (plan compliance + code review findings)

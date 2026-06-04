@@ -163,6 +163,8 @@ Everything else follows the normal plan format. The Incident facts section is th
 ```markdown
 # <Topic> — plan
 
+Decision authority: autonomous | interactive   # OPTIONAL — omit unless overriding the project value
+
 ## Scenarios
 1. <user-visible behavior after this change>
 2. ...
@@ -208,6 +210,8 @@ Everything else follows the normal plan format. The Incident facts section is th
 - <explicitly what this plan does NOT touch>
 - **Sibling elements of categorical choices** — for every categorical element the plan focuses on (a chosen type, mode, role, state, operation), list each sibling that was considered and excluded, with one line on why it is a separate plan
 ```
+
+**Decision-authority override rule (optional).** The plan may carry an optional `Decision authority: autonomous | interactive` line just under the topic heading. It is the **per-feature override** that runs *this one feature* under a different authority than the project value — most often `autonomous` on an otherwise-interactive project for a feature whose canon coverage is rich. Omit the line unless overriding. Step 3.5 reads it as the **top of the effective-authority resolution order** (plan line → `.ai-pm/decision-authority.md` `mode:` → `interactive`). See `### Decision authority` in `WORKFLOW.md` for the enum, the default, and the resolution order — do not re-encode them here.
 
 **Test plan rule:** each new test must have a one-sentence behavior description — what scenario it verifies (given/when/then style). Not just a file name. This is what reviewer and coder use to write and verify the test.
 
