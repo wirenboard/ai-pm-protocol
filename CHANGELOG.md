@@ -13,6 +13,24 @@
 
 ---
 
+## [2.27.0] — 2026-06-05
+
+Ships **review-typology-framework** (EPIC review-typology, slice 1) — a single-sourced `### Review typology` registry in `WORKFLOW.md` that names the protocol's distinct review **types**, each with its own cadence · depth · scope · deterministic-half · AI-half, mirroring the `### Decision authority` single-source discipline. The protocol already reviews every change by diff and audits compliance periodically, but had no layered review **typology**. Research-backed (`.ai-pm/research/review-typology_research.md`), validating the layered model, the **"review new/changed code, not already-clean code"** (Clean-as-You-Code) cadence rule, and the structural→deterministic / semantic→LLM split (backlog #211). This slice lays the framework (5 types — 2 built, 3 registered as later slices) and implements the first, lightest type: **smell / hygiene**, operationalized through `/pm-audit`'s `## Technical quality` hook. Discipline + `/pm-audit` capability only; additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **`### Review typology` registry** (`WORKFLOW.md`) — a canonical, single-sourced discipline naming the 5 review types (per-diff · smell/hygiene · architectural · functional/integration · criticality-prioritization), each with cadence · depth · scope · deterministic-half · AI-half. Two types are built (per-diff exists; smell/hygiene shipped here); the 3 heavier types are **registered as named later slices** (cadence/depth/det-vs-AI sketched, not built). Consumers reference the registry by name; the enum/cadence lives once. Includes the marker↔audit-report coupling caveat for future non-audit sweep triggers.
+- **Smell / hygiene sweep via `/pm-audit`** (`.claude/commands/pm-audit.md`) — the `## Technical quality (full scope only)` hook is strengthened into the smell/hygiene sweep: runs the `code-review` skill over a **proportional scope** (new-code gating — `git diff <last-sweep-sha>..HEAD` + first-run-full + periodic full re-sweep, recorded via a `## Quality sweep: <date> — swept <sha>..HEAD at depth <d>` marker line in the audit report, no new artifact), at a **selectable depth** (low…ultra; never silently the costliest), with findings routed through the existing fix-now / next-sprint / accept-with-context triage (`accepted (quality-sweep-<date>)`), and an **autonomous procedural gate bounded by the proportionality rule** (never a full-tree ultra sweep every audit). The interactive yes/no offer wording is preserved.
+- **`pm-audit.md` added to the `### Decision authority` consumer list** (`WORKFLOW.md`) — the smell-sweep autonomous gate makes the `/pm-audit` command a named consumer of the decision-authority discipline (single-source-drift guard).
+- **Architecture decision record** (`doc/architecture.md`) — records the framework as a new whole-system review discipline (EPIC slice 1), registry home = `WORKFLOW.md` `### Review typology`, and the last-sweep marker = a line in the audit report.
+
+### Notes
+
+- Code-review: 6 findings fixed in-pass (`182db36`) + a registry-cadence alignment follow-up (`f6aea8c`); plan-check approve; verdict approve (`.ai-pm/reviews/review-typology-framework_review.md` — stamped `2026-06-05 — passed`).
+- `tests/hooks.sh` 74/74. `.claude/settings.json` + `tests/hooks.sh` byte-unchanged — the smell deterministic-detection half is **named** as a future hook, not built in this slice. Additive only; the existing `## Technical quality` offer is strengthened, not removed. **No migration.**
+
+---
+
 ## [2.26.0] — 2026-06-05
 
 Ships **readme-template-canonical-shape** — bakes the canonical README front-door shape (что → зачем → install → details → license) into the downstream template `doc/_templates/README.md.tmpl` and adds a `pm-architect` authoring rule so newly-scaffolded projects start from the right shape. Follow-up to `readme-rewrite` (v2.24.1), which fixed this protocol's own README; this slice carries that shape into the template that downstream projects inherit. The template's front-gate stays intact and the install / License / `product.md`-pointer blocks are byte-preserved. Template/doc capability only; additive, fully back-compatible, **no migration**.
