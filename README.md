@@ -90,6 +90,8 @@ PM не знает про агентов, команды и пайплайн —
 
 ## Установка
 
+По умолчанию — **через symlinks** (агенты, команды и `settings.json` ссылаются в submodule, поэтому обновляются автоматически вместе с ним):
+
 ```bash
 git submodule add git@github.com:aadegtyarev/ai-pm-protocol.git .ai-pm/tooling
 mkdir -p .claude
@@ -99,6 +101,26 @@ ln -s ../.ai-pm/tooling/.claude/settings.json .claude/settings.json
 ```
 
 **После установки очисти контекст — `/clear`** (или перезапусти сессию). Агенты, команды и скиллы подхватываются при старте сессии; если submodule и symlinks появились уже в запущенной сессии, в текущем контексте они ещё не загружены, и Claude не сможет их использовать в новом проекте. `/clear` перечитывает `.claude/` и подтягивает их.
+
+### Альтернатива — установка копированием (shared folder / виртуалка по SFS)
+
+Если проект лежит на хосте и проброшен в виртуалку или контейнер через **shared-folder ФС** (vboxsf VirtualBox, VMware HGFS, 9p/virtiofs, иногда SSHFS), такая ФС часто **не отдаёт symlinks**. Тогда Claude Code не находит агентов в `.claude/agents/` и показывает только встроенных (`general-purpose`, `Explore`, `Plan`…), а кастомные `pm-*` агенты «not found». Симптом не в Claude и не в submodule — это ограничение самой ФС.
+
+В этом случае ставь **копированием вместо symlinks** — `.claude/*` становятся реальными файлами, которые читаются на любой ФС:
+
+```bash
+git submodule add git@github.com:aadegtyarev/ai-pm-protocol.git .ai-pm/tooling
+mkdir -p .claude
+cp -R .ai-pm/tooling/.claude/agents   .claude/agents
+cp -R .ai-pm/tooling/.claude/commands .claude/commands
+cp    .ai-pm/tooling/.claude/settings.json .claude/settings.json
+```
+
+Дальше так же — `/clear`, затем «начни проект».
+
+**Цена варианта:** agents/commands/settings — теперь копии, а не symlinks, поэтому auto-update через submodule не работает. При **обновлении шаблона** их нужно перекопировать (см. «Обновление шаблона» ниже, блок для копий).
+
+> Ещё проще, если возможно: склонировать проект **нативно внутри виртуалки** (не через shared folder) — тогда работает обычная установка через symlinks и auto-update сохраняется.
 
 Оркестратор работает с отключённой авто-памятью (`autoMemoryEnabled: false`) — всё состояние живёт в артефактах проекта (`.ai-pm/`, `doc/`, планы, ревью). Каталог для временных/диагностических скриптов — `.claude/tmp/` (git-ignored), а не `/tmp`.
 
@@ -118,6 +140,18 @@ git commit -m "chore: bump ai-pm-protocol"
 ```
 
 Агенты, команды и `WORKFLOW.md` обновляются автоматически — они symlinks внутри submodule. `CLAUDE.md` и `docs/` проекта остаются нетронутыми.
+
+**Если ставил копированием** (вариант для shared folder / SFS выше) — symlinks нет, поэтому после бампа нужно перекопировать `.claude/*` (с `rm -rf`, чтобы убрать удалённые в новой версии агенты/команды):
+
+```bash
+git submodule update --remote .ai-pm/tooling
+rm -rf .claude/agents .claude/commands
+cp -R .ai-pm/tooling/.claude/agents   .claude/agents
+cp -R .ai-pm/tooling/.claude/commands .claude/commands
+cp    .ai-pm/tooling/.claude/settings.json .claude/settings.json
+git add .ai-pm/tooling .claude
+git commit -m "chore: bump ai-pm-protocol"
+```
 
 **Проще — просто скажи Claude: «обнови шаблон»** (или «обнови ai-pm-protocol до v2.2»). Это обычная git-операция, не фича — оркестратор сам делает bump сабмодуля на ветке, коммитит как `chore:` и выполняет миграцию, если новая версия её требует. Отдельный план не нужен.
 
