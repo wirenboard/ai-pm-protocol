@@ -16,9 +16,10 @@
   5. `.claude/agents/pm-plan-checker.md`: one user-facing-only DoD item (prose list + Verdict-format block) keyed on the greppable token (treats `clean` and `gaps: N`-with-N-resolutions as the two resolved states; non-user-facing exempt).
   6. `.claude/agents/pm-auditor.md`: dimension-1 user-facing-only artifact-completeness check, reusing the human-role-subject extraction (absent/unresolved = blocking; non-user-facing with no artifact = clean).
   7. `README.md`: one capability bullet in "Какие риски шаблон снижает" + agent name in the factual roster listing.
+- **Done (pm-coder, 2026-06-04 — code-review fix):**
+  - Code-review finding 1 (count-match wording ambiguity): aligned the `## Resolutions` recording instruction in `.claude/commands/pm-plan.md` step 3 and `.claude/commands/pm-bootstrap.md` step 3 with the advocate spec — "Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number" — so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical.
 - **Remaining:**
   - `doc/architecture.md` decision — POST-coding (pm-architect handoff, orchestrator drives), not coder's.
-  - Review loop: `pm-plan-checker` + `code-review`.
 - **Touched files:**
   - `.claude/agents/pm-product-advocate.md` (new)
   - `WORKFLOW.md`
