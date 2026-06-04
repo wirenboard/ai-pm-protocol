@@ -13,6 +13,22 @@
 
 ---
 
+## [2.17.0] — 2026-06-04
+
+The **semantic complement** to the mechanical `### Pending-migration detection`. A template-version bump can introduce not just structural changes but new *content disciplines* (a populated threat-model lifecycle, foundational user-journeys, a value-first product story) — and the existing `pm-auditor` dimension-5 docs-currency check already detects when those disciplines are missing or stale. This release wires that detection into a PM-collaborative semantic remediation: when a docs-currency finding maps to a discipline a new template version introduced, `/pm-audit`'s fix-now relays that discipline's foundational questions so `pm-architect` can author the content with the PM, rather than leaving "your product story fell behind the template" as an untracked gap. Shipped **remediation-only** after a code-review rework removed a duplicate detector — no new command, agent, dimension, or hook; detection reuses the unchanged dimension 5.
+
+### Added
+
+- **`### Expected-discipline manifest` in `MIGRATIONS.md`**: a registry mapping each template version's content disciplines (populated threat-model lifecycle, foundational user-journeys, value-first product story) to the existing `pm-auditor` dimension-5 finding that detects each one, plus the foundational-question source used for remediation.
+
+### Changed
+
+- **`/pm-audit` stale-docs remediation enhanced** (`.claude/commands/pm-audit.md`): the existing "stale docs → pm-architect" remediation now recognizes when a docs-currency finding maps to a manifest discipline. On fix-now, the orchestrator relays that discipline's foundational questions in one `AskUserQuestion` and `pm-architect` authors the content (PM-collaborative semantic migration); accept-with-context remains the conscious-defer escape hatch.
+- **`WORKFLOW.md` § Maintenance**: after a template submodule bump, run `/pm-audit` so the content disciplines a new template version introduced surface for PM-collaborative fill.
+- **Architecture decision record** (`doc/architecture.md`): records the remediation-only shape — the semantic complement to the mechanical `### Pending-migration detection`, generalizing the "product story fell behind" idea, with detection reusing the unchanged dimension 5 (no new command/agent/dimension/hook).
+
+---
+
 ## [2.16.0] — 2026-06-04
 
 Two coupled, backward-compatible structural moves on the protocol surface. First, the bootstrap raw-drafter agent is renamed `pm-legacy-reader` → `pm-codebase-reader`: "legacy" mis-narrowed the role — a pre-existing codebase may be perfectly modern, just not greenfield — and the agent's job is to read code while writing doc drafts, which "codebase-reader" names accurately. Second, ownership of `docs/user-journeys.md` is consolidated under `pm-architect`, completing the established "reader drafts raw → pm-architect finalizes and owns" pattern (already in force for `architecture.md` and `threat-model.md`) for the one doc where it was still missing. `pm-codebase-reader` continues to draft journeys from code at bootstrap; `pm-architect` now owns per-feature updates, gap-fill, stale remediation, and finalizing that bootstrap draft. No downstream migration is required and the agent roster count is unchanged at 8.
