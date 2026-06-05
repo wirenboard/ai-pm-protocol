@@ -1,18 +1,13 @@
 # Execution State
 
-- **Status:** coding — `diagnostic-flow-discipline` (folds two PM-relayed diagnostic-flow feedback items into one feature). Plan: `doc/features/diagnostic-flow-discipline_plan.md`.
+- **Status:** coding — `agent-reporting-discipline`. **MODE: repo transfer in progress → work LOCALLY only, NO push / NO PR / NO merge** (PM directive). Accumulate feature branches locally; push + open PRs once the new remote URL lands. Plan: `doc/features/agent-reporting-discipline_plan.md`.
 - **Decision authority:** `autonomous` (project-wide) — procedural gates announce-and-proceed; merge/ship manual. **Product forks go to the PM** ("продуктовые решения со мной"). Conversation language: Russian.
-- **Branch:** `feature/diagnostic-flow-discipline` (cut fresh from main after #240/v2.34.0 merged; carried the "diagnostic-flow gap (2)" backlog entry onto Step 0).
-- **Last shipped (this session):** v2.32.0 (#238 review-engine-selection + audit-scope-menu), v2.33.0 (#239 changeset-hygiene), v2.34.0 (#240 test-wiring-parity) — all merged to main.
-- **This feature — four additions to `workflow/incident.md` + 1 line to `pm-stack-researcher.md`:**
-  1. Step A names **passive observation** (tcpdump / BLE-mDNS scan / bus capture) as read-only — no Step A.5 auth, no Blast-radius preflight; bounded **observe-vs-emit** (emitting toward a coupled peer stays under A.5 + preflight).
-  2. **Bisect before you hypothesize** — cheapest path-splitting observation first.
-  3. **Stop-and-research tripwire (anti-thrash)** — two failed fixes on the same symptom → consult the canonical source, not another patch.
-  4. **Stack-research as mid-debug escalation** — spawn `pm-stack-researcher` when reality contradicts an already-cited stack rule (not only up-front); `pm-stack-researcher.md` records the added context.
-- **Done (coder):** `workflow/incident.md` — Step A extended with passive observation + observe-vs-emit boundary; "Bisect before you hypothesize"; "Stop-and-research tripwire (anti-thrash)"; "Stack-research is a mid-diagnosis escalation" (all additive; Step A.5 / Blast-radius preflight / line 18 "relaxes nothing" untouched). `.claude/agents/pm-stack-researcher.md` — one mid-debug invocation-context line, up-front contexts kept. hooks.sh 73/73.
-- **Remaining:** none for coder.
-- **Docs to update (pm-architect, post-coding):** `doc/architecture.md` decision record — **landed**. `### Diagnostic-flow discipline: passive observation is read-only, bisect-before-hypothesize, an anti-thrash tripwire, and mid-debug stack-research` added under `## Architectural decisions` (additive; relaxes none of the Blast-radius / Step A.5 rules; no-hook semantic-judgement family; reuses pm-stack-researcher; Source: the plan).
-- **Touched files:** `workflow/incident.md`, `.claude/agents/pm-stack-researcher.md`, `doc/architecture.md`, `.ai-pm/state/current.md`.
-- **Next step:** review loop — `pm-architect` arch handoff **done** → `pm-plan-checker` Pass 1 → `code-review` Pass 2. hooks.sh stays 73/73 (no hook). Stamps end `— passed`.
-- **Out of scope:** the Blast-radius preflight rule (unchanged); new agent/command/hook (reuses pm-stack-researcher); Steps B/C/D + Step 5.5; mechanical auto-detect of "two failed fixes"; the other open items (agent-VCS reliability; reviewability B linters / C idioms).
-- **Dogfood:** clean diff — additive prose only, no reflow of untouched lines.
+- **Branch:** `feature/agent-reporting-discipline` (cut fresh from main @ v2.36.0/MIT).
+- **Repo migration context:** relicensed AGPL-3.0 → MIT (v2.36.0, PR #242 rebase-merged — author email `a.degtyarev@wirenboard.com` preserved). PM is transferring `aadegtyarev/ai-pm-protocol` → `wirenboard` org. **PENDING after transfer:** (a) PM sends new URL; (b) update install-path URLs in `README.md` ×2 (lines 22, 38), `doc/architecture.md` (387), `.claude/commands/pm-bootstrap.md` (407); (c) then push all local feature branches + open their PRs. Old URL keeps working via GitHub redirect meanwhile.
+- **This feature — agent-reporting-discipline:** verify-or-stay-silent for repo/VCS facts + doc/review agents don't narrate git state (orchestrator's lane). Single-source in `workflow/enforcement.md` (extends "git is orchestrator's, not subagents'"), referenced by name from reporting agents that don't already read it (`pm-architect` — the offender, doesn't read enforcement.md today — `pm-auditor`, `pm-codebase-reader`, `pm-stack-researcher`, `pm-pr-prep`). No hook.
+- **Done (coder):** `workflow/enforcement.md` `### Reporting discipline` (single-source rule: verify-or-stay-silent + lane discipline, under the git-ownership boundary) + one-line by-name references in `pm-architect`, `pm-codebase-reader`, `pm-stack-researcher`, `pm-auditor`, `pm-pr-prep`. Already-readers (`pm-coder`/`pm-plan-checker`/`pm-product-advocate`) inherit it. hooks.sh 73/73.
+- **Touched files (this feature):** `workflow/enforcement.md`, `.claude/agents/pm-architect.md`, `.claude/agents/pm-codebase-reader.md`, `.claude/agents/pm-stack-researcher.md`, `.claude/agents/pm-auditor.md`, `.claude/agents/pm-pr-prep.md`, `doc/features/agent-reporting-discipline_plan.md`, `.ai-pm/state/current.md`.
+- **Docs to update (pm-architect, post-coding):** `doc/architecture.md` (decision record).
+- **Next step:** `pm-architect` (Docs-to-update: `doc/architecture.md` decision record) → review loop (Pass-1 + Pass-2 stamps). Commit locally, **STOP at commit — no push/PR/merge** until transfer completes. hooks.sh stays 73/73 (no hook). Stamps end `— passed`.
+- **Open queue (local, deferred push):** after this — B linters (#218/#211), then C idioms (#227, needs /pm-research). diagnostic-flow-discipline already merged (v2.35.0).
+- **Dogfood:** clean additive diffs only.
