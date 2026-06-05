@@ -428,6 +428,10 @@ Two new Semgrep library entries added to `doc/_templates/stack-idioms/python.md`
 
 State-archive home: the `.ai-pm/state/current.md` archive is committed on the feature branch as the final step before `pm-pr-prep`, so it merges with the feature it describes. Eliminates the protocol gap where the post-ship archive had no rule-compliant commit surface (committing to `main` would violate 'never commit to main'; carrying untracked onto the next branch is git-clean-losable). **Sources:** `workflow/pipeline.md` Step 6 (procedural step) + `workflow/state.md` § 'How state is kept' (conceptual description). Authored by `pm-architect` post-coding per `doc/features/state-archive-home_plan.md` § 'Docs to update'.
 
+### Agent-handoff durability: flush-before-stop + fresh-agent-with-brief as designed fault-tolerance
+
+Durable hand-off between agents is what is on disk — `state/current.md`, the review file, any scratch note — not agent memory. `continue-the-same-agent` is an optional optimization the protocol must never depend on. `pm-coder` flushes its work-so-far to `state/current.md` before any stop-and-report, so the orchestrator can brief a replacement from the disk artifact rather than re-deriving the analysis. The fresh-agent-with-brief path is the designed fault-tolerance path, not an emergency workaround. Sources: `workflow/state.md` § "How state is kept" (principle), `.claude/agents/pm-coder.md` § "When to stop and ask" (flush rule), `workflow/pipeline.md` Step 4 (orchestrator path). Authored by `pm-architect` post-coding per `doc/features/agent-handoff-durability_plan.md` § "Docs to update".
+
 ---
 
 ## Architectural constraints
