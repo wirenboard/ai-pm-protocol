@@ -4,24 +4,54 @@ Run when PM says "check the project", "audit", "review the project", "is everyth
 
 **IMPORTANT:** Do NOT perform inline ad-hoc checks (reading review files, running tests manually). Always invoke this skill and spawn `pm-auditor` as a subagent — that is the only valid audit path. Inline checks bypass protocol compliance verification and produce no audit artifact.
 
-## Auto-scope decision (orchestrator decides, not PM)
+## Scope decision
 
-Before spawning any agent:
+Before spawning any agent, compute the protocol's **scope judgement**, then route on **who initiated** the audit (PM-initiated request vs system-initiated nudge) and, for a PM-initiated request, on **whether the PM already named the scope**.
+
+### 1. Compute the scope judgement (the threshold logic — always runs)
+
+This is the protocol's recommendation, used as the menu's **default pre-selection** for a PM-initiated request and as the **announced auto-scope** for a system-initiated one. It is not removed — it is surfaced.
 
 1. Check `.ai-pm/audits/` for the most recent `audit-*.md` (by filename date).
-2. If `.ai-pm/audits/` is empty or does not exist → first audit → always `full`.
+2. If `.ai-pm/audits/` is empty or does not exist → first audit → judgement = `full`.
 3. Count `feat:` and `fix:` commits since last audit date:
    ```
    git log --since="<last_audit_date>" --oneline | grep -cE "^[a-f0-9]+ (feat|fix):"
    ```
-4. Auto-decide:
+4. Judgement:
    - No prior audit OR last audit > 60 days ago OR > 15 feature commits → **full**
    - Otherwise → **diff** (protocol only, fast)
 
-Tell PM one sentence before starting:
-> "Running a [quick / full] protocol check — [N features / first audit / N days] since last check."
+### 2. Route on initiator
 
-PM can redirect naturally: "just a quick one" → `diff`; "go deep" / "everything" / "comprehensive" → `full`.
+- **System-initiated** (the retrospective nudge from `/pm-plan` fired, or the orchestrator itself decided to audit) → **announce-and-proceed** with the computed judgement, regardless of authority mode. Tell PM one sentence before starting:
+  > "Running a [quick / full] protocol check — [N features / first audit / N days] since last check."
+
+  PM can still redirect naturally: "just a quick one" → `diff`; "go deep" / "everything" / "comprehensive" → `full`.
+
+- **PM-initiated** (the PM asked for a project analysis by intent — "анализ проекта", "проверь проект", "review the project", "аудит") → go to **3** (explicit-scope check), then the **upfront menu** if scope was not named. A PM-initiated analysis is a product/cost fork the PM explicitly asked to own, so the menu is shown **regardless of authority mode** (autonomous mode does not suppress it).
+
+### 3. Explicit scope skips the menu
+
+If the PM's words **already name the scope**, honor it directly — **no scope menu**:
+- "полный анализ" / "go deep" / "everything" / "comprehensive" → `full`
+- "быстрая проверка" / "just a quick one" / "quick check" → `diff`
+
+For an explicit **`full`**, still surface the review-sweep **depth** choice (the `## Technical quality` depth offer applies — do not ask scope, only depth). For an explicit `diff`, proceed straight to the audit.
+
+### 4. The upfront scope menu (PM-initiated, scope not named)
+
+Present **one** `AskUserQuestion` menu before running anything — the protocol's computed judgement (step 1) is the **recommended / pre-selected** option:
+
+> "What kind of project analysis do you want?"
+
+Two options:
+- **Quick** — protocol-compliance only, fast `diff` (commits since the last audit).
+- **Full** — the whole project: protocol-compliance **+** the code-quality review sweep over the full tree.
+
+Mark the option matching the step-1 judgement as the recommendation (e.g. "Recommended — N features / N days since last check"). The PM's pick drives `scope` (`Quick` → `diff`, `Full` → `full`); the PM sees and can override the protocol's judgement upfront.
+
+When the PM picks **Full**, also resolve the review-sweep **depth** in the same flow — fold it into this menu (a second question: light `low`/`medium` vs deep `high`/`max`/`ultra`) **or** defer to the `## Technical quality` depth offer, whichever keeps it to a single pass. Do **not** double-ask depth.
 
 ## Agent dispatch
 
@@ -56,6 +86,8 @@ All agents below are project agents — use the Agent tool with the exact `subag
    
    Options: **Yes, run full audit** / **No, continue with these findings**.
    If yes — re-spawn `pm-auditor` with `scope: full` before walking through findings.
+
+   **No double-prompt.** This offer fires **only when a Quick / `diff` audit actually ran**. When the upfront scope menu (Scope decision, step 4) already chose **Full** — or the PM named an explicit Full — scope is `full`, so this offer does not fire; the PM already made that call upfront.
 
 4. **Walk PM through blocking findings** using the auditor's priority order. For each:
    > "Blocking #<n>: <short title>. **Fix now** (run the remediation step next), **next sprint** (backlog), or **accept-with-context** (note the reason, skip next time)?"
@@ -111,7 +143,7 @@ All agents below are project agents — use the Agent tool with the exact `subag
 
 ## Technical quality — the smell / hygiene sweep (full scope only)
 
-After the protocol findings are walked through, if scope was `full`, run the **smell / hygiene sweep** — the first concrete review **type** of `### Review typology` in `workflow/review-typology.md`. **Read `workflow/review-typology.md` before running the sweep** (the registry; do not re-encode the type list or cadence rule here — reference it by name). It runs the `code-review` skill over the **proportional scope** to surface functionality-preserving hygiene issues (dead code, duplication, high cognitive complexity, over-complexity, simplification) — distinct from a per-diff bug. Its deterministic **detection** half (an enumerable smell catalog a hook/linter should own) is a **named downstream/future path, not run here** (this protocol repo has no linter to host it — see `### Review typology`); the AI **prioritization / root-cause** half is this sweep.
+After the protocol findings are walked through, if scope was `full`, run the **smell / hygiene sweep** — the first concrete review **type** of `### Review typology` in `workflow/review-typology.md`. **Read `workflow/review-typology.md` before running the sweep** (the registry; do not re-encode the type list, cadence, or engine-selection rule here — reference it by name). It is a **whole-codebase** review type, so its engine is **selected per the engine-selection rule in `### Review typology`**: prefer `wb-development:code-review-orchestrator` when it is available and `WB_REVIEW_ORCHESTRATOR` is not `off`, otherwise fall back to the built-in `/code-review` skill at the selected depth (below). The chosen engine runs over the **proportional scope** to surface functionality-preserving hygiene issues (dead code, duplication, high cognitive complexity, over-complexity, simplification) — distinct from a per-diff bug. Its deterministic **detection** half (an enumerable smell catalog a hook/linter should own) is a **named downstream/future path, not run here** (this protocol repo has no linter to host it — see `### Review typology`); the AI **prioritization / root-cause** half is this sweep.
 
 **1. Derive the proportional scope from the last-sweep marker (no new file).** When the sweep actually runs, it writes its outcome as a **real sweep-marker line** in the `audit-*.md` report the auditor already produces:
 
@@ -119,12 +151,12 @@ After the protocol findings are walked through, if scope was `full`, run the **s
 
 where **`<sha>` is HEAD at sweep time** (the commit the sweep reviewed up to). This extends the auditor's existing "derive the diff cutoff from the latest `audit-*.md`" pattern (`pm-auditor.md` step 2) from date-only to date+SHA — **no dedicated `.ai-pm/` file**. A **skip** (step 2) writes **no such line** — only a plain note — so the steady-state reader is never undefined. To scope the next sweep:
 
-- **First-run precedence (overrides the skip gate).** If **no** `audit-*.md` anywhere carries a **real** `## Quality sweep: <date> — swept <sha>..HEAD at depth <d>` line, this is a **first-run = full** sweep — reuse the auditor's existing fallback verbatim (`pm-audit.md` Auto-scope, "empty or does not exist → first audit → always `full`"; `pm-auditor.md` step 2). Do not invent a parallel "first sweep" rule. The skip/silent gate (step 2) applies **only** when a prior real sweep-marker exists AND nothing changed since its `<sha>`.
+- **First-run precedence (overrides the skip gate).** If **no** `audit-*.md` anywhere carries a **real** `## Quality sweep: <date> — swept <sha>..HEAD at depth <d>` line, this is a **first-run = full** sweep — reuse the auditor's existing fallback verbatim (`pm-audit.md` Scope decision, step 1: "empty or does not exist → first audit → judgement = `full`"; `pm-auditor.md` step 2). Do not invent a parallel "first sweep" rule. The skip/silent gate (step 2) applies **only** when a prior real sweep-marker exists AND nothing changed since its `<sha>`.
 - **Incremental scope.** Otherwise, find the **latest `audit-*.md` that contains a real `## Quality sweep: … swept <sha>..HEAD …` line** (a skip note is **not** such a line; a `diff`-scope audit may write a report but run no sweep), read its `<sha>`, and scope the `code-review` pass to **`git diff <that sha>..HEAD`** — the code changed since the last sweep (Clean-as-You-Code new-code gating, per `### Review typology`). Legacy / never-diff-reviewed code is **not** chased per-incremental (there is no signal to compute "never-swept" incrementally) — it is covered by the **first-run full** sweep above and the **periodic full re-sweep** (cadence-drift), the two mechanisms `### Review typology` names for legacy coverage. *(Coupling: the marker exists only where an `audit-*.md` does — safe while the `## Technical quality` full-scope hook is the sole sweep trigger.)*
 
 **2. Proportionality gate — silent/skip when nothing changed since the last sweep.** If a prior real sweep-marker exists AND nothing changed since its `<sha>`, announce **"codebase swept-clean since `<date>`"**, write **only a plain skip note** in the report (e.g. `Quality sweep skipped — swept-clean since <date>`), **NOT** a `## Quality sweep: … swept <sha>..HEAD …` sweep-marker line, and **skip** the `code-review` pass. A skip leaves the previous real marker as the latest one, so the next sweep's reader still finds a well-defined `<sha>`. The sweep never re-reviews swept-clean code.
 
-**3. Selectable depth (no hard-wired `ultra`).** Run the `code-review` skill at a **chosen** level (low / medium / high / max / ultra) — never silently the costliest:
+**3. Selectable depth (no hard-wired `ultra`).** Run the selected engine (step intro — orchestrator preferred when available, else the built-in `/code-review`) at a **chosen** depth — never silently the costliest. Depth applies to the built-in fallback's level (low / medium / high / max / ultra); the orchestrator runs its own multi-aspect pass:
 
 - **Interactive:** offer the cost/depth trade-off and let the PM pick:
   > "Protocol check done. Want a smell/hygiene sweep too? It reviews the code changed since the last sweep (or the full tree on a first / periodic re-sweep) for dead code, duplication, and over-complexity. Depth is selectable — light (`low`/`medium`, a few minutes) for a small routine sweep, deep (`high`/`max`/`ultra`, 10–15 min) for a first/legacy/comprehensive sweep. Run it — and at what depth?"
@@ -154,6 +186,6 @@ If the project has artifacts from before this protocol version (old `docs/audit-
 
 ## Hard rules
 
-- Orchestrator decides scope — never ask PM "full or diff?".
+- Scope routing: a **PM-initiated** analysis request (intent, no scope named) gets the upfront Quick/Full menu (the threshold logic is the recommended default); an explicit scope skips the menu; a **system-initiated** nudge announces-and-proceeds with the computed judgement. Never ask "full or diff?" on a system-initiated audit.
 - One PM decision per finding. No batching unless PM says "fix all".
 - All remediations go through the normal pipeline — no direct edits.
