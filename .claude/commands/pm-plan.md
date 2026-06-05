@@ -101,6 +101,25 @@ Never plan against a missing or stale stack-notes entry. This is not a PM questi
 
   Never write a path placement into a plan without a platform-level reference in stack-notes.
 
+## Integration-risk spike gate (conditional, judgment-triggered)
+
+After the Stack component check, judge whether this feature's core design hinges on a **load-bearing SDK idiom or a novel combination of stack capabilities** that the canonical docs do not directly cover for this specific configuration — for example: enabling capability X where a sibling capability is deliberately off, a registration or flag sequence the happy-path README omits, or an SDK/library interaction the documented examples don't exercise together.
+
+The trigger is a **semantic judgement a regex cannot make** — so there is **no hook** and no mandatory plan section, exactly like the NFR/operational-limits, state-model, and README-currency checks. The gate fires only when **both** hold: (1) the design hinges on such a load-bearing idiom, and (2) that rule in `docs/stack-notes.md` carries `confidence: doc-cited (unverified)` — or carries **no confidence tag at all** (absent tag = `doc-cited (unverified)` by convention, the safe default). The gate is **silent** when the hinge idiom already carries `confidence: execution-verified`.
+
+The spike is **distinct** from Step A.5 (diagnostic probe — reactive, post-failure) and Step 5.5 (run it for real — post-implementation, whole feature). The spike validates a specific hinge idiom **before the design commits to it**, on a throwaway target; the other two come after.
+
+When the gate fires, surface the spike requirement before finalizing the plan:
+
+- **Interactive mode:** one `AskUserQuestion` — authorize a throwaway spike now (a minimal end-to-end run that exercises the hinge idiom on a throwaway target and confirms it works as documented), or explicitly defer with a rationale. Never ask this more than once per plan.
+- **Autonomous mode:** announce-before-act; record `spike-deferred: (autonomous — proceed)` in the plan's Key design decisions and continue.
+
+**Blast-radius preflight:** when the spike target is a live, coupled external system — read `### Blast-radius preflight` in `workflow/incident.md` before acting. The spike goes to a **separate or throwaway instance by default**, never the user's live coupled target. This reference does not relax the preflight rule.
+
+**After a confirmed spike:** the orchestrator updates the hinge rule's tag to `confidence: execution-verified` in `docs/stack-notes.md`. The gate is satisfied; the plan finalizes.
+
+**After an explicit deferral:** record the decision in the plan's Key design decisions as `spike-deferred: <rationale>`. The plan proceeds with the doc-cited hinge idiom surfaced; coder and reviewer are aware the design premise is not execution-verified.
+
 ## Interaction scenario check (mandatory before drafting)
 
 Before writing the plan, identify shared state and external events that can occur concurrently with this feature. Check `docs/user-journeys.md` and adjacent plans in `docs/features/` for features that share state with what you're planning: same connection objects, same topic subscriptions, same device state, same in-memory data structures, same timers or polling loops.
