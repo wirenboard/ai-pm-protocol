@@ -176,3 +176,102 @@ specifier format); https://peps.python.org/pep-0440/ (PEP 440 — version specif
 "Inclusive ordered comparison").
 
 **Contributed by:** ai-pm-protocol (2026-06-05)
+
+---
+
+### inline-rule-id-ban (python)
+
+**Edge case covered:** inline rule-ID citations (`# SC1`, `# AC6`, `# NFR3`) in code comments
+create drift surfaces — the code drifts (a scenario is renamed, a requirement is refactored)
+while the citation stays and becomes misleading. The correct home for a rule ID is the plan /
+test (a test named `test_token_written_0600` documents the invariant without drifting); inline
+citations add machine-texture and rot.
+
+**Deviation = bug:** `# SC1` or `# AC6` etc. inline in code → drift surface; the citation's
+home is the plan/test, not the line it labels.
+
+**Semgrep rule:** `python.style.inline-rule-id-ban`
+
+(use the generic language for this rule since it matches any text file, not just Python)
+
+```yaml
+rules:
+  - id: python.style.inline-rule-id-ban
+    languages: [generic]
+    severity: WARNING
+    message: "inline-rule-id-ban: remove inline rule-ID citations (# SC1, # AC6, etc.); rule IDs belong in the plan/test, not inline — inline citations drift as requirements evolve"
+    paths:
+      include:
+        - "*.py"
+    pattern-regex: '#\s*[A-Z]{2,3}\d+'
+```
+
+**Note:** the pattern `#\s*[A-Z]{2,3}\d+` matches 2–3 uppercase letters followed by digits
+immediately after a `#` comment marker. This targets protocol/requirement-style IDs (`SC1`,
+`AC6`, `NFR3`). It avoids matching `# TODO`, `# FIXME`, `# NOTE` (no digit suffix), and
+`# type: ignore` (lowercase). Suppress with
+`# nosemgrep: python.style.inline-rule-id-ban` on a line where the ID is intentional
+documentation (e.g., a test file whose comment names the scenario by ID for traceability —
+a legitimate exception).
+
+**Linter encoding (if applicable):** not expressible as a pylint/ruff rule — Semgrep Tier 1 only.
+
+**Source:** https://semgrep.dev/docs/writing-rules/pattern-syntax/ (pattern-regex syntax);
+comment-restraint convention: rationale in plan/test, not inline (backlog §
+"Comment-restraint + documentation-minimalism", 2026-06-05).
+
+**Contributed by:** ai-pm-protocol (2026-06-05)
+
+---
+
+### docstring-only-function (python)
+
+**Edge case covered:** a function whose entire body is a docstring with no implementation is
+either dead documentation (the function does nothing but "document itself"), a placeholder stub
+that was never completed, or a trivially-obvious `_private` helper that needs no documentation.
+In all three cases the docstring adds noise and machine-texture without communicating anything
+a good function name doesn't already say.
+
+**Deviation = bug:** `def f(): """..."""` (body = only a docstring) → dead/redundant
+documentation; the function name should carry the meaning; the docstring will drift if the
+function is renamed or removed.
+
+**Semgrep rule:** `python.style.docstring-only-function`
+
+```yaml
+rules:
+  - id: python.style.docstring-only-function
+    languages: [python]
+    severity: WARNING
+    message: "docstring-only-function: function body is only a docstring — this adds noise without communicating anything a good function name doesn't say. Remove the docstring; if the function is a public API stub, the docstring belongs in the plan/contract."
+    patterns:
+      - pattern: |
+          def $FUNC(...):
+              """..."""
+      - pattern-not: |
+          def $FUNC(...):
+              """..."""
+              $BODY
+```
+
+**Note:** the `pattern-not` excludes functions that have a docstring AND a body (`$BODY` after
+the docstring). This narrows the rule to only functions whose ENTIRE body is the docstring with
+no implementation code. The rule catches `pass`-less stubs and documentation-only wrappers.
+For legitimate stub functions (abstract methods, `...`-body), annotate with
+`# nosemgrep: python.style.docstring-only-function` or use the `abc.abstractmethod` decorator
+(which changes the AST shape and avoids the match).
+
+**Scope note:** the rule targets the unambiguous case (entire body = docstring) rather than a
+line-count threshold. The comment-restraint convention in `### Code conventions` (no docstrings
+on trivial/private functions) covers the semantic "short function with a docstring" case — that
+is an AI-reviewed convention, not a deterministic Semgrep check.
+
+**Linter encoding (if applicable):** not expressible as a pylint/ruff rule — Semgrep Tier 1 only.
+
+**Source:** https://docs.python.org/3/library/functions.html#property (the `@property` +
+docstring pattern IS acceptable for properties — the docstring there IS the getter
+documentation, not a stale stub; add a `pattern-not-inside: @property` if needed); PEP 257
+(docstring conventions — this rule enforces the *restraint* direction, not the presence
+direction).
+
+**Contributed by:** ai-pm-protocol (2026-06-05)
