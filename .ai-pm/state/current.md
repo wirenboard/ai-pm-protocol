@@ -1,6 +1,6 @@
 # Execution State
 
-- **Status:** coded — awaiting pm-architect handoff (Docs to update) then review loop
+- **Status:** coded + docs landed (pm-architect Docs-to-update done) — awaiting review loop
 - **Decision authority:** `autonomous` (project-wide, `.ai-pm/decision-authority.md`) — routine procedural gates announce-and-proceed; merge/ship stays manual. **Product forks go to the PM** (PM directive 2026-06-05: "продуктовые решения со мной"). Conversation language: Russian (PM directive 2026-06-05).
 - **Task:** `review-engine-selection` — remove the `code-review-orchestrator` hook deny (it becomes a legitimate engine), keep per-diff Pass-2 on the built-in `/code-review` by protocol routing, and make the `/pm-audit` whole-codebase smell sweep prefer the orchestrator (built-in `/code-review ultra` fallback + `WB_REVIEW_ORCHESTRATOR=off` switch). Plan: `doc/features/review-engine-selection_plan.md`.
 - **Branch:** `feature/periodic-codebase-review`.
@@ -11,8 +11,8 @@
   3. ✓ `workflow/review-typology.md` — added the single-source engine-selection rule (per-diff → built-in; whole-codebase → orchestrator-preferred → built-in `ultra` fallback → `WB_REVIEW_ORCHESTRATOR=off` forces fallback; reframes deny-review-orchestrator).
   4. ✓ `.claude/commands/pm-audit.md` `## Technical quality` — smell sweep engine-selected per `### Review typology` by reference (intro + step 3); all existing sweep behavior preserved.
   5. ✓ `workflow/enforcement.md` — one-line note: orchestrator is a legitimate engine off the deny-list; named deny-list is exactly the 7 role-duplicators.
-- **Docs to update (pm-architect, post-coding — NOT touched by coder):** `doc/architecture.md` (decision record, supersedes deny-review-orchestrator), `README.md` (replace the "disabled by default" section; README-currency trigger fired).
-- **Touched files:** `.claude/settings.json`, `tests/hooks.sh`, `workflow/review-typology.md`, `.claude/commands/pm-audit.md`, `workflow/enforcement.md` (2 commits on `feature/periodic-codebase-review`). Pending pm-architect: `doc/architecture.md`, `README.md`.
-- **Next step:** spawn `pm-architect` for the Docs-to-update handoff; then review loop (`pm-plan-checker` Pass 1 → `code-review` Pass 2 — `.claude/settings.json` is a security-relevant hook, review accordingly).
+- **Done (pm-architect, Docs-to-update — both landed):** `doc/architecture.md` — added the `### Review-engine selection` decision record (engine split + supersedes `deny-review-orchestrator` v2.25.1 + security framing: settings.json is a security-relevant hook, deny removal was a PM decision); `README.md` — replaced the "отключён по умолчанию" section with the engine-selection note (per-diff → built-in; sweep → orchestrator-preferred → `/code-review ultra` fallback; `WB_REVIEW_ORCHESTRATOR=off`), dropped the obsolete `WB_ALLOW_REVIEW_ORCHESTRATOR` launch-flag instructions. 2 commits on the branch.
+- **Touched files:** `.claude/settings.json`, `tests/hooks.sh`, `workflow/review-typology.md`, `.claude/commands/pm-audit.md`, `workflow/enforcement.md` (coder, 2 commits), `doc/architecture.md`, `README.md` (pm-architect, 2 commits) — all on `feature/periodic-codebase-review`.
+- **Next step:** review loop (`pm-plan-checker` Pass 1 → `code-review` Pass 2 — `.claude/settings.json` is a security-relevant hook, review accordingly).
 - **Validation:** `tests/hooks.sh` green (the deterministic hook half); editorial/plan-compliance for the prose half (markdown-prose repo, validation-by-use).
 - **Note (state-archive home):** the prior `orchestrator-read-discipline` state + archive were carried onto this branch at Step 0 (commit on `feature/periodic-codebase-review`), per the known state-archive-home gap.
