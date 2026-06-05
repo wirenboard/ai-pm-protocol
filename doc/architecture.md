@@ -429,7 +429,7 @@ Durable hand-off between agents is what is on disk — `state/current.md`, the r
 
 ### Semgrep pre-review: community rulesets before AI code-review
 
-Step 5 Pass-2 now runs `semgrep --config p/<lang>` on the changed files before spawning the AI `code-review` subagent. The orchestrator detects the project's primary language from `docs/architecture.md ## Stack`, runs `semgrep --config p/<lang> --json <changed-files>` over the files touched by the diff, and appends any findings to `## Code review findings` in `.ai-pm/reviews/<topic>_review.md`. The AI `code-review` then runs over the same diff — Semgrep findings are already present in the file, so `pm-coder` receives one combined artifact.
+Step 5 Pass-2 now runs `semgrep --config p/<lang>` on the changed files before spawning the AI `code-review` subagent. The orchestrator detects the project's primary language from `docs/architecture.md ## Tech stack`, runs `semgrep --config p/<lang> --json <changed-files>` over the files touched by the diff, and appends any findings to `## Code review findings` in `.ai-pm/reviews/<topic>_review.md`. The AI `code-review` then runs over the same diff — Semgrep findings are already present in the file, so `pm-coder` receives one combined artifact.
 
 **Rationale.** Community Semgrep rulesets are maintained by security and quality experts and provide deterministic, cheap mechanical-issue detection. Running before AI review lets the AI focus on semantic and architectural concerns rather than flagging identifiable mechanical patterns. Community rules are qualitatively better than the hand-written project-local rules the `stack-idioms-library` design produced.
 
