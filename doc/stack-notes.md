@@ -204,6 +204,24 @@ This document is for **this template repository itself**. The template documents
 
 ---
 
+### Semgrep
+
+- **Role in this project:** Pipeline pre-check in Step 5 Pass-2 (before AI `code-review`). The orchestrator runs community Semgrep rulesets over the files touched by a change to surface deterministic mechanical issues cheaply before the AI review runs. Findings are appended to `.ai-pm/reviews/<topic>_review.md` so `pm-coder` receives all findings in one artifact. This component supersedes the former local idioms library (`doc/_templates/stack-idioms/python.md`).
+- **Canonical docs:** <https://docs.semgrep.dev/getting-started/>
+- **Community invocation:** `semgrep --config p/<lang> --json <files>` — downloads and runs the named ruleset from the Semgrep registry at runtime. Requires Semgrep installed (`pip install semgrep` or `brew install semgrep`) and internet access.
+- **Language-to-config mapping:**
+  - Python → `p/python`
+  - JavaScript → `p/javascript`
+  - TypeScript → `p/typescript`
+  - Go → `p/go`
+  - Java → `p/java`
+- **Exit-code contract:** 0 = success (findings or none); non-zero = error. Silent-fallback rule: any non-zero exit, missing binary, config download failure, or no known community config for the detected language → skip, proceed to AI review. Source: <https://docs.semgrep.dev/getting-started/>.
+- **JSON output:** findings in the `results` array of the JSON stdout. Each finding entry carries `check_id`, `path`, `start`/`end` (line/col), and `extra.message`. Source: <https://docs.semgrep.dev/getting-started/>.
+- **Known constraint:** requires internet at review time (community rules are downloaded at runtime from the Semgrep registry — `p/<lang>` is not bundled). Not a blocking dependency: the silent-fallback rule ensures the pipeline degrades gracefully when Semgrep is unavailable or the network is down.
+- **Last reviewed:** 2026-06-05
+
+---
+
 ## Validators wired into pipeline
 
 This template has no traditional build/test pipeline — it ships as a documentation-and-config repo consumed via git submodule. The only continuous-validation surface is the GitHub Actions release workflow.
