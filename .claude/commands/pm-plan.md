@@ -121,7 +121,7 @@ If the feature is provably isolated — no shared state, no concurrent operation
 Before drafting the plan, check whether this feature touches a security-relevant surface **and** the project is security-bearing:
 
 - **Security-bearing project?** The project is security-bearing exactly when `docs/threat-model.md` is present. If absent → the project is non-security; this check is silent and you skip the rest of it.
-- **Touches a security-relevant surface?** Check the feature against the single-source list — `### Security-relevant surfaces` in `WORKFLOW.md` (referenced by name; never re-list the items here).
+- **Touches a security-relevant surface?** **Read `workflow/security-surfaces.md` before deciding**, and check the feature against its single-source list — `### Security-relevant surfaces` in `workflow/security-surfaces.md` (referenced by name; never re-list the items here).
 
 If **both** hold: the plan **must** name `docs/threat-model.md` in its "Docs to update" section, with the relevant Threat rows to add or update. After pm-coder finishes, the orchestrator spawns `pm-architect` to update it — this rides the **same** "Docs to update" post-coding handoff already described above for `docs/architecture.md` (same owner, same trigger). `pm-plan-checker` blocks a security-touching plan on a security-bearing project that omits this. This is not a PM question — PM never sees this step.
 
@@ -166,7 +166,7 @@ Ask clarifying questions as needed — grounded in what you read. Typical questi
 - Any edge cases? (empty state, errors, concurrent access)
 - Is there an existing pattern in the codebase this should follow?
 
-**Before every PM question — product vs technical check.** PM is product, not technical (the same split that governs reviewer notes in `WORKFLOW.md`). Apply it to every clarifying question:
+**Before every PM question — product vs technical check.** PM is product, not technical (the same split that governs reviewer notes — see `workflow/pm-comms.md`). Apply it to every clarifying question:
 
 - **Product trade-offs** (what the user experiences, scope between user-visible alternatives, deferral between user-facing features) — surface to PM. Examples: "single install command vs split installs", "real-time vs batch update", "one feature this iteration vs both".
 - **Technical detail** (file layout, naming, internal type choices, library API specifics, unit file shape, regex form, sysd vs supervisord, port numbers) — orchestrator decides. Asking the PM about these is a category-error that wastes their attention and produces low-quality answers.
@@ -179,7 +179,7 @@ Stop asking when you have enough to write the plan.
 
 ## Hotfix mode
 
-When the topic is `hotfix-<area>` (set by the orchestrator following the production incident flow in WORKFLOW.md), add this section to the plan immediately after `## Scenarios`:
+When the topic is `hotfix-<area>` (set by the orchestrator following the production incident flow in `workflow/incident.md`), add this section to the plan immediately after `## Scenarios`:
 
 ```markdown
 ## Incident facts
@@ -197,7 +197,7 @@ Everything else follows the normal plan format. The Incident facts section is th
 
 Decision authority: autonomous | interactive   # OPTIONAL — omit unless overriding the project value
 
-Source: <where this plan came from>   # the plan's provenance line (the plan-level provenance line defined by this feature in the plan format). When the feature was SELECTED autonomously (the orchestrator picked it per the feature-selection scope of `### Decision authority` in `WORKFLOW.md`, not the PM naming it), this same line reads: `selected autonomously per ### Decision authority; source: <backlog item / mandate passage>` — one provenance line carrying the citation, NOT a parallel "Selected-by:" field. The `source:` token is the single grep target the `pm-plan-checker` backstop keys on.
+Source: <where this plan came from>   # the plan's provenance line (the plan-level provenance line defined by this feature in the plan format). When the feature was SELECTED autonomously (the orchestrator picked it per the feature-selection scope of `### Decision authority` in `workflow/decision-authority.md`, not the PM naming it), this same line reads: `selected autonomously per ### Decision authority; source: <backlog item / mandate passage>` — one provenance line carrying the citation, NOT a parallel "Selected-by:" field. The `source:` token is the single grep target the `pm-plan-checker` backstop keys on.
 
 ## Scenarios
 1. <user-visible behavior after this change>
@@ -245,7 +245,7 @@ Source: <where this plan came from>   # the plan's provenance line (the plan-lev
 - **Sibling elements of categorical choices** — for every categorical element the plan focuses on (a chosen type, mode, role, state, operation), list each sibling that was considered and excluded, with one line on why it is a separate plan
 ```
 
-**Decision-authority override rule (optional).** The plan may carry an optional `Decision authority: autonomous | interactive` line just under the topic heading. It is the **per-feature override** that runs *this one feature* under a different authority than the project value — most often `autonomous` on an otherwise-interactive project for a feature whose canon coverage is rich. Omit the line unless overriding. Step 3.5 reads it as the **top of the effective-authority resolution order** (plan line → `.ai-pm/decision-authority.md` `mode:` → `interactive`). See `### Decision authority` in `WORKFLOW.md` for the enum, the default, and the resolution order — do not re-encode them here.
+**Decision-authority override rule (optional).** The plan may carry an optional `Decision authority: autonomous | interactive` line just under the topic heading. It is the **per-feature override** that runs *this one feature* under a different authority than the project value — most often `autonomous` on an otherwise-interactive project for a feature whose canon coverage is rich. Omit the line unless overriding. Step 3.5 reads it as the **top of the effective-authority resolution order** (plan line → `.ai-pm/decision-authority.md` `mode:` → `interactive`). See `### Decision authority` in `workflow/decision-authority.md` for the enum, the default, and the resolution order — do not re-encode them here.
 
 **Test plan rule:** each new test must have a one-sentence behavior description — what scenario it verifies (given/when/then style). Not just a file name. This is what reviewer and coder use to write and verify the test.
 
@@ -268,7 +268,7 @@ If PM says no or later → continue with this feature.
 If **no audit has ever been run** (.ai-pm/audits/ empty or missing):
 > "This project hasn't had a protocol check yet. Want to run one before we plan this feature? It verifies that all previous work is properly documented."
 
-**Autonomous branch.** When the effective authority is `autonomous`, the retrospective/audit nudge is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): auto-decide — run `/pm-audit` when **either** retrospective trigger fires (the 5-since-last threshold trips, **or** no audit has ever been run on a project that has accumulated features) — and **announce**, instead of asking. The PM interrupts to override.
+**Autonomous branch.** When the effective authority is `autonomous`, the retrospective/audit nudge is a procedural checkpoint per `### Decision authority` in `workflow/decision-authority.md` (procedural-gate progression): auto-decide — run `/pm-audit` when **either** retrospective trigger fires (the 5-since-last threshold trips, **or** no audit has ever been run on a project that has accumulated features) — and **announce**, instead of asking. The PM interrupts to override.
 
 **Pending-migration nudge.** If the project shows an un-migrated template structure (per `### Pending-migration detection` in `MIGRATIONS.md` — a lingering `docs/features/_index.md`, or a generated `docs/product.md` with the frozen signature line and no `docs/product-map.md`), surface it before new work:
 > "This project is on an older template structure — `docs/product-map.md` hasn't been generated yet. Worth running the pending `/pm-bootstrap` migration first so we plan against the current format. Run the migration now?"
@@ -295,7 +295,7 @@ There is also the **token-laden-contract** case in `### Pending-migration detect
 
 If PM says yes → run the **contract two-layer migration procedure** in `MIGRATIONS.md` before proceeding (move-not-copy, performed by `pm-architect`, preserves every guarantee).
 
-**Autonomous branch (all pending-migration nudges above).** When the effective authority is `autonomous`, a pending-migration nudge is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): run the detected pending migration + **announce**, instead of asking. The PM interrupts to override.
+**Autonomous branch (all pending-migration nudges above).** When the effective authority is `autonomous`, a pending-migration nudge is a procedural checkpoint per `### Decision authority` in `workflow/decision-authority.md` (procedural-gate progression): run the detected pending migration + **announce**, instead of asking. The PM interrupts to override.
 
 In interactive mode: don't implement fixes, don't block planning — PM decides. (In autonomous mode the nudges above are auto-decided per the **Autonomous branch** — the orchestrator runs the detected pending migration and announces, instead of relaying to the PM.)
 
@@ -307,9 +307,9 @@ After the Product Contract is drafted (Handoff below) and before the coder hando
 
 For a user-facing feature:
 
-1. **Spawn `pm-product-advocate`** (`subagent_type: "pm-product-advocate"`) with tier `per-feature`, the approved plan, the drafted/existing contract, `docs/product.md`, and `docs/user-journeys.md`. It matches them against `### Foundational product questions` in `WORKFLOW.md` (referenced by name; never re-list the questions here) and writes `.ai-pm/reviews/<topic>_advocate.md` with a `gaps: N` / `clean` verdict.
+1. **Spawn `pm-product-advocate`** (`subagent_type: "pm-product-advocate"`) with tier `per-feature`, the approved plan, the drafted/existing contract, `docs/product.md`, and `docs/user-journeys.md`. It matches them against `### Foundational product questions` in `workflow/foundational-questions.md` (the advocate Reads that file; referenced by name, never re-list the questions here) and writes `.ai-pm/reviews/<topic>_advocate.md` with a `gaps: N` / `clean` verdict.
 2. **`clean` → silent pass.** Record the resolved artifact and proceed to the coder handoff. No `AskUserQuestion`, no ceremony (scenario 3).
-3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** `AskUserQuestion` pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical (the orchestrator owns this trail — see the second carve-out in `WORKFLOW.md`'s Edit-ownership rule).
+3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** `AskUserQuestion` pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical (the orchestrator owns this trail — see the second carve-out in the Edit-ownership rule in `workflow/enforcement.md`).
 4. **Block the coder handoff** until every gap is answered or descoped — never a silent skip, never a permanent veto. The block is overridable by a recorded descope, not only by an answer.
 
 This is soft enforcement, backstopped: `pm-plan-checker`'s DoD blocks a user-facing feature whose advocate gate is unresolved, and `pm-auditor` blocks a merged one with no resolved artifact. There is no hook (the trigger is a semantic judgement a regex cannot make). A manual step with no gate degrades silently; the DoD + auditor are that gate.
@@ -328,13 +328,13 @@ If PM says yes — invoke `pm-architect` (`subagent_type: "pm-architect"`) with 
 If PM says no — hand off to coder with plan only.
 If **none apply** — hand off to coder directly without mentioning architect.
 
-**Autonomous branch.** When the effective authority is `autonomous`, the architect-review offer is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): the orchestrator decides itself — run the arch review when the criteria above match, skip it otherwise — and **announces** the decision, instead of asking. The PM interrupts to override.
+**Autonomous branch.** When the effective authority is `autonomous`, the architect-review offer is a procedural checkpoint per `### Decision authority` in `workflow/decision-authority.md` (procedural-gate progression): the orchestrator decides itself — run the arch review when the criteria above match, skip it otherwise — and **announces** the decision, instead of asking. The PM interrupts to override.
 
 ## Handoff
 
 Show the draft to PM. Iterate until PM says ok.
 
-**Autonomous branch.** When the effective authority is `autonomous`, plan-approval is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): announce the plan summary + proceed to the next step instead of relaying "approve the plan?" — the product-readiness advocate gate and `pm-plan-checker` **still run** (auto-proceed advances the pipeline, it does not skip the genuine-fork checks below). The PM interrupts the announce to steer or stop.
+**Autonomous branch.** When the effective authority is `autonomous`, plan-approval is a procedural checkpoint per `### Decision authority` in `workflow/decision-authority.md` (procedural-gate progression): announce the plan summary + proceed to the next step instead of relaying "approve the plan?" — the product-readiness advocate gate and `pm-plan-checker` **still run** (auto-proceed advances the pipeline, it does not skip the genuine-fork checks below). The PM interrupts the announce to steer or stop.
 
 Save to `docs/features/<topic>_plan.md`.
 
@@ -366,7 +366,7 @@ If yes and the contract exists: surface it to PM ("this touches contract X — M
 
 If no (backend-only): skip silently; note "no contract — change is backend-only" in the plan handoff message.
 
-**Autonomous branch.** When the effective authority is `autonomous`, the contract-existence question is a procedural checkpoint per `### Decision authority` in `WORKFLOW.md` (procedural-gate progression): derive user-facing from the existing human-role-subject extraction (the same rule the Product-readiness gate uses) + **announce** the result, instead of asking the PM — then draft the contract (user-facing) or skip silently (backend-only) as above. The PM interrupts to override.
+**Autonomous branch.** When the effective authority is `autonomous`, the contract-existence question is a procedural checkpoint per `### Decision authority` in `workflow/decision-authority.md` (procedural-gate progression): derive user-facing from the existing human-role-subject extraction (the same rule the Product-readiness gate uses) + **announce** the result, instead of asking the PM — then draft the contract (user-facing) or skip silently (backend-only) as above. The PM interrupts to override.
 
 Tell PM the plan is saved, state is initialized. Then, before the coder handoff, run the **Product-readiness gate** above (user-facing features only — exempt and silent for backend-only changes by the same human-role-subject extraction) and the **Architect check** above. The coder handoff stays blocked until the product-readiness gate is resolved (`clean`, or every gap answered/descoped).
 

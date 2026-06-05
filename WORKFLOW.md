@@ -64,8 +64,8 @@ For each topic, read its file with the Read tool at the step that needs it. One 
 | Boundary / edit-ownership / remote-system **full** rules + carve-outs + hook-level enforcement | `workflow/enforcement.md` |
 | The full Step 0–7 step bodies | `workflow/pipeline.md` |
 | What artefacts a change type requires (the change-type table + riders) | `workflow/mandatory-matrix.md` |
-| `### Project kind` (enum + `absent OR unrecognized ⇒ software` default + no-code validation discipline) | `workflow/project-kind.md` |
-| `### Decision authority` (enum + `absent ⇒ interactive` default + derivability test + procedural-gate progression) | `workflow/decision-authority.md` |
+| `### Project kind` (the kind enum + its load-bearing default + no-code validation discipline — declared once there, never re-encoded here) | `workflow/project-kind.md` |
+| `### Decision authority` (the authority enum + its load-bearing default + derivability test + procedural-gate progression — declared once there, never re-encoded here) | `workflow/decision-authority.md` |
 | `### Review typology` (the five review types + det/AI split + new-code-gating) | `workflow/review-typology.md` |
 | `### Security-relevant surfaces` + `### Threat-model lifecycle` | `workflow/security-surfaces.md` |
 | `### Foundational product questions` (the three tiers) | `workflow/foundational-questions.md` |

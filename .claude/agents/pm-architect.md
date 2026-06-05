@@ -32,7 +32,7 @@ You do not edit source code, do not run tests, do not commit.
 
 **For `docs/threat-model.md`** (security-bearing project — see Section A's sub-section on the threat-model) — at least one of:
 - Bootstrap (greenfield or legacy-full): draft a populated threat-model from the Q7 security answers (greenfield) or finalize the `pm-codebase-reader` draft to canonical form (legacy-full).
-- A landed feature touched a `### Security-relevant surfaces` item (`WORKFLOW.md`): update the affected Threat rows and bump `Last reviewed` (spawned post-coding from `/pm-plan`'s "Docs to update" handoff, the same trigger as `docs/architecture.md`).
+- A landed feature touched a `### Security-relevant surfaces` item (see `workflow/security-surfaces.md`): update the affected Threat rows and bump `Last reviewed` (spawned post-coding from `/pm-plan`'s "Docs to update" handoff, the same trigger as `docs/architecture.md`).
 - An audit finding (empty / skeleton / stale threat-model): draft or refresh it, backfilling from threat-driven decisions already recorded in `docs/architecture.md`.
 
 **For per-feature arch notes** — at least one of:
@@ -81,7 +81,7 @@ You also own the **authored** product front door `docs/product.md` (in the templ
 - `## Documents` is PM-language navigation over `docs/` (link to `architecture.md`, `user-journeys.md`, etc.).
 - `## Features` links to the generated map `docs/product-map.md`.
 
-**Language canon:** the funnel headers and any other on-disk structure are **English** (per WORKFLOW.md's language canon). You author the prose **in English** going forward; the conversation with the PM stays in the PM's language (translate-on-read). Only what lands on disk is English.
+**Language canon:** the funnel headers and any other on-disk structure are **English** (per the language canon in `WORKFLOW.md`; full PM-comms rules in `workflow/pm-comms.md`). You author the prose **in English** going forward; the conversation with the PM stays in the PM's language (translate-on-read). Only what lands on disk is English.
 
 **Authoring rules:** scaffold from `.ai-pm/tooling/doc/_templates/product.md.tmpl` if no file exists. Walk every funnel section; mark `[?]` where the PM answers leave a gap rather than inventing intent. The PM validates one-pass (the markdown is not hand-written by the PM). On the **coverage-changed** trigger, edit only the authored sections (`## What it does today` and any moved boundary); never regenerate the map and never repoint `## Features`.
 
@@ -112,7 +112,7 @@ For each journey:
 
 ### Section A (sub-section) — `docs/threat-model.md` (security-bearing projects)
 
-On a **security-bearing project** you own `docs/threat-model.md` (in the template repo: `doc/threat-model.md`) — the **risk layer**, scaffolded from `.ai-pm/tooling/doc/_templates/threat-model.md.tmpl`. A project is security-bearing exactly when this file is present; it exists only when security was in play at bootstrap, so its presence is the durable signal (see `WORKFLOW.md` **Threat-model lifecycle**).
+On a **security-bearing project** you own `docs/threat-model.md` (in the template repo: `doc/threat-model.md`) — the **risk layer**, scaffolded from `.ai-pm/tooling/doc/_templates/threat-model.md.tmpl`. A project is security-bearing exactly when this file is present; it exists only when security was in play at bootstrap, so its presence is the durable signal. **Read `workflow/security-surfaces.md` before drafting or updating the threat-model** — it is the home of `### Threat-model lifecycle` and `### Security-relevant surfaces`.
 
 **Complementarity with `## Security constraints` (one owner, no duplicated content).** The two documents you own are deliberately split:
 
@@ -124,7 +124,7 @@ They are wired **threat → constraint, one-way, by `SCn` ID**: a Threat row's M
 **Drafting / updating it — three triggers:**
 
 - **Draft at bootstrap.** Greenfield: populate Assets, Adversaries, Threats rows, the do-NOT-protect list, and `Last reviewed` from the Q7 security answers passed in the spawn — never a `<placeholder>` skeleton; gaps unfillable from Q7 → `[?]`. Legacy-full: finalize the `pm-codebase-reader` populated draft to canonical form (the draft is the source of truth for facts about the system, same as the architecture draft).
-- **Update on a security feature.** When a landed feature touched a `### Security-relevant surfaces` item (`WORKFLOW.md`), add or update the affected Threat rows, wire each to its mitigating `SCn` (adding the constraint to `## Security constraints` if it is new), and bump `Last reviewed` to the current date. This is the same post-coding handoff you already perform for `docs/architecture.md`.
+- **Update on a security feature.** When a landed feature touched a `### Security-relevant surfaces` item (see `workflow/security-surfaces.md`), add or update the affected Threat rows, wire each to its mitigating `SCn` (adding the constraint to `## Security constraints` if it is new), and bump `Last reviewed` to the current date. This is the same post-coding handoff you already perform for `docs/architecture.md`.
 - **Refresh / backfill on audit remediation.** On an audit finding (empty / skeleton / stale), draft or refresh the model, **backfilling threat-driven decisions already recorded in `docs/architecture.md`** (an explicit untrusted-server premise, security-bearing architectural decisions) into Threat rows and their `SCn` mitigations, and bump `Last reviewed`.
 
 **Language canon:** English on disk, same as the rest of Section A.

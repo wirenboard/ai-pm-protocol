@@ -12,7 +12,7 @@ The orchestrator has already verified the git state (correct branch, clean tree,
 
 ### 0. Pre-flight: Pass-2 stamp gate
 
-Before bumping version, committing, or pushing, verify that every feature shipping in this release carries a **stamped** Pass-2 trail — `## Code review` for a software feature, `## Validation` for a `documentation`-kind feature (`### Project kind` in `WORKFLOW.md`). This is the hard gate that makes the Pass-2 stamp load-bearing instead of by-discipline (`WORKFLOW.md` Step 5 Pass 2: *a manual step with no gate degrades silently — this step 0 is that gate*).
+Before bumping version, committing, or pushing, verify that every feature shipping in this release carries a **stamped** Pass-2 trail — `## Code review` for a software feature, `## Validation` for a `documentation`-kind feature (`### Project kind` in `workflow/project-kind.md`). This is the hard gate that makes the Pass-2 stamp load-bearing instead of by-discipline (Step 5 Pass 2 in `workflow/pipeline.md`: *a manual step with no gate degrades silently — this step 0 is that gate*).
 
 Check every `.ai-pm/reviews/*_review.md` that is new or modified on this branch — committed **or** still in the working tree (the same set step 4 stages):
 
@@ -25,7 +25,7 @@ base=$(git merge-base HEAD origin/HEAD 2>/dev/null || git merge-base HEAD main)
 **The rule is keyed on stamp-section PRESENCE — no filename special-casing.** It covers two stamp sections of the same shape:
 
 - `## Code review` — the software Pass-2 stamp.
-- `## Validation` — the `documentation`-kind Pass-2 stamp (the no-code validation gate; `### Project kind` in `WORKFLOW.md`). A `documentation`-kind feature's review file carries this **instead of** `## Code review`.
+- `## Validation` — the `documentation`-kind Pass-2 stamp (the no-code validation gate; `### Project kind` in `workflow/project-kind.md`). A `documentation`-kind feature's review file carries this **instead of** `## Code review`.
 
 For each stamp section the rule is identical:
 
@@ -59,7 +59,7 @@ Remedy: run review-loop Pass 2 — for a software feature the orchestrator runs
         `## Code review: <date> — passed`; for a documentation-kind feature it runs the
         dry-run/tabletop or editorial review + sign-off, then replaces
         `## Validation: NOT YET RUN` with `## Validation: <date> — <method> — passed`
-        (WORKFLOW.md Step 5 Pass 2 / `### Project kind`).
+        (Step 5 Pass 2 in `workflow/pipeline.md` / `### Project kind` in `workflow/project-kind.md`).
         Re-invoke pr-prep once every trail is stamped.
 ```
 

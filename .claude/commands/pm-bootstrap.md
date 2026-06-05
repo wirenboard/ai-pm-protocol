@@ -47,7 +47,7 @@ Check what exists:
 
 Ask the PM these questions (one conversation, not a form):
 
-0. **Project kind** — is the deliverable **software** (source code) or **documentation** (one or several human-facing documents with no executable code — an SOP, a runbook, a guide, a spec, diagrams — e.g. integrating a device into the company ecosystem, diagnosing a crashed server, soldering a board, a user guide)? See `### Project kind` in `WORKFLOW.md` (the single source of the enum and the `absent OR unrecognized ⇒ software` default — do not re-state them here). The answer is stored single-source as the `## Project kind:` line in `CLAUDE.md` (default `software`). On `kind = documentation`, follow the **Documentation-kind scaffolding** note below instead of the software-only scaffolding.
+0. **Project kind** — is the deliverable **software** (source code) or **documentation** (one or several human-facing documents with no executable code — an SOP, a runbook, a guide, a spec, diagrams — e.g. integrating a device into the company ecosystem, diagnosing a crashed server, soldering a board, a user guide)? See `### Project kind` in `workflow/project-kind.md` (the single source of the enum and the `absent OR unrecognized ⇒ software` default — do not re-state them here). The answer is stored single-source as the `## Project kind:` line in `CLAUDE.md` (default `software`). On `kind = documentation`, follow the **Documentation-kind scaffolding** note below instead of the software-only scaffolding.
 1. What does this product do? (one sentence)
 2. Who uses it? (be specific — role, context)
 3. What problem does it replace or eliminate?
@@ -67,7 +67,7 @@ Ask the PM these questions (one conversation, not a form):
    - **UI planned but not started** → add a note to CLAUDE.md `## Docs` table: `docs/ui-guide.md — not created yet, create when UI work starts`. Do NOT create the file now.
    - **No UI** → skip entirely
 7. Any known security requirements? (auth, payments, PII, encryption)
-8. **Decision authority** — neutral, default interactive. Ask: "Who makes the product decisions on this project — you, each time (**interactive**), or the pipeline, from your bootstrap + the project's canon (**autonomous**)? Either way, opening and merging PRs always stays with you." Default **interactive** if the PM skips or abstains. See `### Decision authority` in `WORKFLOW.md` (the single source of the enum and the `absent file OR unrecognized ⇒ interactive` default — do not re-state them here).
+8. **Decision authority** — neutral, default interactive. Ask: "Who makes the product decisions on this project — you, each time (**interactive**), or the pipeline, from your bootstrap + the project's canon (**autonomous**)? Either way, opening and merging PRs always stays with you." Default **interactive** if the PM skips or abstains. See `### Decision authority` in `workflow/decision-authority.md` (the single source of the enum and the `absent file OR unrecognized ⇒ interactive` default — do not re-state them here).
 
 Then create from templates:
 
@@ -81,7 +81,7 @@ Then create from templates:
 - `docs/features/` directory
 - `docs/product.md` — the **authored** product front door. Scaffold from `product.md.tmpl` (the funnel skeleton: `## Why this exists`, `## What it does today`, `## Documents`, `## Features`). It is **not** generated and carries **no** generator signature line. `pm-architect` fills it from the PM's product Q&A answers (see below) — the orchestrator does not hand-write the prose.
 - `docs/product-map.md` — the **generated** contract→features map. On a fresh greenfield project there are no contracts yet, so it renders with just the component sections (from `docs/architecture.md`) plus a final `## Infrastructure (no user-facing contract)` section; rows appear as features are planned. Generate via the **Product map generation procedure** below.
-- `.ai-pm/decision-authority.md` — write from Q8 (the decision-authority answer): `mode: autonomous | interactive` (default `interactive`) + `veto-window-seconds: 15`. See `### Decision authority` in `WORKFLOW.md` for the keys, the default, and the timer-honesty caveat — do not re-encode the default here. This file is created at bootstrap, but no consumer may *require* it: its absence elsewhere ⇒ `interactive` (so every older project is unaffected and no migration is introduced).
+- `.ai-pm/decision-authority.md` — write from Q8 (the decision-authority answer): `mode: autonomous | interactive` (default `interactive`) + `veto-window-seconds: 15`. See `### Decision authority` in `workflow/decision-authority.md` for the keys, the default, and the timer-honesty caveat — do not re-encode the default here. This file is created at bootstrap, but no consumer may *require* it: its absence elsewhere ⇒ `interactive` (so every older project is unaffected and no migration is introduced).
 - `.ai-pm/state/current.md` from `state.md.tmpl` — initial state set to `Status: idle`; updated by every coder run thereafter
 - `.ai-pm/state/archive/` directory — completed task states get archived here
 - `.ai-pm/reviews/` directory — review artifacts (plan compliance + code review findings)
@@ -90,7 +90,7 @@ Then create from templates:
 - `.ai-pm/research/` directory — research artifacts written by `/pm-research`
 - `.ai-pm/audits/` directory — protocol audit reports
 
-**Documentation-kind scaffolding (only when Q0 = `documentation`).** On a `documentation`-kind project (`### Project kind` in `WORKFLOW.md`), the deliverable is one or several human-facing documents, not code. Adjust the scaffolding:
+**Documentation-kind scaffolding (only when Q0 = `documentation`).** On a `documentation`-kind project (`### Project kind` in `workflow/project-kind.md`), the deliverable is one or several human-facing documents, not code. Adjust the scaffolding:
 
 - **Create the deliverable location, not a forced template:** create the `deliverable/` directory (the `src/`-analogue where the produced document(s) / diagrams / images live — per `### Project kind`). Do **not** author any deliverable file at bootstrap and do **not** drop a template into it — the deliverable is open. **Offer** the optional starters under `.ai-pm/tooling/doc/_templates/starters/` (`sop.md.tmpl` for an SOP / runbook, `guide.md.tmpl` for a reference doc) as a "pick one if it fits, or none"; the first feature's plan decides whether to seed from a starter (then `pm-coder` copies it into `deliverable/` and authors freely).
 - **Keep the shared pillars:** `docs/product.md`, `docs/stack-notes.md` (here the **what / who / tools** — the people, instruments, company systems & standards the document must respect, not language idioms), `docs/architecture.md` (constraints / behavioral contract for any token the document names), `docs/user-journeys.md` (reader / operator experience flow), and `docs/threat-model.md` **only if** Q7 mentioned security — all created exactly as above.
@@ -114,7 +114,7 @@ Then ask PM: "Want to research existing solutions — libraries, ready products,
 
 If yes — run `/pm-research` before any feature planning.
 
-Present a brief to PM summarizing what was captured. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms.
+Present a brief to PM summarizing what was captured. Follow the PM communication rules in `workflow/pm-comms.md`: plain language, user perspective, no code, no unexplained technical terms.
 
 **What we're building** — one paragraph: problem, solution, for whom. Written from PM's answers, not copied verbatim.
 
@@ -159,7 +159,7 @@ Read:
 From this, determine: language, framework, database, key abstractions.
 
 Write minimal docs — enough to start adding features:
-- `CLAUDE.md` — fill what's clear from reading; mark gaps as `[?]`. **Write `## Project kind: software`** (legacy adoption reads an existing codebase — `software`; see `### Project kind` in `WORKFLOW.md`).
+- `CLAUDE.md` — fill what's clear from reading; mark gaps as `[?]`. **Write `## Project kind: software`** (legacy adoption reads an existing codebase — `software`; see `### Project kind` in `workflow/project-kind.md`).
 - `docs/architecture.md` — stack and key decisions extracted from code; mark gaps as `[?]`
 - `docs/user-journeys.md` — write only what's visible from entry points and module names; leave the rest as `[?]`
 - `docs/stack-notes.md` from `stack-notes.md.tmpl` — empty shell
@@ -173,7 +173,7 @@ Write minimal docs — enough to start adding features:
 
 **Authored front door.** Before presenting findings, ask the PM the two product front-door questions (why this exists / what is deliberately out of scope for now), then spawn `pm-architect` (`subagent_type: "pm-architect"`) to author `docs/product.md` from those answers, deriving `## What it does today` from existing contracts and the architecture. pm-architect is the sole writer of the authored `docs/product.md`; it never writes the generated `docs/product-map.md`. If the PM is not ready, leave the scaffolded skeleton for a later `pm-architect` run.
 
-Present findings to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms.
+Present findings to PM. Follow the PM communication rules in `workflow/pm-comms.md`: plain language, user perspective, no code, no unexplained technical terms.
 
 **What the product appears to do** — one paragraph from what's visible at the entry points and module names. Be honest about confidence level.
 
@@ -205,7 +205,7 @@ After the extractor finishes:
 - Create `docs/product-map.md` — the **generated** map; generate using the **Product map generation procedure** below.
 - Create `.ai-pm/state/current.md` from template (`Status: idle`), `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` (pm-codebase-reader already drafted contracts into the contracts/ directory — surface their count and `(needs PM validation)` markers in the PM brief)
 
-Present to PM. Follow the PM communication rules from WORKFLOW.md: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
+Present to PM. Follow the PM communication rules in `workflow/pm-comms.md`: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
 
 **What the product does** — one paragraph, no jargon. What problem it solves, for whom.
 
@@ -383,7 +383,7 @@ Built by:
 
 After the product Q&A is captured and `pm-architect` has authored `docs/product.md` (and `docs/architecture.md`), and **before** the project is treated as ready for its first feature, run the bootstrap product-readiness check. This is the project-birth, once-per-project counterpart to the `/pm-plan` Step 3.5 gate — it forces the zero-to-working story rather than letting an under-specified product proceed straight to feature work.
 
-1. **Spawn `pm-product-advocate`** (`subagent_type: "pm-product-advocate"`) with tier `bootstrap`, the recorded product Q&A answers, `docs/product.md`, and `docs/architecture.md`. It matches them against the **bootstrap tier** of `### Foundational product questions` in `WORKFLOW.md` (referenced by name; never re-list the questions here) and writes `.ai-pm/reviews/bootstrap_advocate.md` with a `gaps: N` / `clean` verdict.
+1. **Spawn `pm-product-advocate`** (`subagent_type: "pm-product-advocate"`) with tier `bootstrap`, the recorded product Q&A answers, `docs/product.md`, and `docs/architecture.md`. It matches them against the **bootstrap tier** of `### Foundational product questions` in `workflow/foundational-questions.md` (referenced by name; never re-list the questions here) and writes `.ai-pm/reviews/bootstrap_advocate.md` with a `gaps: N` / `clean` verdict.
 2. **`clean` → silent pass.** Record the resolved artifact and continue to "After initialization".
 3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** `AskUserQuestion` pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical. The answers belong in the bootstrap product docs — their owners record them (`pm-architect` for `docs/product.md` / `docs/architecture.md`); re-spawn the owner with the PM's answers when an answer should land in a doc.
 
@@ -395,7 +395,7 @@ Tell PM: "Project initialized. Describe a feature and I'll help plan it."
 
 Do NOT start planning a feature until PM explicitly asks (interactive mode — in autonomous mode the first feature is derived and announced, see the autonomous branch below).
 
-**Autonomous branch (`### Decision authority` in `WORKFLOW.md`).** When the effective authority is `autonomous`, the first feature is not relayed: derive it from the bootstrap mandate (and any seeded backlog), announce it on the announce-before-act line, and proceed into `/pm-plan` — per the feature-selection scope of `### Decision authority` (referenced by name; do not re-encode the enum/default or the selection rule). Escalate (one `AskUserQuestion`) only when the mandate yields no derivable first feature — an expected, healthy bootstrap escalation, not a defect.
+**Autonomous branch (`### Decision authority` in `workflow/decision-authority.md`).** When the effective authority is `autonomous`, the first feature is not relayed: derive it from the bootstrap mandate (and any seeded backlog), announce it on the announce-before-act line, and proceed into `/pm-plan` — per the feature-selection scope of `### Decision authority` (referenced by name; do not re-encode the enum/default or the selection rule). Escalate (one `AskUserQuestion`) only when the mandate yields no derivable first feature — an expected, healthy bootstrap escalation, not a defect.
 
 ---
 
