@@ -87,4 +87,4 @@ Traced all finder angles over the code-bearing diff (`.claude/settings.json` + `
 - **Cross-file:** no live-source reference to the orchestrator or the flag survives outside honest history; the 7-role-duplicator arm is byte-identical to `main` (jq-diff, Pass-1) and the live `coder → deny` arm was functionally re-confirmed.
 - **Cleanup/simplification/altitude:** the change is a net simplification (removes a guard + a case arm), adds no complexity, duplication, or special-casing.
 
-## Code review: 2026-06-05 — built-in code-review (high effort) — no defects
+## Code review: 2026-06-05 — built-in code-review (high effort), no defects — passed

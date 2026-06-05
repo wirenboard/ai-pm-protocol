@@ -71,4 +71,4 @@ This is a Markdown PM-facing procedure-flow change — no executable logic. Trac
 - **No-double-prompt guard:** added to `## PM-facing flow` step 3 — the post-`diff` "run full now?" offer fires only when a Quick/`diff` audit actually ran; an upfront/explicit Full sets `scope=full` so it does not double-fire. Logic sound.
 - **Depth folding:** step 4 / `## Technical quality` step 3 resolve sweep depth in one pass with an explicit "do not double-ask depth" instruction; the orchestrator-vs-built-in depth distinction is consistent with `review-engine-selection`.
 
-## Code review: 2026-06-05 — built-in code-review (high effort) — no defects
+## Code review: 2026-06-05 — built-in code-review (high effort), no defects — passed
