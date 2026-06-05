@@ -13,6 +13,27 @@
 
 ---
 
+## [2.31.0] — 2026-06-05
+
+Ships **orchestrator-read-discipline** — closes the orchestrator-side Read-discipline gap left by `workflow-progressive-disclosure`: the decision-authority kernel moves into the always-on `WORKFLOW.md` core (decision-critical rule **present in context, authoritative over recall** — not another please-read instruction) + the template repo dogfoods its own pipeline via a root `CLAUDE.md` that `@`-imports the thin core + the boundary criterion is recorded. A **structural fix**, not a discipline note. Single-source preserved (the kernel has one home, declarations deleted from `workflow/decision-authority.md`); the `### Decision authority` heading is unmoved so all by-name references resolve. Additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **Root `CLAUDE.md` dogfood entry point** (`CLAUDE.md`) — the template repo gets its own root `CLAUDE.md` that `@`-imports the thin `WORKFLOW.md` core, so when the protocol is developed by its own pipeline the orchestrator auto-loads the core/router/invariants (previously nothing auto-loaded).
+- **Boundary-criterion decision record** (`doc/architecture.md`) — records the criterion (a rule the orchestrator applies in freeform reasoning keeps its kernel always-on) as a decision record, plus the File-layout row for the new root `CLAUDE.md`.
+
+### Changed
+
+- **Decision-authority kernel relocated into the `WORKFLOW.md` core** (`WORKFLOW.md`, `workflow/decision-authority.md`) — the `### Decision authority` kernel (enum + `absent ⇒ interactive` default + derivability test + 3-trigger escalate-cap + announce-before-act + merge-always-manual) now lives in the always-on core as a cross-cutting invariant (its single home); the declarations were deleted from `workflow/decision-authority.md`, which now defers to the core and keeps only elaboration (no double-encoding — single-source preserved). The core stays thin (79→81 lines).
+- **"Read before apply" demoted to a secondary backstop** — the decision-critical rule is now present in the always-loaded context and authoritative over memory; the explicit Read step is a full-detail-only secondary backstop rather than the primary mechanism.
+
+### Notes
+
+- Plan-check: Pass-1 **approve** incl. no-double-encoding single-source verified; code-review (Pass-2): **zero findings**; verdict approve (`.ai-pm/reviews/orchestrator-read-discipline_review.md` — stamped `## Code review: 2026-06-05 — passed`).
+- `tests/hooks.sh` 74/74. The `### Decision authority` heading is **unmoved** → all by-name references resolve. Back-compat: the downstream `@.ai-pm/tooling/WORKFLOW.md` contract and the `WORKFLOW.md` path are **byte-unchanged**; additive only, **no migration**.
+
+---
+
 ## [2.30.0] — 2026-06-05
 
 Ships **readme-currency** — README currency + template-conformance are now actively watched during ordinary work instead of drifting silently. Two structure-only, no-hook mechanisms: a judgment-triggered **per-feature README-currency check** in `/pm-plan` (when a feature touches install/packaging/quick-start/the architecture one-liner/a doc pointer, the plan must name `README.md` in "Docs to update" and `pm-architect` refreshes it on the existing post-coding handoff), and a **`pm-auditor` README-conformance dimension** (generalizing the A4 install↔Integration-contract pairing into the audit). Both reference the canonical README shape **by name** — neither re-encodes the beats — and both are structure-only with **no prose-policing**. Additive, fully back-compatible, **no migration**.
