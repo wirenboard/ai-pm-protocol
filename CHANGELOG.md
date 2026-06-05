@@ -13,6 +13,28 @@
 
 ---
 
+## [2.29.0] — 2026-06-05
+
+Ships **workflow-progressive-disclosure** — a progressive-disclosure restructure of `WORKFLOW.md` from a 564-line eager-`@`-imported monolith into a thin **~79-line constitution + router** at the same path plus **15 on-demand `workflow/*.md` topic files** that consumers read just-in-time via the Read tool. ~40 live by-name references were repointed to their new topic homes and explicit "Read `workflow/<topic>.md` before X" steps added at the consumers that need them. Net effect: the always-loaded spec context drops **~17k → ~2.5k tokens (~85% cut)** for the main loop **and** every subagent, since the spec is no longer eager-imported wholesale. Additive, fully back-compatible — the downstream `@.ai-pm/tooling/WORKFLOW.md` import line and the `WORKFLOW.md` path are **byte-unchanged**, and the new topic files ride the existing submodule. **No migration.**
+
+### Added
+
+- **15 on-demand `workflow/*.md` topic files** (`workflow/decision-authority.md`, `enforcement.md`, `examples.md`, `foundational-questions.md`, `incident.md`, `maintenance.md`, `mandatory-matrix.md`, `pipeline.md`, `pm-comms.md`, `project-kind.md`, `protocol-gap.md`, `review-typology.md`, `roster.md`, `security-surfaces.md`, `state.md`) — the spec content decomposed out of the monolith into topic homes, read just-in-time via the Read tool rather than eager-`@`-imported. The single-source disciplines (`### Decision authority`, `### Review typology`, etc.) keep their canonical homes in these files; consumers reference them by name.
+- **Claude Code context-loading stack-note** (`doc/stack-notes.md`) — documents the context-loading model that motivates the restructure: `@`-imports are eager (always loaded into every context), Read-tool reads are on-demand, so moving spec detail behind the router shrinks the always-loaded footprint for the main loop and every subagent.
+
+### Changed
+
+- **`WORKFLOW.md` → thin constitution + router** (`WORKFLOW.md`) — reduced from 564 lines to ~79; now holds only the load-bearing constitution plus a router pointing at the `workflow/*.md` topic files. The path and the downstream `@.ai-pm/tooling/WORKFLOW.md` import line are **byte-unchanged**.
+- **~40 live by-name references repointed + explicit Read steps added** — references that pointed into the old monolith now point at their `workflow/<topic>.md` homes, and explicit "Read `workflow/<topic>.md` before X" steps were added at the consumers that need the detail (including decision-authority Read steps at the autonomous-branch consumers).
+- **Architecture File layout + Integration contract** (`doc/architecture.md`) — File layout records the new `workflow/` topic-file tree; the Integration contract records that the `@`-imported `WORKFLOW.md` path is unchanged and the topic files load on-demand.
+
+### Notes
+
+- Plan-check: Pass-1 approve after one fix (an explicit decision-authority Read step at the autonomous-branch consumers); code-review (Pass-2): **zero findings**; verdict approve (`.ai-pm/reviews/workflow-progressive-disclosure_review.md` — stamped `## Code review: 2026-06-05 — passed`).
+- `tests/hooks.sh` 74/74. Back-compat: the `@.ai-pm/tooling/WORKFLOW.md` import line and the `WORKFLOW.md` path are **byte-unchanged**; the new `workflow/*.md` files ride the existing submodule. Additive only. **No migration.**
+
+---
+
 ## [2.28.0] — 2026-06-05
 
 Ships **ai-minimums-linter-wiring** — makes the `### AI-specific minimums` deterministically **enforced by the downstream project's own linter** instead of self-policed by prose discipline. `pm-stack-researcher` now produces a per-stack AI-minimum→linter-rule mapping (doc-URL cited) that `/pm-bootstrap` wires into the project's `<lint command>` config across all three stack-setup paths, so a diff crossing a minimum fails the Pipeline lint step. Numbers stay single-sourced (the linter **encodes**, never re-declares); minimums a linter cannot express are recorded **convention-only**, honestly, and routed to the `### Review typology` smell type. The deterministic half of backlog #211, sharpened by DriveBox #224. Discipline + agent capability only; additive, fully back-compatible, **no migration**.
