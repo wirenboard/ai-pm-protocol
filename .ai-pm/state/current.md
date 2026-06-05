@@ -1,6 +1,6 @@
 # Execution State
 
-- **Status:** coding — `test-wiring-parity` (PM-relayed protocol-feedback item, "ревью-скоуп"). Plan: `doc/features/test-wiring-parity_plan.md`. **Arch handoff landed** (`doc/architecture.md` decision record written, committed on `feature/test-wiring-parity`).
+- **Status:** SHIPPED to PR — awaiting manual merge. `test-wiring-parity` released as **v2.34.0**, **PR #240 open** (https://github.com/aadegtyarev/ai-pm-protocol/pull/240). Pass-1 approve + Pass-2 (1 single-source finding fixed) — stamp `— passed`, gate-verified; hooks 73/73; dogfood-clean source diff. Merge stays manual: PM squash-merges → auto-tag v2.34.0. After merge: `git checkout main && git pull`.
 - **Decision authority:** `autonomous` (project-wide) — procedural gates announce-and-proceed; merge/ship manual. **Product forks go to the PM** ("продуктовые решения со мной"). Conversation language: Russian.
 - **Branch:** `feature/test-wiring-parity` (cut fresh from main after #239/v2.33.0 merged; carried the two PM-feedback backlog entries onto its Step 0).
 - **Last shipped:** v2.33.0 `changeset-hygiene` (PR #239 merged 2026-06-05). Earlier this session: v2.32.0 `review-engine-selection` + `audit-scope-menu` (PR #238).
