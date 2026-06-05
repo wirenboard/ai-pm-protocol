@@ -2,6 +2,18 @@
 
 Observations and follow-ups recorded during reviews/audits.
 
+## Research: Semgrep community registry — pros/cons of reusing existing rules vs writing from scratch — 2026-06-05 (this repo)
+
+PM request 2026-06-05. When adding Semgrep entries to the stack-idioms library (`doc/_templates/stack-idioms/python.md`), all 5 current rules were written from scratch. The `Source` fields cite official Python/pip/Semgrep docs — NOT the community registry (`semgrep.dev/r/`). The comment-restraint backlog entry said "research and adopt an existing standard" but the research focused on format/schema rather than reusing existing community rule content.
+
+**Questions to answer:**
+- What Python rules exist in `semgrep.dev/r/python.lang` and `semgrep.dev/r/python.style` that overlap with our idioms (exception-crosses-module-boundary, dict-subscript-vs-get, docstring-only-function, inline-rule-id-ban)?
+- **Advantages** of reusing community rules: maintained externally, battle-tested patterns, community-vetted false-positive rates, versioned via `extend: [...]`, directly runnable (`semgrep --config p/python`).
+- **Disadvantages**: community rules may have different scope (too broad, too narrow), different message formatting, may require internet access to fetch, license considerations (`semgrep.dev` registry has mixed licenses), rules may not survive `semgrep --config` offline.
+- **Concrete recommendation**: for future library entries — check the community registry first, adopt if the pattern matches + license is compatible, write from scratch only when no match exists. Document the Source field policy in the library header.
+
+*Path:* `/pm-research` (targeted web-search on `semgrep.dev/r/` for the overlapping rules + a short write-up on adopt-vs-write policy). PM request 2026-06-05.
+
 ## Integration-risk spike gate: docs-research is necessary-not-sufficient — verify a load-bearing idiom by execution before design (the upstream root of the diagnostic items) — 2026-06-05 (this repo)
 
 PM-relayed feedback from the live BLE-import session — the **highest-severity** of the four items (the root where the whole cost arose: three reactive research rounds + several rebuilds/redeploys on live hardware). The up-front `pm-stack-researcher` (pre-plan) **and** the arch note (design) both missed three silent integration bugs: (1) provider-registration timing via ServiceBundle/Environment, (2) the controller scanner inheriting a deliberately-off `network.ble` export, (3) the BLE-central/dialer gated separately from the scanner. All three surfaced only **reactively, on real hardware**, after code+design had already committed to a wrong README registration idiom. Crucially the research was **not** empty — it correctly cleared the big risks (right package, dedup trap, mandatory Wi-Fi handoff, capabilities, disabling bluetoothd, the device-role BLE sharp edge). It missed exactly the **emergent-silent** class.
