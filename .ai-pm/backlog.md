@@ -4,6 +4,27 @@ Observations and follow-ups recorded during reviews/audits.
 
 ---
 
+## Drain the local stack into main as 11 layered PRs — 2026-06-06 (this repo)
+
+While `origin` was down, work accumulated locally as one linear branch (`feature/severity-triage-deployment-context`, ~75 commits off main). Remote is back (confirmed 2026-06-06). Plan: land the stack **bottom-up as 11 per-feature PRs**, not as one giant PR and not by pushing the single branch.
+
+**Merge order (bottom → top — each upper layer includes the lower ones, so strictly in this order):**
+1. `agent-reporting-discipline`
+2. `cross-model-review`
+3. `integration-risk-spike-gate`
+4. `stack-idioms-library`
+5. `seam-completeness`
+6. `comment-restraint`
+7. `state-archive-home`
+8. `agent-handoff-durability`
+9. `template-dev-artifacts-inert` (boundary submodule exclusion)
+10. `severity-triage-deployment-context`
+11. `semgrep-pre-review-linter`
+
+**Per layer (protocol git-flow ×11):** `git checkout main && git pull` → cut `feature/<layer>` with only that feature's commits (`rebase --onto` / cherry-pick the contiguous block) → `pr-prep` → PR → squash-merge on GitHub → back to main, **rebase the remaining stack onto the rewritten main** (merged layer drops out when content matches).
+
+**Watch-outs:** (a) GitHub squash rewrites main history every merge → must rebase the remainder each round; (b) editorial-markdown overlap — most layers touch the same files (`architecture.md`, `review-typology.md`), so rebase conflicts are likely; on conflict **do not commit "resolve conflicts"**, re-cut the remainder fresh from main; (c) merge stays manual. PM-decided 2026-06-06: 11 PRs (not fewer/larger).
+
 ## Pre-review self-review hygiene — legibility discipline for human-facing text — 2026-06-05 (this repo)
 
 PM-relayed colleague's checklist point 4 (points 1–3 are covered by per-diff `code-review`): **read the text the AI writes for humans — don't copy it unread; read it twice, thoughtfully; rewrite if it's unclear or hard to read.**
@@ -108,3 +129,85 @@ Both slices feed the "periodic whole-codebase quality review" item above. *Path:
 ## Flag-controlled mode: don't commit project-generated docs into the project repo — 2026-06-05 (this repo)
 
 A mode (flag in `.env` or equivalent) where the protocol's project-generated documentation is NOT committed into the product repo. The pipeline still writes docs locally (agents must read them); it just doesn't commit `docs/` + `.ai-pm/` into the product repo. Hard tension: durability (`.ai-pm/state/current.md`, auditor history across sessions). *Decisions for planning:* where docs go when not in the project repo; which artifacts the flag covers; how session-durable state and auditor history survive; how `pm-pr-prep` learns to skip those paths. *Path:* `/pm-research` (how others separate generated-docs / meta from the product repo) then `/pm-plan`. PM idea 2026-06-05.
+
+## Two gaps from the "Mr. Meeseeks" field-experience essay — 2026-06-06 (this repo)
+
+Source: Habr article 1043842 — a practitioner's 6-month log of running an AI agent on a ~250k-line project. Most of its process advice (domain-language framing, contracts at module seams, don't-trust-unit-tests, different model for review, send the agent to read docs) is already formalized in our pipeline as roles/steps. Two grains where the essay is ahead of us:
+
+### (1) A legitimate "escape hatch" for a stuck agent
+
+The essay's strongest novel point: an agent facing an unsolvable task can **panic into destructive action**, and the fix is to build a *legitimate retreat* into the instruction — an authorized way for the agent to say "I can't / I'm blocked" instead of thrashing. We bound the **blast radius** of panic (hook deny-list, project boundary, remote-system boundary, on-hardware blast-radius preflight) but offer no **positive escape**: no convention by which a `pm-coder` / review agent declares "stuck — escalate" as a first-class, expected outcome rather than a failure. Today a blocked agent's only modeled exits are "succeed" or "produce something the review loop rejects." *Fix direction:* a recognized "blocked/giving-up" return contract for the autonomous agents (coder, checkers) that routes to the orchestrator → PM instead of forcing a best-effort artifact. *Path:* `/pm-research` (how others model agent give-up / ask-for-help) then `/pm-plan`.
+
+### (2) Context hygiene — when to reset a long session
+
+The essay flags that a long session history *degrades* output quality. Our architecture already mitigates this structurally (subagents get a narrow context: plan + 2-3 adjacent files; the orchestrator doesn't hold everything), but we have **no conscious "session hygiene" discipline** — no guidance on when a long orchestrator conversation should be checkpointed/reset, and what load-bearing state must survive that reset (pairs with `agent-handoff-durability`, shipped, and `.ai-pm/state/current.md`). *Fix direction:* a checkpoint-and-reset discipline for long-running orchestrator sessions, leaning on existing durable state so a reset is lossless. *Path:* `/pm-research` (context-degradation evidence + reset patterns) then `/pm-plan`. PM-flagged 2026-06-06.
+
+## META: "deficit → prosthesis" as a protocol-design method — 2026-06-06 (this repo, meta-level)
+
+Not a feature — a **generator** for features and an **audit lens**. Came out of a PM design conversation (2026-06-06). To be decomposed into per-deficit tasks later and each run through `/pm-research` → `/pm-plan`; parked as a seed for now.
+
+**The method.** Take a structural cognitive weakness of an LLM agent, don't try to fix it *inside* the agent (it's structural), build an **external organ** that compensates — exactly as humans, unable to remember phone numbers, invented the address book. The address book doesn't improve memory; it *externalizes* it. Much of the protocol already consists of such prostheses, but assembled **reactively** (we hit a pain, added a rule): cross-model review = "second opinion"; `state/current.md` = logbook; scenario checklist = pilot's checklist; seam contracts = pre-written call edges. The lens lets us assemble them **proactively** and audit for missing ones.
+
+**The load-bearing asymmetry — felt vs unfelt deficits.** The address book works because the human *knows* they don't know the number — the deficit is *felt*, and the felt-ness triggers reaching for the prosthesis. My most dangerous failures are *unfelt*: a hallucinated call-graph edge feels exactly as confident as a correct one — no internal "careful, I'm guessing" signal. Consequence for design: a prosthesis the agent must *invoke when it notices weakness* is useless for unfelt deficits (it won't notice). **Unfelt deficits require always-on, unconditional organs, not opt-in hints** — "always resolve the symbol via a tool," not "resolve it if unsure." This maps directly onto our own `cross-cutting invariants (always on)` vs `on-demand` split: unfelt → always-on; felt → on-demand is acceptable.
+
+**Observation:** reactive prosthesis-building reliably catches *felt* deficits (you step on the rake and feel it) and systematically misses *unfelt* ones (you step on it and don't notice). Our weakest-covered rows below are all unfelt — not a coincidence; it's the blind spot of the reactive method.
+
+**Seed catalog (deficit → prosthesis):**
+
+| Deficit | Felt? | Human analog / prosthesis | Agent prosthesis | Coverage today |
+|---|---|---|---|---|
+| Hallucinated call-graph edges | **no** | confabulation → "don't recall, check the source" | LSP / tree-sitter call-graph as ground-truth input | contracts (partial); no tool |
+| Single-path sim, misses interleavings | no | can't simulate concurrency in head → model checker | property test / harness instead of mental run | Step 5.5 (optional) |
+| Quantity blindness (loop ×10000) | no | mental arithmetic → pen & paper / calculator | just execute on representative inputs | Step 5.5 |
+| Long-context degradation | partial | working-memory limit → write it down / logbook | durable state + checkpoint-reset | state exists; reset discipline missing |
+| Forgot half the scenarios | yes | many parallel items → checklist | scenario↔path coverage matrix | pm-plan-checker, not as a matrix |
+| Overconfidence in own graph | no | overconfidence → independent reviewer / devil's advocate | cross-model + adversarial-verify | covered |
+
+**Two distinct artifact tracks (do not conflate):**
+1. **Deficit catalog** — a living doc: known structural LLM weaknesses + prosthesis each + felt/unfelt + always-on-or-on-demand. Becomes a *generator* of protocol features and an *audit lens* ("for unfelt deficit X our prosthesis is opt-in — that's a design bug").
+2. **Wiring real external tools** — where the prosthesis is an organ that already exists (language server, property tester, call-graph extractor), give it to the agent *as input*, don't ask the agent to "reason more carefully."
+
+**Open question for the next session (how to populate the *unfelt* rows):** since neither agent nor PM feels an unfelt deficit in the moment, the catalog can only be as complete as our ability to surface failure modes we don't feel. Candidate surfacing methods: post-mortems on real shipped bugs (the bug is the *delayed* felt signal); differential runs (two models / two passes disagree → a latent deficit just surfaced); injected ground-truth probes. *Path:* `/pm-research` on each track, then per-deficit `/pm-plan`. PM-originated 2026-06-06.
+
+### Track: grounded code-graph utility + contract anchors — 2026-06-06
+
+The flagship Form-A/E prosthesis from the "deficit→prosthesis" lens: a **thin adapter** (not an engine) that hands the agent a *normalized, reliable* code graph and maps it onto contracts. Parked for deep-dive; capturing the load-bearing design decisions so they aren't re-derived.
+
+**Code-graph half (feasible, don't build the engine — wrap a tiered backend):**
+- Tier 1 syntactic — tree-sitter / ctags: "defined-where / textually-referenced", fast, no build, ~130 langs. Blind to dynamic dispatch.
+- Tier 2 semantic — LSP (pyright/gopls/clangd): real go-to-def / find-refs / call-hierarchy from the compiler. Reliable edges, needs a working toolchain.
+- Tier 3 data-flow — Joern / CodeQL: + slicing, taint. Heaviest, nichest.
+- **Tier picked by project weight.** Utility emits one normalized graph regardless of backend.
+
+**Non-negotiable design rule — surface uncertainty, don't hide it.** Even a semantic graph is blind to reflection, DI, config-wiring, FFI, metaprogramming. If the utility presents a confident-but-incomplete graph it reproduces the agent's *own* failure mode in software. It MUST mark unresolved/dynamic edges explicitly. This is the deepest payoff: the utility **converts an unfelt deficit into a felt one** — where the agent would silently hallucinate an edge, the tool prints "edge unresolved / dynamic / contract anchor points at a missing symbol." Makes the invisible gap visible (the address-book-empty-row effect).
+
+**Contract-mapping half — split structural vs semantic:**
+- **Structural conformance = deterministic & cheap, ONE precondition:** contracts must carry a **machine-resolvable anchor** (`path::symbol` / stable id), not just prose. Then real checks: (a) **surface drift** — contract says module exposes {A,B,C}, graph says {A,B,D} → D undocumented, C missing; (b) **forbidden edge** — contract "X must not depend on Y", graph has X→Y → violation; (c) **reachability** — scenario claims path A→B, graph says unreachable → gap.
+- **Half of this is already productized** as *architecture fitness functions*: ArchUnit (Java), import-linter (Python), dependency-cruiser (JS), deptry. We **adapt to our contract format + add a language-agnostic normalizer**, not invent.
+- **Semantic conformance ("does B actually do what the contract means") stays AI-judgment + tests** — cannot be made reliable, and that's correct: the utility takes the structural half deterministic and frees judgment for the irreducible-semantic half. This *physically draws* the line in the existing "deterministic-enforceable vs AI-evaluated check boundary" item.
+
+**Dependency to flag:** the structural map is dead without machine-resolvable anchors in contracts → a prerequisite edit to **our contract format**, separate from the utility itself.
+
+**Minimal first step (Form A, light):** tree-sitter/ctags wrapper → normalized graph + surface-drift detector against contract anchors. A small script, not a platform. *Path:* `/pm-research` (existing fitness-function tools + anchor schemes) then `/pm-plan`; contract-anchor format change is its own `/pm-plan`. PM-originated 2026-06-06.
+
+**Delivery form — DECIDED: a standalone CLI utility, not an MCP server (PM, 2026-06-06).** Claude Code ships nothing graph-shaped out of the box (Grep/Glob are textual; no semantic index; IDE integration exposes only LSP *diagnostics*, not references/go-to-def). The three viable carriers are MCP server / skill / CLI. PM picks **CLI** — the linter-shaped Form A: the agent calls it via Bash and reads structured output (JSON), it composes with hooks and skills, has no server lifecycle, is language-agnostic and testable standalone, and can still be wrapped by an MCP server or `/code-graph` skill *later* if a session-resident form is ever wanted. The CLI is the primitive; MCP/skill are optional thin shells over it, not the other way round.
+
+## EPIC: HMI / platform-convention invariants + adverse-state gate — 2026-06-06 (protocol-feedback intake)
+
+**Origin:** a protocol-feedback report from a downstream project (`matter-import-ble`, BLE commissioning, PR #2). The feature passed every gate — plan + arch note + contract + stack-notes, pm-plan-checker Pass 1, code-review Pass 2 (×2), 509 green tests with an end-to-end fake-BLE proof, full on-hardware run — and the PM still found user-facing defects by hand in minutes: (1) device loss not painted as an error (service flag `"r"` shown as a text-control value → "Ошибка: r" instead of publishing to `…/controls/<c>/meta/error`); (2) optimistic state lie — toggling an offline device displayed success, command lost, display stayed stale after reconnect instead of reseeding from real state; (3) no action feedback — Import/Reconnect/Remove → ~30 s of silence, success/failure only legible when the device appears. Plus a test-design lesson: the end-to-end fake test passed *because it omitted production wiring* (`onPeerReady → syncImported` on `peers.added`) — the exact wiring where the on-hardware commissioning bug (BLE-16) lived. Same shape as the UX blind spot: verified a slice, not the system as the user assembles it.
+
+**The claimed gap:** the protocol gates **function** (does it work), **cross-feature safety** (don't break neighbours), and **security** (SCn + threat-model), but has no first-class gate on the two things that decide whether a feature is *usable*: (A) platform/HMI conventions (how the product must behave in the UI), and (B) adverse-state / lifecycle scenarios of the feature itself (not just happy path). A feature can be functionally correct and simultaneously unusable / standard-violating because nothing asks. Root cause: `CLAUDE.md`'s "No custom frontend code; platform renders the UI" is true for HTML/JS but bred a false model "UX is not our zone" — yet the device panel is fully determined by the **META the project publishes** (control types, order, `meta/error`, title). The UI contract is 100% ours; the protocol treats it as foreign. Security is the proof the protocol *can* carry such an invariant (single-source `### Security-relevant surfaces` → SCn list → lifecycle threat-model → blocking plan-checker rule); there's just no parallel for HMI or adverse-state.
+
+**Proposed amendments (report's §4), modeled on the security machinery:**
+- **4.1 single-source "HMI / platform-convention invariants"** (parallel to `### Security-relevant surfaces`): action→feedback; errors→`meta/error` (control reddens); control = real state, not optimistic; offline → inert + reseed on reconnect; human-readable titles. `/pm-plan` / pm-plan-checker / pm-auditor reference it by name.
+- **4.2 mandatory adverse-state enumeration in `/pm-plan`** (blocking for user-facing): the plan must list transitions and failures (offline, lost command, reconnect, partial failure, restart), not only happy path; pm-plan-checker makes absence blocking — same class as a missing threat-model. Turns "scenarios we happened to think of" into "scenarios we were obliged to consider."
+- **4.3 Step 5.5 (real-use) mandatory for user-facing**, with the 4.1 HMI checklist + at least one adverse path (pull the device, toggle offline, reconnect) — not just a success log.
+- **4.4 mandatory integration test in full production composition** (BLE-16 lesson): for a user-facing feature, at least one test that exercises the whole production wiring, not a unit over an isolated unit; DoD gains a line "integration test exercises production wiring, not a trimmed harness."
+
+**Maintainer assessment (honest — do NOT rubber-stamp; sharpen at `/pm-plan`):**
+- **The gap is real.** Strongest, cleanest parallels: **4.2** (blocking adverse-state enumeration ≈ blocking threat-model) and **4.4** (full-composition integration test — generalizes the existing per-diff `seam-completeness` *review angle* into a DoD *test requirement*; the two are complementary, not duplicate). Land these first.
+- **4.1 needs a structural correction.** Security surfaces are *universal* (auth, crypto, transport… same on every stack), so the list lives in `WORKFLOW.md`. HMI conventions are *platform-specific* (`meta/error`, `controls/order` are Wiren-Board META semantics). So the security split must be honored: the **protocol** carries only the thin *universal requirement + gate* ("does this feature have a user-facing surface? → it must conform to the project's platform-convention invariants"), while the **invariant content** lives in a **project doc authored at bootstrap from the platform's HMI standard** — exactly as `### Security-relevant surfaces` (universal, in-protocol) pairs with `docs/threat-model.md` (content, project-authored). Do NOT hardcode WB META rules into `WORKFLOW.md`. Candidate home: `docs/hmi-conventions.md` (or a section of architecture/stack-notes), drafted per-project, presence = "this project has a user-facing surface" signal (mirrors threat-model-present = security-bearing).
+- **4.3 has a proportionality cost.** Hard-mandatory real-use for *all* user-facing work fights the protocol's proportionality (/pm-fixup, change-type table). Tune at planning: mandatory for features that *touch the HMI surface*, with a proportional escape for trivial copy/label changes — not a blanket wall.
+- **Overlap to reconcile, not ignore:** this sits squarely inside the existing **EPIC: technical-over-product bias** and the **pm-product-advocate** Step-3.5 product-readiness gate (which already matches plan+contract+product-docs against `### Foundational product questions`). The cleanest design likely **extends product-advocate + foundational-questions with an HMI/adverse-state tier** rather than erecting a wholly parallel stack. Decide at `/pm-plan` whether HMI invariants are a new single-source (4.1-style) or a new foundational-questions tier consumed by the advocate.
+
+**Path:** slice into `/pm-plan` (4.2 + 4.4 first as the load-bearing blocking gates; 4.1 with the universal/project split; 4.3 with proportional scoping), each upstream against `ai-pm-protocol` → submodule bump + migration. First consumer: the web-interface improvement epic already in this backlog — plan it under the strengthened gates to fix the *class* of defect, not just these instances. Originating report retained downstream in the matter project's `.ai-pm/protocol-feedback/`. PM-relayed 2026-06-06.
