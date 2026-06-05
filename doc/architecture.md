@@ -391,7 +391,7 @@ Four disciplines added together, closing the "flawless-where-stated, gap-on-the-
 
 **Source:** `doc/features/seam-completeness_plan.md`; `.ai-pm/backlog.md` § "Seam-completeness + failure-inventory: closing the 'flawless-where-stated, gap-on-the-unstated' blind spot" (2026-06-05) and § "Review passes must be backlog/review-history-aware + backlog in/out discipline" (2026-06-05); branch commit `0f34abb`.
 
-### Comment-restraint + documentation-minimalism: convention in CLAUDE.md.tmpl, two Semgrep entries in the library
+### Comment-restraint + documentation-minimalism: convention in CLAUDE.md.tmpl
 
 Comments and docstrings in downstream projects had no restraint convention — the risk being over-documentation noise (trivial docstrings, inline rule-ID citations, "what" comments restating the code) that makes diffs harder to read and the codebase harder to maintain. This decision adds a comment-restraint convention to the template.
 
