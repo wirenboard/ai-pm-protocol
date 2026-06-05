@@ -13,6 +13,22 @@
 
 ---
 
+## [2.34.0] — 2026-06-05
+
+Ships **test-wiring-parity** — a PM-relayed review-scope fix: closing the hole where a feature can pass green tests *and* both review passes yet still not work, because the test wired its dependency differently than the production path does (only hardware caught the real BLE-provider regression). The fix is a soft, single-sourced discipline: a feature whose correctness depends on init/registration/wiring **order** must carry at least one test that drives the **production registration path** (not a hand-rolled equivalent setup) and asserts the observable post-condition; `pm-plan-checker` blocks a plan that bypasses it. Sibling of the existing Stack-spec test rule, judgement-triggered (no hook), single-sourced in `/pm-plan` and referenced by name from the checker. Moves a slice of Step 5.5 (run-it-for-real) earlier into the test discipline. Additive and back-compatible — **no migration**.
+
+### Added
+
+- **Test-wiring-parity rule** (`.claude/commands/pm-plan.md`) — sibling to the Stack-spec test rule: a wiring-dependent feature must carry ≥1 test that drives the production registration path and asserts the observable post-condition, not a hand-rolled equivalent.
+- **Wiring-parity blocking clause** (`.claude/agents/pm-plan-checker.md` "Implementation compliance") — blocks a plan whose tests bypass the production registration path; references the `/pm-plan` rule by name (single-source, no re-encoded trigger list).
+- **`### Test-wiring-parity` decision record** (`doc/architecture.md`) — records the rule + checker enforcement, the judgement-triggered / no-hook framing, the single-sourcing, the sibling relationship to the Stack-spec test rule, and that it moves a slice of Step 5.5 earlier (the `code-review` built-in finding-half stays out of scope).
+
+### Notes
+
+- Dogfood: this feature's own diff is clean (changeset-hygiene from v2.33.0 in force). `tests/hooks.sh` stays 73/73 — no hook touched (judgement-triggered, not deny-listed).
+
+---
+
 ## [2.33.0] — 2026-06-05
 
 Ships **changeset-hygiene** — feature A of the PM-sequenced reviewability track (the PM doesn't read code, colleagues do; the changeset shouldn't be painful to review). Two soft, single-sourced disciplines land, plus a legibility rule referenced by name. **Clean-diff discipline:** `pm-coder` step 6 now sharpened so the changeset carries only plan-serving hunks — cosmetic-only / whitespace / reformat-of-untouched-lines / reordering / opportunistic micro-opt are excluded even when harmless, with a necessary-incidental carve-out (such edits are NOT noise); step 34 routes worthwhile unrelated finds to the report (→ backlog), not the diff. **Reviewer surfacing:** `pm-plan-checker` gains a non-blocking **Diff-noise structural note** beside the preserved feature-scope-expansion note — a structural product note, never a hard block, never prose-policing. **Human-text legibility:** a single-source `## Human-facing text legibility` subsection in `workflow/pm-comms.md` (read-before-ship, rewrite-if-unclear, never paste agent output verbatim into a durable artifact), referenced by name from `pm-coder` (comments) and `pm-pr-prep` (CHANGELOG/PR text). Structure-only, soft-enforced (no hook, no hard block), additive and fully back-compatible — **no migration**.
