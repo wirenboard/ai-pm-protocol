@@ -13,6 +13,26 @@
 
 ---
 
+## [2.30.0] — 2026-06-05
+
+Ships **readme-currency** — README currency + template-conformance are now actively watched during ordinary work instead of drifting silently. Two structure-only, no-hook mechanisms: a judgment-triggered **per-feature README-currency check** in `/pm-plan` (when a feature touches install/packaging/quick-start/the architecture one-liner/a doc pointer, the plan must name `README.md` in "Docs to update" and `pm-architect` refreshes it on the existing post-coding handoff), and a **`pm-auditor` README-conformance dimension** (generalizing the A4 install↔Integration-contract pairing into the audit). Both reference the canonical README shape **by name** — neither re-encodes the beats — and both are structure-only with **no prose-policing**. Additive, fully back-compatible, **no migration**.
+
+### Added
+
+- **Per-feature README-currency check in `/pm-plan`** (`.claude/commands/pm-plan.md`) — judgment-triggered, **no hook**: when a feature touches install/packaging, quick-start, the architecture one-liner, or a doc pointer, the plan must list `README.md` under "Docs to update"; `pm-architect` then refreshes README on the **existing** post-coding handoff. Silent when none of those surfaces is touched. References the canonical-README-shape authoring rule by name — never re-encodes the beats.
+- **`pm-auditor` README-conformance dimension** (`.claude/agents/pm-auditor.md`) — structure-only note per missing beat: asserts install/quick-start + `## License` + `docs/product.md` pointer present, and install ↔ `## Integration contract` match (generalizing the A4 pairing into the audit; skipped silently when the contract is N/A). Never prose-polices wording, quality, or currency-of-content; references the canonical shape by name.
+
+### Changed
+
+- **Handoff notes now list `README.md`** (`.claude/agents/pm-architect.md`, `workflow/pipeline.md` Step 4) — one-line additions noting that `README.md` rides the existing "Docs to update" post-coding handoff so the currency check has a home to route through.
+
+### Notes
+
+- Plan-check: Pass-1 **approve**; code-review (Pass-2): **zero findings**; verdict approve (`.ai-pm/reviews/readme-currency_review.md` — stamped `## Code review: 2026-06-05 — passed`).
+- `tests/hooks.sh` 74/74. Both mechanisms are **structure-only / no-prose-policing / no-hook**. Back-compat: additive only, **no migration**. Also validated the v2.29.0 `workflow/*.md` structure by use during this feature.
+
+---
+
 ## [2.29.0] — 2026-06-05
 
 Ships **workflow-progressive-disclosure** — a progressive-disclosure restructure of `WORKFLOW.md` from a 564-line eager-`@`-imported monolith into a thin **~79-line constitution + router** at the same path plus **15 on-demand `workflow/*.md` topic files** that consumers read just-in-time via the Read tool. ~40 live by-name references were repointed to their new topic homes and explicit "Read `workflow/<topic>.md` before X" steps added at the consumers that need them. Net effect: the always-loaded spec context drops **~17k → ~2.5k tokens (~85% cut)** for the main loop **and** every subagent, since the spec is no longer eager-imported wholesale. Additive, fully back-compatible — the downstream `@.ai-pm/tooling/WORKFLOW.md` import line and the `WORKFLOW.md` path are **byte-unchanged**, and the new topic files ride the existing submodule. **No migration.**
