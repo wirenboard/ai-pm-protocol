@@ -86,6 +86,14 @@ rules:
             ...
 ```
 
+**Scope note:** `$DICT[$KEY]` matches ALL Python subscript operations — dicts, lists, tuples,
+strings, and custom objects. This intentionally broad pattern surfaces every unguarded subscript
+that could raise `KeyError` or `IndexError`; downstream teams should review findings and suppress
+on sequences where the index is range-safe (e.g. `# nosemgrep: python.seam.dict-subscript-vs-get`).
+For a dict-only narrowing, scope the rule to call sites where the variable is annotated as
+`Dict[...]` or returned by a known dict-producing function — that requires a project-local
+metavariable filter the generic rule cannot express.
+
 **Note on local-inconsistency detection:** the most actionable case — `dict.get(...)` and
 `dict[key]` on the same dict in the same scope — is not expressible as a single Semgrep
 structural pattern without metavariable tracking across lines. Detect it in code review:
@@ -146,9 +154,18 @@ bare package names (no version specifier at all), add a complementary rule:
     paths:
       include:
         - "requirements*.txt"
-    pattern: $PKG
-    pattern-not: $PKG$OP$VER
+    patterns:
+      - pattern: $PKG
+      - pattern-not: $PKG$OP$VER
+      - pattern-not-regex: '^(\s*#|\s*-|\s*$|--)'
 ```
+
+**Scope note for bare-package rule:** the generic-language `$PKG` pattern matches every
+non-empty line in `requirements*.txt`, including comment lines (`# runtime deps`), pip options
+(`-r base.txt`, `--index-url`, `--extra-index-url`), and blank lines. The `pattern-not-regex`
+above excludes the most common non-package prefixes. Verify this exclusion against the project's
+actual requirements file format; projects using environment markers (`package ; python_version`)
+or editable installs (`-e ./local_pkg`) may need additional `pattern-not-regex` entries.
 
 **Linter encoding (if applicable):** `pip-audit` / `pip-compile` (pip-tools) enforce reproducible
 installs via a lockfile; this rule targets the source-of-truth specifier file, not the lockfile.
