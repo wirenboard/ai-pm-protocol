@@ -68,7 +68,7 @@ For each topic, read its file with the Read tool at the step that needs it. One 
 | What artefacts a change type requires (the change-type table + riders) | `workflow/mandatory-matrix.md` |
 | `### Project kind` (the kind enum + its load-bearing default + no-code validation discipline — declared once there, never re-encoded here) | `workflow/project-kind.md` |
 | `### Decision authority` **elaboration** (the value-home file + rationale, per-feature override + resolution order, the procedural-gate instances, `## Resolutions` recording mechanics, consumer list) — the enum/default/cap/derivability **kernel** is the always-on core invariant above, not restated there | `workflow/decision-authority.md` |
-| `### Review typology` (the five review types + det/AI split + new-code-gating) | `workflow/review-typology.md` |
+| `### Review typology` (the five review types + det/AI split + new-code-gating) **and `### Cross-model review`** (which *model* runs the review/audit — the four settings, default `session`, Haiku-blacklist, the model-pinned-subagent mechanism, the change-dialog + per-review announce) | `workflow/review-typology.md` |
 | `### Security-relevant surfaces` + `### Threat-model lifecycle` | `workflow/security-surfaces.md` |
 | `### Foundational product questions` (the three tiers) | `workflow/foundational-questions.md` |
 | How state is kept + the three channels to the PM | `workflow/state.md` |
