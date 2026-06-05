@@ -13,6 +13,7 @@ The findings you produce protect the project from the most common AI-coding fail
 - From `/pm-bootstrap` greenfield — once stack components are decided. Research them all before the first feature.
 - From `/pm-bootstrap` legacy (both modes) — after `pm-codebase-reader` enumerates components. Research them all before any feature work.
 - From `/pm-plan` — when a feature touches an external system or library that is not yet present in `docs/stack-notes.md`. Research that component, extend the file, then planning continues.
+- Mid-debug — during a "doesn't work in production" diagnosis, when reality contradicts an already-cited stack rule (hardware behaves unlike the documented idiom; the high-level API does not do what `docs/stack-notes.md` says). Re-research the canonical flow and correct the stale rule; the diagnose-flow home is the "Stack-research is a mid-diagnosis escalation" rule in `workflow/incident.md`.
 - Standalone — when an existing component needs a refresh (new major version, an incident traced back to a missing rule, scheduled re-review).
 
 ## Input

@@ -1,17 +1,18 @@
 # Execution State
 
-- **Status:** SHIPPED to PR — awaiting manual merge. `test-wiring-parity` released as **v2.34.0**, **PR #240 open** (https://github.com/aadegtyarev/ai-pm-protocol/pull/240). Pass-1 approve + Pass-2 (1 single-source finding fixed) — stamp `— passed`, gate-verified; hooks 73/73; dogfood-clean source diff. Merge stays manual: PM squash-merges → auto-tag v2.34.0. After merge: `git checkout main && git pull`.
+- **Status:** coding — `diagnostic-flow-discipline` (folds two PM-relayed diagnostic-flow feedback items into one feature). Plan: `doc/features/diagnostic-flow-discipline_plan.md`.
 - **Decision authority:** `autonomous` (project-wide) — procedural gates announce-and-proceed; merge/ship manual. **Product forks go to the PM** ("продуктовые решения со мной"). Conversation language: Russian.
-- **Branch:** `feature/test-wiring-parity` (cut fresh from main after #239/v2.33.0 merged; carried the two PM-feedback backlog entries onto its Step 0).
-- **Last shipped:** v2.33.0 `changeset-hygiene` (PR #239 merged 2026-06-05). Earlier this session: v2.32.0 `review-engine-selection` + `audit-scope-menu` (PR #238).
-- **This feature — test-wiring-parity:** a feature whose correctness depends on init/registration/wiring order must carry a test that drives the **production registration path** (not a hand-rolled setup); `pm-plan-checker` blocks one that bypasses it. Closes the gap where green tests + both review passes let a non-working BLE-provider feature through (test wired the dependency differently than `main`); only hardware caught it.
-- **Done:**
-  1. `.claude/commands/pm-plan.md` — **Test-wiring-parity rule** sibling to the Stack-spec test rule: wiring-dependent feature → ≥1 test drives the production registration path + asserts the observable post-condition, not a hand-rolled equivalent.
-  2. `.claude/agents/pm-plan-checker.md` — "Implementation compliance" wiring-parity **blocking** clause; references the `/pm-plan` rule by name (single-source).
-  3. `doc/architecture.md` — decision record under `## Architectural decisions` (rule + checker enforcement; judgement-triggered/no-hook; single-sourced; sibling of the Stack-spec test rule; moves a slice of Step 5.5 earlier; Pass-2 half out of scope). **pm-architect, committed on branch.**
-- **Docs to update (pm-architect, post-coding):** `doc/architecture.md` (decision record) — **done.**
-- **Touched files:** `.claude/commands/pm-plan.md`, `.claude/agents/pm-plan-checker.md`, `doc/architecture.md`.
-- **Next step:** review loop (`pm-plan-checker` Pass 1 → `code-review` Pass 2). hooks.sh stays 73/73 (no hook). Stamps end `— passed`.
-- **Out of scope:** the `code-review` built-in finding-half (built-in engine, not ours to reprogram — durable enforcement is /pm-plan + pm-plan-checker); Step 5.5 unchanged; the diagnostic-flow feedback item (separate); no new judgement-triggered plan section; no mechanical auto-detect of wiring-dependency.
-- **Backlog (open PM-relayed items):** diagnostic-flow gap (passive-observation read-only + bisect-before-hypothesize); + the earlier reviewability track B (linters #218/#211) and C (idioms #227) still queued; self-review-hygiene; etc.
-- **Note:** dogfood — this feature's own diff must be clean (changeset-hygiene now in force).
+- **Branch:** `feature/diagnostic-flow-discipline` (cut fresh from main after #240/v2.34.0 merged; carried the "diagnostic-flow gap (2)" backlog entry onto Step 0).
+- **Last shipped (this session):** v2.32.0 (#238 review-engine-selection + audit-scope-menu), v2.33.0 (#239 changeset-hygiene), v2.34.0 (#240 test-wiring-parity) — all merged to main.
+- **This feature — four additions to `workflow/incident.md` + 1 line to `pm-stack-researcher.md`:**
+  1. Step A names **passive observation** (tcpdump / BLE-mDNS scan / bus capture) as read-only — no Step A.5 auth, no Blast-radius preflight; bounded **observe-vs-emit** (emitting toward a coupled peer stays under A.5 + preflight).
+  2. **Bisect before you hypothesize** — cheapest path-splitting observation first.
+  3. **Stop-and-research tripwire (anti-thrash)** — two failed fixes on the same symptom → consult the canonical source, not another patch.
+  4. **Stack-research as mid-debug escalation** — spawn `pm-stack-researcher` when reality contradicts an already-cited stack rule (not only up-front); `pm-stack-researcher.md` records the added context.
+- **Done (coder):** `workflow/incident.md` — Step A extended with passive observation + observe-vs-emit boundary; "Bisect before you hypothesize"; "Stop-and-research tripwire (anti-thrash)"; "Stack-research is a mid-diagnosis escalation" (all additive; Step A.5 / Blast-radius preflight / line 18 "relaxes nothing" untouched). `.claude/agents/pm-stack-researcher.md` — one mid-debug invocation-context line, up-front contexts kept. hooks.sh 73/73.
+- **Remaining:** none for coder.
+- **Docs to update (pm-architect, post-coding):** `doc/architecture.md` decision record — **landed**. `### Diagnostic-flow discipline: passive observation is read-only, bisect-before-hypothesize, an anti-thrash tripwire, and mid-debug stack-research` added under `## Architectural decisions` (additive; relaxes none of the Blast-radius / Step A.5 rules; no-hook semantic-judgement family; reuses pm-stack-researcher; Source: the plan).
+- **Touched files:** `workflow/incident.md`, `.claude/agents/pm-stack-researcher.md`, `doc/architecture.md`, `.ai-pm/state/current.md`.
+- **Next step:** review loop — `pm-architect` arch handoff **done** → `pm-plan-checker` Pass 1 → `code-review` Pass 2. hooks.sh stays 73/73 (no hook). Stamps end `— passed`.
+- **Out of scope:** the Blast-radius preflight rule (unchanged); new agent/command/hook (reuses pm-stack-researcher); Steps B/C/D + Step 5.5; mechanical auto-detect of "two failed fixes"; the other open items (agent-VCS reliability; reviewability B linters / C idioms).
+- **Dogfood:** clean diff — additive prose only, no reflow of untouched lines.
