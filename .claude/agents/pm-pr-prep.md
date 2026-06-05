@@ -114,6 +114,8 @@ If nothing releaseworthy — tell PM and stop.
 
 ### 4. CHANGELOG + version bump → commit
 
+The CHANGELOG entry and PR body you author are durable human-facing text — read them for legibility before they ship and rewrite anything unclear, per `### Human-facing text legibility` in `workflow/pm-comms.md` (read-before-ship, rewrite-if-unclear).
+
 Update version in project metadata (`package.json`, `pyproject.toml`, `Cargo.toml`, etc.).
 
 Prepend to `CHANGELOG.md`:

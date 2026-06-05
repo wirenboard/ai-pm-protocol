@@ -46,3 +46,11 @@ User offline → messages queue → user reconnects → messages delivered in or
 **Report problems without panic.**
 > ✓ "Found an issue: if a user leaves a group while offline, they could still receive messages after rejoining. This affects the 'leave group' scenario. Options: fix now (adds ~1 day) or ship with a known limitation and fix in the next iteration."
 > ✗ "NullPointerException in GroupMembershipService at line 247 when userId is null in leaveGroup()."
+
+## Human-facing text legibility
+
+This is the single source for the legibility discipline; the agents and steps that author durable human-facing text reference it **by name** (`### Human-facing text legibility`) rather than re-encode it. Distinct from `## How to talk to the PM` above (which governs live chat) — this governs text that lands in a **durable artifact** and is read later by a human colleague: CHANGELOG entries, PR bodies, decision records, code comments.
+
+**Read before ship; rewrite if unclear.** Any human-facing text the protocol authors into a durable artifact is read for legibility before it ships, and rewritten if it is unclear or hard to read. Agent output is **never pasted verbatim** into a durable artifact unread — first-draft phrasing that is wordy, awkward, or hard for a colleague to follow is reworked, not shipped as-is.
+
+This is the lighter discipline only — read-before-ship and rewrite-if-unclear. The deeper comment-restraint rubric (justifies-not-describes, no trivial docstrings, no inline rule-IDs) is a separate convention and out of scope here.
