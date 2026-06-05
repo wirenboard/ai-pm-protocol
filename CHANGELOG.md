@@ -13,6 +13,28 @@
 
 ---
 
+## [2.33.0] — 2026-06-05
+
+Ships **changeset-hygiene** — feature A of the PM-sequenced reviewability track (the PM doesn't read code, colleagues do; the changeset shouldn't be painful to review). Two soft, single-sourced disciplines land, plus a legibility rule referenced by name. **Clean-diff discipline:** `pm-coder` step 6 now sharpened so the changeset carries only plan-serving hunks — cosmetic-only / whitespace / reformat-of-untouched-lines / reordering / opportunistic micro-opt are excluded even when harmless, with a necessary-incidental carve-out (such edits are NOT noise); step 34 routes worthwhile unrelated finds to the report (→ backlog), not the diff. **Reviewer surfacing:** `pm-plan-checker` gains a non-blocking **Diff-noise structural note** beside the preserved feature-scope-expansion note — a structural product note, never a hard block, never prose-policing. **Human-text legibility:** a single-source `## Human-facing text legibility` subsection in `workflow/pm-comms.md` (read-before-ship, rewrite-if-unclear, never paste agent output verbatim into a durable artifact), referenced by name from `pm-coder` (comments) and `pm-pr-prep` (CHANGELOG/PR text). Structure-only, soft-enforced (no hook, no hard block), additive and fully back-compatible — **no migration**.
+
+### Added
+
+- **Single-source `## Human-facing text legibility` subsection** (`workflow/pm-comms.md`) — sibling of `## How to talk to the PM`, governs durable authored text: read-before-ship, rewrite-if-unclear, never paste agent output verbatim into a durable artifact. Referenced by name (not re-encoded) from `.claude/agents/pm-coder.md` (code comments) and `.claude/agents/pm-pr-prep.md` step 4 (CHANGELOG/PR text).
+- **Diff-noise structural note (non-blocking)** (`.claude/agents/pm-plan-checker.md` "Implementation compliance") — hunk-level cosmetic noise surfaced as a structural product note in wire-token-note shape, never a hard block, never prose-policing; necessary incidental changes are explicitly NOT flagged.
+- **`### Changeset hygiene` decision record** (`doc/architecture.md`) — records the three disciplines, the soft / non-blocking framing within the soft-enforced + single-sourced family, the legibility rule single-sourced in `workflow/pm-comms.md` and referenced by name, and the A→B→C sequencing (B linters #218/#211, C idioms #227).
+
+### Changed
+
+- **`pm-coder` clean-diff sharpening** (`.claude/agents/pm-coder.md`) — step 6 now requires the changeset carry only plan-serving hunks (cosmetic-only / whitespace / reformat / reorder / opportunistic micro-opt excluded even when harmless), with the necessary-incidental carve-out; step 34 routes worthwhile unrelated finds (functional or cosmetic) to the report → backlog, not the diff. Atomic-commit step 10 unchanged.
+- **`pm-pr-prep` legibility reference** (`.claude/agents/pm-pr-prep.md`) — step 4 now cites `## Human-facing text legibility` by name for CHANGELOG/PR text; step-0 stamp gate and version/CHANGELOG mechanics unchanged.
+
+### Notes
+
+- Plan-check: Pass-1 **approve** (all 4 scenarios single-sourced; scenario-4 necessary-incidental boundary present in both coder rule and reviewer note); code-review (Pass-2): **zero defects** over the full diff; verdict approve (`.ai-pm/reviews/changeset-hygiene_review.md`, stamped `## Code review: 2026-06-05 — built-in code-review (high effort), no defects — passed`).
+- `tests/hooks.sh` **73/73** (no hook touched). Structure-only / no prose-policing; the prose is verified editorially per the documented markdown-prose boundary. **Dogfood:** the diff is itself clean — every hunk traces to a scenario or the docs-to-update list, no cosmetic churn. Out of scope: B (linters), C (idioms), code-readability-of-code, the deeper #386 comment-restraint rubric, any hard block on diff-noise. Back-compat: additive only, **no migration**.
+
+---
+
 ## [2.32.0] — 2026-06-05
 
 Ships **periodic-codebase-review** — two structure-only refinements to how whole-codebase review is engaged: **review-engine-selection** unblocks the `code-review-orchestrator` skill in the routing hook and gives the review typology a single-source engine-selection rule (per-diff Pass-2 stays built-in; the whole-codebase sweep prefers the orchestrator when available, with built-in fallback and a `WB_REVIEW_ORCHESTRATOR=off` override); and **audit-scope-menu** turns a PM-initiated analysis request into one upfront `AskUserQuestion` scope menu (Quick `diff` / Full) instead of an auto-decision, while keeping the threshold logic as the recommended default and preserving system-initiated announce-and-proceed. Both reference their canonical rules **by name** (no double-encoding), both are structure-only with no prose-policing, and the change is additive and fully back-compatible — **no migration**.

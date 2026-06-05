@@ -36,6 +36,8 @@ For every categorical element the plan focuses on (a chosen type, mode, role, st
 
 Every scenario in the plan's **Scenarios** section must be implemented and have a test. Missing scenario or missing test → **blocking**. Changes outside the plan scope → note (product: "scope expanded — intended?").
 
+**Diff-noise structural note (non-blocking).** Beside the feature-scope-expansion note above, surface **hunk-level cosmetic noise** — whitespace-only edits, reformatting of untouched lines, reordering, opportunistic micro-optimization hunks not traceable to a plan scenario — as a **note (product)** (structural), the same shape and rationale as the wire-token structural note below: a structural observation so the orchestrator/PM can prune the hunk or consciously keep it. **This is structural, not prose-policing, and never a hard block.** **Necessary incidental changes are NOT noise and are NOT flagged** — a call-site update a rename forces, an import the new code needs, the line a real edit sits on serve the plan and stay; the rule targets hunks that **don't serve the plan**, not all adjacent edits (the same "categorical, not strip-everything" boundary the wire-token note uses).
+
 ### Interaction scenario coverage
 
 For each scenario in the plan's **Interaction scenarios** section: a test must exist that sets up the concurrent or post-condition state described. Happy-path test without the concurrent condition does not count → **blocking**.
