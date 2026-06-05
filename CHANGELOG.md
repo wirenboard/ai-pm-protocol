@@ -13,6 +13,23 @@
 
 ---
 
+## [2.35.0] — 2026-06-05
+
+Ships **diagnostic-flow-discipline** — three additions to the "doesn't work in production" debugging flow (`workflow/incident.md`) that keep diagnosis honest and bounded without changing what the protocol is allowed to touch. **Passive-observation carve-out:** read-only inspection (logs, status, metrics, a read of running state) is explicitly distinguished from a state-changing probe, so the Blast-radius preflight applies where it matters and doesn't tax harmless looking. **Bisect:** when a regression's introduction point is unknown, narrow it by halving the suspect range instead of guessing, before forming a fix hypothesis. **Anti-thrash tripwire + mid-debug stack-research:** after repeated failed fix attempts on the same symptom, stop trying variations and escalate — either to stack-research (consult the actual stack/library behaviour mid-debug) or back to the PM — rather than thrashing. Safety is unchanged: the existing Blast-radius preflight, the remote-system boundary, and the probe rules all stay exactly as they were — this only sharpens *how* diagnosis proceeds inside those guardrails. Additive and back-compatible — **no migration**.
+
+### Added
+
+- **Passive-observation carve-out** (`workflow/incident.md`) — read-only inspection is named and separated from a state-changing probe, so the Blast-radius preflight scopes to actions that change state, not to looking.
+- **Bisect step** (`workflow/incident.md`) — for a regression with an unknown introduction point, halve the suspect range to localize it before hypothesizing a fix.
+- **Anti-thrash tripwire + mid-debug stack-research escalation** (`workflow/incident.md`) — after repeated failed fix attempts on one symptom, stop varying the fix and escalate to stack-research or to the PM instead of thrashing.
+
+### Notes
+
+- Safety guardrails unchanged: Blast-radius preflight, remote-system boundary, and probe rules are untouched — this sharpens diagnostic *procedure* only.
+- Dogfood: feature diff is clean (changeset-hygiene in force). `tests/hooks.sh` unaffected — no hook touched.
+
+---
+
 ## [2.34.0] — 2026-06-05
 
 Ships **test-wiring-parity** — a PM-relayed review-scope fix: closing the hole where a feature can pass green tests *and* both review passes yet still not work, because the test wired its dependency differently than the production path does (only hardware caught the real BLE-provider regression). The fix is a soft, single-sourced discipline: a feature whose correctness depends on init/registration/wiring **order** must carry at least one test that drives the **production registration path** (not a hand-rolled equivalent setup) and asserts the observable post-condition; `pm-plan-checker` blocks a plan that bypasses it. Sibling of the existing Stack-spec test rule, judgement-triggered (no hook), single-sourced in `/pm-plan` and referenced by name from the checker. Moves a slice of Step 5.5 (run-it-for-real) earlier into the test discipline. Additive and back-compatible — **no migration**.
