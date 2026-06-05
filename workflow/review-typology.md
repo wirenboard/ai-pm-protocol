@@ -92,3 +92,23 @@ The seam check is subject to the **backlog-aware dedup rule** — see `### Revie
 **Severity respect:** an accepted item's severity is the recorded triage, never a fresh (often inflated) re-assessment. When a finding was downgraded on acceptance (e.g. blocking → note), that triage is honored in subsequent passes — the current pass does not re-inflate it.
 
 **Apply to ALL review passes:** this rule is mandatory and universal — it applies to the per-diff code-review, the seam-completeness angle (above), and the quality sweep (`/pm-audit` `## Technical quality`). It is stated once here as the universal pre-condition; every review pass reads it by reference (`### Review history awareness` in `workflow/review-typology.md`) and re-encodes none of it.
+
+### Deployment-context triage
+
+**Single source for "calibrate finding severity against the actual deployment target."** Static code analysis is blind to deployment context — a memory finding that is Low on a 16 GB dev laptop can be Medium or High on an embedded controller where OOM kills neighbouring services. The protocol ALREADY captures the missing context: `docs/architecture.md` `## Operational limits & budgets` (RAM/CPU budgets, max-N limits) and `## Architectural constraints` (embedded, resource-constrained, offline) are exactly the artifacts that adjust severity. This subsection closes the loop: the reviewer must have that context before assigning severity to any resource/availability finding.
+
+**Rule — enrichment before the review subagent runs.** Before spawning any review subagent — the per-diff Pass-2 subagent (`workflow/pipeline.md` Step 5), the seam-completeness Agent (`### Seam-completeness per-diff angle` above), and the quality-sweep engine (`/pm-audit` `## Technical quality`) — the orchestrator reads:
+
+- `docs/architecture.md` `## Operational limits & budgets` — documented RAM/CPU/throughput budgets and max-N limits.
+- `docs/architecture.md` `## Architectural constraints` — platform type, resource constraints, offline/embedded status.
+- `docs/threat-model.md` — **when present** (security-bearing project; silent when absent).
+
+These sections are passed as explicit context in the subagent prompt so the reviewer has the documented deployment target available when triaging severity.
+
+**Severity recalibration rule.** When the reviewer encounters a resource/memory/CPU/I/O/availability finding and the project has documented operational limits, the failure_scenario must reflect the actual deployment target: an OOM on an embedded controller with a 128 MB RAM budget and no swap is a different risk than the same issue on a 16 GB server — the former can take down co-located services and requires a manual restart; the latter self-recovers trivially. A finding under-triaged on generic assumptions that maps to a constrained target must be raised to the correct severity for that target.
+
+**Absent / N/A sections are silent.** When `## Operational limits & budgets` or `## Architectural constraints` are absent, `N/A`, or empty, the reviewer uses what is there and does not invent constraints. The enrichment step is read-once-silent-when-absent, never a hard gate.
+
+**Context-enrichment, not cross-model.** The same model with deployment context catches what it misses without that context. This is cheaper and more targeted than routing to a different model: the gap is missing context, not shared-model bias. Cross-model review (`### Cross-model review` above) addresses the residual shared-bias class that survives good prompting; this rule addresses the context-gap class first.
+
+**Apply to ALL review passes:** this rule is mandatory and universal — it applies to the per-diff code-review, the seam-completeness angle, and the quality sweep. It is stated once here as the universal pre-condition; every review pass reads it by reference (`### Deployment-context triage` in `workflow/review-typology.md`) and re-encodes none of it.
