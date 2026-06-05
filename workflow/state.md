@@ -6,7 +6,7 @@ One file — `.ai-pm/state/current.md` — holds the live snapshot of the active
 
 This means: if you pause for a week, come back, and re-enter Claude Code, my first move is to open that file and continue. You do not need to re-explain. You can open the file yourself to see where we are, but you don't write to it — agents do.
 
-When a task finishes, the file is archived to `.ai-pm/state/archive/<topic>-<date>.md` and reset to `Status: idle`.
+When a task finishes, the file is archived to `.ai-pm/state/archive/<topic>-<date>.md` and reset to `Status: idle`; the archive is committed on the feature branch as the final step before `pm-pr-prep`, so it merges with the feature it describes.
 
 For user-facing features, a parallel set of files lives in `.ai-pm/contracts/` — one Product Contract per feature, with what must work, what must not break, and the acceptance checks that prove it. Coder reads the contract before implementing; reviewer verifies the diff against it; auditor flags missing or stale contracts. The contract is how we keep a feature recognizable across many small changes — without it, the product slowly drifts.
 

@@ -1,15 +1,28 @@
 # Execution State
 
-> ## ▶ RESUME MEMO (read first — for a fresh session after a restart)
-> - **You are on branch `feature/comment-restraint`** — tip of local stack: `main @ v2.36.0` → `feature/agent-reporting-discipline` → `feature/stack-idioms-library` → `feature/cross-model-review` → `feature/integration-risk-spike-gate` → `feature/stack-idioms-library-plan` → `feature/seam-completeness` → `feature/comment-restraint` (**done**).
-> - **MODE = repo-transfer hold:** NO push / NO PR / NO merge until PM sends the new remote URL.
-> - **Cross-model review IS live** (auto): run code-review in a model-pinned subagent.
-> - **Authority:** autonomous, product forks → PM; conversation language = Russian.
-> - **comment-restraint: SHIPPED** — comment-restraint convention in CLAUDE.md.tmpl + inline-rule-id-ban + docstring-only-function in python.md + architecture.md record. Pass-1 + Pass-2 (Opus, 3 findings fixed) passed; stamp in `.ai-pm/reviews/comment-restraint_review.md`.
-> - **Next queue:** check backlog for next feature.
-
-- **Status:** idle — `comment-restraint` done. **MODE: repo transfer → LOCALLY ONLY.**
+- **Status:** implemented — `state-archive-home` done; awaiting Pass-1 + Pass-2 review.
 - **Decision authority:** autonomous. Conversation language: Russian.
-- **Stack (local, transfer hold):** `main @ v2.36.0` → `feature/agent-reporting-discipline` (done) → `feature/stack-idioms-library` (done) → `feature/cross-model-review` (done) → `feature/integration-risk-spike-gate` (done) → `feature/stack-idioms-library-plan` (done) → `feature/seam-completeness` (done) → `feature/comment-restraint` (done).
-- **Last completed:** `comment-restraint` — comment-restraint convention + 2 Semgrep library entries. Pass-1 + Pass-2 (Opus, 3 findings fixed). Stamp: `.ai-pm/reviews/comment-restraint_review.md` `## Code review: 2026-06-05 — passed`.
-- **Next feature:** check `.ai-pm/backlog.md` for next open item after #474.
+- **Branch:** `feature/state-archive-home`
+
+## Done
+
+- Added archive step bullet to `workflow/pipeline.md` Step 6 (before `pm-pr-prep`): orchestrator copies `current.md` → `archive/<topic>-<date>.md`, resets `current.md` to `Status: idle`, commits both on the feature branch.
+- Extended the archiving sentence in `workflow/state.md` § "How state is kept" with the commit-point clause: "the archive is committed on the feature branch as the final step before `pm-pr-prep`, so it merges with the feature it describes."
+- `tests/hooks.sh`: 73/73 green.
+
+## Remaining
+
+- Pass-1 plan-compliance (`pm-plan-checker`).
+- Pass-2 `code-review` (cross-model per `.ai-pm/review-config.md`).
+- `pm-architect` doc update: `doc/architecture.md` decision record (post-coding, per plan § Docs to update).
+- Ship gate (A/B/C) + `pm-pr-prep`.
+
+## Touched files
+
+- `workflow/pipeline.md`
+- `workflow/state.md`
+- `.ai-pm/state/current.md`
+
+## Next step
+
+Pass-1 (`pm-plan-checker`) → Pass-2 (`code-review`) → `pm-architect` doc update → ship gate.
