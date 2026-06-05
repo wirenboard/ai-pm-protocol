@@ -60,10 +60,10 @@ Provably isolated at the prose level (settings + orchestration routing + bootstr
 
 ## Docs to update
 
-- `doc/architecture.md`: decision record — the four settings, default `session` (back-compat) + opt-in cross-model, the built-in-pinned mechanism (spike-verified), the full-review engine chain (orchestrator-pinned / ultra-cloud / built-in-pinned), `audit-model` via the pm-auditor spawn, the bootstrap/announce/change-via-dialog-+-restart UX, the downstream migration, Haiku-blacklist; sharpens #101. `pm-architect`.
+- `doc/architecture.md`: decision record — the four settings, **default `auto` (opinionated, justified in the doc)** + absent⇒auto, the built-in-pinned mechanism (spike-verified), the full-review engine chain (orchestrator-pinned / no-orchestrator offer: ultra-cloud vs built-in-whole-base-pinned), `audit-model` via the pm-auditor spawn, the bootstrap/announce/change-via-dialog UX (no restart), mandatory model-announce, the documented-default-change downstream migration, Haiku-blacklist; sharpens #101. `pm-architect`.
 - `workflow/review-typology.md`: `### Cross-model review` single-source rule — `pm-coder`.
 - `workflow/pipeline.md` (Step 5) + `.claude/commands/pm-audit.md` (`## Technical quality` + the audit-model spawn) + `.claude/commands/pm-bootstrap.md` (question) + `MIGRATIONS.md` (migration): wiring — `pm-coder`.
-- `.ai-pm/review-config.md` (this repo, dogfood — default `session`) + `doc/_templates/` (downstream template config + `CLAUDE.md.tmpl` pointer): config file — `pm-coder`.
+- `.ai-pm/review-config.md` (this repo, dogfood — set to `auto`): config file — `pm-coder`. (No separate `doc/_templates/*.tmpl` — like `decision-authority.md`, the value file is written inline by `/pm-bootstrap`; a `.tmpl` would be a second drift-prone source.)
 - `README.md`: short note — review/audit can run cross-model (default session; how to set/change) — README-currency trigger fires; `pm-architect`.
 
 ## Out of scope
