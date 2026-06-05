@@ -1,5 +1,14 @@
 # Execution State
 
+> ## ▶ RESUME MEMO (read first — for a fresh session after a restart)
+> - **You are on branch `feature/cross-model-review`** — the tip of a LOCAL stack: `main @ v2.36.0 (MIT)` → `feature/agent-reporting-discipline` (A, done) → `feature/stack-idioms-library` (C, research-parked) → `feature/cross-model-review` (done). **Do NOT switch to `main`** (would drop the stack's protocol changes from context).
+> - **MODE = repo-transfer hold:** the PM is transferring `aadegtyarev/ai-pm-protocol` → `wirenboard` org. **Work LOCALLY only — NO push / NO PR / NO merge** until the PM sends the **new remote URL**.
+> - **When the new URL arrives:** (1) update install-paths — `README.md` L22 & L38, `doc/architecture.md` L387, `.claude/commands/pm-bootstrap.md` L407; (2) push the whole stack; (3) open PRs in order **A → C → cross-model**.
+> - **Cross-model review IS now live on this branch** (`.ai-pm/review-config.md` = `auto`): when you run a review/audit, read `### Cross-model review` in `workflow/review-typology.md`, run the built-in `code-review` in a subagent **pinned to a model ≠ session** (Opus session → Sonnet), and **announce the model** (mandatory, every path). Spike-verified mechanism.
+> - **Authority:** `autonomous`, but **product forks go to the PM** ("продуктовые решения со мной"); **conversation language = Russian**.
+> - **Next queue (post-transfer):** #5 integration-risk spike gate (PM-named root) → C idioms (research done, write `.ai-pm/research/` doc + plan) → #399 seam-completeness → #474 comment-restraint. Plus **bookkeeping debt:** mark shipped backlog items ✓SHIPPED (#460/#71/#54/#21/#37/#101/#84).
+> - **This session shipped:** v2.32.0 (review-engine-selection + audit-scope-menu) · v2.33.0 (changeset-hygiene) · v2.34.0 (test-wiring-parity) · v2.35.0 (diagnostic-flow-discipline) · v2.36.0 (relicense MIT) — all merged. Local-done on the stack: agent-reporting-discipline, cross-model-review.
+
 - **Status:** coding — `cross-model-review`. **MODE: repo transfer in progress → work LOCALLY only, NO push / NO PR / NO merge** (PM directive). Plan: `doc/features/cross-model-review_plan.md`.
 - **Decision authority:** `autonomous` (project-wide). **Product forks → PM** ("продуктовые решения со мной"). Conversation language: Russian.
 - **Stack (local, transfer hold):** `main @ v2.36.0 (MIT)` → `feature/agent-reporting-discipline` (A, done) → `feature/stack-idioms-library` (C, research-parked) → `feature/cross-model-review` (current). Push the whole chain + open PRs once the new remote URL lands.
