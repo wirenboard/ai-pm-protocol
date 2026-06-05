@@ -80,6 +80,8 @@ Then write `.ai-pm/review-config.md` and confirm; the change applies from the ne
 
 The seam check is subject to the **backlog-aware dedup rule** — see `### Review history awareness` below: before recording any finding from the seam check, cross-check against the feature's existing `.ai-pm/reviews/<topic>_review.md` and `.ai-pm/backlog.md` accepted entries.
 
+The seam check is also subject to **deployment-context enrichment** — see `### Deployment-context triage` below: the orchestrator passes `docs/architecture.md` `## Operational limits & budgets` + `## Architectural constraints` (and `docs/threat-model.md` when present) as context to the seam Agent, so symmetry-of-paranoia findings on resource/availability guards are calibrated for the actual deployment target.
+
 ### Review history awareness
 
 **Single source for the backlog-aware dedup rule that applies to all review passes.** Before the orchestrator records any finding — from per-diff code-review, from the seam check, or from the quality sweep — it **cross-checks** against:
