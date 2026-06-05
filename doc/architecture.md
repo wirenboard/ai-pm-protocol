@@ -313,7 +313,8 @@ Real top-level paths in this repo (cross-checked against `ls` and `git ls-tree -
 | Path | Purpose |
 |---|---|
 | `README.md` | PM-facing marketing + natural-language workflow walkthrough + install instructions. |
-| `WORKFLOW.md` | Orchestration rules imported into downstream `CLAUDE.md`. Agent roster, edit-ownership rule, remote-system boundary, git workflow, PM communication style. |
+| `WORKFLOW.md` | Thin constitution + router (~79 lines): the always-loaded core rules plus explicit "Read `workflow/<topic>.md` before X" pointers. Imported into downstream `CLAUDE.md` via `@`. The former monolithic bulk now lives in `workflow/`. |
+| `workflow/` | On-demand orchestration topic files (15) — the decomposed `WORKFLOW.md` bulk (`roster`, `enforcement`, `pipeline`, `mandatory-matrix`, `project-kind`, `decision-authority`, `review-typology`, `security-surfaces`, `foundational-questions`, `state`, `incident`, `protocol-gap`, `maintenance`, `pm-comms`, `examples`). Each is read just-in-time via the Read tool, not `@`-imported. One single-source rule-home per file. |
 | `MIGRATIONS.md` | Canonical migration catalogue — pending-migration detection conditions + per-version migration procedures for moving a project between protocol template versions. Sibling to `WORKFLOW.md`; referenced by bare filename from `pm-plan`, `pm-audit`, `pm-auditor`, `pm-plan-checker`, and the `pm-bootstrap.md` pointer. |
 | `CHANGELOG.md` | Release log in Keep-a-Changelog 1.1.0 format; top `## [<VERSION>]` entry drives `auto-tag.yml`. |
 | `LICENSE` | AGPL v3. |
@@ -349,7 +350,7 @@ How a downstream project consumes the template, and what it commits to in return
     - `.claude/settings.json` → `../.ai-pm/tooling/.claude/settings.json`
 
     Submodule update therefore propagates new agent personas, command procedures, and hooks without any downstream merge.
-3. **WORKFLOW.md imported via `@`-directive.** Downstream `CLAUDE.md` contains the line `@.ai-pm/tooling/WORKFLOW.md` — Claude Code expands it inline at session start. Orchestration rules update with the submodule pointer.
+3. **WORKFLOW.md imported via `@`-directive.** Downstream `CLAUDE.md` contains the line `@.ai-pm/tooling/WORKFLOW.md` — Claude Code expands it inline at session start. Orchestration rules update with the submodule pointer. The `@`-line itself is byte-unchanged and now imports only the thin constitution + router core; its `workflow/*.md` topic siblings ride the same submodule and are pulled on demand by the consuming agents / commands (read just-in-time, not `@`-imported), so they update transparently with the submodule pointer exactly as the symlinked agents / commands do. **Source:** `WORKFLOW.md` (the `Read workflow/<topic>.md` router pointers) + `doc/features/workflow-progressive-disclosure_plan.md`.
 4. **Templates consumed by `/pm-bootstrap`.** On first `/pm-bootstrap` in a downstream, the command reads `.ai-pm/tooling/doc/_templates/*.tmpl` and writes filled-in counterparts into the downstream's `docs/` (e.g., `docs/architecture.md`, `docs/user-journeys.md`, `docs/stack-notes.md`). After bootstrap the downstream owns those files — they are not symlinked, they live in the downstream's own history.
 
 **Version bumping:** When downstream wants a newer template version, it runs `git submodule update --remote .ai-pm/tooling`, stages the new submodule pointer, and commits with a `chore: bump ai-pm-protocol to <sha>` message. The submodule pointer is the only thing in the downstream's diff — agent / command / WORKFLOW changes are transparent. **Source:** `README.md` § "Установка" (the inline `git submodule update --remote .ai-pm/tooling` line at the end of the install block) + `WORKFLOW.md` § "Maintenance".
