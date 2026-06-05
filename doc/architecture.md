@@ -367,6 +367,20 @@ Every agent's report holds to two reporting rules, single-sourced as `### Report
 
 **No hook — the semantic-judgement family.** "Did the agent verify this claim?" is not regex-decidable, so this is discipline, not a mechanical guarantee — the same no-hook-for-semantic-judgement family as the changeset-hygiene and test-wiring-parity disciplines. The rule narrows the surface (cite-or-omit) and the lane boundary removes the most common occasion for a fabricated claim; an LLM can still confabulate, so this is honestly a soft fix. Motivation: `pm-architect` reported a tracked file as "untracked" — a confabulated git-state claim it never verified, made outside its remit; a fabricated repo-state claim is a trust tax on every report the orchestrator relays. **Source:** `doc/features/agent-reporting-discipline_plan.md`.
 
+### Protocol-level stack-idioms library: two-tier executable standard
+
+The library addresses the "same idioms rediscovered per project" problem: common, recurring per-stack patterns should live at the protocol level so each new project starts from a curated seed.
+
+- **Two-tier standard:** Tier 1 = Semgrep rules (YAML, pattern-detectable idioms, machine-executable per-diff); Tier 2 = shareable linter-config references (metric-threshold idioms such as max line count, complexity — the `ai-minimums-linter-wiring` mapping). Prose-only entries are not added to the library; they stay in `docs/stack-notes.md`.
+- **Library home:** `doc/_templates/stack-idioms/<stack>.md` — one Markdown file per language/framework with fenced YAML blocks for Semgrep rules and prose for linter-config references. Placed in `doc/_templates/` (the template machinery home); load-on-demand via the Read tool, never @-imported (the @-import-is-eager lesson from `doc/stack-notes.md` § "Claude Code context-loading model" — `@`-imports expand at session start regardless of size).
+- **Entry schema:** `idiom → edge case covered → deviation = bug → Semgrep rule YAML → linter encoding reference → source URL → contributed-by`. The `message` field is the load-bearing prose; the fenced YAML block is the machine-executable rule. One fact, one owner.
+- **Seed-then-augment → contribute-up:** `pm-stack-researcher` reads the library before researching new idioms (seed), annotates first-occurrence entries with `[first occurrence — not yet promoted to library]`, and emits "Contribute-up candidate" recommendations for patterns recurring across ≥2 projects. The orchestrator (on PM approval) writes to the library; the researcher never does.
+- **Recurrence gate ≥2 projects:** prevents accumulating one-off project specifics. First occurrence stays in the downstream project's `docs/stack-notes.md`.
+- **Initial seed:** `doc/_templates/stack-idioms/python.md` — three seam-completeness entries (exception-crosses-module-boundary, dict-subscript-vs-get, pin-lower-version-bound) — validates the schema end-to-end. These are the idioms the seam-completeness review pass (#226) will reference.
+- **Why Semgrep, not prose:** the "idiom deviation = bug" thesis (backlog § "Idiom-as-pre-solved-edge-case") — an idiom pre-solves an edge case; deviation leaves it uncovered; Semgrep rules make this deterministic and diff-runnable, offloading the idiom-consistency class from AI reviewer to tooling (the deterministic-vs-AI boundary, backlog #211).
+
+**Source:** `doc/features/stack-idioms-library_plan.md`, `.ai-pm/research/stack-idioms-library_research.md`, commit `e87f851`.
+
 ---
 
 ## Architectural constraints
