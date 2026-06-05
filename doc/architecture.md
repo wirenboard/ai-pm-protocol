@@ -99,6 +99,8 @@ Four orthogonal optimizations applied together:
 
 **Source:** `doc/features/optimize-without-losing-rigor_plan.md`; commits d09ac14, e441949, d563b02, 310695d.
 
+**Currency note (2026-06-05):** Point 4's audit-scope decision was a silent auto-decide-and-announce. It now splits on **who initiated** the audit. A **PM-initiated** project-analysis request ("анализ проекта" / "review the project" by intent, no scope named) surfaces an **upfront `AskUserQuestion` scope menu** — Quick (`diff`, protocol-compliance only) vs Full (whole project + the code-quality review sweep) — with the threshold logic (first audit / >60 days / >15 feature commits) as the menu's **recommended default** the PM sees and can override; for Full the review-sweep **depth** choice is folded in. An explicit scope in the PM's words skips the menu (Full still surfaces depth). A **system-initiated** audit (the retrospective nudge / orchestrator-decided) keeps its **announce-and-proceed** behavior in both authority modes. A "no double-prompt" guard ensures the post-`diff` "run a full audit now?" offer fires only when a Quick/`diff` audit actually ran. PM-facing flow refinement, not a structural change. **Source:** `doc/features/audit-scope-menu_plan.md`.
+
 ---
 
 ### Realignment around best-in-class built-in skills/tools
