@@ -13,6 +13,29 @@
 
 ---
 
+## [2.32.0] — 2026-06-05
+
+Ships **periodic-codebase-review** — two structure-only refinements to how whole-codebase review is engaged: **review-engine-selection** unblocks the `code-review-orchestrator` skill in the routing hook and gives the review typology a single-source engine-selection rule (per-diff Pass-2 stays built-in; the whole-codebase sweep prefers the orchestrator when available, with built-in fallback and a `WB_REVIEW_ORCHESTRATOR=off` override); and **audit-scope-menu** turns a PM-initiated analysis request into one upfront `AskUserQuestion` scope menu (Quick `diff` / Full) instead of an auto-decision, while keeping the threshold logic as the recommended default and preserving system-initiated announce-and-proceed. Both reference their canonical rules **by name** (no double-encoding), both are structure-only with no prose-policing, and the change is additive and fully back-compatible — **no migration**.
+
+### Added
+
+- **Single-source engine-selection rule for the review typology** (`workflow/review-typology.md`) — states once that per-diff Pass-2 stays built-in `/code-review` and the whole-codebase sweep prefers `code-review-orchestrator` when available (built-in fallback; `WB_REVIEW_ORCHESTRATOR=off` forces built-in). Referenced by name from `.claude/commands/pm-audit.md`, `workflow/enforcement.md`, and the architecture record.
+- **`### Review-engine selection` decision record** (`doc/architecture.md`) — records the engine-selection decision and that it supersedes `deny-review-orchestrator` (v2.25.1), prior history intact.
+- **Upfront scope menu on a PM-initiated analysis request** (`.claude/commands/pm-audit.md` `## Scope decision`) — a PM-initiated request with no scope named now shows one `AskUserQuestion` menu (Quick `diff` / Full = whole project + quality sweep) before running, with the 60-day / 15-commit / first-audit judgement preserved as the pre-selected recommended default; explicit scope skips the menu (explicit Full still surfaces sweep depth); the menu shows in both authority modes; system-initiated stays announce-and-proceed.
+
+### Changed
+
+- **`code-review-orchestrator` unblocked in the routing hook** (`.claude/settings.json`) — the orchestrator deny arm and the `WB_ALLOW_REVIEW_ORCHESTRATOR=1` escape guard are removed; the skill now falls through to the let-through. The 7 `wb-*` role-duplicator denies are byte-identical to before (verified).
+- **`pm-audit` `## Technical quality` selects the engine by reference** (`.claude/commands/pm-audit.md`) — the sweep names the engine via the `### Review typology` rule rather than re-encoding it; the `## Scope decision` rename propagated into the first-run-precedence cross-ref (no dangling `Auto-scope`).
+- **`workflow/enforcement.md` orchestrator note** — one line clarifying the orchestrator is off the deny-list and the named deny set is exactly the 7 role-duplicators.
+
+### Notes
+
+- Plan-check: Pass-1 **approve** for both features (single-source / no-double-encoding verified); code-review (Pass-2): **zero findings** on both, security-relevant hook change reviewed accordingly; verdicts approve (`.ai-pm/reviews/review-engine-selection_review.md`, `.ai-pm/reviews/audit-scope-menu_review.md` — both stamped `## Code review: 2026-06-05 — passed`).
+- `tests/hooks.sh` **73/73** (net -1 from deleting the obsolete `WB_ALLOW_REVIEW_ORCHESTRATOR` flag-escape case; new let-through + role-deny-still-fires cases added). Both features are **structure-only / no-prose-policing**; the prose halves are verified editorially per the documented markdown-prose boundary. Back-compat: additive only, **no migration**.
+
+---
+
 ## [2.31.0] — 2026-06-05
 
 Ships **orchestrator-read-discipline** — closes the orchestrator-side Read-discipline gap left by `workflow-progressive-disclosure`: the decision-authority kernel moves into the always-on `WORKFLOW.md` core (decision-critical rule **present in context, authoritative over recall** — not another please-read instruction) + the template repo dogfoods its own pipeline via a root `CLAUDE.md` that `@`-imports the thin core + the boundary criterion is recorded. A **structural fix**, not a discipline note. Single-source preserved (the kernel has one home, declarations deleted from `workflow/decision-authority.md`); the `### Decision authority` heading is unmoved so all by-name references resolve. Additive, fully back-compatible, **no migration**.
