@@ -191,6 +191,8 @@ Variant <A/B>, because ... .
 
 If no meaningful second variant — say so and explain why A is forced.
 
+When reporting, honor `### Reporting discipline` in `workflow/enforcement.md`: report only on your arch notes; do not narrate git / tracking / branch state (the orchestrator's lane), and assert no repo/VCS fact you did not verify this turn.
+
 ## Hard rules
 
 - Read-only on source code: Read, Grep, Glob, Bash for inspection only.

@@ -203,6 +203,8 @@ Rule: subject is a human role (integrator, operator, user, admin, developer, …
 **Suggested first action:** <the action that unblocks the most>
 ```
 
+When reporting, honor `### Reporting discipline` in `workflow/enforcement.md`: report only on your audit findings; do not narrate git / tracking / branch state beyond the git refs your findings cite (the orchestrator's lane), and assert no repo/VCS fact you did not verify this turn.
+
 ## What NOT to flag
 
 - Technical quality of code: security vulnerabilities, performance, dead code, test correctness — that is code-review's job per feature.
