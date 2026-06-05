@@ -358,7 +358,7 @@ Real top-level paths in this repo (cross-checked against `ls` and `git ls-tree -
 | `workflow/` | On-demand orchestration topic files (15) — the decomposed `WORKFLOW.md` bulk (`roster`, `enforcement`, `pipeline`, `mandatory-matrix`, `project-kind`, `decision-authority`, `review-typology`, `security-surfaces`, `foundational-questions`, `state`, `incident`, `protocol-gap`, `maintenance`, `pm-comms`, `examples`). Each is read just-in-time via the Read tool, not `@`-imported. One single-source rule-home per file. |
 | `MIGRATIONS.md` | Canonical migration catalogue — pending-migration detection conditions + per-version migration procedures for moving a project between protocol template versions. Sibling to `WORKFLOW.md`; referenced by bare filename from `pm-plan`, `pm-audit`, `pm-auditor`, `pm-plan-checker`, and the `pm-bootstrap.md` pointer. |
 | `CHANGELOG.md` | Release log in Keep-a-Changelog 1.1.0 format; top `## [<VERSION>]` entry drives `auto-tag.yml`. |
-| `LICENSE` | AGPL v3. |
+| `LICENSE` | MIT. |
 | `.gitignore` | Excludes `.reviews/`, `.claude/worktrees/`, local-only files. |
 | `.claude/agents/` | Eight persona files (`pm-architect`, `pm-auditor`, `pm-codebase-reader`, `pm-coder`, `pm-pr-prep`, `pm-plan-checker`, `pm-product-advocate`, `pm-stack-researcher`). |
 | `.claude/commands/` | Five slash-command procedures (`pm-audit`, `pm-bootstrap`, `pm-fixup`, `pm-plan`, `pm-research`). |
