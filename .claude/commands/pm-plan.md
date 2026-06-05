@@ -157,6 +157,21 @@ When it fires, surface *"what are this feature's states, the transitions between
 
 Record a transition / trigger / debounce the orchestrator cannot determine without real system knowledge as `[?]` for the PM to confirm — **never invent an edge** (the same "never invent to fill" discipline `pm-architect` applies to the Behavioral contract; never reverse-engineer the model from code). Like the NFR system-budget guard: once the `## State model` section captures the machine (a non-`N/A` / `[?]` table), stay **silent** on the already-modeled states and fire only for a feature that introduces a *new* state / transition / trigger not yet in the section. There is no hard gate this slice: the prompt degrades silently if the trigger is misjudged, and the home makes a recorded model recoverable at the next refresh.
 
+## README-currency check (conditional, judgment-triggered)
+
+Before drafting the plan, judge whether this feature touches a **README-bearing surface** — something the project `README.md` carries as a thin front door. The check fires only when that judgement holds — silent otherwise. The trigger is a **concrete list**, re-judged each plan from the feature description:
+
+- **install / packaging** — how the project is installed, packaged, or deployed (a new install command, a changed package name, a deb / Docker / submodule delivery change);
+- **quick-start** — the run / first-use commands the README's quick-start block shows;
+- **the architecture one-liner** — the README's one-paragraph "what tech stack and why" pointer (a stack change that makes it stale);
+- **a doc pointer** — a `docs/` target the README links to is added, removed, or repathed (e.g. the `docs/product.md` front-gate pointer or the `docs/architecture.md` pointer).
+
+The trigger is a **semantic judgement a regex cannot make** — so there is **no hook** and no mandatory plan section, exactly like the NFR/operational-limits, state-model, and product-readiness checks. If the feature touches **none** of those surfaces — the check is **silent**, no README mention required, like the NFR check on a non-scale feature and the Security-surface check on a non-security project (proportional, never blanket-mandatory on every feature).
+
+When it fires, the plan **must name `README.md` in its "Docs to update"** section. The refresh rides the **existing post-coding "Docs to update" handoff** already described above for `docs/architecture.md` — `pm-architect` (the README front-door owner) refreshes it on the **same** handoff, with the **same owner and trigger** as `docs/architecture.md` and `docs/threat-model.md`. Do **not** invent a new handoff and do **not** route the refresh to the coder (coder does not touch docs).
+
+`pm-architect` keeps the README in the **canonical front-door shape** when it refreshes — that shape is single-sourced and **referenced by name, never re-encoded here**: the **readme-template-canonical-shape** authoring rule (`pm-architect`'s Canonical-README-shape authoring rule) + the README front-gate discipline + the `doc/_templates/README.md.tmpl` top guidance comment. Do **not** restate the beat list as a parallel definition in the plan, and do **not** ask for a capability/value section — the README stays a thin front door whose "why" beat is the `docs/product.md` pointer, owned there. There is no hard gate this slice: the prompt degrades silently if the trigger is misjudged, and the home (`pm-architect` on the next refresh) makes a stale README recoverable.
+
 ## Planning conversation
 
 Ask clarifying questions as needed — grounded in what you read. Typical questions:

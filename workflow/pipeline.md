@@ -38,7 +38,7 @@ A bootstrap variant of this gate runs once at `/pm-bootstrap` (tier `bootstrap`)
 
 **Step 4 — Coder implements.** Works on a feature branch, commits atomically as it goes, runs pipeline, never touches existing tests.
 
-If the plan's **Docs to update** section is non-empty — before starting the review loop, spawn the owning agent with a focused prompt: `pm-architect` for `docs/architecture.md` **or `docs/user-journeys.md`** changes (pm-architect owns both). This satisfies DoD item 8 before pm-plan-checker runs.
+If the plan's **Docs to update** section is non-empty — before starting the review loop, spawn the owning agent with a focused prompt: `pm-architect` for `docs/architecture.md`, `docs/user-journeys.md`, `docs/threat-model.md`, **or `README.md`** changes (pm-architect owns all of these; `README.md` rides this same handoff when the `/pm-plan` README-currency check named it). This satisfies DoD item 8 before pm-plan-checker runs.
 
 After coder (and any doc agents) finish, I tell you:
 - What the feature now does (user perspective, no code)
