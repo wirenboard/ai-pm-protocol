@@ -13,6 +13,18 @@
 
 ---
 
+## [2.36.0] — 2026-06-05
+
+Relicenses the template from **AGPL-3.0 → MIT** (`Copyright (c) 2026 Alexander Degtyarev`). The `LICENSE` file now carries the standard MIT text; the `README.md` `## Лицензия` line is rewritten to describe MIT accurately (permissive — free including commercial use, no copyleft, modifications need not be returned), dropping the former AGPL copyleft claim; the `doc/architecture.md` module-map `LICENSE` cell reads `MIT.`. A repo-wide sweep confirms no AGPL/Affero reference remains; the downstream `README.md.tmpl` keeps its neutral `<license>` placeholder. Downstream projects pick up the new license on the next `git submodule update --remote`. No code or structural change — **no migration**.
+
+### Changed
+
+- **`LICENSE`** — full GNU AGPL v3 text replaced with the canonical MIT License (`Copyright (c) 2026 Alexander Degtyarev`).
+- **`README.md`** (`## Лицензия`) — rewritten for MIT: free use including commercial, no copyleft, modifications may stay closed (the prior "модификации возвращаются в open source" copyleft claim removed as false under MIT).
+- **`doc/architecture.md`** — module-map `LICENSE` row cell `AGPL v3.` → `MIT.`.
+
+---
+
 ## [2.35.0] — 2026-06-05
 
 Ships **diagnostic-flow-discipline** — three additions to the "doesn't work in production" debugging flow (`workflow/incident.md`) that keep diagnosis honest and bounded without changing what the protocol is allowed to touch. **Passive-observation carve-out:** read-only inspection (logs, status, metrics, a read of running state) is explicitly distinguished from a state-changing probe, so the Blast-radius preflight applies where it matters and doesn't tax harmless looking. **Bisect:** when a regression's introduction point is unknown, narrow it by halving the suspect range instead of guessing, before forming a fix hypothesis. **Anti-thrash tripwire + mid-debug stack-research:** after repeated failed fix attempts on the same symptom, stop trying variations and escalate — either to stack-research (consult the actual stack/library behaviour mid-debug) or back to the PM — rather than thrashing. Safety is unchanged: the existing Blast-radius preflight, the remote-system boundary, and the probe rules all stay exactly as they were — this only sharpens *how* diagnosis proceeds inside those guardrails. Additive and back-compatible — **no migration**.
