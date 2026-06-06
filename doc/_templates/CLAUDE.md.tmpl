@@ -58,6 +58,13 @@ Stack linter:
 <lint command — e.g., "npm run lint" / "golangci-lint run" / "pylint src/">
 ```
 
+Comment restraint:
+- Comment WHY-when-non-obvious only. Do NOT comment WHAT — well-named code says that.
+- Rationale lives in the plan / arch / contract / test, not inline.
+- No inline rule-ID citations (`# SC1`, `# AC6`, etc.) — rule IDs belong in the plan/test; inline citations drift.
+- No docstrings on trivial or `_private` functions.
+- Do NOT wire docstring-presence linters (pydocstyle / ruff `D` / pylint missing-docstring / interrogate / darglint) — they enforce presence, which is the opposite direction of comment restraint and amplifies over-documentation.
+
 ---
 
 ## Pipeline
