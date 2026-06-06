@@ -69,6 +69,8 @@ After writing, return a short structured summary — this drives the caller's ne
 
 The caller uses **New validators** to extend the Pipeline section in `CLAUDE.md`. The caller uses **Open questions** to decide whether a human-led review is needed.
 
+When reporting, honor `### Reporting discipline` in `workflow/enforcement.md`: report only on your stack-notes findings; do not narrate git / tracking / branch state (the orchestrator's lane), and assert no repo/VCS fact you did not verify this turn.
+
 ## Hard rules
 
 - **Never navigate above the project root.** No parent directories, no sibling repositories.

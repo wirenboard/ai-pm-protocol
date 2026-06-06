@@ -66,3 +66,10 @@ git checkout main && git pull          # back to main, ready for next branch
 ```
 
 Never reuse a branch across multiple PRs. Never commit "resolve merge conflicts" — if conflicts appear, the branch is stale; cut a fresh one from main.
+
+### Reporting discipline
+
+Git is the orchestrator's domain (the boundary above). That domain comes with two reporting rules every agent's report must hold to — a fabricated repo-state claim in an agent report is a trust tax on every report the orchestrator relays.
+
+- **Verify-or-stay-silent.** Any agent claim about repository / VCS state — tracked vs untracked, committed, current branch, file presence, "byte-identical to main", test counts / pass counts — must be backed by a command the agent **actually ran this turn** (cite it), or **not stated at all**. Narrated-from-memory repo claims are forbidden. This affirms the good habit several agents already follow: `pm-coder` cites real `tests/hooks.sh` counts, `pm-plan-checker` re-runs the suite, `pm-pr-prep` runs `git` before reporting state.
+- **Lane discipline.** Doc and review agents author their artifact and report on **that**; they do **not** narrate git / tracking / branch / commit state — that is the orchestrator's domain (this section's boundary). A tracking observation irrelevant to the agent's own task → stay silent rather than volunteer it.

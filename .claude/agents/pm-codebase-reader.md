@@ -121,6 +121,8 @@ After writing all files, output a summary block — this is returned to the call
 
 The "Judgment calls" list feeds the "What we're not sure about" section in the PM brief.
 
+When reporting, honor `### Reporting discipline` in `workflow/enforcement.md`: report only on the docs you wrote; do not narrate git / tracking / branch state (the orchestrator's lane), and assert no repo/VCS fact you did not verify this turn.
+
 ## Hard rules
 
 - **Never navigate above the project root** (`git rev-parse --show-toplevel`). No parent directory reads, no sibling repository searches.
