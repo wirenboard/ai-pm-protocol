@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); FILE=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); [ -z \"$FILE\" ] && exit 0; CONTENT=$(echo \"$INPUT\" | jq -r '.tool_input.content // empty'); STRIPPED=$(printf '%s' \"$CONTENT\" | tr -d ' \\t\\n\\r'); [ -n \"$STRIPPED\" ] && exit 0; [ ! -s \"$FILE\" ] && exit 0; echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Empty/whitespace-only Write over an existing non-empty file would zero authored content (truncation guard, mirrors the code-scalpel SC6 invariant: write rejects empty content). This is never a legitimate need -- a genuine truncate should use a different tool, and additions should use Edit. Regression guard for the 2026-06-06 doc-loss incident.\"}}'",
+            "command": "INPUT=$(cat); FILE=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); [ -z \"$FILE\" ] && exit 0; CONTENT=$(echo \"$INPUT\" | jq -r '.tool_input.content // empty'); STRIPPED=$(printf '%s' \"$CONTENT\" | tr -d ' \\t\\n\\r\\f\\v'); [ -n \"$STRIPPED\" ] && exit 0; [ ! -s \"$FILE\" ] && exit 0; echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Empty/whitespace-only Write over an existing non-empty file would zero authored content (truncation guard, mirrors the code-scalpel SC6 invariant: write rejects empty content). This is never a legitimate need -- a genuine truncate should use a different tool, and additions should use Edit. Regression guard for the 2026-06-06 doc-loss incident.\"}}'",
             "statusMessage": "Checking destructive Write..."
           }
         ]

@@ -448,6 +448,8 @@ run_case "write: whitespace-only content over existing non-empty file -> deny" \
     "deny" "$WRITE_HOOK" "$(mk_input_write "$ROOT/README.md" "
 
 ")"
+run_case "write: form-feed-only content over existing non-empty file -> deny  # regression for Pass-2 form-feed finding" \
+    "deny" "$WRITE_HOOK" "$(mk_input_write "$ROOT/README.md" "$(printf '\f')")"
 
 # Negative: legitimate writes pass.
 run_case "write: non-empty content over existing file -> pass" \
