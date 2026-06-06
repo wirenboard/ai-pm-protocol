@@ -424,6 +424,10 @@ Two new Semgrep library entries added to `doc/_templates/stack-idioms/python.md`
 
 **Source:** `doc/features/comment-restraint_plan.md`; `.ai-pm/backlog.md` § "Comment-restraint + documentation-minimalism" (2026-06-05); branch commit `5a12db4`.
 
+### State-archive home: state current.md committed on feature branch before pm-pr-prep
+
+State-archive home: the `.ai-pm/state/current.md` archive is committed on the feature branch as the final step before `pm-pr-prep`, so it merges with the feature it describes. Eliminates the protocol gap where the post-ship archive had no rule-compliant commit surface (committing to `main` would violate 'never commit to main'; carrying untracked onto the next branch is git-clean-losable). **Sources:** `workflow/pipeline.md` Step 6 (procedural step) + `workflow/state.md` § 'How state is kept' (conceptual description). Authored by `pm-architect` post-coding per `doc/features/state-archive-home_plan.md` § 'Docs to update'.
+
 ---
 
 ## Architectural constraints

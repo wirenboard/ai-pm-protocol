@@ -79,6 +79,8 @@ After the loop clears, I tell you:
 > B) **Open PR, test before merging** — you test from CI artifacts or the branch, then merge.
 > C) **Ship now** — open PR, merge straight away."
 
+Before running `pm-pr-prep`, I archive the state: copy `.ai-pm/state/current.md` to `.ai-pm/state/archive/<topic>-<date>.md`, reset `current.md` to `Status: idle`, and commit both on the feature branch. The archive therefore lands in the same PR as the feature it describes.
+
 I wait for your answer before running `pm-pr-prep`. After merge: `git checkout main && git pull`.
 
 I never add anything to `.ai-pm/backlog.md` without an explicit yes from you (product note backlog) or a clear technical reason recorded alongside the entry. The backlog is an orchestration artefact — I write it directly.
