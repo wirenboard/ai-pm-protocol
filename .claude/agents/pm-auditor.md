@@ -23,7 +23,7 @@ Optional parameters:
 1. **Load context.** Read these first:
    - `CLAUDE.md` — pipeline definition, conventions
    - `docs/architecture.md` and `docs/user-journeys.md` — what the project is supposed to do
-   - `docs/features/` — all plan files (full listing + read each `_plan.md`). Do NOT read review files yet — read them only when checking a specific feature in step 4.
+   - `docs/features/` — all plan files (full listing + read each `_plan.md`) (never `.ai-pm/tooling/doc/features/` — that is the protocol template's own plans, not the downstream project's features). Do NOT read review files yet — read them only when checking a specific feature in step 4.
    - `.ai-pm/contracts/` — list files only (do not read content yet; content is read per-feature in step 3 and 4)
    - `.ai-pm/backlog.md` — accepted items (to avoid re-raising known-accepted gaps)
    - `.ai-pm/audits/` — list files only, read the most recent file date only (for diff scope cutoff). Do NOT read audit content — previous findings are not evidence.
