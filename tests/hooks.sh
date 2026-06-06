@@ -166,6 +166,11 @@ mk_input_skill() {
     jq -nc --arg s "$1" '{tool_name:"Skill", tool_input:{skill:$s}}'
 }
 
+# Helper to build a PreToolUse-shaped JSON for a Write (file_path + content).
+mk_input_write() {
+    jq -nc --arg p "$1" --arg c "$2" '{tool_name:"Write", tool_input:{file_path:$p, content:$c}}'
+}
+
 # Helper to build a UserPromptSubmit-shaped JSON with a prompt field.
 mk_input_prompt() {
     jq -nc --arg p "$1" '{prompt:$p}'
@@ -202,6 +207,7 @@ SSH_MUT_HOOK='.hooks.PreToolUse[1].hooks[2].command'
 GIT_PUSH_HOOK='.hooks.PreToolUse[1].hooks[3].command'
 GIT_COMMIT_HOOK='.hooks.PreToolUse[1].hooks[4].command'
 AGENT_GUARD_HOOK='.hooks.PreToolUse[2].hooks[0].command'
+WRITE_HOOK='.hooks.PreToolUse[3].hooks[0].command'
 UPS_HOOK='.hooks.UserPromptSubmit[0].hooks[0].command'
 
 # ----------------------------------------------------------------------
@@ -422,6 +428,36 @@ run_case "routing: code-review-orchestrator is NOT denied (let-through)" \
 # The role-duplicator deny still fires after the orchestrator arm is gone.
 run_case "routing: wb-development:coder still denied" \
     "deny" "$AGENT_GUARD_HOOK" "$(mk_input_agent wb-development:coder)"
+
+# ----------------------------------------------------------------------
+# destructive-Write guard — denies an empty/whitespace-only Write over an
+# existing non-empty file (truncation guard; mirrors the code-scalpel SC6
+# invariant). Allows real-content overwrites, writes to non-existent paths,
+# and empty writes over already-empty files (nothing to lose).
+# Source: https://code.claude.com/docs/en/hooks
+# ----------------------------------------------------------------------
+
+# A fresh empty temp file under $ROOT for the already-empty pass case.
+WRITE_EMPTY_TMP="$ROOT/.hooks-test-empty-$$"
+touch "$WRITE_EMPTY_TMP"
+
+# Positive: zeroing an existing authored file via Write is denied.
+run_case "write: empty content over existing non-empty file -> deny  # regression for incident 2026-06-06" \
+    "deny" "$WRITE_HOOK" "$(mk_input_write "$ROOT/README.md" "")"
+run_case "write: whitespace-only content over existing non-empty file -> deny" \
+    "deny" "$WRITE_HOOK" "$(mk_input_write "$ROOT/README.md" "
+
+")"
+
+# Negative: legitimate writes pass.
+run_case "write: non-empty content over existing file -> pass" \
+    "pass" "$WRITE_HOOK" "$(mk_input_write "$ROOT/README.md" "real new content")"
+run_case "write: empty content to non-existent path -> pass" \
+    "pass" "$WRITE_HOOK" "$(mk_input_write "$ROOT/.hooks-test-absent-$$" "")"
+run_case "write: empty content over an already-empty file -> pass" \
+    "pass" "$WRITE_HOOK" "$(mk_input_write "$WRITE_EMPTY_TMP" "")"
+
+rm -f "$WRITE_EMPTY_TMP"
 
 # ----------------------------------------------------------------------
 # UserPromptSubmit route reminder — injects the protocol route on
