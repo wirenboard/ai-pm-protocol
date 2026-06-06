@@ -79,6 +79,7 @@ For every entry in the plan's "Stack expectations touched":
 - [ ] Expected artifacts exist for this feature: plan, this review, and a Product Contract if the feature is user-facing
 - [ ] **(user-facing only)** Product-readiness gate resolved — advocate artifact present and every foundational gap answered or descoped
 - [ ] **(documentation-kind only)** Validation gate resolved — `## Validation` in this review file stamped `<date> — <method> — passed` (method `dry-run` | `sign-off`); structural lint (markdownlint) green
+- [ ] Plans with failure-inventory scenarios (external I/O failure modes listed as scenarios) have at least one corresponding negative-space test per failure path. A plan that lists failure paths but has no failure-path tests fails this check.
 
 If any item is unchecked → DoD fails → `request-changes`.
 
@@ -126,6 +127,7 @@ Write to `.ai-pm/reviews/<topic>_review.md`:
 - [x/[ ]] Expected artifacts exist (plan, this review, contract if user-facing)
 - [x/[ ]/n/a] Product-readiness gate resolved (user-facing only — advocate artifact `clean` or `gaps: N` with N resolutions)
 - [x/[ ]/n/a] Validation gate resolved (documentation-kind only — `## Validation` stamped `<date> — <method> — passed`; markdownlint green)
+- [x/[ ]/n/a] Failure-inventory negative-space tests present (n/a when plan has no failure-inventory scenarios — applies only when the plan lists failure paths as explicit scenarios)
 
 **DoD: pass | fail**
 

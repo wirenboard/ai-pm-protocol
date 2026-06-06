@@ -191,6 +191,14 @@ When it fires, the plan **must name `README.md` in its "Docs to update"** sectio
 
 `pm-architect` keeps the README in the **canonical front-door shape** when it refreshes — that shape is single-sourced and **referenced by name, never re-encoded here**: the **readme-template-canonical-shape** authoring rule (`pm-architect`'s Canonical-README-shape authoring rule) + the README front-gate discipline + the `doc/_templates/README.md.tmpl` top guidance comment. Do **not** restate the beat list as a parallel definition in the plan, and do **not** ask for a capability/value section — the README stays a thin front door whose "why" beat is the `docs/product.md` pointer, owned there. There is no hard gate this slice: the prompt degrades silently if the trigger is misjudged, and the home (`pm-architect` on the next refresh) makes a stale README recoverable.
 
+## Failure-inventory check (conditional, judgment-triggered)
+
+Before drafting the plan, judge whether this feature's implementation touches **external I/O** — network calls, third-party APIs, file system reads/writes, or shared data stores. The check fires only when that judgement holds — silent otherwise. The trigger is a **semantic judgement a regex cannot make** — so there is **no hook** and no mandatory plan section, exactly like the NFR/operational-limits, state-model, and README-currency checks. If the feature touches **none** of those surfaces — the check is **silent**, no failure-inventory required (proportional, never blanket-mandatory).
+
+When it fires, the planner explicitly enumerates — for each affected public function — invalid inputs, external failure modes (network error, partial data, missing key, timeout, corrupt response), and the return/raise behavior in each case. These failure paths appear as **explicit scenarios in the plan's `## Scenarios` section** alongside the happy-path scenarios. They are **not** a separate `## Failure inventory` section — placing them in Scenarios ensures the coder treats them as first-class requirements, not optional documentation. The coder covers them as reliably as any other stated scenario.
+
+**Autonomous branch.** When the effective authority is `autonomous`, the planner auto-includes failure-inventory scenarios when the trigger fires and **announces**: "Failure-inventory check fired (feature touches external I/O) — failure paths added to Scenarios. Interrupt to override."
+
 ## Planning conversation
 
 Ask clarifying questions as needed — grounded in what you read. Typical questions:
@@ -282,6 +290,8 @@ Source: <where this plan came from>   # the plan's provenance line (the plan-lev
 **Decision-authority override rule (optional).** The plan may carry an optional `Decision authority: autonomous | interactive` line just under the topic heading. It is the **per-feature override** that runs *this one feature* under a different authority than the project value — most often `autonomous` on an otherwise-interactive project for a feature whose canon coverage is rich. Omit the line unless overriding. Step 3.5 reads it as the **top of the effective-authority resolution order** (plan line → `.ai-pm/decision-authority.md` `mode:` → `interactive`). **Read `workflow/decision-authority.md` before applying any of the autonomous branches below** (it carries the derivability test, the procedural-gate progression, and the escalate-regardless cap the branches execute). See `### Decision authority` in `workflow/decision-authority.md` for the enum, the default, and the resolution order — do not re-encode them here.
 
 **Test plan rule:** each new test must have a one-sentence behavior description — what scenario it verifies (given/when/then style). Not just a file name. This is what reviewer and coder use to write and verify the test.
+
+**Failure-path test rule:** when the plan includes failure-inventory scenarios (external I/O failure modes, invalid inputs, missing keys, partial data), each such failure path requires at least one corresponding negative-space test in the test plan — a test that exercises the failure condition, not the invariant path. `pm-plan-checker` verifies the pairing: a plan with failure-inventory scenarios must have failure-path tests for each one.
 
 **Interaction scenario test rule:** each interaction scenario requires a test that sets up the concurrent or post-condition state and verifies the expected outcome. Omitting a test for an interaction scenario is the same protocol violation as omitting a test for a regular scenario. `pm-plan-checker` will block on missing interaction scenario tests.
 
