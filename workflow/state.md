@@ -8,6 +8,8 @@ This means: if you pause for a week, come back, and re-enter Claude Code, my fir
 
 When a task finishes, the file is archived to `.ai-pm/state/archive/<topic>-<date>.md` and reset to `Status: idle`; the archive is committed on the feature branch as the final step before `pm-pr-prep`, so it merges with the feature it describes.
 
+The durable hand-off between agents is what is on disk — `state/current.md`, the review file, any scratch note — not what is in agent memory. `continue-the-same-agent` is an optional optimization: it saves tokens when available and breaks nothing when it is not. The protocol must never depend on it.
+
 For user-facing features, a parallel set of files lives in `.ai-pm/contracts/` — one Product Contract per feature, with what must work, what must not break, and the acceptance checks that prove it. Coder reads the contract before implementing; reviewer verifies the diff against it; auditor flags missing or stale contracts. The contract is how we keep a feature recognizable across many small changes — without it, the product slowly drifts.
 
 PM never edits state or contracts. PM reads them when curious.

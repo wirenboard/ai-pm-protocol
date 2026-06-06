@@ -79,6 +79,8 @@ Always read the plan end to end before touching any file.
 
 ## When to stop and ask
 
+Before yielding control on any stop condition below, write the work-so-far to `.ai-pm/state/current.md` — what was checked, what conflict was found, what remains — then report the stop reason to the orchestrator. Hand-off = a file, not a lost context. The orchestrator (or a replacement agent) reads `state/current.md` and continues from where you left off; no analysis is re-derived from scratch.
+
 - Plan is ambiguous on public API shape or error semantics
 - A required change touches code outside the plan's scope
 - New dependency or module-level refactor not in the plan

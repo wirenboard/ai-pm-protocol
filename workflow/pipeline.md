@@ -36,7 +36,7 @@ The interactive branch above is **byte-unchanged** (and is every existing projec
 
 A bootstrap variant of this gate runs once at `/pm-bootstrap` (tier `bootstrap`) — see that command. This is soft enforcement, backstopped (not by-discipline): `pm-plan-checker`'s DoD blocks a user-facing feature whose advocate gate is unresolved, and `pm-auditor` blocks a merged user-facing feature with no resolved advocate artifact. There is **no hook** — "is this user-facing / is the product under-specified" is a semantic judgement a regex cannot make.
 
-**Step 4 — Coder implements.** Works on a feature branch, commits atomically as it goes, runs pipeline, never touches existing tests.
+**Step 4 — Coder implements.** Works on a feature branch, commits atomically as it goes, runs pipeline, never touches existing tests. When a coder stops at a blocking question and the same agent cannot be continued, the orchestrator spawns a fresh agent with a brief that explicitly quotes the stopped agent's conclusions from `state/current.md` — this is the protocol's designed fault-tolerance path, not an emergency workaround.
 
 If the plan's **Docs to update** section is non-empty — before starting the review loop, spawn the owning agent with a focused prompt: `pm-architect` for `docs/architecture.md`, `docs/user-journeys.md`, `docs/threat-model.md`, **or `README.md`** changes (pm-architect owns all of these; `README.md` rides this same handoff when the `/pm-plan` README-currency check named it). This satisfies DoD item 8 before pm-plan-checker runs.
 
