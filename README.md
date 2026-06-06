@@ -19,7 +19,7 @@
 По умолчанию — **через symlinks** (агенты, команды и `settings.json` ссылаются в submodule, поэтому обновляются автоматически вместе с ним):
 
 ```bash
-git submodule add git@github.com:aadegtyarev/ai-pm-protocol.git .ai-pm/tooling
+git submodule add git@github.com:wirenboard/ai-pm-protocol.git .ai-pm/tooling
 mkdir -p .claude
 ln -s ../.ai-pm/tooling/.claude/agents .claude/agents
 ln -s ../.ai-pm/tooling/.claude/commands .claude/commands
@@ -35,7 +35,7 @@ ln -s ../.ai-pm/tooling/.claude/settings.json .claude/settings.json
 В этом случае ставь **копированием вместо symlinks** — `.claude/*` становятся реальными файлами, которые читаются на любой ФС:
 
 ```bash
-git submodule add git@github.com:aadegtyarev/ai-pm-protocol.git .ai-pm/tooling
+git submodule add git@github.com:wirenboard/ai-pm-protocol.git .ai-pm/tooling
 mkdir -p .claude
 cp -R .ai-pm/tooling/.claude/agents   .claude/agents
 cp -R .ai-pm/tooling/.claude/commands .claude/commands
