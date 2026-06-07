@@ -48,12 +48,23 @@
 //   skill  -> output.args.name             (skill loaded by name; skill({name}))
 //   read   -> output.args.filePath         (per the docs .env example)
 //   write  -> output.args.filePath + .content
+//   bash   -> output.args.command          (the shell command string)
 //
-// SCOPE: CORE deny rules only. The "ask"-class guards (force-push, git commit
-// --no-verify, ssh content-edit, ssh mutating action) are NOT ported here:
-// tool.execute.before can only throw (hard deny) or allow — it has no "ask"
-// return — so those map to OpenCode's permission config, a later slice. This is
-// a documented divergence (see AGENTS.md). Do NOT force them into throws.
+// CORE DENY SET (this plugin now enforces the SAME clear-DENY guards as the
+// Claude settings.json adapter): (a) wb-* role-duplicator task spawn,
+// (b) wb-* role-duplicator skill load, (c) read outside the project root,
+// (d) empty/whitespace-only write over an existing non-empty file (truncation),
+// and (e) a `find` invocation whose first absolute-path argument resolves
+// OUTSIDE the project root (the bash find-boundary guard — ported from the
+// Claude settings.json Bash matcher's `find`-boundary `if` hook). With (e) the
+// OpenCode plugin reaches clear-DENY parity with Claude: role-duplicator +
+// read-boundary + truncating-write + find-boundary.
+//
+// SCOPE: CORE (clear-DENY) rules only. The "ask"-class guards (force-push, git
+// commit --no-verify, ssh content-edit, ssh mutating action) are NOT ported
+// here: tool.execute.before can only throw (hard deny) or allow — it has no
+// "ask" return — so those map to OpenCode's permission config, a later slice.
+// This is a documented divergence (see AGENTS.md). Do NOT force them into throws.
 //
 // SUBAGENT-EFFECTIVE: verified on OpenCode 1.16.2 (Spike B, 2026-06-07) — a
 // task-spawned subagent's tool call DOES fire and get denied by this hook (the
@@ -88,6 +99,25 @@ function isInsideRoot(root, resolved) {
   const rootResolved = path.resolve(root);
   if (resolved === rootResolved) return true;
   return resolved.startsWith(rootResolved + path.sep);
+}
+
+// Extract the first ABSOLUTE-path argument of a `find` invocation in a bash
+// command string, mirroring the Claude settings.json find-boundary guard's
+// intent (`grep -oP 'find +\K/[^ |;&"\x27]*' | head -1`): the Claude regex takes
+// the first `/`-leading token that immediately follows `find ` (one-or-more
+// spaces), stopping at a space/pipe/semicolon/ampersand/quote. So `find /etc -name x`
+// yields `/etc`; `find . -name x` and `find src -type f` yield null (the token
+// after `find` is relative — ALLOWED). A relative `find` (no leading-slash first
+// arg) is allowed. Returns the absolute path string, or null if the command is
+// not a `find` with an absolute first argument. Conservative and behavior-faithful
+// to the Claude guard: only the first token after `find` is considered.
+function findAbsolutePathArg(command) {
+  if (typeof command !== "string" || command.length === 0) return null;
+  // Match `find` (as a word) followed by 1+ spaces and a `/`-leading token,
+  // capturing the path up to the first space/pipe/semicolon/ampersand/quote —
+  // the same delimiter class the Claude grep -oP pattern stops at.
+  const m = command.match(/(?:^|[\s;&|(])find[ \t]+(\/[^\s|;&"']*)/);
+  return m ? m[1] : null;
 }
 
 // OpenCode plugin entry — the SINGLE named export. Per
@@ -164,6 +194,23 @@ export const AiPmEnforcement = async (ctx) => {
               ". A genuine truncate should use a different tool; additions should" +
               " use edit. Regression guard for the 2026-06-06 doc-loss incident."
           );
+        }
+        return;
+      }
+
+      // (e) bash -> deny a `find` whose first absolute-path argument resolves
+      //     OUTSIDE the project root (ports the Claude settings.json Bash
+      //     matcher's find-boundary guard; clear-DENY parity). A relative
+      //     `find` (find ., find src) carries no absolute first arg and is
+      //     allowed; every non-find bash command is allowed (this guard gates
+      //     only the find boundary — the "ask"-class bash guards stay deferred).
+      if (tool === "bash") {
+        const absPath = findAbsolutePathArg(args.command);
+        if (absPath !== null) {
+          const resolved = path.resolve(absPath);
+          if (!isInsideRoot(projectRoot, resolved)) {
+            throw new Error("find searches outside project root: " + absPath);
+          }
         }
         return;
       }

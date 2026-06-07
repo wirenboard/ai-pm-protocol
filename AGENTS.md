@@ -28,8 +28,12 @@
 > [#5894](https://github.com/anomalyco/opencode/issues/5894) **in our favor on
 > 1.16.2**. **Version-pinned caveat:** this is verified on **1.16.2** only —
 > #5894 is historically version-sensitive, so **re-verify on every OpenCode
-> upgrade**. The adapter is still **not fully certified**: the "ask"-class guards
-> are not yet ported (see the divergence below) and full cross-model review
+> upgrade**. The plugin now enforces the **same clear-DENY set as the Claude
+> adapter** — role-duplicator (`task`/`skill`), read-boundary, truncating-write,
+> and the `find`-boundary guard (a `find` whose first absolute-path argument
+> resolves outside the project root). The adapter is still **not fully
+> certified**: only the **"ask"-class** guards remain not-yet-ported (see the
+> divergence below — a permission-config follow-up) and full cross-model review
 > wiring is a later slice. Treat OpenCode as a preview harness, **never** as
 > fully-supported, until certification lands. "Preview" must never be read as
 > "certified".
@@ -173,9 +177,12 @@ return** — so these guards have **no faithful equivalent in this plugin** and 
 (it would block legitimate, PM-confirmed actions). They map instead to OpenCode's
 **permission** configuration (<https://opencode.ai/docs/permissions/>), a later
 slice. Until then, the "ask"-class guards are a **documented divergence**: the
-OpenCode adapter enforces the CORE clear-DENY guards (role-duplicator spawn/skill
-deny, read-outside-root, destructive truncating write) but **not** the "ask"-class
-ones. Do not read the CORE plugin as full parity with the Claude `settings.json`.
+OpenCode adapter enforces the **same clear-DENY guards as the Claude adapter**
+(role-duplicator spawn/skill deny, read-outside-root, destructive truncating
+write, and the `find`-outside-root boundary deny) but **not** the "ask"-class
+ones. The clear-DENY set is now at **parity**; only the "ask"-class guards
+remain a divergence (a permission-config follow-up). Do not read the CORE plugin
+as full parity with the Claude `settings.json` **for the "ask"-class guards**.
 
 ## What this adapter ships (preview scope)
 
@@ -192,8 +199,10 @@ ones. Do not read the CORE plugin as full parity with the Claude `settings.json`
   which **auto-loads** from `.opencode/plugin/` (no `opencode.json` registration
   needed — and an explicit `plugin` entry would double-register it, so it is
   deliberately absent). Its wb-* role deny-list is **single-sourced** from the
-  Claude `settings.json` (one authored copy, no drift). It enforces the CORE
-  clear-DENY guards only — see the "ask" divergence above.
+  Claude `settings.json` (one authored copy, no drift). It enforces the **same
+  clear-DENY guards as the Claude adapter** — role-duplicator (`task`/`skill`),
+  read-outside-root, truncating write, and the `find`-outside-root boundary —
+  only the "ask"-class guards remain not-yet-ported (see the divergence above).
 
 The cross-model **model pins** are intentionally **not** shipped in this preview
 — see upstream gap #17577.
