@@ -1,5 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "model": "__SESSION_MODEL__",
   "instructions": [
     ".ai-pm/tooling/WORKFLOW.md"
   ],

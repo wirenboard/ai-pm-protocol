@@ -13,6 +13,13 @@ each adapter file it
   * for harness-local agents (an OpenCode-only section — the protocol-owned
     review/research engines, where the OTHER harness has a native built-in),
     inlines a body AND frontmatter that BOTH live under the manifest dir,
+  * for OpenCode CONTROL agents (the cross-model review/audit layer named in the
+    manifest's `models.control_agents`), injects a single `model: <control>` line
+    into the generated frontmatter, and substitutes the session model into
+    opencode.json — the model choice is single-sourced in the manifest's `models`
+    block (OpenCode has no runtime per-task model override, PR #17577, so the
+    cross-model pin is static). The Claude manifest has no `models` block, so no
+    pin is injected and the Claude adapter stays byte-identical.
 
 then for the harness's capability artifacts (settings.json on Claude;
 opencode.json + AGENTS.md on OpenCode) copies the verbatim bytes from the
@@ -96,11 +103,45 @@ def read_bytes(path: pathlib.Path) -> bytes:
     return path.read_bytes()
 
 
+def inject_model_pin(fm: bytes, model: str) -> bytes:
+    """Inject a `model: <model>` line into an agent's frontmatter, immediately
+    after the opening `---` fence. Used for the cross-model CONTROL agents on
+    OpenCode: the model is single-sourced in the manifest's `models` block and
+    pinned here at build time (OpenCode has no runtime per-task model override —
+    PR #17577 closed-not-merged — so the cross-model review degrades to a static
+    frontmatter pin). Thin + deterministic: a single fixed-position insert, no
+    YAML parse/reserialize. The .fm files carry NO `model:` line, so the model id
+    lives in exactly one place (the manifest); changing it is edit-two-values +
+    regenerate, never a per-file edit."""
+    opener = b"---\n"
+    if not fm.startswith(opener):
+        raise ValueError(
+            "frontmatter does not start with a '---' fence — cannot inject the model pin"
+        )
+    pin = f"model: {model}\n".encode("utf-8")
+    return opener + pin + fm[len(opener):]
+
+
 def generate(harness: str, out_root: pathlib.Path) -> list:
     """Build the adapter for `harness` into `out_root`. Returns the list of
     written paths (relative to out_root), in deterministic order."""
     manifest = load_manifest(harness)
     written = []
+
+    # --- Cross-model pins (OpenCode): the model is single-sourced in the
+    #     manifest's `models` block. `control_model` is pinned into each CONTROL
+    #     agent's generated frontmatter (the review/audit layer runs a DIFFERENT
+    #     model than the session — an independent cross-model check); the session
+    #     model is injected into opencode.json (see the artifacts loop). The
+    #     PRODUCERS are NOT pinned — they inherit the session. OpenCode has no
+    #     runtime per-task model override (PR #17577 closed-not-merged), so the
+    #     pin is STATIC. Absent `models` (e.g. the Claude manifest) -> no pins,
+    #     so the Claude side stays byte-identical. ---
+    models = manifest.get("models") or {}
+    control_model = models.get("control")
+    control_agents = set(models.get("control_agents", []))
+    if control_agents and not control_model:
+        raise ValueError("manifest `models.control_agents` is set but `models.control` is missing")
 
     # --- Agents: frontmatter + body ---
     agents = manifest["agents"]
@@ -110,6 +151,8 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
     out_agents.mkdir(parents=True, exist_ok=True)
     for name in agents["names"]:
         fm = read_bytes(fm_dir / f"{name}{agents['frontmatter_suffix']}")
+        if name in control_agents:
+            fm = inject_model_pin(fm, control_model)
         body = read_bytes(body_dir / f"{name}{agents['body_suffix']}")
         out = out_agents / f"{name}{agents['output_suffix']}"
         out.write_bytes(fm + body)
@@ -136,6 +179,10 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
         out_local.mkdir(parents=True, exist_ok=True)
         for name in local_agents["names"]:
             fm = read_bytes(la_fm_dir / f"{name}{local_agents['frontmatter_suffix']}")
+            # A harness-local engine can also be a CONTROL agent (code-review is —
+            # it runs the cross-model independent check), so apply the same pin.
+            if name in control_agents:
+                fm = inject_model_pin(fm, control_model)
             body = read_bytes(la_body_dir / f"{name}{local_agents['body_suffix']}")
             out = out_local / f"{name}{local_agents['output_suffix']}"
             out.write_bytes(fm + body)
@@ -191,7 +238,29 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
             out_art = out_root / art["output_file"]
             rel = out_art.relative_to(out_root)
         out_art.parent.mkdir(parents=True, exist_ok=True)
-        out_art.write_bytes(read_bytes(src_art))
+        data = read_bytes(src_art)
+        # Single-source the OpenCode session model: the source opencode.json
+        # carries a `__SESSION_MODEL__` placeholder in its top-level `model` key,
+        # substituted here with models.session. The rationale (PROVISIONAL preview
+        # default) cannot live in opencode.json itself — OpenCode validates it as
+        # strict JSON and rejects unrecognized keys — so it stays in adapter.json's
+        # _comment. Deterministic: a single fixed substitution of a string literal.
+        placeholder = art.get("session_model_placeholder")
+        if placeholder:
+            session_model = models.get("session")
+            if not session_model:
+                raise ValueError(
+                    f"artifact {art['output_file']} declares a session_model_placeholder "
+                    "but the manifest has no `models.session`"
+                )
+            token = placeholder.encode("utf-8")
+            if token not in data:
+                raise ValueError(
+                    f"artifact source {art['source_file']} is missing the session model "
+                    f"placeholder {placeholder}"
+                )
+            data = data.replace(token, session_model.encode("utf-8"))
+        out_art.write_bytes(data)
         written.append(rel)
 
     return written

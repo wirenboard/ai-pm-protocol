@@ -15,8 +15,17 @@
     "`instructions` array in opencode.json (https://opencode.ai/docs/config/), the",
     "OpenCode analogue of the Claude @-import.",
     "",
-    "PREVIEW: the deny-list enforcement plugin and cross-model model pins are",
-    "intentionally NOT built here (later slices; the plugin is gated on Spike B).",
+    "PREVIEW: the cross-model setup below is a PROVISIONAL preview default.",
+    "OpenCode has no runtime per-task model override (PR #17577 closed-not-merged),",
+    "so the protocol's cross-model review degrades to STATIC frontmatter pins. The",
+    "`models` block is the SINGLE SOURCE for the model choice: the generator injects",
+    "models.session into opencode.json's top-level `model` (the session default) and",
+    "models.control into each control_agents agent's generated frontmatter as a",
+    "`model:` line. Changing the models later = edit the two values below +",
+    "regenerate; no per-file editing. The control agents run a DIFFERENT model than",
+    "the session for an independent cross-model check (independent blind spots).",
+    "DeepSeek is the only authenticated provider here, so v4-pro / v4-flash is a",
+    "PREVIEW default — downstream overrides for their own provider.",
     "",
     "Each section names the harness-neutral capability (see",
     "src/manifests/capabilities.json) it realizes, so the same neutral bodies are",
@@ -24,6 +33,28 @@
   ],
   "harness": "opencode",
   "output_root": ".opencode",
+  "models": {
+    "_comment": [
+      "SINGLE-SOURCE cross-model model choice (PROVISIONAL preview default, PM",
+      "2026-06-07 — DeepSeek is the only authenticated provider here). `session`",
+      "is the session/primary + producer-subagent model (producers INHERIT the",
+      "session — they are NOT pinned). `control` is pinned into each agent in",
+      "`control_agents` (the review/audit layer) so it runs a DIFFERENT model than",
+      "the session — an independent cross-model check. OpenCode has no runtime",
+      "per-task model override (PR #17577 closed-not-merged,",
+      "https://github.com/anomalyco/opencode/pull/17577), so the model is pinned",
+      "STATICALLY in frontmatter. Override these two values for a different",
+      "provider, then regenerate."
+    ],
+    "session": "deepseek/deepseek-v4-pro",
+    "control": "deepseek/deepseek-v4-flash",
+    "control_agents": [
+      "code-review",
+      "pm-plan-checker",
+      "pm-auditor",
+      "pm-product-advocate"
+    ]
+  },
   "agents": {
     "capability": "subagent-definition",
     "output_dir": "agent",
@@ -68,11 +99,13 @@
       "plugin's wb-* deny-list does NOT include them — they are ALLOWED engines, the",
       "same way code-review/deep-research are not gated on Claude.",
       "",
-      "Model: intentionally NO `model:` pin — they inherit the session/primary",
-      "model. True cross-model review (a DIFFERENT model than the session, for",
-      "independent blind spots) is a SEPARATE deferred item (needs a 2nd configured",
-      "model + a PM pin); these run same-model on OpenCode for now. See plan",
-      "scenario 6 + the no-built-in-review/research gap-handling decision."
+      "Model: NOT pinned in these .fm files — the model is single-sourced in the",
+      "top-level `models` block and injected by the generator. `code-review` is a",
+      "CONTROL agent (it appears in models.control_agents), so the generator pins it",
+      "to models.control (a DIFFERENT model than the session) for an independent",
+      "cross-model review. `deep-research` is NOT a control agent, so it inherits the",
+      "session model (no pin). See plan scenario 6 + the cross-model gap-handling",
+      "decision (PR #17577 unmerged -> static frontmatter pins)."
     ],
     "output_dir": "agent",
     "output_suffix": ".md",
@@ -133,7 +166,16 @@
       "capability": "always-on-core-import",
       "output_file": "opencode.json",
       "source_file": "opencode.json",
-      "assembly": "verbatim-copy"
+      "assembly": "verbatim-copy",
+      "_comment": [
+        "The source carries a `__SESSION_MODEL__` placeholder in its top-level",
+        "`model` key; the generator substitutes it with models.session (the single",
+        "source). This is the OpenCode session/primary default — a PROVISIONAL",
+        "preview default (rationale lives in this adapter.json's _comment; it cannot",
+        "go in opencode.json, which OpenCode validates as strict JSON with no",
+        "unrecognized keys)."
+      ],
+      "session_model_placeholder": "__SESSION_MODEL__"
     },
     {
       "capability": "route-reminder (always-on) + supported-harness declaration",
