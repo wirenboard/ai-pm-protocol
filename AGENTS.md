@@ -69,13 +69,33 @@ difference to record: on Claude the reminder is **change-intent-triggered**
 > prioritization) via the structured-question tool, not plain prose; simple
 > yes/no proceed-gates may stay prose.
 
-## The orchestrator seat — the PRIMARY agent runs the protocol
+## The orchestrator seat — the shipped `ai-pm` PRIMARY agent runs the protocol
 
-On OpenCode the protocol **orchestrator** is the **PRIMARY** agent (the default
-`build` primary). It is the seat that reads this `AGENTS.md` and the always-on
-core (`WORKFLOW.md`, loaded via the `instructions` array — see below), drives the
-Step 0–7 pipeline, and owns the three things subagents must not do:
+On OpenCode the protocol **orchestrator** is a **first-class shipped PRIMARY
+agent: `ai-pm`** (`.opencode/agent/ai-pm.md`) — **not** the default `build`
+primary. `build` is a do-it-all coder whose persona and `write`/`edit` tools
+dominate the layered protocol instructions, so it authors content itself instead
+of delegating; the protocol therefore ships its own orchestrator primary whose
+**identity is the orchestrator** (its body is the system prompt) and whose **tool
+grant makes content-authoring impossible** (`write`/`edit` denied — see below).
+This is discipline by construction, the structural mirror of how the Claude
+orchestrator is held by its system prompt.
 
+`ai-pm` is the seat that reads this `AGENTS.md` and the always-on core
+(`WORKFLOW.md`, loaded via the `instructions` array — see below), drives the
+Step 0–7 pipeline, **delegates** every content artifact to the owning `pm-*`
+subagent (code → `pm-coder`, architecture/docs → `pm-architect`, planning/checks →
+the matching `pm-*`) via `task`, and does only git operations + `.ai-pm`
+bookkeeping itself (via `bash`). It owns the three things subagents must not do,
+**plus** the no-author constraint:
+
+- **no `write` / no `edit`** — `ai-pm`'s frontmatter `tools` map sets
+  `write: false` and `edit: false`, so the orchestrator **structurally cannot**
+  author content artifacts (source, `docs/`, plans, contracts). Content authoring
+  routes to the `pm-*` agents by construction; the orchestrator's own writes
+  (`.ai-pm/state`, backlog, git) go through `bash`. Verified on OpenCode 1.16.2:
+  `ai-pm` resolves `edit` to `deny` and is granted no `write` tool, while `build`
+  has neither restriction.
 - **`question`** — surface PM decision-forks via the structured-question tool.
   This grant is given to the **primary only**: `.opencode/opencode.json` carries a
   top-level `permission: { question: "allow" }`, which the OpenCode loader resolves
@@ -85,9 +105,17 @@ Step 0–7 pipeline, and owns the three things subagents must not do:
   (last-match-wins). A subagent **returns findings to the orchestrator**; it never
   prompts the PM directly. Verified on OpenCode 1.16.2: the primary resolves
   `question` to `allow`, every `pm-*` subagent resolves it to `deny`.
-- **`task`** — spawn the `pm-*` subagents (the protocol roles). Covered by the
-  primary's default `"*": allow` permission; no extra configuration.
-- **`skill`** — run protocol skills. Also covered by the primary's `"*": allow`.
+- **`task`** — spawn the `pm-*` subagents (the protocol roles) and the
+  review/research engines. Granted in `ai-pm`'s `tools` map.
+- **`skill`** — run protocol skills. Granted in `ai-pm`'s `tools` map.
+
+**Running the orchestrator.** `ai-pm` is wired as the **default primary** via the
+top-level `default_agent: "ai-pm"` key in `.opencode/opencode.json`
+(<https://opencode.ai/docs/config/>), so a plain `opencode` (or
+`opencode run …`) in a downstream starts the orchestrator, **not** `build`. (To
+reach a built-in primary deliberately, `opencode run --agent build …`.) Verified
+on OpenCode 1.16.2: `opencode agent list` shows `ai-pm (primary)`, and the loader
+accepts the config (`opencode debug config --pure`, exit 0).
 
 The `pm-*` agents are **subagents**: the orchestrator spawns them with `task`, they
 do their scoped work (read, write their artifact, run tests) and return findings.

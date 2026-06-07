@@ -99,12 +99,23 @@
       "plugin's wb-* deny-list does NOT include them — they are ALLOWED engines, the",
       "same way code-review/deep-research are not gated on Claude.",
       "",
+      "ORCHESTRATOR (`ai-pm`): also harness-local — a `mode: primary` agent carrying",
+      "the orchestrator IDENTITY as its system prompt. On Claude the orchestrator IS",
+      "the main session (its system prompt is the project entry file), so no agent file",
+      "is generated there; on OpenCode the default `build` primary is a do-it-all coder",
+      "that authors content itself, so the adapter SHIPS a first-class orchestrator",
+      "primary whose tool grant DENIES write/edit (content authoring is impossible —",
+      "it must delegate to pm-coder/pm-architect). It is made the default primary via",
+      "the top-level `default_agent` key in opencode.json (below). See the",
+      "opencode-orchestrator-primary plan.",
+      "",
       "Model: NOT pinned in these .fm files — the model is single-sourced in the",
       "top-level `models` block and injected by the generator. `code-review` is a",
       "CONTROL agent (it appears in models.control_agents), so the generator pins it",
       "to models.control (a DIFFERENT model than the session) for an independent",
-      "cross-model review. `deep-research` is NOT a control agent, so it inherits the",
-      "session model (no pin). See plan scenario 6 + the cross-model gap-handling",
+      "cross-model review. `deep-research` and `ai-pm` are NOT control agents, so they",
+      "inherit the session model (no pin) — the orchestrator drives/plans on the strong",
+      "PRO session model. See plan scenario 6 + the cross-model gap-handling",
       "decision (PR #17577 unmerged -> static frontmatter pins)."
     ],
     "output_dir": "agent",
@@ -115,6 +126,7 @@
     "frontmatter_suffix": ".fm",
     "assembly": "frontmatter + body",
     "names": [
+      "ai-pm",
       "code-review",
       "deep-research"
     ]
