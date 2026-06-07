@@ -185,6 +185,14 @@ static pins** on OpenCode.
   frontmatter, so it runs a **different model than the session**: an independent
   cross-model check that does not share the session model's blind spots.
 
+The same control/review agents also run at **low reasoning effort**
+(`variant: minimal`, injected into their frontmatter from `models.control_variant`
+in the same single source) — a per-operation effort tier that trims reasoning-token
+**count** on these routine/check operations. The **producers** + the orchestrator
+(`ai-pm`) carry **no `variant`**: planning, architecture, coding, and orchestration
+keep their full default reasoning. Model is the **cost** lever; variant is the
+reasoning-**count** lever — two orthogonal dials on the same `models` block.
+
 > **PROVISIONAL preview default — change it for your provider.** DeepSeek is the
 > **only authenticated provider** in this preview environment, so
 > `deepseek/deepseek-v4-pro` (session) / `deepseek/deepseek-v4-flash` (control)

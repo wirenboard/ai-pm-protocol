@@ -15,11 +15,14 @@ each adapter file it
     inlines a body AND frontmatter that BOTH live under the manifest dir,
   * for OpenCode CONTROL agents (the cross-model review/audit layer named in the
     manifest's `models.control_agents`), injects a single `model: <control>` line
-    into the generated frontmatter, and substitutes the session model into
-    opencode.json — the model choice is single-sourced in the manifest's `models`
-    block (OpenCode has no runtime per-task model override, PR #17577, so the
-    cross-model pin is static). The Claude manifest has no `models` block, so no
-    pin is injected and the Claude adapter stays byte-identical.
+    AND — when `models.control_variant` is set — a `variant: <control_variant>`
+    line (the per-operation reasoning-effort tier: control/review ops run at low
+    effort) into the generated frontmatter, and substitutes the session model into
+    opencode.json — the model + variant choices are single-sourced in the
+    manifest's `models` block (OpenCode has no runtime per-task model override,
+    PR #17577, so the cross-model pin is static; the variant is likewise a static
+    per-agent frontmatter key). The Claude manifest has no `models` block, so no
+    pin and no variant are injected and the Claude adapter stays byte-identical.
 
 then for the harness's capability artifacts (settings.json on Claude;
 opencode.json + AGENTS.md on OpenCode) copies the verbatim bytes from the
@@ -188,6 +191,29 @@ def inject_model_pin(fm: bytes, model: str) -> bytes:
     return opener + pin + fm[len(opener):]
 
 
+def inject_variant(fm: bytes, variant: str) -> bytes:
+    """Inject a `variant: <variant>` line into an agent's frontmatter, immediately
+    after the opening `---` fence — the per-operation reasoning-effort tier for
+    the cross-model CONTROL agents on OpenCode. The variant is single-sourced in
+    the manifest's `models.control_variant` and injected here at build time: the
+    control/review layer runs at LOW reasoning effort (a routine/check tier) to
+    cut reasoning-token COUNT, while producers + the orchestrator keep their
+    default reasoning (they get no variant line). Mirrors inject_model_pin: a
+    single fixed-position insert, no YAML parse/reserialize, so the output stays
+    deterministic. Applied AFTER inject_model_pin, so a control agent's fence is
+    followed by `model:` then `variant:`. Verified 1.16.2: a per-agent `variant:`
+    is accepted; a top-level `variant` in opencode.json is not (so the tier is
+    per agent). The .fm files carry NO `variant:` line — the tier lives in exactly
+    one place (the manifest); changing it is edit-one-value + regenerate."""
+    opener = b"---\n"
+    if not fm.startswith(opener):
+        raise ValueError(
+            "frontmatter does not start with a '---' fence — cannot inject the variant"
+        )
+    line = f"variant: {variant}\n".encode("utf-8")
+    return opener + line + fm[len(opener):]
+
+
 def generate(harness: str, out_root: pathlib.Path) -> list:
     """Build the adapter for `harness` into `out_root`. Returns the list of
     written paths (relative to out_root), in deterministic order."""
@@ -208,6 +234,11 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
     control_agents = set(models.get("control_agents", []))
     if control_agents and not control_model:
         raise ValueError("manifest `models.control_agents` is set but `models.control` is missing")
+    # `control_variant` (per-operation effort tiering): the per-agent reasoning
+    # effort `variant` injected into the SAME control agents, single-sourced here.
+    # Optional — absent (e.g. the Claude manifest) -> no variant injected, so the
+    # Claude side stays byte-identical; producers + the orchestrator never get one.
+    control_variant = models.get("control_variant")
 
     # --- Agents: frontmatter + body ---
     agents = manifest["agents"]
@@ -219,6 +250,8 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
         fm = read_bytes(fm_dir / f"{name}{agents['frontmatter_suffix']}")
         if name in control_agents:
             fm = inject_model_pin(fm, control_model)
+            if control_variant:
+                fm = inject_variant(fm, control_variant)
         body = read_bytes(body_dir / f"{name}{agents['body_suffix']}")
         out = out_agents / f"{name}{agents['output_suffix']}"
         out.write_bytes(fm + body)
@@ -246,9 +279,12 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
         for name in local_agents["names"]:
             fm = read_bytes(la_fm_dir / f"{name}{local_agents['frontmatter_suffix']}")
             # A harness-local engine can also be a CONTROL agent (code-review is —
-            # it runs the cross-model independent check), so apply the same pin.
+            # it runs the cross-model independent check), so apply the same pin AND
+            # the same per-operation effort variant.
             if name in control_agents:
                 fm = inject_model_pin(fm, control_model)
+                if control_variant:
+                    fm = inject_variant(fm, control_variant)
             body = read_bytes(la_body_dir / f"{name}{local_agents['body_suffix']}")
             out = out_local / f"{name}{local_agents['output_suffix']}"
             out.write_bytes(fm + body)

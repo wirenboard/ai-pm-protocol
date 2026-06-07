@@ -1,4 +1,5 @@
 ---
+variant: minimal
 model: deepseek/deepseek-v4-flash
 # OpenCode-ONLY engine subagent — code review. Shape per
 # https://opencode.ai/docs/agents/: `description` + `mode: subagent` + a `tools`
