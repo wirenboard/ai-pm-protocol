@@ -774,6 +774,117 @@ fi
 # form check above (driven off the manifest) is the deterministic, CI-safe guard.
 
 # ----------------------------------------------------------------------
+# oc-effort-tier  (per-operation effort tiering)
+# Per-operation reasoning-effort tiering: the cross-model CONTROL/review agents
+# run at LOW reasoning effort to cut reasoning-token COUNT, while producers + the
+# orchestrator keep their DEFAULT reasoning. The tier is single-sourced in the
+# manifest's `models.control_variant` and injected into each control agent's
+# frontmatter as a `variant:` line (mirroring the slice-9 `model:` pin). Assert,
+# DRIVEN OFF the manifest so the test stays correct if the value changes:
+#   (a) each CONTROL agent (.opencode/agent/<name>.md for name in
+#       models.control_agents) carries `variant: <models.control_variant>`;
+#   (b) every PRODUCER agent (generated agent NOT in control_agents — incl. the
+#       orchestrator ai-pm + the non-control engine deep-research) carries NO
+#       `variant:` line (default reasoning).
+# When the manifest omits control_variant, the case is a no-op pass (no variant
+# expected anywhere). Source: per-operation-effort-tiering plan scenario 1;
+# verified 1.16.2 — a per-agent `variant:` is accepted, a top-level one is not.
+# ----------------------------------------------------------------------
+if [ ! -f "$MANIFEST" ]; then
+    fail "oc-effort-tier: opencode adapter manifest missing at $MANIFEST"
+elif python3 - "$MANIFEST" "$OC" <<'PY'
+import json, re, sys, pathlib
+manifest_path, oc = sys.argv[1], pathlib.Path(sys.argv[2])
+man = json.load(open(manifest_path))
+models = man.get("models") or {}
+control_variant = models.get("control_variant")
+control_agents = set(models.get("control_agents", []))
+errs = []
+
+def frontmatter(path):
+    lines = path.read_text(encoding="utf-8").split("\n")
+    if not lines or lines[0] != "---":
+        return None
+    out = []
+    for l in lines[1:]:
+        if l == "---":
+            return out
+        out.append(l)
+    return None
+
+def variant_line(fm):
+    # a top-level `variant: <value>` line in frontmatter (not indented/comment)
+    for l in fm:
+        m = re.match(r'^variant:\s*(\S+)\s*$', l)
+        if m:
+            return m.group(1)
+    return None
+
+agent_files = sorted((oc / "agent").glob("*.md"))
+if not agent_files:
+    errs.append("no .opencode/agent/*.md files found")
+seen_controls = set()
+for f in agent_files:
+    name = f.stem
+    fm = frontmatter(f)
+    if fm is None:
+        errs.append(f"{name}: could not parse frontmatter"); continue
+    v = variant_line(fm)
+    if name in control_agents:
+        seen_controls.add(name)
+        if control_variant:
+            if v != control_variant:
+                errs.append(f"CONTROL agent {name}: variant is {v!r}, want {control_variant!r}")
+        else:
+            if v is not None:
+                errs.append(f"CONTROL agent {name}: has variant {v!r} but manifest sets no control_variant")
+    else:
+        # producers + orchestrator + non-control engines: NO variant (default reasoning)
+        if v is not None:
+            errs.append(f"PRODUCER agent {name}: has a variant {v!r} (producers/orchestrator keep default reasoning — no variant)")
+
+if control_variant:
+    missing_controls = control_agents - seen_controls
+    for nm in sorted(missing_controls):
+        errs.append(f"control agent {nm} named in manifest has no generated .opencode/agent/{nm}.md")
+
+if errs:
+    for e in errs: print(e)
+    sys.exit(1)
+sys.exit(0)
+PY
+then
+    pass "oc-effort-tier: each control agent (driven off manifest models.control_variant) carries variant: <models.control_variant>, and every producer/orchestrator agent has NO variant line (default reasoning) — per-operation effort tiering"
+else
+    fail "oc-effort-tier: the per-operation effort variants do not match the manifest models.control_variant (see above)"
+fi
+
+# Runtime (GUARDED-SKIP): the real OpenCode loader must ACCEPT the generated
+# config WITH the per-agent variants present (opencode debug config --pure exit 0
+# — would catch a rejected variant value or a top-level-variant mistake). SKIPS
+# cleanly when `opencode` is absent. `no_proxy` includes registry.npmjs.org so the
+# runtime's npm-install does not hang on the proxy; --pure validates the parse
+# without external plugin load; generous timeout + an empty-output guard on a
+# precondition probe that the variants actually reached the scratch build.
+if command -v opencode >/dev/null 2>&1; then
+    VDIR=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
+    python3 "$GEN" --harness opencode --out "$VDIR/.opencode" >/dev/null 2>&1
+    # Precondition: the scratch build must actually carry the injected variants
+    # (empty-output guard — a silent no-inject would make the loader check vacuous).
+    variant_hits=$(grep -rl '^variant:' "$VDIR/.opencode/agent" 2>/dev/null)
+    if [ -z "$variant_hits" ]; then
+        fail "oc-effort-tier (runtime): no variant lines in the scratch build — nothing to validate (inject failed?)"
+    elif (cd "$VDIR" && no_proxy="${no_proxy:-},registry.npmjs.org" NO_PROXY="${NO_PROXY:-},registry.npmjs.org" timeout 120 opencode debug config --pure </dev/null >/dev/null 2>&1); then
+        pass "oc-effort-tier (runtime): the real OpenCode loader accepts the generated config WITH the per-agent variant: lines present (opencode debug config --pure, exit 0)"
+    else
+        fail "oc-effort-tier (runtime): the real OpenCode loader REJECTED the config with the per-agent variant: lines (opencode debug config --pure exited non-zero — a variant value or placement is invalid)"
+    fi
+    rm -rf "$VDIR"
+else
+    echo "SKIP: oc-effort-tier (runtime) — opencode not on PATH (CI without opencode does not fail; the form check above still runs)"
+fi
+
+# ----------------------------------------------------------------------
 # oc-orchestrator-primary-present  (slice 12)
 # The protocol ships a first-class ORCHESTRATOR as a PRIMARY agent (not the
 # default `build`): .opencode/agent/ai-pm.md must exist with `mode: primary` in
