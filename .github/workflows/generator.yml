@@ -1,0 +1,48 @@
+name: Generator integrity
+
+# Runs tests/generator.sh on PRs and pushes that change the single-source
+# generator surface: the neutral source (src/), the generator (gen/), the
+# generated Claude adapter (.claude/), the frozen golden reference (.golden/),
+# or the test / workflow that gate them. Anything else does not need this
+# validation.
+#
+# The two integrity guards (opencode-harness-support stage (a) slice 1):
+#   * generated-claude-adapter-byte-equivalent — regenerated .claude/ is
+#     byte-identical to the frozen golden reference.
+#   * single-source-diff-clean — regenerating leaves the adapter tree
+#     diff-clean (no generated file diverges from a fresh build).
+#
+# Stack rules respected (citations in doc/stack-notes.md):
+#   * Path filter on push/pull_request — `on.<event>.paths`:
+#     https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+#   * actions/checkout@v4 — fetch-depth: 1 sufficient (no history walking);
+#     the diff-clean check reads the committed working tree, not history.
+#     Source: https://github.com/actions/checkout
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'gen/**'
+      - '.claude/**'
+      - '.golden/**'
+      - 'tests/generator.sh'
+      - '.github/workflows/generator.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'gen/**'
+      - '.claude/**'
+      - '.golden/**'
+      - 'tests/generator.sh'
+      - '.github/workflows/generator.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run generator integrity tests
+        run: bash tests/generator.sh
