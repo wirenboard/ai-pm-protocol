@@ -8,9 +8,9 @@
 
 - **Recent:**
   - `s16` (merged): per-agent reasoning `variant: minimal` on control agents (token-COUNT lever), single-sourced in the `models` block.
-  - **NOW:** (A) plan the **leaner-always-on / targeted-reading** feature — the dominant token-COUNT lever (INPUT ≈84% of tokens); **MUST not break protocol correctness** → /pm-plan + arch note. (B) this state.md leaned (done).
+  - **`s17` (built, on sub-branch `feature/opencode-harness-support--s17-context-leanness`, NOT merged):** context-leanness targeted-reading discipline. Single-home rule `### Targeted reading of large structured docs` in `workflow/pipeline.md` (index-first → section → widen); TARGETED bodies (pm-coder/pm-stack-researcher/pm-product-advocate/pm-plan-checker) reference it; FULL carve-outs (pm-architect owner, pm-auditor whole-doc reviewer) read full. Adapters regenerated + Claude golden re-frozen (form A). New `tests/targeted-reading.sh` (7/7). All suites green; neutral-prose clean. Out of scope (untouched): stack-notes targeting, body/always-on shrinking, batching.
 
-- **Next:** plan+build (A) carefully → then input-leanness rollout. **Extraction stays PM-gated** ("after your real tests" + new-repo target + history-preservation choice).
+- **Next:** review `s17` (pm-plan-checker → code-review) → merge-back to integration branch. **Extraction stays PM-gated** ("after your real tests" + new-repo target + history-preservation choice).
 
 - **Done — OpenCode effort (one-liners; detail in plans/commits):** s1 Claude generator+byte-equiv (golden) · s2 OpenCode adapter · s3 CORE enforcement plugin+config fix · s4 orchestrator question-seat · s5 plugin ESM-load fix · s7 review/research engines (code-review, deep-research) · s8 find-boundary deny · s9 cross-model pins (session v4-pro / control v4-flash) · s10 neutralize bodies + vocabulary/reference-table + golden re-freeze · s11 neutralize WORKFLOW+workflow/*.md · s12 ai-pm primary orchestrator · s13 orchestrator write path-scope · s14 orchestrator pipeline-order persona (decision-authority-aware) · s16 effort variant tier. Spikes A (submodule→symlink) + B (#5894 subagent containment WORKS on 1.16.2) execution-verified. Docs/contracts: doc/{product,product-map,user-journeys}.md + 10 Product Contracts (LLM/agent = the user) + architecture decision records + stack-notes execution-verified flips.
 

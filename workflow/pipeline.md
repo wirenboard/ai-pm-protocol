@@ -12,7 +12,22 @@ When you describe a feature or bug:
 - If on an existing feature branch → ask the user: "We're on branch `<branch>`. Continue here (add this feature to the same PR) or cut a fresh branch?"
 - If working tree is dirty → ask the user to commit or stash first.
 
-**Step 1 — I read the project context first.** `docs/architecture.md`, `docs/user-journeys.md`, `docs/features/`. No questions until I understand what already exists.
+**Step 1 — I read the project context first.** `docs/architecture.md`, `docs/user-journeys.md`, `docs/features/`. No questions until I understand what already exists. I read large structured docs **targeted** per `### Targeted reading of large structured docs` below, not whole.
+
+### Targeted reading of large structured docs
+
+This is the single home for the targeted-reading discipline; every consumer references it by name and never restates it. Motivation is input-token **count** — a large doc reloaded whole on every spawn dominates the input — and the discipline lowers the default without lowering the ceiling, so correctness is never traded away.
+
+**Applies to** a large, reliably structured doc — chiefly `docs/architecture.md`, whose `### ` decision records and `## ` section headers **are** its index. **Does not apply to** small or single-purpose docs — a single feature plan, a `.ai-pm/contracts/<feature>.md`, `docs/product.md`, an individual `workflow/*.md` topic, the agent's own body. Those are already lean; read them as-is, no index-first ceremony.
+
+When a **consumer** agent needs a fact from a doc the discipline applies to, it follows this sequence:
+
+1. **Index first.** Grep the doc's header list (`### ` / `## ` headers) before choosing what to read. The consumer always sees *what exists* — it can never fail to consider a section it can see in the index.
+2. **Locate.** Match the task to the relevant section(s) by header title.
+3. **Read just that.** Grep to find the header line number, then offset-read that section.
+4. **Widen when the task needs it.** Read more sections, or the whole file, whenever the task genuinely needs broad context — a cross-cutting check, an ambiguity the section doesn't resolve, any doubt about sufficiency. Widening is always permitted and is never a defect; the default is targeted, the ceiling is full.
+
+**Carve-outs — these roles read FULL, never targeted:** the doc **owner** authoring its own canon (`pm-architect` on `docs/architecture.md`) and a **whole-document consistency reviewer** (`pm-auditor`, whose dimensions are inherently cross-cutting). Their correctness depends on the whole document; targeting would blind them.
 
 **Step 2 — We plan together.** I ask clarifying questions grounded in the architecture and existing scenarios. Then I show you the plan in plain language — scenarios, what changes for users, what must not break — and ask: does this match what you want?
 

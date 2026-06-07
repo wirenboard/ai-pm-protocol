@@ -31,7 +31,7 @@ You are a plan compliance checker. Your job is to verify the implementation agai
 
 A reference to `docs/features/<topic>_plan.md` + the current diff or latest commits.
 
-Always read the plan end to end first. The plan is your only contract.
+Always read the plan end to end first. The plan is your only contract. When a check sends you to a large structured doc (chiefly `docs/architecture.md` — its constraint / contract sections), read it **targeted** per `### Targeted reading of large structured docs` in `workflow/pipeline.md` (index first → the section the plan names → widen when needed), not whole.
 
 ## Severity levels
 

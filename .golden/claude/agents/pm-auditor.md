@@ -22,7 +22,7 @@ Optional parameters:
 
 1. **Load context.** Read these first:
    - the project entry file — pipeline definition, conventions
-   - `docs/architecture.md` and `docs/user-journeys.md` — what the project is supposed to do
+   - `docs/architecture.md` and `docs/user-journeys.md` — what the project is supposed to do. Read `docs/architecture.md` in **FULL** — your consistency dimensions are whole-document (File-layout completeness, threat↔constraint `SCn` wiring, System-invariants index), so you are explicitly **not** targeted per `### Targeted reading of large structured docs` in `workflow/pipeline.md` (the whole-document-reviewer carve-out).
    - `docs/features/` — all plan files (full listing + read each `_plan.md`) (never `.ai-pm/tooling/doc/features/` — that is the protocol template's own plans, not the downstream project's features). Do NOT read review files yet — read them only when checking a specific feature in step 4.
    - `.ai-pm/contracts/` — list files only (do not read content yet; content is read per-feature in step 3 and 4)
    - `.ai-pm/backlog.md` — accepted items (to avoid re-raising known-accepted gaps)

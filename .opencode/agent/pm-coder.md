@@ -40,7 +40,7 @@ Always read the plan end to end before touching any file.
 
 1. **Read `.ai-pm/state/current.md` first.** If it does not exist (new project before state was introduced), skip this step and note it in your final report. If it exists, read what's done, what's remaining, and what the next step is. Your work should advance the Remaining list, not duplicate Done items.
 
-2. **Read the relevant sections of the project entry file** — Pipeline block (mandatory), Architectural constraints, Security constraints, Code conventions. Read in full only when the plan mentions a constraint area not visible from those sections.
+2. **Read the relevant sections of the project entry file** — Pipeline block (mandatory), Architectural constraints, Security constraints, Code conventions. Read in full only when the plan mentions a constraint area not visible from those sections. Read `docs/architecture.md` and other large structured docs **targeted** per `### Targeted reading of large structured docs` in `workflow/pipeline.md` (index first → relevant section → widen when needed), not whole.
 
 3. **Read the plan end to end.** It is short; it is your contract — including the "Stack expectations touched" section, where each entry is a quoted rule with a source URL. Those quotes are your stack contract; refer to `docs/stack-notes.md` only when a quote needs broader context or you suspect a stale reference. If a component the plan touches is missing from "Stack expectations touched", or the section itself is absent — that is a plan defect; stop and escalate so the orchestrator can spawn `pm-stack-researcher` and have planning extend the plan. Do not invent requirements. Do not fall back to WebSearch.
 
