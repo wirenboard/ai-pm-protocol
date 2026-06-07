@@ -43,6 +43,18 @@
 #     extended to the second adapter (no OpenCode golden: .opencode/ is new, so
 #     its guard is determinism + diff-clean, not byte-equivalence-to-a-baseline).
 #
+#   oc-orchestrator-can-question  (slice 4)
+#     opencode.json grants `question` to the PRIMARY orchestrator via a top-level
+#     permission { question: allow } (form), and — guarded-skip when `opencode`
+#     absent — the real loader resolves question=allow for the primary and
+#     question=deny for every pm-* subagent (grant scoped to the orchestrator).
+#     Source: https://opencode.ai/docs/permissions/
+#
+#   oc-agent-toolgrant-parity  (slice 4)
+#     each .opencode/agent/*.md `tools` map COVERS its Claude counterpart's grant
+#     (no skill/webfetch/websearch/edit dropped in slice 2's 1:1 translation).
+#     Source: https://opencode.ai/docs/tools/
+#
 # Exit code: 0 if every case matches expectation, 1 if any case fails.
 #
 # Usage: bash tests/opencode.sh
@@ -344,6 +356,155 @@ if diff -r "$S1" "$S2" >/dev/null 2>&1; then
     pass "generator-deterministic (opencode): two independent OpenCode builds are byte-identical"
 else
     fail "generator-deterministic (opencode): two OpenCode builds differ"
+fi
+
+# ----------------------------------------------------------------------
+# oc-orchestrator-can-question
+# The protocol surfaces PM decision-forks via the structured-question tool, and
+# on OpenCode that seat is the PRIMARY (orchestrator) agent — NOT the subagents
+# (subagents return findings to the orchestrator; they never prompt the PM
+# directly). OpenCode's default primary denies `question`, so the adapter's
+# .opencode/opencode.json must carry a top-level `permission: { question: allow }`
+# to grant it to the primary.
+#
+#   (a) FORM: opencode.json has a top-level `permission` object whose `question`
+#       value is "allow".
+#   (b) RUNTIME (guarded-skip when `opencode` absent): the real loader accepts the
+#       config (debug config --pure exit 0) AND `opencode agent list` resolves the
+#       primary `build` agent's `question` permission to `allow` while every `pm-*`
+#       subagent resolves it to `deny` (the grant is scoped to the orchestrator).
+# Source: https://opencode.ai/docs/permissions/
+# ----------------------------------------------------------------------
+OCJSON="$OC/opencode.json"
+if [ -f "$OCJSON" ] && python3 - "$OCJSON" <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+perm = cfg.get("permission") or {}
+sys.exit(0 if perm.get("question") == "allow" else 1)
+PY
+then
+    pass "oc-orchestrator-can-question (form): opencode.json grants question to the primary via a top-level permission { question: allow } (https://opencode.ai/docs/permissions/)"
+else
+    fail "oc-orchestrator-can-question (form): opencode.json has no top-level permission { question: allow } — the orchestrator cannot surface forks to the PM"
+fi
+
+# Runtime: the real loader must resolve question=allow for the PRIMARY and
+# question=deny for every pm-* subagent. GUARDED-SKIP when opencode is absent.
+if command -v opencode >/dev/null 2>&1; then
+    QDIR=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
+    AL="$QDIR/agentlist.txt"
+    # `opencode agent list` reads the project's .opencode/ (this repo's, live tree).
+    if timeout 300 opencode agent list </dev/null >"$AL" 2>/dev/null; then
+        if python3 - "$AL" <<'PY'
+import sys, re, json
+txt = open(sys.argv[1]).read()
+lines = txt.split("\n"); name=None; body=[]; blocks=[]
+for ln in lines:
+    m = re.match(r'^(\S[^(]*?) \((primary|subagent|all)\)\s*$', ln)
+    if m:
+        if name is not None: blocks.append((name, "\n".join(body)))
+        name = m.group(1).strip(); body = []
+    else:
+        body.append(ln)
+if name is not None: blocks.append((name, "\n".join(body)))
+def question_effective(raw):
+    try: arr = json.loads(raw.strip())
+    except Exception: return None
+    q = [r["action"] for r in arr if r.get("permission") == "question"]
+    return q[-1] if q else None  # last-match-wins
+build_eff = None; bad = []
+for nm, raw in blocks:
+    eff = question_effective(raw)
+    if nm == "build": build_eff = eff
+    if nm.startswith("pm-") and eff != "deny":
+        bad.append((nm, eff))
+ok = (build_eff == "allow") and not bad
+if not ok:
+    print("build question=%r (want allow); pm-* not denying: %r" % (build_eff, bad))
+sys.exit(0 if ok else 1)
+PY
+        then
+            pass "oc-orchestrator-can-question (runtime): the real loader resolves question=allow for the PRIMARY (build) and question=deny for every pm-* subagent (grant scoped to the orchestrator)"
+        else
+            fail "oc-orchestrator-can-question (runtime): the loader did not scope question correctly (primary must be allow; every pm-* subagent must be deny)"
+        fi
+    else
+        fail "oc-orchestrator-can-question (runtime): \`opencode agent list\` exited non-zero"
+    fi
+    rm -rf "$QDIR"
+else
+    echo "SKIP: oc-orchestrator-can-question (runtime) — opencode not on PATH (CI without opencode does not fail; the form check above still runs)"
+fi
+
+# ----------------------------------------------------------------------
+# oc-agent-toolgrant-parity
+# Each .opencode/agent/*.md `tools` object map must COVER (be a superset of) its
+# Claude counterpart's grant — so slice-2's 1:1 translation dropped no capability
+# (skill/webfetch/websearch/edit). The mapping below is the Claude grant per agent
+# translated to OpenCode tool names (https://opencode.ai/docs/tools/):
+#   Read->read Grep->grep Glob->glob Bash->bash Write->write Edit->edit
+#   Skill->skill WebFetch->webfetch WebSearch->websearch
+# This is a STATIC parity check (OpenCode grant ⊇ mapped Claude grant); it does not
+# forbid an extra OpenCode tool, only a MISSING one.
+# ----------------------------------------------------------------------
+python3 - "$OC" <<'PY'
+import sys, re, pathlib
+oc = pathlib.Path(sys.argv[1])
+# Claude grants (the parity reference), mapped to OpenCode tool names.
+expected = {
+    "pm-architect":        {"read","grep","glob","bash","write"},
+    "pm-auditor":          {"read","grep","glob","bash","write"},
+    "pm-codebase-reader":  {"read","grep","glob","bash","write"},
+    "pm-plan-checker":     {"read","grep","glob","bash","write"},
+    "pm-product-advocate": {"read","grep","glob","bash","write"},
+    "pm-coder":            {"read","edit","write","bash","grep","glob","skill"},
+    "pm-pr-prep":          {"bash","read","edit"},
+    "pm-stack-researcher": {"webfetch","websearch","read","grep","glob","bash","write","skill"},
+}
+def granted_tools(path):
+    text = path.read_text(encoding="utf-8")
+    lines = text.split("\n")
+    # frontmatter = first ---...--- block
+    fences = [i for i,l in enumerate(lines) if l == "---"]
+    if len(fences) < 2: return None
+    fm = lines[fences[0]+1:fences[1]]
+    # find the tools: object key and collect indented `name: true` entries until
+    # dedent (a non-indented frontmatter key).
+    out = set(); in_tools = False
+    for l in fm:
+        if re.match(r'^tools:\s*$', l):
+            in_tools = True; continue
+        if in_tools:
+            m = re.match(r'^\s+([a-z_]+):\s+true\s*$', l)
+            if m:
+                out.add(m.group(1)); continue
+            # a `false` entry or a comment line inside the block: keep scanning
+            if re.match(r'^\s+([a-z_]+):\s+false\s*$', l) or re.match(r'^\s+#', l):
+                continue
+            # a non-indented key ends the tools block
+            if re.match(r'^[a-z_]+:', l):
+                in_tools = False
+    return out
+fail = []
+for name, want in expected.items():
+    f = oc / "agent" / f"{name}.md"
+    if not f.is_file():
+        fail.append(f"{name}: agent file missing"); continue
+    got = granted_tools(f)
+    if got is None:
+        fail.append(f"{name}: could not parse tools map"); continue
+    missing = want - got
+    if missing:
+        fail.append(f"{name}: missing {sorted(missing)} (has {sorted(got)})")
+if fail:
+    for x in fail: print(x)
+    sys.exit(1)
+sys.exit(0)
+PY
+if [ $? -eq 0 ]; then
+    pass "oc-agent-toolgrant-parity: every .opencode/agent/*.md tools map covers its Claude grant (no skill/webfetch/websearch/edit dropped in the 1:1 translation; https://opencode.ai/docs/tools/)"
+else
+    fail "oc-agent-toolgrant-parity: an .opencode/agent tools map is missing a capability its Claude counterpart grants (see above)"
 fi
 
 # ----------------------------------------------------------------------
