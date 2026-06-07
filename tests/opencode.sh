@@ -161,26 +161,26 @@ for f in "$OC"/agent/*.md; do
     name=$(basename "$f")
 
     if ! printf '%s\n' "$fm" | grep -q '^description:'; then
-        fail "oc-agent-frontmatter-shape: $name has no `description:` in frontmatter"
+        fail "oc-agent-frontmatter-shape: $name has no \`description:\` in frontmatter"
         shape_ok=0; continue
     fi
     if ! printf '%s\n' "$fm" | grep -Eq '^mode:[[:space:]]+(subagent|primary|all)[[:space:]]*$'; then
-        fail "oc-agent-frontmatter-shape: $name has no valid `mode:` (subagent|primary|all)"
+        fail "oc-agent-frontmatter-shape: $name has no valid \`mode:\` (subagent|primary|all)"
         shape_ok=0; continue
     fi
     # tools must be an OBJECT map: a `tools:` line with no value after it, then
     # at least one indented `  <name>: true|false` entry. A Claude comma-list
     # (`tools: Read, Edit`) has a value on the `tools:` line and would fail here.
     if printf '%s\n' "$fm" | grep -Eq '^tools:[[:space:]]*[^[:space:]]'; then
-        fail "oc-agent-frontmatter-shape: $name uses a scalar `tools:` value (Claude comma-list shape), not an object map"
+        fail "oc-agent-frontmatter-shape: $name uses a scalar \`tools:\` value (Claude comma-list shape), not an object map"
         shape_ok=0; continue
     fi
     if ! printf '%s\n' "$fm" | grep -q '^tools:[[:space:]]*$'; then
-        fail "oc-agent-frontmatter-shape: $name has no `tools:` object key"
+        fail "oc-agent-frontmatter-shape: $name has no \`tools:\` object key"
         shape_ok=0; continue
     fi
     if ! printf '%s\n' "$fm" | grep -Eq '^[[:space:]]+[a-z_]+:[[:space:]]+(true|false)[[:space:]]*$'; then
-        fail "oc-agent-frontmatter-shape: $name `tools:` has no `<name>: true|false` object entries"
+        fail "oc-agent-frontmatter-shape: $name \`tools:\` has no \`<name>: true|false\` object entries"
         shape_ok=0; continue
     fi
 done
