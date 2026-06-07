@@ -33,8 +33,9 @@
 > and the `find`-boundary guard (a `find` whose first absolute-path argument
 > resolves outside the project root). The adapter is still **not fully
 > certified**: only the **"ask"-class** guards remain not-yet-ported (see the
-> divergence below — a permission-config follow-up) and full cross-model review
-> wiring is a later slice. Treat OpenCode as a preview harness, **never** as
+> divergence below — a permission-config follow-up). Cross-model review **is**
+> wired via static frontmatter pins (a PROVISIONAL preview default — see the
+> cross-model section below). Treat OpenCode as a preview harness, **never** as
 > fully-supported, until certification lands. "Preview" must never be read as
 > "certified".
 
@@ -118,13 +119,42 @@ delegation points), and they are **allowed engines** — the enforcement plugin'
 `deep-research` are not gated on Claude).
 
 > **PREVIEW honesty.** These are solid **single-agent** engines — they are **not**
-> a replica of Claude's **multi-agent** `code-review` / `deep-research`. And
-> **cross-model is not yet wired**: they run on the **same model as the session**
-> (a runtime per-`task` model override is unavailable on OpenCode — gap #17577,
-> below). A separate reviewer/researcher model (a different model than the
-> session, for independent blind spots) needs a second configured model + a PM
-> model pin and is a later slice. Treat them as capable same-model engines, not as
-> a drop-in equal of the Claude built-ins.
+> a replica of Claude's **multi-agent** `code-review` / `deep-research`.
+> `code-review` **does** run cross-model (it is pinned to the control model — see
+> the cross-model section below); `deep-research` runs on the **same model as the
+> session** (it is not a control agent). Treat them as capable engines, not as a
+> drop-in equal of the Claude built-ins.
+
+## Cross-model review — static frontmatter pins (PROVISIONAL preview default)
+
+The protocol's cross-model rule (a control/review layer that runs a **different
+model** than the session, for an independent blind-spot check) is realized on
+OpenCode by **static model pins in agent frontmatter**. OpenCode has **no runtime
+per-`task` model override** — the implementing PR
+[anomalyco/opencode#17577](https://github.com/anomalyco/opencode/pull/17577) is
+**closed, not merged** — so the protocol's cross-model rule **degrades to these
+static pins** on OpenCode.
+
+- **Session / primary + producer subagents → `deepseek/deepseek-v4-pro`.** The
+  session model is set as the top-level `model` in `.opencode/opencode.json`. The
+  **producer** subagents (`pm-architect`, `pm-coder`, `pm-codebase-reader`,
+  `pm-stack-researcher`, `pm-pr-prep`, `deep-research`) carry **no `model:` pin**
+  — they **inherit** the session model.
+- **Control / review subagents → pinned `deepseek/deepseek-v4-flash`.** The
+  review/audit layer — `code-review`, `pm-plan-checker`, `pm-auditor`,
+  `pm-product-advocate` — carries an explicit `model:` pin in its generated
+  frontmatter, so it runs a **different model than the session**: an independent
+  cross-model check that does not share the session model's blind spots.
+
+> **PROVISIONAL preview default — change it for your provider.** DeepSeek is the
+> **only authenticated provider** in this preview environment, so
+> `deepseek/deepseek-v4-pro` (session) / `deepseek/deepseek-v4-flash` (control)
+> is a **preview default, not a recommendation**. The choice is **single-sourced**
+> in the `models` block of `src/manifests/opencode/adapter.json` (two values +
+> the control-agent list); change those and regenerate — the model id is **never**
+> hand-edited into individual agent files. When/if a runtime per-`task` model
+> override (#17577-class) lands upstream, the adapter can adopt it and retire the
+> static pins.
 
 ## Supported harnesses
 
@@ -142,13 +172,16 @@ The OpenCode adapter tracks two named upstream gaps. One still blocks
 certification; the other was **verified in our favor on 1.16.2** (so the CORE
 enforcement plugin now ships), with a version-pinned caveat:
 
-1. **Runtime per-task model override is unavailable (still a gap).** OpenCode's
-   `task` tool has no per-invocation `model` parameter. The implementing PR
+1. **Runtime per-task model override is unavailable (still a gap; worked
+   around with static pins).** OpenCode's `task` tool has no per-invocation
+   `model` parameter. The implementing PR
    **[anomalyco/opencode#17577](https://github.com/anomalyco/opencode/pull/17577)**
    ("add model override for task tool subagents") is **CLOSED, NOT MERGED**.
    Consequence: the protocol's cross-model review/audit mechanism cannot rely
-   on a runtime model override on OpenCode — a reviewer/auditor model must be
-   pinned in agent frontmatter instead (a later slice).
+   on a runtime model override on OpenCode — so the reviewer/auditor model is
+   pinned **statically in agent frontmatter** instead (see the cross-model
+   section above). This is a working degradation, not a blocker: cross-model
+   review **is** wired in this preview via the static pins.
 
 2. **Subagent tool-hook containment — VERIFIED in our favor on 1.16.2
    (version-pinned).** Whether a plugin's `tool.execute.before` hook reliably
@@ -204,5 +237,8 @@ as full parity with the Claude `settings.json` **for the "ask"-class guards**.
   read-outside-root, truncating write, and the `find`-outside-root boundary —
   only the "ask"-class guards remain not-yet-ported (see the divergence above).
 
-The cross-model **model pins** are intentionally **not** shipped in this preview
-— see upstream gap #17577.
+The cross-model **model pins** are shipped as a **PROVISIONAL preview default**
+(session `deepseek/deepseek-v4-pro`, control `deepseek/deepseek-v4-flash`),
+single-sourced in `adapter.json`'s `models` block — see the cross-model section
+above. They statically realize the protocol's cross-model rule because OpenCode
+has no runtime per-task model override (#17577).

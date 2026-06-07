@@ -72,6 +72,15 @@
 #     neither engine agent file references a .claude/ path (the symmetry /
 #     no-cross-read invariant, asserted directly on the two engine files).
 #
+#   oc-crossmodel-pins  (slice 9)
+#     the cross-model rule degrades to STATIC frontmatter pins on OpenCode (no
+#     runtime per-task model override — PR #17577). Driven off the manifest
+#     `models` block: each control agent carries `model: <models.control>`, every
+#     producer agent has NO pin (inherits the session), and opencode.json `model`
+#     == models.session. Runtime guarded-skip: `opencode agent list` resolves each
+#     control agent to the control model. Source:
+#     https://github.com/anomalyco/opencode/pull/17577
+#
 # Exit code: 0 if every case matches expectation, 1 if any case fails.
 #
 # Usage: bash tests/opencode.sh
@@ -629,6 +638,104 @@ else
     fail "oc-engine-self-contained: an engine agent references a .claude/ path:"
     printf '%s\n' "$engine_xref" | sed 's/^/    /'
 fi
+
+# ----------------------------------------------------------------------
+# oc-crossmodel-pins  (slice 9)
+# The protocol's cross-model rule degrades to STATIC frontmatter pins on OpenCode
+# (no runtime per-task model override — PR #17577 closed-not-merged). The model
+# choice is single-sourced in the manifest's `models` block. Assert, DRIVEN OFF
+# that block so the test stays correct if the values change:
+#   (a) each CONTROL agent (.opencode/agent/<name>.md for name in
+#       models.control_agents) carries `model: <models.control>` in frontmatter;
+#   (b) the PRODUCER agents (every generated agent NOT in control_agents) carry
+#       NO `model:` pin — they inherit the session;
+#   (c) .opencode/opencode.json top-level `model` == models.session.
+# Source: https://github.com/anomalyco/opencode/pull/17577,
+#         https://opencode.ai/docs/agents/, https://opencode.ai/docs/config/
+# ----------------------------------------------------------------------
+MANIFEST="$ROOT/src/manifests/opencode/adapter.json"
+if [ ! -f "$MANIFEST" ]; then
+    fail "oc-crossmodel-pins: opencode adapter manifest missing at $MANIFEST"
+elif python3 - "$MANIFEST" "$OC" <<'PY'
+import json, re, sys, pathlib
+manifest_path, oc = sys.argv[1], pathlib.Path(sys.argv[2])
+man = json.load(open(manifest_path))
+models = man.get("models") or {}
+session = models.get("session")
+control = models.get("control")
+control_agents = set(models.get("control_agents", []))
+errs = []
+if not session:        errs.append("manifest models.session is missing/empty")
+if not control:        errs.append("manifest models.control is missing/empty")
+if not control_agents: errs.append("manifest models.control_agents is empty")
+
+def frontmatter(path):
+    lines = path.read_text(encoding="utf-8").split("\n")
+    if not lines or lines[0] != "---":
+        return None
+    out = []
+    for l in lines[1:]:
+        if l == "---":
+            return out
+        out.append(l)
+    return None
+
+def model_pin(fm):
+    # a top-level `model: <value>` line in frontmatter (not an indented/comment line)
+    for l in fm:
+        m = re.match(r'^model:\s*(\S+)\s*$', l)
+        if m:
+            return m.group(1)
+    return None
+
+# Enumerate the full generated agent set, classify producer vs control off the
+# manifest (every agent file that is NOT a control agent is a producer here).
+agent_files = sorted((oc / "agent").glob("*.md"))
+if not agent_files:
+    errs.append("no .opencode/agent/*.md files found")
+seen_controls = set()
+for f in agent_files:
+    name = f.stem
+    fm = frontmatter(f)
+    if fm is None:
+        errs.append(f"{name}: could not parse frontmatter"); continue
+    pin = model_pin(fm)
+    if name in control_agents:
+        seen_controls.add(name)
+        if pin != control:
+            errs.append(f"CONTROL agent {name}: model pin is {pin!r}, want {control!r}")
+    else:
+        if pin is not None:
+            errs.append(f"PRODUCER agent {name}: has a model pin {pin!r} (producers must inherit the session — no pin)")
+
+missing_controls = control_agents - seen_controls
+for nm in sorted(missing_controls):
+    errs.append(f"control agent {nm} named in manifest has no generated .opencode/agent/{nm}.md")
+
+# opencode.json top-level model == session
+cfg = json.load(open(oc / "opencode.json"))
+if cfg.get("model") != session:
+    errs.append(f"opencode.json model is {cfg.get('model')!r}, want session {session!r}")
+
+if errs:
+    for e in errs: print(e)
+    sys.exit(1)
+sys.exit(0)
+PY
+then
+    pass "oc-crossmodel-pins: each control agent (driven off manifest models.control_agents) carries model: <models.control>, every producer agent has NO pin, and opencode.json model == models.session (https://github.com/anomalyco/opencode/pull/17577)"
+else
+    fail "oc-crossmodel-pins: the cross-model static pins do not match the manifest models block (see above)"
+fi
+
+# Runtime: `opencode agent list` reports each agent's resolved PERMISSIONS but
+# NOT its resolved model (the model is not in that output), so the pin "taking"
+# at runtime cannot be confirmed from `agent list`. The runtime confirmation that
+# a control agent's LLM call actually uses the control model is a real
+# `opencode run --print-logs` check (the `service=llm ... modelID=` log lines for
+# the session vs the pinned subagent) — done as the slice-9 LIVE confirmation, not
+# wired here (it needs a real model round-trip + the configured provider). The
+# form check above (driven off the manifest) is the deterministic, CI-safe guard.
 
 # ----------------------------------------------------------------------
 # Summary

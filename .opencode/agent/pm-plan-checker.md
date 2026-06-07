@@ -1,4 +1,5 @@
 ---
+model: deepseek/deepseek-v4-flash
 # OpenCode subagent frontmatter. Shape per https://opencode.ai/docs/agents/:
 # `description` + `mode` + `tools` OBJECT map (not Claude's comma-list); no
 # `name` key (filename is the id). Translated 1:1 from the Claude grant
