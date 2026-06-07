@@ -21,7 +21,7 @@ This skill runs in the main session — planning is a conversation with the PM, 
 
 Read these first:
 - `.ai-pm/state/current.md` — current task state; if `Status` is anything other than `idle` or `done`, an active task exists; surface to PM ("we are in the middle of <task> — finish that first, or pause and start this new one?")
-- `CLAUDE.md` — architecture constraints, security constraints
+- the project entry file — architecture constraints, security constraints
 - `docs/architecture.md` — stack, decisions, constraints
 - `docs/stack-notes.md` — stack idioms, constraints, validators, integration contracts (mandatory; see "Stack component check" below)
 - `docs/user-journeys.md` — existing scenarios (identifies regression risk)
@@ -89,7 +89,7 @@ Before drafting the plan, identify which stack components this feature touches. 
 For each touched component, check `docs/stack-notes.md`:
 
 - **Component already present** with current `Last reviewed` date → read the section, plan must respect its idioms and constraints.
-- **Component missing or stale** (no entry, or entry older than 6 months without re-review) → spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) for that component **before** continuing planning. Wait for it to extend `stack-notes.md`. Take its "New validators" list — add to the plan's "Docs to update" section as `CLAUDE.md` Pipeline extension.
+- **Component missing or stale** (no entry, or entry older than 6 months without re-review) → spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) for that component **before** continuing planning. Wait for it to extend `stack-notes.md`. Take its "New validators" list — add to the plan's "Docs to update" section as a project-entry-file Pipeline extension.
 
 Never plan against a missing or stale stack-notes entry. This is not a PM question — PM never sees this step. If a researcher run takes time, tell PM one sentence ("checking stack docs before planning, one moment") and continue.
 
@@ -111,7 +111,7 @@ The spike is **distinct** from Step A.5 (diagnostic probe — reactive, post-fai
 
 When the gate fires, surface the spike requirement before finalizing the plan:
 
-- **Interactive mode:** one `AskUserQuestion` — authorize a throwaway spike now (a minimal end-to-end run that exercises the hinge idiom on a throwaway target and confirms it works as documented), or explicitly defer with a rationale. Never ask this more than once per plan.
+- **Interactive mode:** one structured-question-tool pass — authorize a throwaway spike now (a minimal end-to-end run that exercises the hinge idiom on a throwaway target and confirms it works as documented), or explicitly defer with a rationale. Never ask this more than once per plan.
 - **Autonomous mode:** announce-before-act; record `spike-deferred: (autonomous — proceed)` in the plan's Key design decisions and continue.
 
 **Blast-radius preflight:** when the spike target is a live, coupled external system — read `### Blast-radius preflight` in `workflow/incident.md` before acting. The spike goes to a **separate or throwaway instance by default**, never the user's live coupled target. This reference does not relax the preflight rule.
@@ -213,7 +213,7 @@ Ask clarifying questions as needed — grounded in what you read. Typical questi
 - **Product trade-offs** (what the user experiences, scope between user-visible alternatives, deferral between user-facing features) — surface to PM. Examples: "single install command vs split installs", "real-time vs batch update", "one feature this iteration vs both".
 - **Technical detail** (file layout, naming, internal type choices, library API specifics, unit file shape, regex form, sysd vs supervisord, port numbers) — orchestrator decides. Asking the PM about these is a category-error that wastes their attention and produces low-quality answers.
 
-Before forming an AskUserQuestion, write down the question and check: *would a non-technical PM be able to give a meaningful answer based on product knowledge alone?* If no — drop the question, decide yourself, document the decision in the plan's Key design decisions section. If you're framing technical options as "PM chooses between systemd / Docker / k8s", you are asking the wrong question — re-frame to the product trade-off those technical options serve ("integrator experience: single canonical install or component-by-component setup?"), then map technical options back to whichever product direction the PM picks.
+Before forming a structured-question-tool prompt, write down the question and check: *would a non-technical PM be able to give a meaningful answer based on product knowledge alone?* If no — drop the question, decide yourself, document the decision in the plan's Key design decisions section. If you're framing technical options as "PM chooses between systemd / Docker / k8s", you are asking the wrong question — re-frame to the product trade-off those technical options serve ("integrator experience: single canonical install or component-by-component setup?"), then map technical options back to whichever product direction the PM picks.
 
 Stop asking when you have enough to write the plan.
 
@@ -280,7 +280,7 @@ Source: <where this plan came from>   # the plan's provenance line (the plan-lev
 - `docs/user-journeys.md`: <what changes — which journey, how>
 - `docs/architecture.md`: <what new constraint or decision to add>
 - `docs/threat-model.md`: <which Threat rows to add or update> (required on a security-bearing project when the feature touches a `### Security-relevant surfaces` item — see the Security-surface check; updated by `pm-architect` post-coding)
-- `CLAUDE.md` Pipeline section: add `<validator command>` (if stack-researcher discovered a new validator for this feature's components)
+- the project entry file's Pipeline section: add `<validator command>` (if stack-researcher discovered a new validator for this feature's components)
 
 ## Out of scope
 - <explicitly what this plan does NOT touch>
@@ -354,8 +354,8 @@ After the Product Contract is drafted (Handoff below) and before the coder hando
 For a user-facing feature:
 
 1. **Spawn `pm-product-advocate`** (`subagent_type: "pm-product-advocate"`) with tier `per-feature`, the approved plan, the drafted/existing contract, `docs/product.md`, and `docs/user-journeys.md`. It matches them against `### Foundational product questions` in `workflow/foundational-questions.md` (the advocate Reads that file; referenced by name, never re-list the questions here) and writes `.ai-pm/reviews/<topic>_advocate.md` with a `gaps: N` / `clean` verdict.
-2. **`clean` → silent pass.** Record the resolved artifact and proceed to the coder handoff. No `AskUserQuestion`, no ceremony (scenario 3).
-3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** `AskUserQuestion` pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical (the orchestrator owns this trail — see the second carve-out in the Edit-ownership rule in `workflow/enforcement.md`).
+2. **`clean` → silent pass.** Record the resolved artifact and proceed to the coder handoff. No structured-question-tool pass, no ceremony (scenario 3).
+3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** structured-question-tool pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical (the orchestrator owns this trail — see the second carve-out in the Edit-ownership rule in `workflow/enforcement.md`).
 4. **Block the coder handoff** until every gap is answered or descoped — never a silent skip, never a permanent veto. The block is overridable by a recorded descope, not only by an answer.
 
 This is soft enforcement, backstopped: `pm-plan-checker`'s DoD blocks a user-facing feature whose advocate gate is unresolved, and `pm-auditor` blocks a merged one with no resolved artifact. There is no hook (the trigger is a semantic judgement a regex cannot make). A manual step with no gate degrades silently; the DoD + auditor are that gate.
