@@ -76,26 +76,37 @@ agent: `ai-pm`** (`.opencode/agent/ai-pm.md`) — **not** the default `build`
 primary. `build` is a do-it-all coder whose persona and `write`/`edit` tools
 dominate the layered protocol instructions, so it authors content itself instead
 of delegating; the protocol therefore ships its own orchestrator primary whose
-**identity is the orchestrator** (its body is the system prompt) and whose **tool
-grant makes content-authoring impossible** (`write`/`edit` denied — see below).
-This is discipline by construction, the structural mirror of how the Claude
-orchestrator is held by its system prompt.
+**identity is the orchestrator** (its body is the system prompt). The **persona is
+the enforcement**: the orchestrator authors only its own artifacts and delegates
+code + canonical docs — the structural mirror of how the Claude orchestrator is
+held by its system prompt (full `write`, no tool block, simply doesn't author
+content).
 
 `ai-pm` is the seat that reads this `AGENTS.md` and the always-on core
 (`WORKFLOW.md`, loaded via the `instructions` array — see below), drives the
-Step 0–7 pipeline, **delegates** every content artifact to the owning `pm-*`
-subagent (code → `pm-coder`, architecture/docs → `pm-architect`, planning/checks →
-the matching `pm-*`) via `task`, and does only git operations + `.ai-pm`
-bookkeeping itself (via `bash`). It owns the three things subagents must not do,
-**plus** the no-author constraint:
+Step 0–7 pipeline, **delegates** every code + canonical-doc artifact to the owning
+`pm-*` subagent (code → `pm-coder`, architecture/canonical docs → `pm-architect`,
+planning/checks → the matching `pm-*`) via `task`, and authors its **own**
+artifacts itself — the feature plan during planning + `.ai-pm` bookkeeping. It owns
+the three things subagents must not do, **plus** the scoped-authoring discipline:
 
-- **no `write` / no `edit`** — `ai-pm`'s frontmatter `tools` map sets
-  `write: false` and `edit: false`, so the orchestrator **structurally cannot**
-  author content artifacts (source, `docs/`, plans, contracts). Content authoring
-  routes to the `pm-*` agents by construction; the orchestrator's own writes
-  (`.ai-pm/state`, backlog, git) go through `bash`. Verified on OpenCode 1.16.2:
-  `ai-pm` resolves `edit` to `deny` and is granted no `write` tool, while `build`
-  has neither restriction.
+- **scoped `write` / `edit`** — `ai-pm` **keeps** the `write`/`edit` tools because
+  it legitimately authors its own artifacts: the **feature plan** during planning
+  (`/pm-plan` is its own PM conversation, not a subagent) and the **`.ai-pm`
+  bookkeeping** (state, backlog, contracts, decision/resolution trails), exactly as
+  the Claude orchestrator does. It does **not** author source code or the canonical
+  `docs` (architecture, product, journeys, …) — those route to `pm-coder` /
+  `pm-architect`. A per-agent **path-`permission`** backstops this as a structural
+  hint: `ai-pm`'s frontmatter carries `permission.edit` AND `permission.write`
+  path-globs that **allow** `.ai-pm/**` + `doc/features/**` and **deny** `**`
+  (verified 1.16.2: per-agent `permission.edit`/`permission.write` accept path-glob
+  maps and the config stays valid — <https://opencode.ai/docs/permissions/>). The
+  **persona is the real enforcement**, not this block: `bash` (needed for git +
+  bookkeeping) bypasses any tool/permission restriction, and that bypass is governed
+  by the persona ("do not route around the path-permission via `bash`"), not by the
+  config. An airtight wall would need a plugin path/actor-aware `bash`-write deny
+  (the defense-in-depth follow-up). Verified on OpenCode 1.16.2: `ai-pm`'s `edit`
+  and `write` resolve to the allow-`.ai-pm`/`doc/features` + deny-`**` rules.
 - **`question`** — surface PM decision-forks via the structured-question tool.
   This grant is given to the **primary only**: `.opencode/opencode.json` carries a
   top-level `permission: { question: "allow" }`, which the OpenCode loader resolves
