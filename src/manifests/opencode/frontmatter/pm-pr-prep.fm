@@ -1,0 +1,12 @@
+---
+# OpenCode subagent frontmatter. Shape per https://opencode.ai/docs/agents/:
+# `description` + `mode` + `tools` OBJECT map (not Claude's comma-list); no
+# `name` key (filename is the id). Translated 1:1 from the Claude grant
+# (Bash,Read,Edit).
+description: Prepares a release on the current feature branch — bumps version, generates CHANGELOG, pushes, then either opens a GitHub PR or returns clear handoff instructions when the remote is not GitHub. Reports status to the orchestrator. Tolerant to non-GitHub remotes and no-remote-at-all.
+mode: subagent
+tools:
+  bash: true
+  read: true
+  edit: true
+---

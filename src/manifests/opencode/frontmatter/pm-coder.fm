@@ -1,0 +1,16 @@
+---
+# OpenCode subagent frontmatter. Shape per https://opencode.ai/docs/agents/:
+# `description` + `mode` + `tools` OBJECT map (not Claude's comma-list); no
+# `name` key (filename is the id). Translated 1:1 from the Claude grant
+# (Read,Edit,Write,Bash,Grep,Glob,Skill).
+description: Implements a feature or fix based on docs/features/<topic>_plan.md. Reads CLAUDE.md for pipeline and conventions. Runs tests + linters. Commits atomically. Never touches existing tests. Does NOT push or create PRs.
+mode: subagent
+tools:
+  read: true
+  edit: true
+  write: true
+  bash: true
+  grep: true
+  glob: true
+  skill: true
+---

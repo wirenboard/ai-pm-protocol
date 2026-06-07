@@ -1,0 +1,77 @@
+{
+  "_comment": [
+    "OpenCode adapter assembly spec. Tells gen/generate.py how to build the full",
+    ".opencode/ adapter (+ the root AGENTS.md) from the SAME neutral source as the",
+    "Claude adapter — no re-carving of any body. The generator stays THIN (arch",
+    "note 'How thin the metalanguage can be'): it inlines a neutral body, prepends",
+    "the OpenCode frontmatter from this manifest, and copies the config + entry",
+    "surface artifacts verbatim. No parsing, no re-serialization — so the output is",
+    "deterministic (same inputs -> byte-identical outputs).",
+    "",
+    "Frontmatter shape per https://opencode.ai/docs/agents/ : `description` +",
+    "`mode: subagent` + a `tools` OBJECT map (NOT Claude's comma-list). Agent",
+    "files land under .opencode/agent/ (the filename is the agent id); command",
+    "files under .opencode/command/. The always-on core is wired via the",
+    "`instructions` array in opencode.json (https://opencode.ai/docs/config/), the",
+    "OpenCode analogue of the Claude @-import.",
+    "",
+    "PREVIEW: the deny-list enforcement plugin and cross-model model pins are",
+    "intentionally NOT built here (later slices; the plugin is gated on Spike B).",
+    "",
+    "Each section names the harness-neutral capability (see",
+    "src/manifests/capabilities.json) it realizes, so the same neutral bodies are",
+    "re-targeted to OpenCode without touching src/agents|commands/*.body.md."
+  ],
+  "harness": "opencode",
+  "output_root": ".opencode",
+  "agents": {
+    "capability": "subagent-definition",
+    "output_dir": "agent",
+    "output_suffix": ".md",
+    "body_dir": "agents",
+    "body_suffix": ".body.md",
+    "frontmatter_dir": "frontmatter",
+    "frontmatter_suffix": ".fm",
+    "assembly": "frontmatter + body",
+    "names": [
+      "pm-architect",
+      "pm-auditor",
+      "pm-codebase-reader",
+      "pm-coder",
+      "pm-plan-checker",
+      "pm-pr-prep",
+      "pm-product-advocate",
+      "pm-stack-researcher"
+    ]
+  },
+  "commands": {
+    "capability": "command-definition",
+    "output_dir": "command",
+    "output_suffix": ".md",
+    "body_dir": "commands",
+    "body_suffix": ".body.md",
+    "assembly": "body",
+    "names": [
+      "pm-audit",
+      "pm-bootstrap",
+      "pm-fixup",
+      "pm-plan",
+      "pm-research"
+    ]
+  },
+  "artifacts": [
+    {
+      "capability": "always-on-core-import",
+      "output_file": "opencode.json",
+      "source_file": "opencode.json",
+      "assembly": "verbatim-copy"
+    },
+    {
+      "capability": "route-reminder (always-on) + supported-harness declaration",
+      "output_file": "AGENTS.md",
+      "source_file": "AGENTS.md",
+      "assembly": "verbatim-copy",
+      "root_relative": true
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+---
+# OpenCode subagent frontmatter. Shape per https://opencode.ai/docs/agents/:
+# `description` + `mode` + `tools` OBJECT map (not Claude's comma-list); no
+# `name` key (filename is the id). Translated 1:1 from the Claude grant
+# (Read,Grep,Glob,Bash,Write).
+description: Independent product-axis referee — the product-side twin of code-review. Runs pre-coding (user-facing features) and at bootstrap. Matches the approved plan + contract + product docs against the fixed `### Foundational product questions` checklist in `workflow/foundational-questions.md` and reports only the questions with no recorded answer — a gap report that blocks the coder handoff until each gap is answered or descoped by the PM. Presence-only — never judges answer quality, never addresses the PM. Read-only — never edits code, never commits.
+mode: subagent
+tools:
+  read: true
+  grep: true
+  glob: true
+  bash: true
+  write: true
+---

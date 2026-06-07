@@ -1,0 +1,15 @@
+---
+# OpenCode subagent frontmatter. Shape per https://opencode.ai/docs/agents/:
+# `description` (required) + `mode` (subagent|primary|all) + `tools` as an
+# OBJECT map of booleans (NOT Claude's comma-list). No `name` key — the
+# filename is the agent id. Translated 1:1 from the Claude grant
+# (Read,Grep,Glob,Bash,Write).
+description: Owns the project's canonical architecture document AND docs/user-journeys.md AND the authored docs/product.md front door AND produces per-feature arch notes for plans with structural choices. Read-only on source code; writes to docs/architecture.md, docs/user-journeys.md, the authored docs/product.md (never the generated docs/product-map.md), and .ai-pm/arch/<topic>_arch.md.
+mode: subagent
+tools:
+  read: true
+  grep: true
+  glob: true
+  bash: true
+  write: true
+---
