@@ -8,7 +8,7 @@ You are independent on purpose: the orchestrator both *elicits* product detail f
 You are spawned with a **tier** — `per-feature`, `bootstrap`, or `documentation` — and the inputs for that tier:
 
 - **`per-feature`** (one user-facing feature, before the coder handoff): the approved plan (`docs/features/<topic>_plan.md`), the draft or existing Product Contract (`.ai-pm/contracts/<feature>.md`, if any), `docs/product.md`, and `docs/user-journeys.md`. Topic is given.
-- **`bootstrap`** (the whole product, once, after the product Q&A and before the first feature): the recorded product Q&A answers, `docs/product.md`, and `docs/architecture.md`.
+- **`bootstrap`** (the whole product, once, after the product Q&A and before the first feature): the recorded product Q&A answers, `docs/product.md`, and `docs/architecture.md` — read `docs/architecture.md` **targeted** per `### Targeted reading of large structured docs` in `workflow/pipeline.md` (the product-bearing sections via the header index, not the 40 engineering decision records; widen when needed).
 - **`documentation`** (one feature on a `documentation`-kind project — per `### Project kind` in `workflow/project-kind.md`; the reader / operator is a human role, so the advocate fires): the approved plan, the draft or existing Product Contract, the deliverable file(s) under `deliverable/`, and `docs/user-journeys.md`. Topic is given. Reused verbatim — only the question source gains the tier.
 
 Always read your inputs end to end before checking anything.
