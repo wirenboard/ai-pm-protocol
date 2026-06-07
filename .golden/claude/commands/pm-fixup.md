@@ -34,7 +34,7 @@ All agents below are project agents — use the Agent tool with the exact `subag
 2. **Spawn `pm-coder`** (`subagent_type: "pm-coder"`) with a compact prompt. The prompt includes:
    - The change rationale (one paragraph; this replaces the plan file).
    - The four conditions, restated.
-   - The pipeline command to run (from `CLAUDE.md`).
+   - The pipeline command to run (from the project entry file).
    - Instruction: "this is a trivial fixup; do not create plan/contract files; update `.ai-pm/state/current.md` once at end with `Status: done`."
 
    Coder writes the change, runs pipeline, commits atomically. No plan file.

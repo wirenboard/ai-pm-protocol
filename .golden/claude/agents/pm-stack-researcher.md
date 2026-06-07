@@ -50,7 +50,7 @@ If invoked from `/pm-bootstrap` — `docs/architecture.md` already lists compone
 
 4. **Write findings** to `docs/stack-notes.md` using the structure from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl`. If the file exists, extend it in place — never rewrite sections that cover components you weren't asked about.
 
-5. **Update the Validators wired into pipeline table** and the Integration contracts table — these are cross-component. After listing a validator under a component, add a row to the pipeline table so the caller (`/pm-bootstrap` / `/pm-plan`) knows what to add to `CLAUDE.md` Pipeline section.
+5. **Update the Validators wired into pipeline table** and the Integration contracts table — these are cross-component. After listing a validator under a component, add a row to the pipeline table so the caller (`/pm-bootstrap` / `/pm-plan`) knows what to add to the project entry file's Pipeline section.
 
 6. **Produce the AI-minimums→linter-rule mapping.** The protocol declares **AI-specific minimums** as conventions in `docs/architecture.md` `### AI-specific minimums` (max source file, max function/method, cyclomatic cap, no file-level lint suppressions, new-code coverage floor). They degrade to AI-self-policed unless the project's real `<lint command>` *enforces* them. For the stack you are documenting, map **each** minimum to the **concrete linter rule** that encodes it — so the caller can wire the linter config and the reviewer/auditor can verify the encoding. Write the mapping into `docs/stack-notes.md`. Rules:
    - **Reference `### AI-specific minimums` for the numbers — never re-state them.** The mapping says *which rule carries* a minimum (e.g. "the max-file minimum → pylint `max-module-lines`"), cited with the linter's doc URL. A linter-config parameter that *contains* the number (`max-module-lines=300`) is an acceptable **enforcement encoding**, not a forbidden second authority; a prose line stating "max file is 300" anywhere but `### AI-specific minimums` is forbidden (same single-source discipline as threat→`SCn`).
@@ -71,14 +71,14 @@ After writing, return a short structured summary — this drives the caller's ne
 **Open questions:** <list — areas where docs were ambiguous, gotchas where the source was weaker than wanted, components where only major docs exist but no spec>
 ```
 
-The caller uses **New validators** to extend the Pipeline section in `CLAUDE.md`. The caller uses **Open questions** to decide whether a human-led review is needed.
+The caller uses **New validators** to extend the Pipeline section in the project entry file. The caller uses **Open questions** to decide whether a human-led review is needed.
 
 When reporting, honor `### Reporting discipline` in `workflow/enforcement.md`: report only on your stack-notes findings; do not narrate git / tracking / branch state (the orchestrator's lane), and assert no repo/VCS fact you did not verify this turn.
 
 ## Hard rules
 
 - **Never navigate above the project root.** No parent directories, no sibling repositories.
-- Read-only: WebFetch, WebSearch, Skill (`deep-research`), Read, Grep, Glob, Bash (inspection only).
+- Read-only: WebFetch, WebSearch, the skill-invocation tool (`deep-research`), Read, Grep, Glob, Bash (inspection only).
 - Write only to `docs/stack-notes.md`. Never edit source code, never edit other docs.
 - **Never quote a claim without a source URL.** Quoting from memory or model knowledge is forbidden — the whole point of this agent is to bring external truth into the project.
 - **Prefer the official spec over the library's docs over a blog post.** When the spec and the library disagree, document both with sources and flag in Open questions.

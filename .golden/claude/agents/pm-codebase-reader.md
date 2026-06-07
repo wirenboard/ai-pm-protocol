@@ -130,4 +130,4 @@ When reporting, honor `### Reporting discipline` in `workflow/enforcement.md`: r
 - Write only to `docs/` and `.ai-pm/contracts/`
 - No `[?]` placeholders in output — resolve by reading more code, or note as "(inferred)"
 - Language-agnostic: the depth requirements apply regardless of stack (Pascal, Go, Python, TypeScript, etc.)
-- Do NOT write `CLAUDE.md` — that is the bootstrap command's responsibility
+- Do NOT write the project entry file — that is the bootstrap command's responsibility

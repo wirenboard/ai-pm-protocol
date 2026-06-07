@@ -12,6 +12,15 @@ name: Generator integrity
 #   * single-source-diff-clean — regenerating leaves the adapter tree
 #     diff-clean (no generated file diverges from a fresh build).
 #
+# Plus the harness-neutral-prose guards (harness-neutral-prose slice 1), which
+# gate the same single-source surface (src/ bodies + capabilities.json + the
+# rendered reference table):
+#   * neutral-prose-no-claude-isms — no bare Claude primitive in the neutralized
+#     bodies outside the install-prose allowlist.
+#   * reference-table-matches-capabilities — the rendered table is a drift-free
+#     render of capabilities.json.
+#   * harness-reference-table-complete — every neutral noun has both concretes.
+#
 # Stack rules respected (citations in doc/stack-notes.md):
 #   * Path filter on push/pull_request — `on.<event>.paths`:
 #     https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
@@ -27,6 +36,7 @@ on:
       - '.claude/**'
       - '.golden/**'
       - 'tests/generator.sh'
+      - 'tests/neutral-prose.sh'
       - '.github/workflows/generator.yml'
   pull_request:
     paths:
@@ -35,6 +45,7 @@ on:
       - '.claude/**'
       - '.golden/**'
       - 'tests/generator.sh'
+      - 'tests/neutral-prose.sh'
       - '.github/workflows/generator.yml'
 
 jobs:
@@ -46,3 +57,6 @@ jobs:
 
       - name: Run generator integrity tests
         run: bash tests/generator.sh
+
+      - name: Run harness-neutral-prose guards
+        run: bash tests/neutral-prose.sh

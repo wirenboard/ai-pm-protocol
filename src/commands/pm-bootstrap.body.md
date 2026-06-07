@@ -33,9 +33,9 @@ If PM says yes — `rm .git/hooks/<each>`. If PM says no — note it and continu
 
 Check what exists:
 
-- `CLAUDE.md` exists and contains `@.ai-pm/tooling/WORKFLOW.md` → already initialized. Check for **pending template-upgrade migrations** (below); if none, confirm and exit.
-- No `CLAUDE.md` but code exists → **legacy adoption**
-- No `CLAUDE.md` and no production code → **greenfield**
+- The project entry file exists and the instruction-loading mechanism points at the always-on core (`WORKFLOW.md`) → already initialized. Check for **pending template-upgrade migrations** (below); if none, confirm and exit.
+- No project entry file but code exists → **legacy adoption**
+- No project entry file and no production code → **greenfield**
 
 ### Pending template-upgrade migrations
 
@@ -47,7 +47,7 @@ Check what exists:
 
 Ask the PM these questions (one conversation, not a form):
 
-0. **Project kind** — is the deliverable **software** (source code) or **documentation** (one or several human-facing documents with no executable code — an SOP, a runbook, a guide, a spec, diagrams — e.g. integrating a device into the company ecosystem, diagnosing a crashed server, soldering a board, a user guide)? See `### Project kind` in `workflow/project-kind.md` (the single source of the enum and the `absent OR unrecognized ⇒ software` default — do not re-state them here). The answer is stored single-source as the `## Project kind:` line in `CLAUDE.md` (default `software`). On `kind = documentation`, follow the **Documentation-kind scaffolding** note below instead of the software-only scaffolding.
+0. **Project kind** — is the deliverable **software** (source code) or **documentation** (one or several human-facing documents with no executable code — an SOP, a runbook, a guide, a spec, diagrams — e.g. integrating a device into the company ecosystem, diagnosing a crashed server, soldering a board, a user guide)? See `### Project kind` in `workflow/project-kind.md` (the single source of the enum and the `absent OR unrecognized ⇒ software` default — do not re-state them here). The answer is stored single-source as the `## Project kind:` line in the project entry file (default `software`). On `kind = documentation`, follow the **Documentation-kind scaffolding** note below instead of the software-only scaffolding.
 1. What does this product do? (one sentence)
 2. Who uses it? (be specific — role, context)
 3. What problem does it replace or eliminate?
@@ -63,8 +63,8 @@ Ask the PM these questions (one conversation, not a form):
 5. Tech stack? (language, framework, database — and why each choice)
 6. Does the project have a UI? Three cases:
    - **Custom UI** (HTML/CSS/components the project builds) → create `docs/ui-guide.md`
-   - **Platform UI** (generated forms, admin panels, dashboards provided by a platform — e.g., WB jsoneditor/confed, Django admin, Grafana) → no `ui-guide.md`. Add a "UI pattern" section to `docs/architecture.md` describing what platform surfaces exist and what the project owns (e.g., the JSON schema, the virtual device topics). Add same note to `CLAUDE.md`.
-   - **UI planned but not started** → add a note to CLAUDE.md `## Docs` table: `docs/ui-guide.md — not created yet, create when UI work starts`. Do NOT create the file now.
+   - **Platform UI** (generated forms, admin panels, dashboards provided by a platform — e.g., WB jsoneditor/confed, Django admin, Grafana) → no `ui-guide.md`. Add a "UI pattern" section to `docs/architecture.md` describing what platform surfaces exist and what the project owns (e.g., the JSON schema, the virtual device topics). Add same note to the project entry file.
+   - **UI planned but not started** → add a note to the project entry file's `## Docs` table: `docs/ui-guide.md — not created yet, create when UI work starts`. Do NOT create the file now.
    - **No UI** → skip entirely
 7. Any known security requirements? (auth, payments, PII, encryption)
 8. **Decision authority** — neutral, default interactive. Ask: "Who makes the product decisions on this project — you, each time (**interactive**), or the pipeline, from your bootstrap + the project's canon (**autonomous**)? Either way, opening and merging PRs always stays with you." Default **interactive** if the PM skips or abstains. See `### Decision authority` in `workflow/decision-authority.md` (the single source of the enum and the `absent file OR unrecognized ⇒ interactive` default — do not re-state them here).
@@ -72,7 +72,7 @@ Ask the PM these questions (one conversation, not a form):
 
 Then create from templates:
 
-- `CLAUDE.md` from `CLAUDE.md.tmpl` — fill in all placeholders, **including the `## Project kind:` line** from Q0 (default `software` if unanswered). Pipeline section is left with `<test command>` and `<lint command>` as placeholders for now — extended after `pm-stack-researcher` runs. (On `kind = documentation` there is no test/build pipeline to populate — see **Documentation-kind scaffolding** below.)
+- The project entry file from `CLAUDE.md.tmpl` — fill in all placeholders, **including the `## Project kind:` line** from Q0 (default `software` if unanswered). Pipeline section is left with `<test command>` and `<lint command>` as placeholders for now — extended after `pm-stack-researcher` runs. (On `kind = documentation` there is no test/build pipeline to populate — see **Documentation-kind scaffolding** below.)
 - `README.md` from `README.md.tmpl`
 - `docs/architecture.md` from `architecture.md.tmpl`
 - `docs/user-journeys.md` from `user-journeys.md.tmpl` — leave as guided skeleton for PM to fill
@@ -96,8 +96,8 @@ Then create from templates:
 
 - **Create the deliverable location, not a forced template:** create the `deliverable/` directory (the `src/`-analogue where the produced document(s) / diagrams / images live — per `### Project kind`). Do **not** author any deliverable file at bootstrap and do **not** drop a template into it — the deliverable is open. **Offer** the optional starters under `.ai-pm/tooling/doc/_templates/starters/` (`sop.md.tmpl` for an SOP / runbook, `guide.md.tmpl` for a reference doc) as a "pick one if it fits, or none"; the first feature's plan decides whether to seed from a starter (then `pm-coder` copies it into `deliverable/` and authors freely).
 - **Keep the shared pillars:** `docs/product.md`, `docs/stack-notes.md` (here the **what / who / tools** — the people, instruments, company systems & standards the document must respect, not language idioms), `docs/architecture.md` (constraints / behavioral contract for any token the document names), `docs/user-journeys.md` (reader / operator experience flow), and `docs/threat-model.md` **only if** Q7 mentioned security — all created exactly as above.
-- **Skip the software-only scaffolding that has no documentation meaning:** the `CLAUDE.md` `## Pipeline` block carries no `<test command>` / build validators (markdownlint is the structural pre-gate — record it as the validator); the stack-researcher step still runs but documents the what / who / tools the document must respect, not language idioms. `docs/ui-guide.md` is created only on the same UI rule as software (a documentation project rarely has one).
-- The `## Project kind: documentation` line in `CLAUDE.md` is what makes the mandatory-table rider, the Pass-2 routing, and the `## Validation` gate fire downstream (all reference `### Project kind` by name).
+- **Skip the software-only scaffolding that has no documentation meaning:** the project entry file's `## Pipeline` block carries no `<test command>` / build validators (markdownlint is the structural pre-gate — record it as the validator); the stack-researcher step still runs but documents the what / who / tools the document must respect, not language idioms. `docs/ui-guide.md` is created only on the same UI rule as software (a documentation project rarely has one).
+- The `## Project kind: documentation` line in the project entry file is what makes the mandatory-table rider, the Pass-2 routing, and the `## Validation` gate fire downstream (all reference `### Project kind` by name).
 
 **WIP doc snapshot (before the first doc-mutating spawn).** The docs above exist on disk but are still **untracked** — so a destructive write to one (an empty `Write` that zeroes it) is unrecoverable, the file simply vanishes. Before spawning any agent that mutates an already-created doc, commit a WIP snapshot on the bootstrap branch so every later state is recoverable via `git checkout <file>`:
 
@@ -110,10 +110,10 @@ git add docs/ CLAUDE.md README.md .ai-pm/decision-authority.md .ai-pm/state/curr
 **Stack literacy onboarding (mandatory, no PM questions).** Spawn the `pm-stack-researcher` agent (`subagent_type: "pm-stack-researcher"`) with the stack components from PM's answers (language, runtime, framework, database, key libraries, target platform). The agent reads canonical docs and spec, writes `docs/stack-notes.md` with cited idioms, constraints, validators and integration contracts.
 
 After `pm-stack-researcher` returns:
-- Take its "New validators" list and add each command to the `Pipeline` block in `CLAUDE.md` — these are mandatory gates alongside `<test command>` and `<lint command>`.
+- Take its "New validators" list and add each command to the `Pipeline` block in the project entry file — these are mandatory gates alongside `<test command>` and `<lint command>`.
 - **Wire the AI-specific minimums into the project's `<lint command>` config** using `pm-stack-researcher`'s AI-minimums→linter-rule mapping in `docs/stack-notes.md` (it maps each minimum from `docs/architecture.md` `### AI-specific minimums` to the concrete rule that enforces it — e.g. for Python a pylint config carrying `max-module-lines` / `max-args` / mccabe / `R0801`, ruff and vulture; **examples only — use the mapping for this project's actual stack, never a hardcoded list**). The config parameter *carries* the number (enforcement), it does not re-declare it — the values stay single-sourced in `### AI-specific minimums`. Any minimum the mapping records as **convention-only** (the stack's linter cannot express it) stays AI-review-backstopped, not forced into the config. So a diff that crosses a minimum fails the Pipeline lint step.
 - Take its "Open questions" list and surface to PM as a brief technical caveats block (one sentence each, plain language) — PM does not have to act on them now, but they exist on record.
-- **Re-snapshot:** `pm-stack-researcher` has authored `docs/stack-notes.md` (and the `CLAUDE.md` Pipeline / lint edits above). Commit the WIP snapshot again (`git add … && git commit --no-verify -m "chore: bootstrap WIP doc snapshot"`) before the next doc-mutating spawn, so the freshly-authored stack notes are recoverable.
+- **Re-snapshot:** `pm-stack-researcher` has authored `docs/stack-notes.md` (and the project entry file's Pipeline / lint edits above). Commit the WIP snapshot again (`git add … && git commit --no-verify -m "chore: bootstrap WIP doc snapshot"`) before the next doc-mutating spawn, so the freshly-authored stack notes are recoverable.
 
 **Spawn `pm-architect`** (`subagent_type: "pm-architect"`) **(Section A — canonical architecture.md + authored product.md).** Architect reads PM's stack answers, the freshly-written `docs/stack-notes.md`, and the template at `.ai-pm/tooling/doc/_templates/architecture.md.tmpl`. It walks every template section (Tech stack, Architectural decisions, Architectural constraints, File layout (module map), Integration contract, Behavioral contract (taxonomies & invariants), Release flow), marking N/A sections explicitly (Security, Code conventions, Deploy if not applicable). It cites the bootstrap conversation for each decision rationale. The result replaces the placeholder content created from the template. This is the new owner of `docs/architecture.md` — orchestrator no longer writes architecture inline.
 
@@ -172,7 +172,7 @@ Read:
 From this, determine: language, framework, database, key abstractions.
 
 Write minimal docs — enough to start adding features:
-- `CLAUDE.md` — fill what's clear from reading; mark gaps as `[?]`. **Write `## Project kind: software`** (legacy adoption reads an existing codebase — `software`; see `### Project kind` in `workflow/project-kind.md`).
+- The project entry file — fill what's clear from reading; mark gaps as `[?]`. **Write `## Project kind: software`** (legacy adoption reads an existing codebase — `software`; see `### Project kind` in `workflow/project-kind.md`).
 - `docs/architecture.md` — stack and key decisions extracted from code; mark gaps as `[?]`
 - `docs/user-journeys.md` — write only what's visible from entry points and module names; leave the rest as `[?]`
 - `docs/stack-notes.md` from `stack-notes.md.tmpl` — empty shell
@@ -182,7 +182,7 @@ Write minimal docs — enough to start adding features:
 - `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` directories
 - Optional docs — skip; create only if code clearly requires them (e.g., obvious security constraints)
 
-**Stack literacy onboarding (mandatory, no PM questions).** Once stack components are identified from the code, spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) with that list. It fills `docs/stack-notes.md`. Take its "New validators" list and add commands to the Pipeline block in `CLAUDE.md`. **Wire the AI-specific minimums into the `<lint command>` config** via its AI-minimums→linter-rule mapping (same as the greenfield stack-setup step above — config carries the numbers, never re-declares them; convention-only minimums stay AI-backstopped). Take its "Open questions" — surface to PM as caveats.
+**Stack literacy onboarding (mandatory, no PM questions).** Once stack components are identified from the code, spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) with that list. It fills `docs/stack-notes.md`. Take its "New validators" list and add commands to the Pipeline block in the project entry file. **Wire the AI-specific minimums into the `<lint command>` config** via its AI-minimums→linter-rule mapping (same as the greenfield stack-setup step above — config carries the numbers, never re-declares them; convention-only minimums stay AI-backstopped). Take its "Open questions" — surface to PM as caveats.
 
 **Authored front door.** Before presenting findings, ask the PM the two product front-door questions (why this exists / what is deliberately out of scope for now), then spawn `pm-architect` (`subagent_type: "pm-architect"`) to author `docs/product.md` from those answers, deriving `## What it does today` from existing contracts and the architecture. pm-architect is the sole writer of the authored `docs/product.md`; it never writes the generated `docs/product-map.md`. If the PM is not ready, leave the scaffolded skeleton for a later `pm-architect` run.
 
@@ -209,10 +209,10 @@ Then run the **Foundational-question pass** (below) before the project is ready 
 Invoke the `pm-codebase-reader` agent using the Agent tool with `subagent_type: "pm-codebase-reader"`. It reads all significant modules at defined depth and writes raw drafts of `docs/architecture.md`, `docs/user-journeys.md`, and optional docs (`ui-guide.md`, `threat-model.md`). Wait for it to complete and read its summary output.
 
 After the extractor finishes:
-- Write `CLAUDE.md` from `.ai-pm/tooling/doc/_templates/CLAUDE.md.tmpl` — fill in all placeholders using the stack and architecture the extractor documented. Pipeline section left as placeholders until `pm-stack-researcher` runs.
+- Write the project entry file from `.ai-pm/tooling/doc/_templates/CLAUDE.md.tmpl` — fill in all placeholders using the stack and architecture the extractor documented. Pipeline section left as placeholders until `pm-stack-researcher` runs.
 - Create `docs/stack-notes.md` from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl` (empty shell).
 - **WIP doc snapshot (before the first doc-mutating spawn).** `pm-codebase-reader` has drafted `docs/architecture.md`, `docs/user-journeys.md`, and the optional docs, but they are still **untracked** — a destructive write would lose them unrecoverably. Before spawning `pm-stack-researcher` / `pm-architect`, commit a WIP snapshot on the bootstrap branch so every later state is recoverable via `git checkout <file>`: `git add docs/ CLAUDE.md && git commit --no-verify -m "chore: bootstrap WIP doc snapshot"` (`--no-verify` matches the bootstrap-commit convention — no test framework exists yet; closes the untracked-docs window that made the 2026-06-06 doc-loss incident unrecoverable). **Re-snapshot after each authoring spawn returns** (`pm-stack-researcher` after it writes `docs/stack-notes.md`, `pm-architect` after Section A finalizes), before any refinement re-spawn that would mutate the just-authored docs.
-- Spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) with the stack components the extractor put in `architecture.md` (mandatory, no PM questions). After it returns: extend the Pipeline block in `CLAUDE.md` with its "New validators"; **wire the AI-specific minimums into the `<lint command>` config** via its AI-minimums→linter-rule mapping (same as the greenfield stack-setup step above — config carries the numbers, never re-declares them; convention-only minimums stay AI-backstopped); reflect "Integration contracts" in `architecture.md` deploy section; record "Open questions" for the PM brief below.
+- Spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) with the stack components the extractor put in `architecture.md` (mandatory, no PM questions). After it returns: extend the Pipeline block in the project entry file with its "New validators"; **wire the AI-specific minimums into the `<lint command>` config** via its AI-minimums→linter-rule mapping (same as the greenfield stack-setup step above — config carries the numbers, never re-declares them; convention-only minimums stay AI-backstopped); reflect "Integration contracts" in `architecture.md` deploy section; record "Open questions" for the PM brief below.
 - **Spawn `pm-architect`** (`subagent_type: "pm-architect"`) **(Section A)** to finalize `docs/architecture.md` **and `docs/user-journeys.md`** to canonical format, and — passing the PM's product front-door answers (ask the two product questions: why this exists / deliberately out of scope for now) — to author `docs/product.md`. `pm-codebase-reader` produces raw architecture and user-journeys drafts — `pm-architect` is the owner of both and must walk every template section, fill gaps from `stack-notes.md`, mark N/A sections explicitly, and cite each decision; for the journeys it finalizes the draft to canonical form (the draft is the source of truth for facts, the same extractor-drafts / architect-owns handoff as the architecture draft). For `docs/product.md`, it authors the funnel from the PM answers, deriving `## What it does today` from the drafted contracts and architecture. pm-architect is the sole writer of the authored `docs/product.md`; it never writes the generated `docs/product-map.md`. **If `pm-codebase-reader` drafted `docs/threat-model.md`** (security artifacts present in the code — see `pm-codebase-reader.md`), pm-architect **finalizes that draft** to canonical form in this same spawn — the identical handoff it already does for the `architecture.md` draft (extractor drafts, architect owns). Wait for it to complete before presenting to PM. **Re-snapshot once it returns** (`git add docs/ CLAUDE.md && git commit --no-verify -m "chore: bootstrap WIP doc snapshot"`) before any re-invocation of `pm-codebase-reader` / `pm-architect` from PM validation below — so a destructive re-spawn write over the finalized docs is recoverable rather than lost to an untracked file.
 - Create `docs/features/` directory if it doesn't exist
 - Create `docs/product.md` — the **authored** front door. Scaffold from `product.md.tmpl` (no generator signature line) so `pm-architect` (above) can author it.
@@ -280,7 +280,7 @@ Once PM chooses a stack:
    git checkout -b port/<target-stack>   # e.g. port/rust-tauri
    ```
 
-4. **Remove all legacy files** — delete everything except the documentation created during bootstrap (`docs/`, `CLAUDE.md`, `README.md`). Commit:
+4. **Remove all legacy files** — delete everything except the documentation created during bootstrap (`docs/`, the project entry file, `README.md`). Commit:
    ```bash
    git add -A
    git commit -m "chore: remove legacy code, keep docs for porting"
@@ -399,7 +399,7 @@ After the product Q&A is captured and `pm-architect` has authored `docs/product.
 
 1. **Spawn `pm-product-advocate`** (`subagent_type: "pm-product-advocate"`) with tier `bootstrap`, the recorded product Q&A answers, `docs/product.md`, and `docs/architecture.md`. It matches them against the **bootstrap tier** of `### Foundational product questions` in `workflow/foundational-questions.md` (referenced by name; never re-list the questions here) and writes `.ai-pm/reviews/bootstrap_advocate.md` with a `gaps: N` / `clean` verdict.
 2. **`clean` → silent pass.** Record the resolved artifact and continue to "After initialization".
-3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** `AskUserQuestion` pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical. The answers belong in the bootstrap product docs — their owners record them (`pm-architect` for `docs/product.md` / `docs/architecture.md`); re-spawn the owner with the PM's answers when an answer should land in a doc.
+3. **`gaps: N` → one relay pass.** Relay all N gap questions to the PM in **one** structured-question-tool pass (never per-question tool-spam). For each gap the PM either answers it or consciously descopes it with a rationale. Record **each gap** as a numbered entry — one entry per gap, in gap order, matching the gap's number — in the artifact's `## Resolutions` trail below `## Verdict`, so the `gaps: N` ↔ N-resolutions count-match the backstops perform is mechanical. The answers belong in the bootstrap product docs — their owners record them (`pm-architect` for `docs/product.md` / `docs/architecture.md`); re-spawn the owner with the PM's answers when an answer should land in a doc.
 
 This pass forces the **questions** only. It does **not** auto-draft a populated `docs/user-journeys.md` from the answers — that is a separate deferred feature; keep it out of scope here.
 
@@ -409,7 +409,7 @@ Tell PM: "Project initialized. Describe a feature and I'll help plan it."
 
 Do NOT start planning a feature until PM explicitly asks (interactive mode — in autonomous mode the first feature is derived and announced, see the autonomous branch below).
 
-**Autonomous branch (`### Decision authority` in `workflow/decision-authority.md`).** **Read `workflow/decision-authority.md` before deriving the first feature** (it carries the derivability test and the escalate-regardless cap this branch executes). When the effective authority is `autonomous`, the first feature is not relayed: derive it from the bootstrap mandate (and any seeded backlog), announce it on the announce-before-act line, and proceed into `/pm-plan` — per the feature-selection scope of `### Decision authority` (referenced by name; do not re-encode the enum/default or the selection rule). Escalate (one `AskUserQuestion`) only when the mandate yields no derivable first feature — an expected, healthy bootstrap escalation, not a defect.
+**Autonomous branch (`### Decision authority` in `workflow/decision-authority.md`).** **Read `workflow/decision-authority.md` before deriving the first feature** (it carries the derivability test and the escalate-regardless cap this branch executes). When the effective authority is `autonomous`, the first feature is not relayed: derive it from the bootstrap mandate (and any seeded backlog), announce it on the announce-before-act line, and proceed into `/pm-plan` — per the feature-selection scope of `### Decision authority` (referenced by name; do not re-encode the enum/default or the selection rule). Escalate (one structured-question-tool pass) only when the mandate yields no derivable first feature — an expected, healthy bootstrap escalation, not a defect.
 
 ---
 

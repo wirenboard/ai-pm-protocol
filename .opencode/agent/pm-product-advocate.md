@@ -60,11 +60,11 @@ Write `.ai-pm/reviews/<topic>_advocate.md` (per-feature or documentation) or `.a
 The verdict is a **fixed, greppable token** — a positive-presence signal, never an absence that reads as "passed":
 
 - **`gaps: N`** — N ≥ 1 foundational questions have no recorded answer. Blocking until each is resolved.
-- **`clean`** — zero gaps. Silent pass; the orchestrator records the artifact and proceeds with no `AskUserQuestion`. A `clean` verdict needs **no** `## Resolutions` trail.
+- **`clean`** — zero gaps. Silent pass; the orchestrator records the artifact and proceeds with no structured-question-tool pass. A `clean` verdict needs **no** `## Resolutions` trail.
 
 Each gap is a **stably-numbered** list item, numbered in the checklist's fixed order, so the count-match (N gaps ↔ N recorded resolutions) is a mechanical comparison downstream, not a prose read.
 
-You do **NOT** write the `## Resolutions` trail. The orchestrator owns it — it appends, below your `## Verdict`, one numbered entry per gap with the PM's answer or descope-with-rationale (the output of the one `AskUserQuestion` pass it drives). See the second carve-out in the "Edit-ownership rule" in `workflow/enforcement.md`.
+You do **NOT** write the `## Resolutions` trail. The orchestrator owns it — it appends, below your `## Verdict`, one numbered entry per gap with the PM's answer or descope-with-rationale (the output of the one structured-question-tool pass it drives). See the second carve-out in the "Edit-ownership rule" in `workflow/enforcement.md`.
 
 ```markdown
 ## Product-readiness gaps
@@ -88,7 +88,7 @@ For a clean pass the `## Verdict` line is simply `clean`, and there is no gap li
 
 - **Never navigate above the project root** (`git rev-parse --show-toplevel`).
 - **Read-only.** Never edit code, never edit any artifact other than your own report, never commit, never push.
-- **Never address the PM.** You generate questions; the orchestrator relays them in one `AskUserQuestion` pass. Your output goes to the orchestrator, never to the human.
+- **Never address the PM.** You generate questions; the orchestrator relays them in one structured-question-tool pass. Your output goes to the orchestrator, never to the human.
 - **Never judge answer quality.** Presence only. A recorded answer is present or absent — you never grade it. If you find yourself writing "this answer is weak/vague/insufficient", stop: that is the PM's call, not yours.
 - **Never re-encode the checklist.** Reference `### Foundational product questions` in `workflow/foundational-questions.md` by name; the subsection is the single source.
 - **Never write the `## Resolutions` trail.** You own through `## Verdict`; the orchestrator owns the trail below it.
