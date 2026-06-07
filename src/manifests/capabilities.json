@@ -15,8 +15,72 @@
     "that already lives in the Claude manifest (frontmatter blocks, settings.json),",
     "so the slice-1 substitutions are effectively identity: the generator emits the",
     "verbatim Claude artifact. The structure — not a near-identity Claude mapping —",
-    "is what lets a non-identity harness slot in later."
+    "is what lets a non-identity harness slot in later.",
+    "",
+    "harness_reference (harness-neutral-prose slice 1): the READER-FACING side of",
+    "the same single source. The shared prose (pm-* agent/command bodies, and a",
+    "later slice WORKFLOW.md / workflow/*.md) names every harness-specific concept",
+    "with a NEUTRAL NOUN, never a bare Claude/OpenCode primitive. This block is the",
+    "ONE home that maps each neutral noun -> its Claude and OpenCode concrete. A",
+    "human-readable table is GENERATED from this block (gen/generate.py --harness",
+    "reference -> doc/harness-reference.md); a reader who needs the concrete consults",
+    "that table; the prose stays neutral. `claude_concrete` is also the exact bare",
+    "string the neutral-prose guard (tests/neutral-prose.sh) scans for OUTSIDE the",
+    "allowlist. Single source — do NOT copy this mapping anywhere else."
   ],
+  "harness_reference": {
+    "_note": [
+      "Each entry: neutral_noun (the word the prose uses), claude_concrete and",
+      "opencode_concrete (the per-harness realization the reader resolves to via the",
+      "generated table), and an optional `skew` flag where the two harnesses differ",
+      "BEHAVIORALLY, not just in naming — the route reminder fires per-prompt on",
+      "Claude but is always-on on OpenCode; the prose names the INTENT neutrally and",
+      "each adapter doc states its realized timing (arch note sub-decision 2)."
+    ],
+    "project-entry-file": {
+      "neutral_noun": "the project entry file",
+      "claude_concrete": "CLAUDE.md",
+      "opencode_concrete": "AGENTS.md",
+      "note": "The harness-loaded project instruction file. The protocol's Pipeline block, the `## Project kind:` line, and the Docs table all live in whichever file the harness loads."
+    },
+    "structured-question-tool": {
+      "neutral_noun": "the structured-question tool",
+      "claude_concrete": "AskUserQuestion",
+      "opencode_concrete": "question",
+      "note": "Surface a substantive product fork as a structured choice, not free prose."
+    },
+    "enforcement-layer": {
+      "neutral_noun": "the enforcement layer",
+      "claude_concrete": "settings.json PreToolUse hook",
+      "opencode_concrete": "tool.execute.before plugin (throw)",
+      "note": "Blocks a role-duplicator spawn/skill-load and guards boundary/destructive ops at the harness level."
+    },
+    "instruction-loading-mechanism": {
+      "neutral_noun": "the instruction-loading mechanism",
+      "claude_concrete": "@-import (@.ai-pm/tooling/WORKFLOW.md)",
+      "opencode_concrete": "instructions[] array",
+      "note": "How the always-on core (WORKFLOW.md) is loaded for every session."
+    },
+    "change-intent-route-reminder": {
+      "neutral_noun": "the change-intent route reminder",
+      "claude_concrete": "UserPromptSubmit hook",
+      "opencode_concrete": "always-on AGENTS.md/instructions content",
+      "skew": "BEHAVIORAL: per-prompt on Claude (fires on change-intent), always-on on OpenCode (no UserPromptSubmit-equivalent). Name the intent neutrally; each adapter doc states its realized timing.",
+      "note": "Inject the protocol route on change-intent prompts."
+    },
+    "skill-invocation-tool": {
+      "neutral_noun": "the skill-invocation tool",
+      "claude_concrete": "Skill",
+      "opencode_concrete": "skill",
+      "note": "Invoke a packaged skill/command."
+    },
+    "adapter-directory": {
+      "neutral_noun": "the adapter directory",
+      "claude_concrete": ".claude/",
+      "opencode_concrete": ".opencode/",
+      "note": "The harness's adapter tree (agents, commands, enforcement). Context-sensitive — the install/enforcement prose that names a concrete adapter path is the adapter layer's own concern (allowlisted in the install command bodies until the install-auto-detect slice)."
+    }
+  },
   "capabilities": {
     "subagent-definition": {
       "description": "How a pm-* subagent's metadata (name, description, tool grant) is declared alongside its neutral body.",

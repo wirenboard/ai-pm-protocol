@@ -66,6 +66,72 @@ def load_manifest(harness: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# Where the rendered reader-facing harness-reference table is written. A GENERATED
+# build artifact (single-sourced from capabilities.json's `harness_reference`
+# block), kept next to the generator — NOT authored doc/ content. Regenerate with
+# `python3 gen/generate.py --harness reference`; the diff-clean guard fails on a
+# stale render or a hand-edit, the same discipline as the adapters.
+REFERENCE_TABLE = ROOT / "gen" / "harness-reference.md"
+
+
+def render_reference_table() -> str:
+    """Render the human-readable harness-reference table from the SINGLE source —
+    capabilities.json's `harness_reference` block. The shared prose names every
+    harness-specific concept with a neutral noun; this table is the one home a
+    reader consults to resolve a neutral noun -> the Claude / OpenCode concrete.
+    Deterministic: entries are emitted in the manifest's authored key order, no
+    clock / filesystem dependence. The mapping lives ONLY in capabilities.json —
+    this render is a derived view, asserted drift-free by tests/neutral-prose.sh
+    (`reference-table-matches-capabilities`)."""
+    caps = json.loads((MANIFESTS / "capabilities.json").read_text(encoding="utf-8"))
+    ref = caps.get("harness_reference")
+    if not ref:
+        raise ValueError("capabilities.json has no `harness_reference` block to render")
+
+    lines = []
+    lines.append("# Harness-reference table\n")
+    lines.append(
+        "> **GENERATED — do not edit by hand.** Rendered from "
+        "`src/manifests/capabilities.json` (`harness_reference` block) by "
+        "`gen/generate.py --harness reference`. The single source of the "
+        "neutral-noun -> concrete mapping is that manifest; this file is a derived "
+        "view. A hand-edit or a stale render trips "
+        "`reference-table-matches-capabilities` in `tests/neutral-prose.sh`.\n"
+    )
+    lines.append(
+        "The protocol's shared instruction prose (the `pm-*` agent and command "
+        "bodies) names every harness-specific concept with a **neutral noun**, "
+        "never a bare Claude or OpenCode primitive. A reader (human or model) who "
+        "needs the concrete for their harness resolves it here.\n"
+    )
+    lines.append("| Neutral noun | Claude | OpenCode |")
+    lines.append("|---|---|---|")
+    for entry in ref.values():
+        if not isinstance(entry, dict) or "neutral_noun" not in entry:
+            # Skip the `_note` documentation key (not a mapping row).
+            continue
+        noun = entry["neutral_noun"]
+        claude = entry["claude_concrete"]
+        opencode = entry["opencode_concrete"]
+        marker = " ⚠" if entry.get("skew") else ""
+        lines.append(f"| {noun} | `{claude}` | `{opencode}`{marker} |")
+
+    # Behavioral-skew footnotes (the route reminder differs in TIMING, not just
+    # naming — name the intent neutrally, each adapter doc states its timing).
+    skews = [e for e in ref.values()
+             if isinstance(e, dict) and e.get("skew")]
+    if skews:
+        lines.append("")
+        lines.append(
+            "⚠ **Behavioral skew (not just naming).** The two harnesses differ in "
+            "*behavior*, not only in the name of the primitive:"
+        )
+        for e in skews:
+            lines.append(f"- **{e['neutral_noun']}** — {e['skew']}")
+
+    return "\n".join(lines) + "\n"
+
+
 def extract_wb_deny_roles() -> list:
     """Single-source the wb-* role-duplicator deny set: extract it from the ONE
     authored copy — the Claude settings.json Task|Agent|Skill matcher's
@@ -268,9 +334,24 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Generate a harness adapter from neutral source.")
-    ap.add_argument("--harness", default="claude", help="harness manifest to build: claude|opencode (default: claude)")
-    ap.add_argument("--out", default=None, help="output root override (default: manifest output_root)")
+    ap.add_argument("--harness", default="claude", help="harness manifest to build: claude|opencode (default: claude); `reference` renders the harness-reference table")
+    ap.add_argument("--out", default=None, help="output root override (default: manifest output_root); for `--harness reference`, the output file path")
     args = ap.parse_args()
+
+    # `reference` is not an adapter build — it renders the reader-facing
+    # harness-reference table from capabilities.json (single source). Kept on the
+    # same CLI so the build surface is one entrypoint.
+    if args.harness == "reference":
+        try:
+            rendered = render_reference_table()
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        out_path = pathlib.Path(args.out).resolve() if args.out else REFERENCE_TABLE
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(rendered, encoding="utf-8")
+        print(f"rendered harness-reference table -> {out_path}")
+        return 0
 
     try:
         manifest = load_manifest(args.harness)
