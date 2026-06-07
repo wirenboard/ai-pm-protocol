@@ -8,3 +8,4 @@
 # Claude Code worktree + throwaway scratch dirs
 .claude/worktrees/
 .claude/tmp/
+.ai-pm/tmp/

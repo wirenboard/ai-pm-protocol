@@ -96,19 +96,21 @@ the three things subagents must not do, **plus** the scoped-authoring discipline
   bookkeeping** (state, backlog, contracts, decision/resolution trails), exactly as
   the Claude orchestrator does. It does **not** author source code or the canonical
   `docs` (architecture, product, journeys, …) — those route to `pm-coder` /
-  `pm-architect`. The **persona is the enforcement** (proven live): the body states
-  the orchestrator authors only its own artifacts and delegates code / canonical
-  docs. An earlier slice carried a per-agent **path-`permission`** map (allow
-  `.ai-pm/**` + `doc/features/**`, deny `**`) as a structural hint; it was
+  `pm-architect`. The **persona is the primary enforcement** (proven live): the body
+  states the orchestrator authors only its own artifacts and delegates code /
+  canonical docs. An earlier slice carried a per-agent **path-`permission`** map
+  (allow `.ai-pm/**` + `doc/features/**`, deny `**`) as a structural hint; it was
   **removed** because it was broken AND bypassable. Broken: OpenCode matches the
   globs against **absolute** paths, so the project-relative globs never matched and
   **every** orchestrator write fell through to `**: deny` — denying the legitimate
   `.ai-pm` writes the orchestrator must make. Bypassable: `bash` (needed for git +
   bookkeeping) routes around any tool/permission restriction, so the block gave zero
-  real protection. The structural backstop is a future enforcement-plugin
-  path/actor-aware `bash`-write deny (a separate slice, after an actor-detection
-  feasibility check), not a per-agent permission map that can neither match the
-  paths nor resist `bash`.
+  real protection. **The real structural backstop now lives in the enforcement
+  plugin** (the actor/path-aware write guards — see the plugin description below):
+  it denies the orchestrator authoring content paths (source / canonical docs) via
+  `write`/`edit` **or** `bash` redirect — the airtight backstop the removed
+  permission map could not be — while leaving subagents (who author source
+  legitimately) untouched and denying **any** out-of-root write for **every** actor.
 - **`question`** — surface PM decision-forks via the structured-question tool.
   This grant is given to the **primary only**: `.opencode/opencode.json` carries a
   top-level `permission: { question: "allow" }`, which the OpenCode loader resolves
@@ -285,6 +287,29 @@ as full parity with the Claude `settings.json` **for the "ask"-class guards**.
   clear-DENY guards as the Claude adapter** — role-duplicator (`task`/`skill`),
   read-outside-root, truncating write, and the `find`-outside-root boundary —
   only the "ask"-class guards remain not-yet-ported (see the divergence above).
+  It **additionally** carries two actor/path-aware write guards that
+  **structurally backstop the orchestrator persona** — the real backstop the
+  removed path-`permission` could not be:
+  - **Out-of-root write deny (ALL agents).** A `write`/`edit` whose target, or a
+    `bash` command whose parsed write-target (redirect `>`/`>>`, `tee`, `sed -i`,
+    `cp`/`mv` destination, `dd of=`), resolves **outside** the project root is
+    denied for **every** actor — closing the live boundary breach where the
+    orchestrator wrote `/tmp/nula-dev.log` (use a project-local temp, e.g. a
+    gitignored `.ai-pm/tmp/`, never `/tmp`). Needs no actor lookup.
+  - **Orchestrator content-authoring deny (subagents exempt).** In the
+    **orchestrator (primary) session only**, a `write`/`edit`/`bash`-write that
+    targets a **content path** — inside the root but **not** under `.ai-pm/` and
+    **not** a `doc/features/**` plan (the orchestrator's own artifacts), and not a
+    pure git op — is denied: the orchestrator authors only its plan + `.ai-pm`
+    bookkeeping; code routes to `pm-coder`, canonical docs to `pm-architect`.
+    **Subagents** (e.g. `pm-coder`) author source legitimately and are **not**
+    subject to this. The actor is resolved via the plugin client
+    (`ctx.client.session.get` — a primary session has **no** `parentID` / agent id
+    `ai-pm`; a `task`-spawned subagent has `parentID` set); the lookup **fails open**
+    on the actor (a lookup miss is treated as a subagent, never a false denial — the
+    persona is the fail-safe). This closes the live bug where the orchestrator
+    authored a source file via `bash cat > …`, routing around the old tool/permission
+    restriction.
 
 The cross-model **model pins** are shipped as a **PROVISIONAL preview default**
 (session `deepseek/deepseek-v4-pro`, control `deepseek/deepseek-v4-flash`),

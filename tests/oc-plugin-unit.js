@@ -1,7 +1,13 @@
 // tests/oc-plugin-unit.js — deterministic, CI-safe unit test for the OpenCode
 // CORE enforcement plugin's tool.execute.before hook
 // (opencode-harness-support, stage (a), slice 3 — case `oc-enforcement-plugin-throws`;
-// slice 5 — ESM-load rework + `oc-plugin-esm-loadable` regression guard).
+// slice 5 — ESM-load rework + `oc-plugin-esm-loadable` regression guard;
+// slice 15 — the two ACTOR/PATH-aware write guards: (f) out-of-root write deny
+// for ALL actors, (g) orchestrator content-authoring deny with subagents exempt.
+// The hook now reads input.sessionID and does an actor lookup via
+// ctx.client.session.get; this test injects a MOCK ctx whose session.get returns
+// a chosen {data:{agent,parentID}} to drive BOTH the orchestrator (no parentID /
+// agent `ai-pm`) and a subagent (parentID set), plus a fail-open lookup case).
 //
 // NO LLM, NO OpenCode runtime, NO network. It loads the GENERATED plugin
 // (.opencode/plugin/ai-pm-enforcement.js) THE WAY OPENCODE DOES — as an ES
@@ -103,12 +109,41 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
   if (typeof entry !== "function") { finish(); return; }
 
   // --- (3) Obtain the hook by calling the plugin with a synthetic ctx, the way
-  //     the runtime calls it (ctx.directory = the session's project root). ---
-  const hooks = await entry({ directory: SCRATCH });
-  const hook = hooks && hooks["tool.execute.before"];
-  if (typeof hook !== "function") {
+  //     the runtime calls it (ctx.directory = the session's project root). The
+  //     slice-15 guards need an ACTOR lookup, so ctx now carries a MOCK
+  //     `client.session.get` returning a chosen `{data:{agent,parentID}}`: we
+  //     build TWO ctxs — one resolving to the ORCHESTRATOR (no parentID / agent
+  //     `ai-pm`), one to a SUBAGENT (parentID set) — and drive both. ---
+  function makeCtx(actor) {
+    // actor: "orchestrator" -> {agent:"ai-pm", parentID:null};
+    //        "subagent"     -> {agent:"pm-coder", parentID:"ses_parent"}
+    const data = actor === "orchestrator"
+      ? { agent: "ai-pm", parentID: null }
+      : { agent: "pm-coder", parentID: "ses_parent" };
+    return {
+      directory: SCRATCH,
+      client: { session: { get: async (_q) => ({ data }) } },
+    };
+  }
+
+  async function hookFor(actor) {
+    const hooks = await entry(makeCtx(actor));
+    return hooks && hooks["tool.execute.before"];
+  }
+
+  const hookOrch = await hookFor("orchestrator");
+  const hookSub = await hookFor("subagent");
+  // The legacy assertions (deny-set parity + the in-root content allow cases) use
+  // the SUBAGENT hook as the default: the parity DENY cases (wb-* task/skill,
+  // out-of-root read, truncating write, find) are actor-agnostic so either hook
+  // denies them identically, while the legacy ALLOW cases write in-root content
+  // (authored.md, brand-new.md) which only a SUBAGENT may author — the orchestrator
+  // is now barred by guard (g), so those must run under the subagent hook. The
+  // slice-15 cases pass an explicit hook (hookOrch / hookSub) per assertion.
+  const hook = hookSub;
+  if (typeof hook !== "function" || typeof hookSub !== "function") {
     bad("oc-enforcement-plugin-throws: the plugin returns a tool.execute.before hook function",
-        "got typeof " + typeof hook);
+        "got typeof " + typeof hook + " / " + typeof hookSub);
     finish();
     return;
   }
@@ -133,17 +168,19 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
   }
   const DENIED_ROLE = denyRoles[0];
 
-  async function assertThrows(name, tool, args) {
+  // The hook now reads input.sessionID (for the actor lookup); supply a fixed id.
+  // `h` defaults to the orchestrator hook so the legacy calls are unchanged.
+  async function assertThrows(name, tool, args, h) {
     try {
-      await hook({ tool }, { args });
+      await (h || hook)({ tool, sessionID: "ses_test" }, { args });
       bad(name, "expected a throw (deny), but the hook allowed the call");
     } catch (e) {
       ok(name);
     }
   }
-  async function assertAllows(name, tool, args) {
+  async function assertAllows(name, tool, args, h) {
     try {
-      await hook({ tool }, { args });
+      await (h || hook)({ tool, sessionID: "ses_test" }, { args });
       ok(name);
     } catch (e) {
       bad(name, "expected the hook to allow, but it threw: " + (e && e.message));
@@ -243,6 +280,123 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
     "oc-enforcement-plugin-allows: a non-find bash command is allowed",
     "bash",
     { command: "echo hello && ls -la" }
+  );
+
+  // ====================================================================
+  // SLICE 15 — the two structural write guards (actor/path-aware).
+  // ====================================================================
+
+  // --- (f) OUT-OF-ROOT WRITE DENY — applies to ALL actors (orchestrator AND
+  //     subagent). The boundary is actor-agnostic. ---
+
+  // write tool to /tmp/x -> DENY for BOTH actors.
+  await assertThrows(
+    "oc-slice15-(f): orchestrator `write` to /tmp/x (out of root) is denied",
+    "write", { filePath: "/tmp/oc-plugin-out-of-root-x", content: "data\n" }, hookOrch
+  );
+  await assertThrows(
+    "oc-slice15-(f): subagent `write` to /tmp/x (out of root) is denied",
+    "write", { filePath: "/tmp/oc-plugin-out-of-root-x", content: "data\n" }, hookSub
+  );
+
+  // edit tool to /tmp/x -> DENY for BOTH actors.
+  await assertThrows(
+    "oc-slice15-(f): orchestrator `edit` to /tmp/x (out of root) is denied",
+    "edit", { filePath: "/tmp/oc-plugin-out-of-root-y" }, hookOrch
+  );
+  await assertThrows(
+    "oc-slice15-(f): subagent `edit` to /tmp/x (out of root) is denied",
+    "edit", { filePath: "/tmp/oc-plugin-out-of-root-y" }, hookSub
+  );
+
+  // bash `echo x > /tmp/y` -> DENY for BOTH actors.
+  await assertThrows(
+    "oc-slice15-(f): orchestrator bash `echo x > /tmp/y` (out of root) is denied",
+    "bash", { command: "echo x > /tmp/oc-plugin-out-of-root-z" }, hookOrch
+  );
+  await assertThrows(
+    "oc-slice15-(f): subagent bash `echo x > /tmp/y` (out of root) is denied",
+    "bash", { command: "echo x > /tmp/oc-plugin-out-of-root-z" }, hookSub
+  );
+
+  // --- (g) ORCHESTRATOR CONTENT-AUTHORING DENY — the orchestrator may NOT author
+  //     content paths (source / canonical docs); a SUBAGENT may. Allowlist for the
+  //     orchestrator = .ai-pm/** + doc/features/**. ---
+
+  // A content write (src/foo.ts) -> DENY for the orchestrator, ALLOW for a subagent.
+  await assertThrows(
+    "oc-slice15-(g): orchestrator `write` to src/foo.ts (content path) is denied",
+    "write", { filePath: path.join(SCRATCH, "src", "foo.ts"), content: "export const x=1;\n" }, hookOrch
+  );
+  await assertAllows(
+    "oc-slice15-(g): subagent `write` to src/foo.ts (content path) is ALLOWED",
+    "write", { filePath: path.join(SCRATCH, "src", "foo.ts"), content: "export const x=1;\n" }, hookSub
+  );
+
+  // A canonical-doc write (docs/architecture.md) -> DENY for the orchestrator.
+  await assertThrows(
+    "oc-slice15-(g): orchestrator `write` to docs/architecture.md (canonical doc) is denied",
+    "write", { filePath: path.join(SCRATCH, "docs", "architecture.md"), content: "# arch\n" }, hookOrch
+  );
+  await assertAllows(
+    "oc-slice15-(g): subagent `write` to docs/architecture.md (canonical doc) is ALLOWED",
+    "write", { filePath: path.join(SCRATCH, "docs", "architecture.md"), content: "# arch\n" }, hookSub
+  );
+
+  // The orchestrator's OWN artifacts -> ALLOW for the orchestrator.
+  //   .ai-pm/state/current.md (bookkeeping)
+  await assertAllows(
+    "oc-slice15-(g): orchestrator `write` to .ai-pm/state/current.md (own bookkeeping) is allowed",
+    "write", { filePath: path.join(SCRATCH, ".ai-pm", "state", "current.md"), content: "state\n" }, hookOrch
+  );
+  //   doc/features/x_plan.md (its plan)
+  await assertAllows(
+    "oc-slice15-(g): orchestrator `write` to doc/features/x_plan.md (its plan) is allowed",
+    "write", { filePath: path.join(SCRATCH, "doc", "features", "x_plan.md"), content: "# plan\n" }, hookOrch
+  );
+
+  // bash content-write via redirect (the live `cat > src/...` bypass) -> DENY for
+  // the orchestrator, ALLOW for a subagent.
+  await assertThrows(
+    "oc-slice15-(g): orchestrator bash `echo x > src/foo.ts` (content path, the cat-bypass) is denied",
+    "bash", { command: "echo x > " + path.join(SCRATCH, "src", "foo.ts") }, hookOrch
+  );
+  await assertAllows(
+    "oc-slice15-(g): subagent bash `echo x > src/foo.ts` (content path) is ALLOWED",
+    "bash", { command: "echo x > " + path.join(SCRATCH, "src", "foo.ts") }, hookSub
+  );
+
+  // bash content-write to the orchestrator's OWN artifact -> ALLOW for the orchestrator.
+  await assertAllows(
+    "oc-slice15-(g): orchestrator bash `echo x >> .ai-pm/backlog.md` (own bookkeeping) is allowed",
+    "bash", { command: "echo x >> " + path.join(SCRATCH, ".ai-pm", "backlog.md") }, hookOrch
+  );
+
+  // A pure git op the orchestrator runs (git writes its own files) -> ALLOW.
+  await assertAllows(
+    "oc-slice15-(g): orchestrator bash `git commit` (pure git op) is allowed",
+    "bash", { command: "git add -A && git commit -m x" }, hookOrch
+  );
+
+  // FAIL-OPEN on actor: if the session lookup throws, treat as a subagent (no
+  // false denial). A content write under a ctx whose client.session.get throws is
+  // ALLOWED (the (g) guard cannot confirm the orchestrator, so it does not fire;
+  // (f) still applies — this target is in-root so it passes).
+  const failOpenHooks = await entry({
+    directory: SCRATCH,
+    client: { session: { get: async () => { throw new Error("lookup boom"); } } },
+  });
+  await assertAllows(
+    "oc-slice15-(g): a content write under a FAILED actor lookup is allowed (fail-open on actor; no false denial)",
+    "write", { filePath: path.join(SCRATCH, "src", "bar.ts"), content: "x\n" },
+    failOpenHooks["tool.execute.before"]
+  );
+  // ...but (f) out-of-root STILL fires under a failed actor lookup (boundary is
+  // actor-agnostic; no lookup needed).
+  await assertThrows(
+    "oc-slice15-(f): an out-of-root write under a FAILED actor lookup is STILL denied (boundary needs no actor)",
+    "write", { filePath: "/tmp/oc-plugin-failopen-x", content: "x\n" },
+    failOpenHooks["tool.execute.before"]
   );
 
   finish();
