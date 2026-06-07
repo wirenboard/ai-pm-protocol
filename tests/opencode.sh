@@ -81,6 +81,29 @@
 #     control agent to the control model. Source:
 #     https://github.com/anomalyco/opencode/pull/17577
 #
+#   oc-orchestrator-primary-present  (slice 12)
+#     the protocol ships a first-class orchestrator as a PRIMARY agent:
+#     .opencode/agent/ai-pm.md exists with `mode: primary` (and — guarded-skip when
+#     `opencode` absent — `opencode agent list --pure` shows it as a primary). This
+#     is OpenCode-only (on Claude the orchestrator IS the main session). Source:
+#     https://opencode.ai/docs/agents/
+#
+#   oc-orchestrator-cannot-author  (slice 12)
+#     the orchestrator's frontmatter `tools` map DENIES write + edit (it cannot
+#     author content artifacts — it must delegate to pm-coder / pm-architect) and
+#     GRANTS task + skill + read + bash (it can drive the pipeline + bookkeep). The
+#     question grant is the primary-only top-level permission (see
+#     oc-orchestrator-can-question). Runtime guarded-skip: the loader resolves ai-pm
+#     as a primary with edit=deny and no write grant while task=allow. Source:
+#     https://opencode.ai/docs/agents/
+#
+#   oc-orchestrator-is-default  (slice 12)
+#     the downstream runs the SHIPPED orchestrator, not the default `build`:
+#     opencode.json sets the top-level `default_agent: "ai-pm"` key (verified 1.16.2:
+#     the loader selects config.default_agent as the default primary, falling back to
+#     build only when absent), and AGENTS.md names the shipped primary + the run
+#     mechanism. Source: https://opencode.ai/docs/config/
+#
 # Exit code: 0 if every case matches expectation, 1 if any case fails.
 #
 # Usage: bash tests/opencode.sh
@@ -736,6 +759,177 @@ fi
 # the session vs the pinned subagent) — done as the slice-9 LIVE confirmation, not
 # wired here (it needs a real model round-trip + the configured provider). The
 # form check above (driven off the manifest) is the deterministic, CI-safe guard.
+
+# ----------------------------------------------------------------------
+# oc-orchestrator-primary-present  (slice 12)
+# The protocol ships a first-class ORCHESTRATOR as a PRIMARY agent (not the
+# default `build`): .opencode/agent/ai-pm.md must exist with `mode: primary` in
+# frontmatter. On Claude the orchestrator IS the main session, so no agent file
+# is generated there — this is OpenCode-only (harness-local). RUNTIME
+# (guarded-skip when `opencode` absent): `opencode agent list --pure` shows
+# `ai-pm` as a primary. Source: https://opencode.ai/docs/agents/,
+# opencode-orchestrator-primary plan scenario 1.
+# ----------------------------------------------------------------------
+ORCH="$OC/agent/ai-pm.md"
+if [ ! -f "$ORCH" ]; then
+    fail "oc-orchestrator-primary-present: orchestrator agent missing at $ORCH"
+else
+    ofm=$(awk 'NR==1 && $0=="---"{inb=1;next} inb && $0=="---"{exit} inb{print}' "$ORCH")
+    if printf '%s\n' "$ofm" | grep -Eq '^mode:[[:space:]]+primary[[:space:]]*$'; then
+        pass "oc-orchestrator-primary-present: .opencode/agent/ai-pm.md exists with mode: primary (the shipped orchestrator seat, not the default build; https://opencode.ai/docs/agents/)"
+    else
+        fail "oc-orchestrator-primary-present: ai-pm.md is not mode: primary"
+    fi
+fi
+
+# ----------------------------------------------------------------------
+# oc-orchestrator-cannot-author  (slice 12)
+# The orchestrator is the seat that DRIVES the pipeline and NEVER authors content
+# artifacts — discipline by construction, not by instruction. Its frontmatter
+# `tools` map must DENY write + edit (so it physically cannot use the
+# content-authoring tools and is pushed to delegate to pm-coder / pm-architect)
+# while GRANTING task + question + skill + read + bash (it can drive the pipeline,
+# surface forks, and do git/.ai-pm bookkeeping). NOTE: `question` is granted to the
+# primary via the top-level opencode.json permission (oc-orchestrator-can-question
+# above), not in the per-agent tools map — so the tools-map assertion covers the
+# tool grants and the question grant is taken as already-asserted for the primary.
+# Source: https://opencode.ai/docs/agents/, plan scenario 2.
+# ----------------------------------------------------------------------
+if [ ! -f "$ORCH" ]; then
+    fail "oc-orchestrator-cannot-author: orchestrator agent missing at $ORCH"
+elif python3 - "$ORCH" <<'PY'
+import sys, re, pathlib
+text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+lines = text.split("\n")
+fences = [i for i, l in enumerate(lines) if l == "---"]
+if len(fences) < 2:
+    print("no frontmatter block"); sys.exit(1)
+fm = lines[fences[0]+1:fences[1]]
+tools = {}
+in_tools = False
+for l in fm:
+    if re.match(r'^tools:\s*$', l):
+        in_tools = True; continue
+    if in_tools:
+        m = re.match(r'^\s+([a-z_]+):\s+(true|false)\s*$', l)
+        if m:
+            tools[m.group(1)] = (m.group(2) == "true"); continue
+        if re.match(r'^\s+#', l):  # comment inside the block
+            continue
+        if re.match(r'^[a-z_]+:', l):  # a non-indented key ends the block
+            in_tools = False
+errs = []
+# Must DENY the content-authoring tools.
+for t in ("write", "edit"):
+    if tools.get(t) is not False:
+        errs.append(f"{t} must be explicitly false (cannot author); got {tools.get(t)!r}")
+# Must GRANT the drive-the-pipeline + bookkeep tools.
+for t in ("task", "skill", "read", "bash"):
+    if tools.get(t) is not True:
+        errs.append(f"{t} must be granted (true); got {tools.get(t)!r}")
+if errs:
+    for e in errs: print(e)
+    sys.exit(1)
+sys.exit(0)
+PY
+then
+    pass "oc-orchestrator-cannot-author: ai-pm.md tools map sets write:false AND edit:false (cannot author content), and grants task/skill/read/bash (can drive the pipeline + bookkeep); the question grant is the primary-only top-level permission (https://opencode.ai/docs/agents/)"
+else
+    fail "oc-orchestrator-cannot-author: the orchestrator tools map does not deny write/edit and grant task/skill/read/bash (see above)"
+fi
+
+# Runtime: the real loader must resolve ai-pm as a PRIMARY whose `edit` permission
+# is `deny` and whose `write` tool is not granted (the tools map's
+# write:false/edit:false take effect), while `task` is granted. GUARDED-SKIP when
+# opencode is absent. `--pure` resolves the agent set without a model round-trip.
+if command -v opencode >/dev/null 2>&1; then
+    ODIR=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
+    OAL="$ODIR/agentlist.txt"
+    # `timeout 300` matches the pre-existing runtime checks (the agent-list resolve
+    # is slow on a cold loader / under contention); a shorter cap truncated the
+    # output under load. `--pure` resolves the agent set without a model round-trip.
+    if timeout 300 opencode agent list --pure </dev/null >"$OAL" 2>/dev/null && [ -s "$OAL" ]; then
+        if grep -Eq '^ai-pm \(primary\)' "$OAL" && python3 - "$OAL" <<'PY'
+import sys, re, json
+raw = open(sys.argv[1]).read()
+# Find the `ai-pm (primary)` header, then bracket-match the JSON permission
+# array that follows it. Bracket-matching (not a non-greedy regex with an
+# `^\S...\(subagent\)` lookahead — under re.DOTALL `.*` crosses newlines and the
+# lookahead lands on the block's own closing `]` line, truncating it before the
+# `]`) is robust to the multi-line pretty-printed array.
+hm = re.search(r'^ai-pm \(primary\)\s*$', raw, re.M)
+if not hm:
+    print("ai-pm block not found"); sys.exit(1)
+start = raw.find("[", hm.end())
+if start == -1:
+    print("ai-pm permission array not found"); sys.exit(1)
+depth = 0; endpos = -1
+for i in range(start, len(raw)):
+    if raw[i] == "[": depth += 1
+    elif raw[i] == "]":
+        depth -= 1
+        if depth == 0: endpos = i + 1; break
+if endpos == -1:
+    print("ai-pm permission array not balanced"); sys.exit(1)
+try:
+    rules = json.loads(raw[start:endpos])
+except Exception as e:
+    print("ai-pm permission array did not parse: %s" % e); sys.exit(1)
+def eff(perm):
+    acts = [r["action"] for r in rules if r.get("permission") == perm]
+    return acts[-1] if acts else None
+edit_eff = eff("edit")
+write_eff = eff("write")
+task_eff = eff("task")
+# edit must resolve to deny; write must NOT be granted (no allow rule —
+# tools:false drops it from the active set); task must be allowed.
+ok = (edit_eff == "deny") and (write_eff != "allow") and (task_eff == "allow")
+if not ok:
+    print("ai-pm resolved: edit=%r (want deny) write=%r (want not-allow) task=%r (want allow)" % (edit_eff, write_eff, task_eff))
+sys.exit(0 if ok else 1)
+PY
+        then
+            pass "oc-orchestrator-cannot-author (runtime): the real loader resolves ai-pm as a primary with edit=deny and no write grant (content authoring impossible) while task=allow (it can delegate)"
+        else
+            fail "oc-orchestrator-cannot-author (runtime): the loader did not resolve ai-pm's no-author / can-delegate permissions correctly"
+        fi
+    else
+        fail "oc-orchestrator-cannot-author (runtime): \`opencode agent list --pure\` exited non-zero"
+    fi
+    rm -rf "$ODIR"
+else
+    echo "SKIP: oc-orchestrator-cannot-author (runtime) — opencode not on PATH (CI without opencode does not fail; the form check above still runs)"
+fi
+
+# ----------------------------------------------------------------------
+# oc-orchestrator-is-default  (slice 12)
+# The downstream must run the SHIPPED orchestrator, not the default `build`.
+# OpenCode supports a top-level `default_agent` config key (verified 1.16.2: the
+# loader selects `config.default_agent` as the default primary, falling back to
+# `build` only when it is absent). So .opencode/opencode.json must set
+# `default_agent: "ai-pm"`. RUNTIME (guarded-skip): the loader accepts the config
+# AND `ai-pm` resolves as a primary (asserted above). The AGENTS.md orchestrator
+# seat section must also name the shipped primary + the run mechanism. Source:
+# https://opencode.ai/docs/config/, plan scenario 3.
+# ----------------------------------------------------------------------
+if [ -f "$OCJSON" ] && python3 - "$OCJSON" <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+sys.exit(0 if cfg.get("default_agent") == "ai-pm" else 1)
+PY
+then
+    pass "oc-orchestrator-is-default (form): opencode.json sets default_agent: \"ai-pm\" — a plain \`opencode\` runs the orchestrator, not build (https://opencode.ai/docs/config/)"
+else
+    fail "oc-orchestrator-is-default (form): opencode.json does not set default_agent to ai-pm — the downstream would run the default build primary"
+fi
+
+# AGENTS.md must name the shipped orchestrator primary + the default-agent wiring
+# in its orchestrator-seat section.
+if grep -q 'default_agent' "$AGENTS" && grep -q 'ai-pm' "$AGENTS"; then
+    pass "oc-orchestrator-is-default (docs): AGENTS.md names the shipped ai-pm orchestrator primary and the default_agent run mechanism"
+else
+    fail "oc-orchestrator-is-default (docs): AGENTS.md does not name the ai-pm orchestrator primary + the default_agent wiring"
+fi
 
 # ----------------------------------------------------------------------
 # Summary
