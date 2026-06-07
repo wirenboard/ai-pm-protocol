@@ -55,6 +55,23 @@
 #     (no skill/webfetch/websearch/edit dropped in slice 2's 1:1 translation).
 #     Source: https://opencode.ai/docs/tools/
 #
+#   oc-engine-agents-present  (slice 7)
+#     the OpenCode-only review/research engines are shipped:
+#     .opencode/agent/code-review.md and .opencode/agent/deep-research.md exist,
+#     each with valid OpenCode frontmatter (`description` + `mode: subagent` + a
+#     `tools` object) — and (guarded-skip when `opencode` absent) `opencode agent
+#     list` shows both load. OpenCode has no built-in code-review/deep-research, so
+#     the adapter ships its own. Source: https://opencode.ai/docs/agents/
+#
+#   oc-engine-not-denied  (slice 7)
+#     the enforcement plugin's wb-* deny set does NOT include `code-review` /
+#     `deep-research` — they are ALLOWED engines (same as on Claude, where
+#     code-review/deep-research are not gated). Source: https://opencode.ai/docs/plugins/
+#
+#   oc-engine-self-contained  (slice 7)
+#     neither engine agent file references a .claude/ path (the symmetry /
+#     no-cross-read invariant, asserted directly on the two engine files).
+#
 # Exit code: 0 if every case matches expectation, 1 if any case fails.
 #
 # Usage: bash tests/opencode.sh
@@ -514,6 +531,102 @@ if [ $? -eq 0 ]; then
     pass "oc-agent-toolgrant-parity: every .opencode/agent/*.md tools map covers its Claude grant (no skill/webfetch/websearch/edit dropped in the 1:1 translation; https://opencode.ai/docs/tools/)"
 else
     fail "oc-agent-toolgrant-parity: an .opencode/agent tools map is missing a capability its Claude counterpart grants (see above)"
+fi
+
+# ----------------------------------------------------------------------
+# oc-engine-agents-present
+# OpenCode ships NO built-in code-review / deep-research engine (verified 1.16.2:
+# built-ins are only build/plan/general/explore). So the adapter must SHIP its
+# own. Assert both engine agent files exist with valid OpenCode frontmatter
+# (description + mode: subagent + a tools object), and — guarded-skip when
+# `opencode` is absent — that `opencode agent list` shows both load.
+# Source: https://opencode.ai/docs/agents/
+# ----------------------------------------------------------------------
+engine_ok=1
+for eng in code-review deep-research; do
+    ef="$OC/agent/$eng.md"
+    if [ ! -f "$ef" ]; then
+        fail "oc-engine-agents-present: missing engine agent $ef"
+        engine_ok=0; continue
+    fi
+    efm=$(awk 'NR==1 && $0=="---"{inb=1;next} inb && $0=="---"{exit} inb{print}' "$ef")
+    printf '%s\n' "$efm" | grep -q '^description:' \
+        || { fail "oc-engine-agents-present: $eng.md has no description:"; engine_ok=0; }
+    printf '%s\n' "$efm" | grep -Eq '^mode:[[:space:]]+subagent[[:space:]]*$' \
+        || { fail "oc-engine-agents-present: $eng.md is not mode: subagent"; engine_ok=0; }
+    printf '%s\n' "$efm" | grep -q '^tools:[[:space:]]*$' \
+        || { fail "oc-engine-agents-present: $eng.md has no tools: object key"; engine_ok=0; }
+    printf '%s\n' "$efm" | grep -Eq '^[[:space:]]+[a-z_]+:[[:space:]]+(true|false)[[:space:]]*$' \
+        || { fail "oc-engine-agents-present: $eng.md tools: has no object entries"; engine_ok=0; }
+done
+[ "$engine_ok" -eq 1 ] && pass "oc-engine-agents-present: .opencode/agent/code-review.md + deep-research.md exist with valid OpenCode frontmatter (description + mode: subagent + a tools object) — the protocol-shipped review/research engines OpenCode has no built-in for (https://opencode.ai/docs/agents/)"
+
+# Runtime: the real loader must list both engines as subagents. GUARDED-SKIP when
+# opencode is absent (CI without opencode must not fail).
+if command -v opencode >/dev/null 2>&1; then
+    EDIR=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
+    EAL="$EDIR/agentlist.txt"
+    if timeout 300 opencode agent list </dev/null >"$EAL" 2>/dev/null; then
+        if grep -Eq '^code-review \((subagent|all)\)' "$EAL" \
+           && grep -Eq '^deep-research \((subagent|all)\)' "$EAL"; then
+            pass "oc-engine-agents-present (runtime): \`opencode agent list\` shows both code-review and deep-research loaded as subagents"
+        else
+            fail "oc-engine-agents-present (runtime): \`opencode agent list\` did not show both engines as subagents"
+            grep -E '^(code-review|deep-research) ' "$EAL" | sed 's/^/    /'
+        fi
+    else
+        fail "oc-engine-agents-present (runtime): \`opencode agent list\` exited non-zero"
+    fi
+    rm -rf "$EDIR"
+else
+    echo "SKIP: oc-engine-agents-present (runtime) — opencode not on PATH (CI without opencode does not fail; the form check above still runs)"
+fi
+
+# ----------------------------------------------------------------------
+# oc-engine-not-denied
+# The review/research engines are ALLOWED engines (the same way code-review /
+# deep-research are not gated on Claude). The enforcement plugin's wb-* role
+# deny-list (single-sourced from settings.json) must NOT include `code-review`
+# or `deep-research` — otherwise the orchestrator could not delegate to them.
+# Source: https://opencode.ai/docs/plugins/
+# ----------------------------------------------------------------------
+if [ ! -f "$PLUGIN" ]; then
+    fail "oc-engine-not-denied: generated plugin missing at $PLUGIN"
+else
+    if python3 - "$PLUGIN" <<'PY'
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r'const WB_DENY_ROLES = (\[[^\]]*\]);', src)
+if not m:
+    print("no WB_DENY_ROLES literal in generated plugin"); sys.exit(2)
+import json
+roles = json.loads(m.group(1))
+bad = [r for r in roles if r in ("code-review", "deep-research")]
+if bad:
+    print("DENIED engines present in deny-list: %r" % bad); sys.exit(1)
+sys.exit(0)
+PY
+    then
+        pass "oc-engine-not-denied: the enforcement plugin's wb-* deny set does NOT include code-review/deep-research — they are allowed engines (https://opencode.ai/docs/plugins/)"
+    else
+        fail "oc-engine-not-denied: the enforcement plugin denies code-review and/or deep-research — they must be allowed engines"
+    fi
+fi
+
+# ----------------------------------------------------------------------
+# oc-engine-self-contained
+# The symmetry / no-cross-read invariant, asserted directly on the two engine
+# agent files: neither references a .claude/ path (it must not depend on the
+# Claude adapter existing). The broader opencode-adapter-self-contained case
+# already scans the whole adapter; this is a tight, explicit guard on the
+# slice-7 engine files.
+# ----------------------------------------------------------------------
+engine_xref=$(grep -l '\.claude/' "$OC/agent/code-review.md" "$OC/agent/deep-research.md" 2>/dev/null)
+if [ -z "$engine_xref" ]; then
+    pass "oc-engine-self-contained: neither code-review.md nor deep-research.md references a .claude/ path (no cross-read)"
+else
+    fail "oc-engine-self-contained: an engine agent references a .claude/ path:"
+    printf '%s\n' "$engine_xref" | sed 's/^/    /'
 fi
 
 # ----------------------------------------------------------------------
