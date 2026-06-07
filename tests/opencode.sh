@@ -330,8 +330,9 @@ fi
 #     plugin". This guard would have caught that defect.
 #   * oc-enforcement-plugin-throws: calls AiPmEnforcement({directory}) to get the
 #     tool.execute.before hook and asserts it THROWS for each deny case (wb-* task,
-#     wb-* skill, out-of-root read, truncating write) and ALLOWS the legitimate
-#     cases (pm-* task, in-root read, real write).
+#     wb-* skill, out-of-root read, truncating write, and a bash `find` with an
+#     absolute path outside the root) and ALLOWS the legitimate cases (pm-* task,
+#     in-root read, real write, relative/in-root `find`, a non-find bash command).
 # Requires node; SKIPS cleanly if node is absent.
 # Source: https://opencode.ai/docs/plugins/
 # ----------------------------------------------------------------------

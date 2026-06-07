@@ -19,10 +19,13 @@
 //      to load plugin"). This guard would have caught the slice-5 defect.
 //   3. CALL `AiPmEnforcement({ directory: <tmp project root> })` to obtain the
 //      `tool.execute.before` hook, then run SYNTHETIC (input, output) pairs,
-//      asserting it THROWS for each deny case and ALLOWS the legitimate cases.
-//      The OpenCode tool/arg shapes used here are the ones the 1.16.2 runtime
-//      passes (task.subagent_type, skill.name, read.filePath, write.filePath+
-//      content) and the documented plugin contract
+//      asserting it THROWS for each deny case (wb-* task, wb-* skill, out-of-root
+//      read, truncating write, and a `find` with an absolute path outside the
+//      root) and ALLOWS the legitimate cases (incl. relative/in-root `find` and
+//      a non-find bash command). The OpenCode tool/arg shapes used here are the
+//      ones the 1.16.2 runtime passes (task.subagent_type, skill.name,
+//      read.filePath, write.filePath+content, bash.command) and the documented
+//      plugin contract
 //      (https://opencode.ai/docs/plugins/ — throwing in tool.execute.before
 //      blocks the call).
 //
@@ -177,6 +180,15 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
     { filePath: victim, content: "   \n\t  " }
   );
 
+  // (e) bash `find` with an absolute path argument OUTSIDE the project root ->
+  //     DENY (the find-boundary guard ported from the Claude settings.json Bash
+  //     matcher; clear-DENY parity).
+  await assertThrows(
+    "oc-enforcement-plugin-throws: (e) bash `find /etc -name x` (absolute path outside root) is denied",
+    "bash",
+    { command: "find /etc -name x" }
+  );
+
   // --- ALLOW cases (the hook must not over-block) ---
 
   // A pm-* task spawn -> ALLOW (not in the deny set).
@@ -208,6 +220,29 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
     "oc-enforcement-plugin-allows: an empty write creating a new (non-existent) file is allowed",
     "write",
     { filePath: path.join(SCRATCH, "brand-new.md"), content: "" }
+  );
+
+  // A relative `find` (no absolute first arg) -> ALLOW (the find-boundary guard
+  // gates only an absolute path resolving outside root).
+  await assertAllows(
+    "oc-enforcement-plugin-allows: bash `find . -name x` (relative, no absolute arg) is allowed",
+    "bash",
+    { command: "find . -name x" }
+  );
+
+  // A `find` rooted at a path INSIDE the project root -> ALLOW.
+  await assertAllows(
+    "oc-enforcement-plugin-allows: bash `find <root-relative absolute> ...` (inside root) is allowed",
+    "bash",
+    { command: "find " + path.join(SCRATCH, "sub") + " -name x" }
+  );
+
+  // A non-find bash command -> ALLOW (this guard gates only the find boundary;
+  // the "ask"-class bash guards are not ported in this slice).
+  await assertAllows(
+    "oc-enforcement-plugin-allows: a non-find bash command is allowed",
+    "bash",
+    { command: "echo hello && ls -la" }
   );
 
   finish();
