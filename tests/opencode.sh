@@ -107,6 +107,16 @@
 #     build only when absent), and AGENTS.md names the shipped primary + the run
 #     mechanism. Source: https://opencode.ai/docs/config/
 #
+#   oc-orchestrator-pipeline-order  (slice 14)
+#     the persona body states the load-bearing pipeline-ORDER rules (a form/grep
+#     check over the generated body): /pm-plan precedes any pm-coder spawn; the
+#     plan-approval gate follows the decision-authority mode (interactive +
+#     autonomous both named, referencing the decision-authority rule, NOT a blanket
+#     "PM approves"); the pipeline is sequential with docs a POST-CODING handoff
+#     (never pm-coder + the docs-owner in parallel); merge/ship stays manual in both
+#     modes. Catches a regression that drops one rule. Source:
+#     opencode-orchestrator-primary plan scenario 7.
+#
 # Exit code: 0 if every case matches expectation, 1 if any case fails.
 #
 # Usage: bash tests/opencode.sh
@@ -978,6 +988,61 @@ if grep -q 'default_agent' "$AGENTS" && grep -q 'ai-pm' "$AGENTS"; then
     pass "oc-orchestrator-is-default (docs): AGENTS.md names the shipped ai-pm orchestrator primary and the default_agent run mechanism"
 else
     fail "oc-orchestrator-is-default (docs): AGENTS.md does not name the ai-pm orchestrator primary + the default_agent wiring"
+fi
+
+# ----------------------------------------------------------------------
+# oc-orchestrator-pipeline-order  (slice 14)
+# Delegating is necessary but not sufficient — the PM live re-test showed the
+# orchestrator delegated yet ran the pipeline OUT OF ORDER (it spawned pm-coder
+# AND pm-architect in parallel with NO /pm-plan first). The persona body must
+# carry the HARD sequencing rules so a regression that drops one is caught. This
+# is a FORM (presence/grep) check over the GENERATED body — prose, so each rule is
+# matched by its load-bearing tokens, kept specific enough that deleting a rule
+# trips it. Source: opencode-orchestrator-primary plan scenario 7, the
+# disciplined-pipeline + decision-authority contracts, WORKFLOW.md Step 0–7.
+# ----------------------------------------------------------------------
+if [ ! -f "$ORCH" ]; then
+    fail "oc-orchestrator-pipeline-order: orchestrator agent missing at $ORCH"
+else
+    # Scan the BODY (below the closing frontmatter fence) so a rule cannot be
+    # satisfied by a frontmatter comment.
+    obody=$(awk 'f{print} /^---$/{c++} c==2{f=1}' "$ORCH")
+    oerrs=""
+    # (1) A plan precedes code: /pm-plan runs BEFORE any pm-coder spawn.
+    if ! printf '%s\n' "$obody" | grep -Eq '`/pm-plan`.*`pm-coder`|plan precedes code'; then
+        oerrs="$oerrs\n  - missing the plan-before-code rule (/pm-plan before pm-coder)"
+    fi
+    # (2) The plan-approval gate follows the decision-authority mode — both modes
+    #     named, referencing the decision-authority rule (not a blanket "PM approves").
+    if ! printf '%s\n' "$obody" | grep -Eq 'decision-authority'; then
+        oerrs="$oerrs\n  - missing the decision-authority reference for the plan-approval gate"
+    fi
+    if ! printf '%s\n' "$obody" | grep -qi 'interactive'; then
+        oerrs="$oerrs\n  - the plan-approval gate does not name the interactive mode"
+    fi
+    if ! printf '%s\n' "$obody" | grep -qi 'autonomous'; then
+        oerrs="$oerrs\n  - the plan-approval gate does not name the autonomous mode"
+    fi
+    # (3) The pipeline is sequential AND docs are a POST-CODING handoff — no
+    #     parallel coder + docs-owner.
+    if ! printf '%s\n' "$obody" | grep -qi 'sequential'; then
+        oerrs="$oerrs\n  - missing the sequential-pipeline rule"
+    fi
+    if ! printf '%s\n' "$obody" | grep -Eqi 'never.*parallel|parallel.*never|not concurrently'; then
+        oerrs="$oerrs\n  - missing the never-parallel coder+docs-owner rule"
+    fi
+    if ! printf '%s\n' "$obody" | grep -Eqi 'post-coding'; then
+        oerrs="$oerrs\n  - missing the docs-are-post-coding-handoff rule"
+    fi
+    # (4) Merge/ship stays manual in both modes.
+    if ! printf '%s\n' "$obody" | grep -Eqi 'merge and ship stay manual|merge/ship.*manual|stay manual'; then
+        oerrs="$oerrs\n  - missing the merge/ship-stays-manual rule"
+    fi
+    if [ -z "$oerrs" ]; then
+        pass "oc-orchestrator-pipeline-order: the persona body states the load-bearing order rules — /pm-plan precedes pm-coder, the plan-approval gate follows the decision-authority mode (interactive + autonomous named), the pipeline is sequential with docs a post-coding handoff (no parallel coder+docs-owner), and merge/ship stays manual"
+    else
+        fail "oc-orchestrator-pipeline-order: the persona body is missing one or more load-bearing order rules:$(printf '%b' "$oerrs")"
+    fi
 fi
 
 # ----------------------------------------------------------------------
