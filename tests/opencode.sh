@@ -852,15 +852,29 @@ if command -v opencode >/dev/null 2>&1; then
         if grep -Eq '^ai-pm \(primary\)' "$OAL" && python3 - "$OAL" <<'PY'
 import sys, re, json
 raw = open(sys.argv[1]).read()
-m = re.search(r'^ai-pm \(primary\)\n(.*?)(?=^\S.*\((primary|subagent|all)\)\n|\Z)', raw, re.S | re.M)
-if not m:
+# Find the `ai-pm (primary)` header, then bracket-match the JSON permission
+# array that follows it. Bracket-matching (not a non-greedy regex with an
+# `^\S...\(subagent\)` lookahead — under re.DOTALL `.*` crosses newlines and the
+# lookahead lands on the block's own closing `]` line, truncating it before the
+# `]`) is robust to the multi-line pretty-printed array.
+hm = re.search(r'^ai-pm \(primary\)\s*$', raw, re.M)
+if not hm:
     print("ai-pm block not found"); sys.exit(1)
-block = m.group(1)
-arrs = re.findall(r'\[\s*\{.*?\}\s*\]', block, re.S)
-rules = []
-for a in arrs:
-    try: rules = json.loads(a); break
-    except Exception: pass
+start = raw.find("[", hm.end())
+if start == -1:
+    print("ai-pm permission array not found"); sys.exit(1)
+depth = 0; endpos = -1
+for i in range(start, len(raw)):
+    if raw[i] == "[": depth += 1
+    elif raw[i] == "]":
+        depth -= 1
+        if depth == 0: endpos = i + 1; break
+if endpos == -1:
+    print("ai-pm permission array not balanced"); sys.exit(1)
+try:
+    rules = json.loads(raw[start:endpos])
+except Exception as e:
+    print("ai-pm permission array did not parse: %s" % e); sys.exit(1)
 def eff(perm):
     acts = [r["action"] for r in rules if r.get("permission") == perm]
     return acts[-1] if acts else None
