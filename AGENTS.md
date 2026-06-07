@@ -131,10 +131,11 @@ ones. Do not read the CORE plugin as full parity with the Claude `settings.json`
   <https://opencode.ai/docs/config/>).
 - The **CORE enforcement plugin** `.opencode/plugin/ai-pm-enforcement.js`
   (`tool.execute.before` throws to deny — <https://opencode.ai/docs/plugins/>),
-  registered via the `plugin` array in `.opencode/opencode.json`. Its wb-* role
-  deny-list is **single-sourced** from the Claude `settings.json` (one authored
-  copy, no drift). It enforces the CORE clear-DENY guards only — see the "ask"
-  divergence above.
+  which **auto-loads** from `.opencode/plugin/` (no `opencode.json` registration
+  needed — and an explicit `plugin` entry would double-register it, so it is
+  deliberately absent). Its wb-* role deny-list is **single-sourced** from the
+  Claude `settings.json` (one authored copy, no drift). It enforces the CORE
+  clear-DENY guards only — see the "ask" divergence above.
 
 The cross-model **model pins** are intentionally **not** shipped in this preview
 — see upstream gap #17577.

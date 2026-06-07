@@ -2,8 +2,5 @@
   "$schema": "https://opencode.ai/config.json",
   "instructions": [
     ".ai-pm/tooling/WORKFLOW.md"
-  ],
-  "plugin": [
-    ".opencode/plugin/ai-pm-enforcement.js"
   ]
 }
