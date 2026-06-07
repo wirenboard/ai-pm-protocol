@@ -1,0 +1,5 @@
+---
+name: pm-codebase-reader
+description: Reads an existing codebase and writes raw drafts of docs/architecture.md and docs/user-journeys.md (and optional docs). Called from /pm-bootstrap full mode. Produces drafts — pm-architect owns and finalizes docs/architecture.md AND docs/user-journeys.md (and docs/threat-model.md when drafted) to canonical format afterward. Read-only on source code.
+tools: Read, Grep, Glob, Bash, Write
+---

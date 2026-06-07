@@ -1,0 +1,57 @@
+{
+  "_comment": [
+    "Claude adapter assembly spec. Tells gen/generate.py how to build the full",
+    ".claude/ adapter from the neutral source for the 'claude' harness. The",
+    "generator is intentionally THIN (arch note 'How thin the metalanguage can",
+    "be'): it inlines a neutral body, prepends the harness frontmatter from this",
+    "manifest, and copies the capability artifacts verbatim. No parsing, no",
+    "re-serialization — so byte-identity with the golden is trivially guaranteed.",
+    "",
+    "'capability' on each entry names the harness-neutral capability (see",
+    "src/manifests/capabilities.json) the entry realizes, so the same body set can",
+    "be re-targeted to a second harness's adapter spec without touching src/."
+  ],
+  "harness": "claude",
+  "output_root": ".claude",
+  "agents": {
+    "capability": "subagent-definition",
+    "output_dir": "agents",
+    "output_suffix": ".md",
+    "body_dir": "agents",
+    "body_suffix": ".body.md",
+    "frontmatter_dir": "frontmatter",
+    "frontmatter_suffix": ".fm",
+    "assembly": "frontmatter + body",
+    "names": [
+      "pm-architect",
+      "pm-auditor",
+      "pm-codebase-reader",
+      "pm-coder",
+      "pm-plan-checker",
+      "pm-pr-prep",
+      "pm-product-advocate",
+      "pm-stack-researcher"
+    ]
+  },
+  "commands": {
+    "capability": "command-definition",
+    "output_dir": "commands",
+    "output_suffix": ".md",
+    "body_dir": "commands",
+    "body_suffix": ".body.md",
+    "assembly": "body",
+    "names": [
+      "pm-audit",
+      "pm-bootstrap",
+      "pm-fixup",
+      "pm-plan",
+      "pm-research"
+    ]
+  },
+  "settings": {
+    "capability": "deny-list-enforcement + route-reminder",
+    "output_file": "settings.json",
+    "source_file": "settings.json",
+    "assembly": "verbatim-copy"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "_comment": [
+    "Harness-neutral vocabulary layer (plan scenario 2; arch note 'How thin the",
+    "metalanguage can be'). A capability is named ONCE, neutrally; each harness's",
+    "manifest resolves it to that harness's concrete primitive. The generator reads",
+    "this lookup to decide HOW a capability is realized in the target adapter.",
+    "",
+    "Slice 1 ships only the 'claude' column populated. The 'opencode' column is",
+    "present as documented intent (sourced from doc/stack-notes.md) so a later slice",
+    "plugs OpenCode in by filling primitives + adding an opencode adapter manifest,",
+    "WITHOUT re-carving any neutral body. The bodies in src/ are already harness-",
+    "neutral; nothing here rewrites them.",
+    "",
+    "For Claude (the reference harness) every primitive is realized by an artifact",
+    "that already lives in the Claude manifest (frontmatter blocks, settings.json),",
+    "so the slice-1 substitutions are effectively identity: the generator emits the",
+    "verbatim Claude artifact. The structure — not a near-identity Claude mapping —",
+    "is what lets a non-identity harness slot in later."
+  ],
+  "capabilities": {
+    "subagent-definition": {
+      "description": "How a pm-* subagent's metadata (name, description, tool grant) is declared alongside its neutral body.",
+      "claude": {
+        "primitive": "yaml-frontmatter-block",
+        "realized_by": "claude/frontmatter/<name>.fm (verbatim per-agent block: name + description + comma-list tools)",
+        "tools_form": "comma-list"
+      },
+      "opencode": {
+        "primitive": "yaml-frontmatter-block",
+        "realized_by": "opencode/frontmatter/<name>.fm (mode + model + permission + tools OBJECT map)",
+        "tools_form": "object-map",
+        "source": "https://opencode.ai/docs/agents/",
+        "status": "doc-confirmed (not built in slice 1)"
+      }
+    },
+    "command-definition": {
+      "description": "How a /pm-* command body is declared. On Claude the command file is pure body, no frontmatter.",
+      "claude": {
+        "primitive": "bare-markdown-body",
+        "realized_by": "the neutral command body, emitted verbatim (no frontmatter)"
+      },
+      "opencode": {
+        "primitive": "markdown-body-with-optional-at-inline",
+        "realized_by": ".opencode/command/<name>.md (command bodies MAY use @file inline — an asymmetry; the generator must not over-apply it to agent bodies)",
+        "source": "https://opencode.ai/docs/commands/",
+        "status": "doc-confirmed (not built in slice 1)"
+      }
+    },
+    "deny-list-enforcement": {
+      "description": "Block a class-1 role-duplicator spawn/skill-load; guard boundary/destructive ops.",
+      "claude": {
+        "primitive": "pretooluse-hook-in-settings-json",
+        "realized_by": "claude/settings.json hooks.PreToolUse (emitted verbatim)"
+      },
+      "opencode": {
+        "primitive": "ts-plugin-throw",
+        "realized_by": ".opencode/ plugin: tool.execute.before throws to deny / mutates output.args to rewrite",
+        "source": "https://opencode.ai/docs/plugins/",
+        "status": "doc-cited (unverified) — Spike B (#5894) gates subagent containment"
+      }
+    },
+    "route-reminder": {
+      "description": "Inject the protocol route on change-intent prompts.",
+      "claude": {
+        "primitive": "userpromptsubmit-hook-in-settings-json",
+        "realized_by": "claude/settings.json hooks.UserPromptSubmit (emitted verbatim; per-prompt injection)"
+      },
+      "opencode": {
+        "primitive": "always-on-instructions-content",
+        "realized_by": "baked into AGENTS.md / instructions (always-on, NOT per-prompt — no UserPromptSubmit-equivalent hook)",
+        "source": "https://opencode.ai/docs/plugins/",
+        "status": "doc-cited (unverified)"
+      }
+    },
+    "always-on-core-import": {
+      "description": "Make the always-on core (WORKFLOW.md) load for every session.",
+      "claude": {
+        "primitive": "at-import-line",
+        "realized_by": "the @WORKFLOW.md import in CLAUDE.md (out of slice-1 scope — adapter slice covers .claude/ only)"
+      },
+      "opencode": {
+        "primitive": "instructions-array-entry",
+        "realized_by": "opencode.json instructions array entry (submodule-relative path); no @-import inside an instruction file",
+        "source": "https://opencode.ai/docs/rules/",
+        "status": "doc-confirmed (not built in slice 1)"
+      }
+    },
+    "structured-question-tool": {
+      "description": "Surface a substantive product fork as a structured choice, not free prose.",
+      "claude": { "primitive": "AskUserQuestion" },
+      "opencode": {
+        "primitive": "question",
+        "source": "https://opencode.ai/docs/tools/",
+        "status": "doc-cited (unverified)"
+      }
+    },
+    "skill-invocation": {
+      "description": "Invoke a packaged skill/command.",
+      "claude": { "primitive": "Skill" },
+      "opencode": {
+        "primitive": "skill",
+        "source": "https://opencode.ai/docs/skills/",
+        "status": "doc-cited (unverified)"
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+---
+name: pm-auditor
+description: Protocol compliance sweep. Checks that every merged feature has plan + review + contract artifacts, that plans match implementations, and that contracts and docs are current. Writes findings to .ai-pm/audits/audit-<YYYY-MM-DD>.md. Never edits code, never commits, never opens PRs.
+tools: Read, Grep, Glob, Bash, Write
+---

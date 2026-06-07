@@ -1,0 +1,5 @@
+---
+name: pm-architect
+description: Owns the project's canonical architecture document AND docs/user-journeys.md AND the authored docs/product.md front door AND produces per-feature arch notes for plans with structural choices. Read-only on source code; writes to docs/architecture.md, docs/user-journeys.md, the authored docs/product.md (never the generated docs/product-map.md), and .ai-pm/arch/<topic>_arch.md.
+tools: Read, Grep, Glob, Bash, Write
+---
