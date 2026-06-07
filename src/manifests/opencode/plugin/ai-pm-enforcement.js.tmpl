@@ -60,6 +60,37 @@
 // OpenCode plugin reaches clear-DENY parity with Claude: role-duplicator +
 // read-boundary + truncating-write + find-boundary.
 //
+// STRUCTURAL BACKSTOP (slice 15 — the two write guards the persona alone can't
+// guarantee against a weak model; two confirmed live bugs):
+//   (f) OUT-OF-ROOT WRITE DENY (ALL agents). A `write`/`edit` whose target, or a
+//       `bash` command whose parsed write-target (redirect `>`/`>>`, `tee`,
+//       `sed -i`, `cp`/`mv` destination, `dd of=`), resolves OUTSIDE the project
+//       root is denied for EVERY actor (orchestrator and subagent alike). This
+//       closes the live boundary breach where the orchestrator wrote
+//       `/tmp/nula-dev.log` (backlog 2026-06-07). No actor lookup needed.
+//   (g) ORCHESTRATOR CONTENT-AUTHORING DENY. In the ORCHESTRATOR (primary)
+//       session ONLY, a `write`/`edit`/`bash`-write that targets a CONTENT path —
+//       i.e. INSIDE the root but NOT under `.ai-pm/` and NOT a `doc/features/**`
+//       plan (the orchestrator's OWN artifacts), and not a pure git op — is
+//       denied. The orchestrator authors only its plan + `.ai-pm` bookkeeping;
+//       code routes to pm-coder, canonical docs to pm-architect. SUBAGENTS
+//       (parentID present) author source legitimately and are NOT subject to (g).
+//       This is the real structural backstop the removed slice-13 path-permission
+//       could not be (broken-glob + bash-bypassable). It closes the live bug
+//       where the orchestrator authored a source file via `bash cat > …`.
+//
+// ACTOR DETECTION (orchestrator-verified spike, OpenCode 1.16.2). The plugin
+// function receives `ctx` with a `client`; inside `tool.execute.before` we
+// `await ctx.client.session.get({ path: { id: input.sessionID } })` →
+// `{ data: { agent, parentID, ... } }`. The ORCHESTRATOR (primary) session has
+// NO `parentID` (top-level); a `task`-spawned SUBAGENT has `parentID` set. So
+// `parentID` absent (and/or agent id `ai-pm`) ⇒ orchestrator; `parentID` present
+// ⇒ subagent. We look it up ONCE per hook call only when needed (guard (g)), and
+// FAIL-OPEN on the actor: if the session can't be resolved we treat the caller as
+// NON-orchestrator, so a lookup failure never produces a false denial (the
+// persona is the fail-safe; guard (f), the boundary, needs no lookup and always
+// applies).
+//
 // SCOPE: CORE (clear-DENY) rules only. The "ask"-class guards (force-push, git
 // commit --no-verify, ssh content-edit, ssh mutating action) are NOT ported
 // here: tool.execute.before can only throw (hard deny) or allow — it has no
@@ -120,6 +151,178 @@ function findAbsolutePathArg(command) {
   return m ? m[1] : null;
 }
 
+// Mask the spans of a bash command in which a `>` / `>>` is NOT a redirection,
+// so the write-idiom scans below never mistake such a `>` (or a path that lives
+// only inside one of those spans) for a real redirect or write target. This is
+// the slice-15 fix for the over-deny defect. Three non-redirect span kinds are
+// neutralized:
+//   - QUOTED strings `"…"` / `'…'` — a `>` inside is literal text, and a path
+//     inside (`echo "see > /etc/passwd for x"`) is not a write target.
+//   - ARITHMETIC `(( … ))` — a `>` is a numeric comparison (`(( a > b ))`).
+//   - TEST `[[ … ]]` — a `>` is a string comparison (`[[ a > b ]]`).
+//
+// Each masked span is replaced with same-length `_` filler (delimiters included)
+// so the masked copy stays index-aligned with the original and the filler char
+// `_` carries none of the scans' delimiters. CARVE-OUT: a quoted span that
+// immediately follows a redirect operator (`>`/`>>`, optionally fd-prefixed) IS
+// a genuine redirect TARGET path (`echo x > "my file.txt"`), so it is PRESERVED
+// for the redirect scan to capture. (Arithmetic/test spans are never redirect
+// targets, so they are always masked.)
+function maskQuotedSpans(command) {
+  const fill = (s) => "_".repeat(s.length);
+  // First neutralize arithmetic `(( … ))` and test `[[ … ]]` spans (their `>` is
+  // a comparison, never a redirect). Done before the quote pass; these never
+  // contain a redirect target, so they are unconditionally masked.
+  let out = command.replace(/\(\([^)]*\)\)|\[\[[^\]]*\]\]/g, fill);
+  // Then mask quoted spans, EXCEPT a quoted redirect target (operator + optional
+  // spaces directly before the quote) — that quote is a real write path.
+  out = out.replace(/(\d?>>?\s*)?("[^"]*"|'[^']*')/g, (match, redirPrefix, quoted) => {
+    if (redirPrefix !== undefined) return match; // redirect target: keep intact
+    return fill(quoted); // mask the whole span (quotes included)
+  });
+  return out;
+}
+
+// Best-effort extraction of the file-write TARGET paths of a bash command, for
+// the out-of-root (f) + orchestrator-content (g) write guards. Mirrors the
+// conservative, heuristic style of findAbsolutePathArg / the Claude ssh-content
+// guard: it is NOT a shell parser, it recognizes the common write idioms and is
+// deliberately permissive on miss (the persona is the fail-safe). Recognized:
+//   - redirect:      `> path`, `>> path`, `1> path`, `2>> path` (truncate/append)
+//   - tee:           `tee path`, `tee -a path`, `tee -- path`
+//   - sed in-place:  `sed -i … path` (every non-option token after the `-i` flag)
+//   - cp / mv:       the LAST path-like token (the destination)
+//   - dd of=:        `dd … of=path`
+// Returns an array of raw target tokens (possibly relative; the caller resolves
+// against the root). Tokens that are clearly options/streams (`-…`, `/dev/null`,
+// `&1`, `&2`) are skipped. A command with no recognized write idiom yields [].
+//
+// All scans run on a QUOTE-MASKED copy of the command (maskQuotedSpans), so a
+// `>` / path that appears only inside a quoted string is never extracted — only
+// a quoted token that is itself a redirect TARGET survives the mask (and is
+// captured below). This is the slice-15 over-deny fix.
+function bashWriteTargets(command) {
+  if (typeof command !== "string" || command.length === 0) return [];
+  const masked = maskQuotedSpans(command);
+  command = masked;
+  const targets = [];
+  const isStream = (t) =>
+    t === "/dev/null" || t === "/dev/stdout" || t === "/dev/stderr" ||
+    t === "&1" || t === "&2" || t.startsWith("&");
+
+  // (1) Redirections: `>`, `>>`, optionally fd-prefixed (`1>`, `2>>`). Capture
+  //     the following token (quotes stripped). `2>&1`-style fd dups are skipped
+  //     by the isStream filter. Runs on the masked copy: a `>` inside a quoted
+  //     span has been masked to `_`, so only genuine redirect operators match.
+  const redir = /(?:^|\s)\d?>>?\s*("[^"]*"|'[^']*'|[^\s|;&<>()]+)/g;
+  let r;
+  while ((r = redir.exec(command)) !== null) {
+    const tok = r[1].replace(/^["']|["']$/g, "");
+    if (tok && !isStream(tok)) targets.push(tok);
+  }
+
+  // (2) tee: every non-option token after `tee` up to a pipe/terminator.
+  const tee = command.match(/(?:^|[\s;&|(])tee\b([^|;&\n]*)/);
+  if (tee) {
+    for (const tok of tee[1].split(/\s+/)) {
+      if (!tok || tok.startsWith("-") || isStream(tok)) continue;
+      targets.push(tok.replace(/^["']|["']$/g, ""));
+    }
+  }
+
+  // (3) sed -i: in-place edit. Every non-option token after the segment's `sed`
+  //     is a file target (the script itself is typically `-e`/quoted, but a bare
+  //     `sed -i 's/…/…/' path` leaves the quoted script as a token — we treat any
+  //     non-`-` token as a candidate path; resolving + classifying it is harmless
+  //     for the script token since it won't be an out-of-root/content file path
+  //     that matters, and erring toward MORE deny on the orchestrator is correct).
+  const sed = command.match(/(?:^|[\s;&|(])sed\b[^|;&\n]*?\s-i\b([^|;&\n]*)/);
+  if (sed) {
+    for (const tok of sed[1].split(/\s+/)) {
+      if (!tok || tok.startsWith("-") || isStream(tok)) continue;
+      // Skip an obvious sed script token (begins with a quote + s/ y/ etc.).
+      const clean = tok.replace(/^["']|["']$/g, "");
+      if (/^[sy]\W/.test(clean) || clean.includes("/") === false && /[{};]/.test(clean)) continue;
+      targets.push(clean);
+    }
+  }
+
+  // (4) cp / mv: the destination is the LAST path-like token of the segment —
+  //     but ONLY up to any redirection. The segment regex `[^|;&\n]*` does not
+  //     stop at `>` / `>>` / `<`, so a trailing redirect's target would hijack
+  //     the "destination" (`cp data /out/dest > log` would take `log`, leaving
+  //     the real out-of-root `/out/dest` unchecked). Slice-15 fix: cut the cp/mv
+  //     args at the FIRST redirect operator before taking the last token (the
+  //     redirect target is already captured independently by scan (1) above).
+  const cpmv = command.match(/(?:^|[\s;&|(])(?:cp|mv)\b([^|;&\n]*)/);
+  if (cpmv) {
+    const argsBeforeRedirect = cpmv[1].split(/\d?>>?|</)[0];
+    const toks = argsBeforeRedirect.split(/\s+/).filter((t) => t && !t.startsWith("-") && !isStream(t));
+    if (toks.length >= 1) targets.push(toks[toks.length - 1].replace(/^["']|["']$/g, ""));
+  }
+
+  // (5) dd of=: the of= operand.
+  const dd = command.match(/(?:^|[\s;&|(])dd\b[^|;&\n]*?\bof=("[^"]*"|'[^']*'|[^\s|;&<>()]+)/);
+  if (dd) {
+    const tok = dd[1].replace(/^["']|["']$/g, "");
+    if (tok && !isStream(tok)) targets.push(tok);
+  }
+
+  return targets;
+}
+
+// True if a bash command is a PURE git op (every segment's leading word is `git`).
+// Git writes its own object/index files inside `.git/` and the orchestrator owns
+// git — so a pure git command is exempt from the orchestrator-content guard (g).
+// Conservative: a single non-git segment makes the whole command non-pure-git.
+function isPureGitCommand(command) {
+  if (typeof command !== "string" || command.length === 0) return false;
+  const segments = command.split(/&&|\|\||;|\|/);
+  let sawGit = false;
+  for (const seg of segments) {
+    const t = seg.trim();
+    if (t.length === 0) continue;
+    if (!/^git\b/.test(t)) return false;
+    sawGit = true;
+  }
+  return sawGit;
+}
+
+// Classify a RESOLVED absolute path (already inside the root) as an ALLOWED
+// orchestrator-authored artifact or a DENIED content path. ALLOWED = under
+// `.ai-pm/` OR a `doc/features/**` plan (the orchestrator's own artifacts).
+// DENIED = anything else inside the root (source code, `docs/`/`doc/*.md` canon,
+// config, …). The caller has already confirmed `resolved` is inside `root`.
+function isOrchestratorAuthorable(root, resolved) {
+  const rootResolved = path.resolve(root);
+  const rel = path.relative(rootResolved, resolved);
+  // rel is "" for the root itself, or a `/`-separated relative path inside it.
+  const parts = rel.split(path.sep);
+  if (parts[0] === ".ai-pm") return true;
+  if (parts[0] === "doc" && parts[1] === "features") return true;
+  return false;
+}
+
+// Resolve the calling session's actor via the plugin client. Returns true iff the
+// caller is the ORCHESTRATOR (primary): no `parentID` (top-level) OR agent id
+// `ai-pm`. FAIL-OPEN: any lookup failure (no client, missing sessionID, network
+// error, unexpected shape) returns false (treat as a subagent) so a lookup miss
+// never produces a false denial — the persona is the fail-safe.
+async function isOrchestratorSession(client, sessionID) {
+  try {
+    if (!client || !client.session || typeof client.session.get !== "function") return false;
+    if (typeof sessionID !== "string" || sessionID.length === 0) return false;
+    const res = await client.session.get({ path: { id: sessionID } });
+    const data = (res && res.data) || {};
+    // Primary (orchestrator) session has NO parentID; a task-spawned subagent
+    // has parentID set. The orchestrator's agent id is `ai-pm`.
+    if (data.agent === "ai-pm") return true;
+    return data.parentID === undefined || data.parentID === null;
+  } catch (_e) {
+    return false; // fail-open on actor
+  }
+}
+
 // OpenCode plugin entry — the SINGLE named export. Per
 // https://opencode.ai/docs/plugins/ the plugin is an async function receiving
 // { project, client, $, directory, worktree } and returning a hooks object; the
@@ -136,6 +339,50 @@ export const AiPmEnforcement = async (ctx) => {
     "tool.execute.before": async (input, output) => {
       const tool = input && input.tool;
       const args = (output && output.args) || {};
+      const sessionID = input && input.sessionID;
+      const client = ctx && ctx.client;
+
+      // Shared write-target guard for guards (f) + (g). Given a list of resolved
+      // ABSOLUTE target paths and a label for the error, throws on the FIRST
+      // violation. (f) out-of-root applies to ALL actors and is checked first
+      // (no lookup); (g) orchestrator-content is checked only when the caller is
+      // the orchestrator (single lookup, lazily, only if an in-root target needs
+      // it). `targets` is an array of resolved absolute paths (null entries
+      // skipped). `label` describes the tool for the error text.
+      const enforceWriteTargets = async (targets, label, skipContentGuard) => {
+        const resolvedTargets = targets.filter((t) => typeof t === "string" && t.length > 0);
+        // (f) OUT-OF-ROOT (all actors): any target outside the root is denied.
+        for (const resolved of resolvedTargets) {
+          if (!isInsideRoot(projectRoot, resolved)) {
+            throw new Error(
+              "Out-of-root write (" + label + "): " + resolved +
+                " is outside the project root " + path.resolve(projectRoot) +
+                ". Writes must stay inside the project root — use a project-local" +
+                " temp (e.g. a gitignored .ai-pm/tmp/), never /tmp or any path" +
+                " outside the project."
+            );
+          }
+        }
+        // (g) ORCHESTRATOR-CONTENT: only the orchestrator (primary) is barred from
+        // authoring content paths. Skipped when the caller says so (pure git op).
+        // Look the actor up once, and only if there is at least one in-root target
+        // that is NOT orchestrator-authorable.
+        if (skipContentGuard) return;
+        const contentTargets = resolvedTargets.filter(
+          (resolved) => !isOrchestratorAuthorable(projectRoot, resolved)
+        );
+        if (contentTargets.length === 0) return; // all targets are .ai-pm / doc/features
+        if (await isOrchestratorSession(client, sessionID)) {
+          throw new Error(
+            "Orchestrator content-authoring deny (" + label + "): " +
+              contentTargets[0] +
+              " is a content path (source / canonical docs). The orchestrator" +
+              " authors only the plan (doc/features/**) and .ai-pm bookkeeping;" +
+              " delegate code to pm-coder and canonical docs to pm-architect" +
+              " (spawn the owning pm-* agent via task)."
+          );
+        }
+      };
 
       // (a) task -> deny a wb-* role-duplicator subagent spawn.
       if (tool === "task") {
@@ -173,11 +420,17 @@ export const AiPmEnforcement = async (ctx) => {
       // (d) write -> deny an empty/whitespace-only write over an existing
       //     non-empty file (truncation guard; mirrors the Claude destructive-Write
       //     guard / the 2026-06-06 doc-loss regression guard).
+      //     ALSO (f)/(g): the write TARGET (args.filePath) is run through the
+      //     shared boundary + orchestrator-content guard.
       if (tool === "write") {
+        const resolved = resolveTarget(projectRoot, args.filePath);
+        // (f)/(g) target guards first — a write outside the root (any actor) or
+        // an orchestrator content-authoring write is denied regardless of content.
+        await enforceWriteTargets([resolved], "write");
+
         const content = typeof args.content === "string" ? args.content : "";
         const stripped = content.replace(/[\s]/g, "");
         if (stripped.length > 0) return; // non-empty content is fine
-        const resolved = resolveTarget(projectRoot, args.filePath);
         if (resolved === null) return;
         let existingNonEmpty = false;
         try {
@@ -198,6 +451,17 @@ export const AiPmEnforcement = async (ctx) => {
         return;
       }
 
+      // (f)/(g) edit -> the edit TARGET (args.filePath) is run through the shared
+      //     boundary + orchestrator-content guard. An edit outside the root is
+      //     denied for all actors; an orchestrator edit of a content path is
+      //     denied (subagents are exempt). The edit tool requires an existing
+      //     file, so there is no truncation/creation case here.
+      if (tool === "edit") {
+        const resolved = resolveTarget(projectRoot, args.filePath);
+        await enforceWriteTargets([resolved], "edit");
+        return;
+      }
+
       // (e) bash -> deny a `find` whose first absolute-path argument resolves
       //     OUTSIDE the project root (ports the Claude settings.json Bash
       //     matcher's find-boundary guard; clear-DENY parity). A relative
@@ -211,6 +475,18 @@ export const AiPmEnforcement = async (ctx) => {
           if (!isInsideRoot(projectRoot, resolved)) {
             throw new Error("find searches outside project root: " + absPath);
           }
+        }
+        // (f)/(g) bash-write: parse the command for write-targets (redirect,
+        //     tee, sed -i, cp/mv destination, dd of=) and run them through the
+        //     shared guard. (f) out-of-root applies to ALL actors. (g) the
+        //     orchestrator-content guard is SKIPPED for a pure git op (git writes
+        //     its own files; the orchestrator owns git). Subagents are exempt from
+        //     (g) by the actor lookup. Best-effort parse, conservative on miss.
+        const writeTargets = bashWriteTargets(args.command).map((t) =>
+          resolveTarget(projectRoot, t)
+        );
+        if (writeTargets.length > 0) {
+          await enforceWriteTargets(writeTargets, "bash", isPureGitCommand(args.command));
         }
         return;
       }
