@@ -16,6 +16,8 @@
 
 ## Установка
 
+**Поддерживаемые harness'ы:** **Claude Code** (основной, self-host) и **OpenCode** (preview). Набор объявлен явно — не выводится из того, какая из папок адаптера (`.claude/` или `.opencode/`) присутствует. Submodule-механика для downstream **не меняется**: тот же URL, та же установка без сборки; ниже добавлен только путь установки под OpenCode.
+
 По умолчанию — **через symlinks** (агенты, команды и `settings.json` ссылаются в submodule, поэтому обновляются автоматически вместе с ним):
 
 ```bash
@@ -47,6 +49,22 @@ cp    .ai-pm/tooling/.claude/settings.json .claude/settings.json
 **Цена варианта:** agents/commands/settings — теперь копии, а не symlinks, поэтому auto-update через submodule не работает. При обновлении шаблона их нужно перекопировать (см. «Обновление шаблона» ниже).
 
 > Ещё проще, если возможно: склонировать проект **нативно внутри виртуалки** (не через shared folder) — тогда работает обычная установка через symlinks и auto-update сохраняется.
+
+### Установка под OpenCode (preview)
+
+OpenCode поддержан как **preview**: адаптеры загружаются и enforcement-плагин проверен subagent-эффективным на **OpenCode 1.16.2** (привязано к версии — перепроверяй при обновлении). Пока **не вошло в preview**: авто-детект harness'а при установке, bash-`find`-граница и «ask»-class guard'ы, cross-model model-пины, собственный OpenCode-движок review/research, и сам split репозитория. Полная сертификация OpenCode — отдельный более поздний шаг, ждущий двух upstream-пробелов (runtime per-`task` model override, PR `#17577`; subagent-permission cluster `#5894`).
+
+Установка зеркалит symlink-вариант для Claude — submodule остаётся тем же (тот же URL, без сборки), добавляются symlinks `.opencode/{agent,command,plugin}` в submodule плюс запись пути к ядру в `instructions` и `AGENTS.md`:
+
+```bash
+git submodule add git@github.com:wirenboard/ai-pm-protocol.git .ai-pm/tooling
+mkdir -p .opencode
+ln -s ../.ai-pm/tooling/.opencode/agent   .opencode/agent
+ln -s ../.ai-pm/tooling/.opencode/command .opencode/command
+ln -s ../.ai-pm/tooling/.opencode/plugin  .opencode/plugin
+```
+
+Дальше — как и для Claude: после установки очисти контекст (новая сессия), затем переходи к Quickstart.
 
 Оркестратор работает с отключённой авто-памятью (`autoMemoryEnabled: false`) — всё состояние живёт в артефактах проекта (`.ai-pm/`, `doc/`, планы, ревью). Каталог для временных/диагностических скриптов — `.claude/tmp/` (git-ignored), а не `/tmp`.
 
