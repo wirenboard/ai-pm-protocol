@@ -22,15 +22,15 @@ When you describe a feature or bug:
 
 For a user-facing feature I spawn `pm-product-advocate` (tier `per-feature`). It matches the plan + contract + `docs/product.md` + `docs/user-journeys.md` against `### Foundational product questions` (in `workflow/foundational-questions.md`) and writes its gap report with a `gaps: N` / `clean` verdict.
 
-- **Zero gaps (`clean`)** — silent pass. I record the resolved artifact and proceed to Step 4; no `AskUserQuestion`, no ceremony.
-- **Gaps (`gaps: N`)** — I relay all N gap questions to you in **one** `AskUserQuestion` pass. For each gap you either answer it or consciously descope it with a rationale. I record each answer/descope as a numbered entry in the artifact's `## Resolutions` trail. The coder handoff stays **blocked** until every gap is answered or descoped — never a silent skip, never a permanent veto.
+- **Zero gaps (`clean`)** — silent pass. I record the resolved artifact and proceed to Step 4; no structured-question-tool pass, no ceremony.
+- **Gaps (`gaps: N`)** — I relay all N gap questions to you in **one** structured-question-tool pass. For each gap you either answer it or consciously descope it with a rationale. I record each answer/descope as a numbered entry in the artifact's `## Resolutions` trail. The coder handoff stays **blocked** until every gap is answered or descoped — never a silent skip, never a permanent veto.
 
 **Autonomous branch (additive — fires only when the effective authority is `autonomous`; see `### Decision authority` in `workflow/decision-authority.md`).** **Read `workflow/decision-authority.md` before running the derivability test below** (it carries the derivability test, the procedural-gate progression, and the escalate-regardless cap this branch executes). The advocate spawn is **unchanged** — same prompt, same `clean` / `gaps: N` verdict. When the effective authority for this feature is `autonomous` (per-feature plan `Decision authority:` line → `.ai-pm/decision-authority.md` `mode:` → `interactive`), the orchestrator handles a `gaps: N` verdict differently:
 
 - For each gap I run the **derivability test** (`### Decision authority`): is the answer derivable from cited project canon + the bootstrap mandate?
-- **Derivable** → I **announce** it (fork · chosen option · rationale citing the canon ref · invariants · `(proceeding — interrupt to override)`), then record an `auto` `## Resolutions` entry carrying the cited passage + rationale, committed before acting. No `AskUserQuestion` for this gap.
+- **Derivable** → I **announce** it (fork · chosen option · rationale citing the canon ref · invariants · `(proceeding — interrupt to override)`), then record an `auto` `## Resolutions` entry carrying the cited passage + rationale, committed before acting. No structured-question-tool pass for this gap.
 - **Not derivable, OR a `### Security-relevant surfaces` item on a security-bearing project, OR a PM-marked irreversible / high-stakes fork** → I escalate it (the cap): record an `escalated` `## Resolutions` entry and add it to the escalation set.
-- The **escalation set** is what reaches the existing **one** `AskUserQuestion` pass (the interactive path, narrowed to just the escalations). An **empty escalation set ⇒ fully silent** — announcements only, no `AskUserQuestion`.
+- The **escalation set** is what reaches the existing **one** structured-question-tool pass (the interactive path, narrowed to just the escalations). An **empty escalation set ⇒ fully silent** — announcements only, no structured-question-tool pass.
 
 The interactive branch above is **byte-unchanged** (and is every existing project, by the default). This autonomous path is purely additive, and merge/ship still stays manual in both scopes.
 
@@ -99,7 +99,7 @@ After you merge: pull main locally and we're ready for the next feature. **When 
 2. **Triage each** (I decide; I involve you only when product scope is at stake):
    - **Needs a code change** → I spawn `pm-coder` with the thread as a focused task; it fixes on the same branch, runs the pipeline, commits.
    - **Question** → I answer in a reply; no code change.
-   - **Reviewer asks for behaviour the plan/contract didn't cover** → that is a product decision: I bring it to you (AskUserQuestion) before acting; it may need a plan update.
+   - **Reviewer asks for behaviour the plan/contract didn't cover** → that is a product decision: I bring it to you (via the structured-question tool) before acting; it may need a plan update.
 3. **Push and respond** — after the fixes land I push, reply to each thread with what changed (or why not), and resolve the threads I addressed.
 4. **Re-run the review loop** (`pm-plan-checker` + `code-review`) if the fixes were non-trivial, before asking for re-review.
 

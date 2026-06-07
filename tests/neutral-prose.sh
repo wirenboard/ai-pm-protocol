@@ -9,18 +9,32 @@
 # allowlist"):
 #
 #   neutral-prose-no-claude-isms
-#     given the neutralized bodies (src/agents|commands/*.body.md), when scanned
-#     for bare Claude primitives (CLAUDE.md, AskUserQuestion, settings.json
-#     PreToolUse, .claude/, the Skill tool), then NONE appears except in the
-#     documented allowlist — the install command-body prose (pm-bootstrap +
-#     pm-audit, DEFERRED to the install-auto-detect slice) and .git/hooks (a git
-#     mechanic, not a Claude-ism). The standard is mechanically enforced, the
-#     same loud-fail discipline as single-source-diff-clean. NON-VACUOUS: the
-#     suite also injects a bare CLAUDE.md into a scratch copy and asserts the
-#     scan trips (claude-ism-reintroduction-trips-guard).
+#     given the neutralized corpus — the shared bodies (src/agents|commands/
+#     *.body.md) AND the always-on core (WORKFLOW.md + workflow/*.md) — when
+#     scanned for bare Claude primitives (CLAUDE.md, AskUserQuestion, settings.json
+#     PreToolUse, UserPromptSubmit, the @-import-as-the-only-mechanism, .claude/,
+#     the Skill tool), then NONE appears except in the documented allowlist. The
+#     standard is mechanically enforced, the same loud-fail discipline as
+#     single-source-diff-clean. NON-VACUOUS: the suite also injects a bare
+#     CLAUDE.md into a scratch copy and asserts the scan trips
+#     (claude-ism-reintroduction-trips-guard).
 #
-#     SCOPE NOTE: this slice neutralizes the BODIES only. WORKFLOW.md and
-#     workflow/*.md are the NEXT slice — deliberately NOT scanned here.
+#     ALLOWLIST (arch note § "The guard's residual-token allowlist", extended for
+#     the always-on core in slice 2):
+#       * the install command bodies (pm-bootstrap + pm-audit) — DEFERRED install/
+#         enforcement concretes, until the install-auto-detect slice.
+#       * .git/hooks — a git mechanic, never a Claude-ism (not scanned).
+#       * workflow/enforcement.md line 42 ONLY — the one passage that genuinely
+#         TEACHES the per-harness enforcement MECHANISM, naming BOTH harnesses'
+#         concretes side by side (Claude settings.json PreToolUse hook; OpenCode
+#         tool.execute.before plugin) as the "realized per harness" detail and
+#         pointing at the harness-reference table. The arch note explicitly keeps
+#         this kind of mechanism-teaching passage concrete rather than forcing a
+#         wrong neutralization. Matched by an exact marker phrase so a stray Claude
+#         primitive ELSEWHERE in enforcement.md still trips.
+#
+#     SCOPE: slice 1 neutralized the BODIES; slice 2 extends the SAME scan to
+#     WORKFLOW.md + workflow/*.md (the always-on core, the most-read surface).
 #
 #   reference-table-matches-capabilities
 #     given the rendered reference table (gen/harness-reference.md), when its
@@ -61,9 +75,19 @@ fail() { echo "FAIL: $1"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
 [ -f "$GEN" ]   || { echo "FAIL: generator missing at $GEN" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "FAIL: python3 not available" >&2; exit 1; }
 
-# The in-scope neutralized corpus for THIS slice: the shared agent + command
-# bodies. (WORKFLOW.md / workflow/*.md are the next slice — not scanned here.)
+# The in-scope neutralized corpus.
+#   BODIES  — the shared agent + command bodies (slice 1).
+#   CORE    — the always-on core (slice 2): WORKFLOW.md + every workflow/*.md.
+#             These are ROOT files, NOT generated (the generator never touches
+#             them; they ship to both harnesses via the instruction-loading
+#             mechanism), so there is no golden impact — edited in place.
 BODIES="$ROOT/src/agents $ROOT/src/commands"
+CORE="$ROOT/WORKFLOW.md $ROOT/workflow"
+
+# The ONE allowlisted line in the core: the per-harness enforcement-mechanism
+# teaching passage in workflow/enforcement.md (arch note allowlist). Matched by an
+# exact marker substring so a stray primitive elsewhere in enforcement.md trips.
+ENFORCEMENT_TEACH_RE='The enforcement layer is \*\*realized per harness\*\*'
 
 # ----------------------------------------------------------------------
 # neutral-prose-no-claude-isms
@@ -124,8 +148,45 @@ for pat in 'CLAUDE\.md' '\.claude/' 'PreToolUse'; do
 $hits"
 done
 
+# ----------------------------------------------------------------------
+# CORE scan (slice 2) — WORKFLOW.md + workflow/*.md.
+#
+# These root files carry NO install bodies, so EVERY listed bare primitive must
+# be neutral. The ONLY allowed home is the single enforcement-mechanism teaching
+# line in workflow/enforcement.md (matched by ENFORCEMENT_TEACH_RE), which the
+# arch note keeps concrete because it genuinely teaches both harnesses' wiring
+# side by side. A primitive on any OTHER core line is a fail.
+# ----------------------------------------------------------------------
+
+scan_core() {
+    # $1 = grep ERE pattern; offending hits anywhere in the core are a fail,
+    # EXCEPT the one allowlisted enforcement-teaching line.
+    grep -rnE "$1" $CORE 2>/dev/null | sed "s#^$ROOT/##" \
+        | grep -vE "$ENFORCEMENT_TEACH_RE"
+}
+
+# Every listed bare Claude primitive must be neutral across the whole core.
+# `@-import` is matched as the "@<word>" instruction-loading concrete (the bare
+# @.ai-pm path or an @WORKFLOW.md-style import); the neutral noun "the
+# instruction-loading mechanism" does NOT match.
+for pat in 'AskUserQuestion' 'UserPromptSubmit' 'CLAUDE\.md' '\.claude/' \
+           'PreToolUse' 'settings\.json' '@\.ai-pm/tooling' '@WORKFLOW'; do
+    hits=$(scan_core "$pat")
+    [ -n "$hits" ] && violations="$violations
+[$pat] (core must be neutral; only the enforcement-teaching line is exempt):
+$hits"
+done
+
+# The bare `Skill` tool grant in the core (same case-sensitive word-boundary rule
+# as the bodies; the lowercase `skill` and `skill-invocation` noun do not match).
+core_skill_hits=$(grep -rnE '\bSkill\b' $CORE 2>/dev/null | sed "s#^$ROOT/##" \
+    | grep -vE "$ENFORCEMENT_TEACH_RE")
+[ -n "$core_skill_hits" ] && violations="$violations
+[bare Skill tool in core] (must be 'the skill-invocation tool'):
+$core_skill_hits"
+
 if [ -z "$violations" ]; then
-    pass "neutral-prose-no-claude-isms: no bare Claude primitive in the neutralized bodies outside the install-prose allowlist + .git/hooks"
+    pass "neutral-prose-no-claude-isms: no bare Claude primitive in the neutralized bodies OR the always-on core (WORKFLOW.md + workflow/*.md) outside the documented allowlist (install bodies + .git/hooks + the one enforcement-mechanism teaching line)"
 else
     fail "neutral-prose-no-claude-isms: bare Claude primitive(s) found outside the allowlist:"
     printf '%s\n' "$violations" | sed 's/^/    /'
@@ -148,6 +209,32 @@ if [ -n "$inject_hits" ]; then
     pass "claude-ism-reintroduction-trips-guard: an injected bare CLAUDE.md is detected by the scan (guard is live)"
 else
     fail "claude-ism-reintroduction-trips-guard: injected CLAUDE.md was NOT detected — guard is vacuous"
+fi
+
+# ----------------------------------------------------------------------
+# core-scan-non-vacuous (slice 2)
+# Prove the CORE scan + its enforcement-teaching allowlist are BOTH live:
+#   (a) a bare AskUserQuestion on an ordinary core line MUST surface, and
+#   (b) the allowlisted enforcement-teaching marker line MUST be exempt (a Claude
+#       concrete on that one line is NOT flagged) — so the allowlist is real, not
+#       a blanket pass that would swallow violations.
+# Built so the marker line itself ALSO carries a Claude concrete: if the exempt
+# filter were too broad (e.g. matched the whole file) the violating line would be
+# masked and the test would catch it.
+# ----------------------------------------------------------------------
+mkdir -p "$SCRATCH/workflow"
+{
+    printf 'Surface a fork via the AskUserQuestion tool before acting.\n'
+    printf 'The enforcement layer is **realized per harness** (Claude settings.json PreToolUse hook).\n'
+} > "$SCRATCH/workflow/injected.md"
+core_inject_hits=$(grep -rnE 'AskUserQuestion' "$SCRATCH/workflow" 2>/dev/null \
+    | grep -vE "$ENFORCEMENT_TEACH_RE")
+core_exempt_hits=$(grep -rnE 'PreToolUse' "$SCRATCH/workflow" 2>/dev/null \
+    | grep -vE "$ENFORCEMENT_TEACH_RE")
+if [ -n "$core_inject_hits" ] && [ -z "$core_exempt_hits" ]; then
+    pass "core-scan-non-vacuous: an injected AskUserQuestion on a core line trips; the enforcement-teaching line's concrete is correctly exempt (allowlist is precise, not blanket)"
+else
+    fail "core-scan-non-vacuous: core scan/allowlist not behaving — injected violation surfaced=[$core_inject_hits] exempt-line leaked=[$core_exempt_hits]"
 fi
 
 # ----------------------------------------------------------------------

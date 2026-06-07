@@ -22,4 +22,4 @@ Different change types impose different overhead. This table is the single sourc
 
 **Project-kind rider:** on a `documentation`-kind project, the code-only obligations in the table above are inert and the no-code validation discipline applies instead — see the **Project-kind rider** under `### Project kind` in `workflow/project-kind.md` (referenced by name; never re-encoded here).
 
-Trivial-fixup rules and the `/pm-fixup` command are in `.claude/commands/pm-fixup.md`.
+Trivial-fixup rules and the `/pm-fixup` command body live in the adapter directory (`pm-fixup`).

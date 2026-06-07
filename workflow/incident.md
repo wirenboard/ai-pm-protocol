@@ -59,6 +59,6 @@ I involve you when:
 - Reviewer finds a blocking issue that requires a product decision (e.g., descope a scenario, accept a known limitation)
 - Planning has a high-stakes ambiguity you need to resolve
 
-**Every question to you must use the AskUserQuestion tool** — never ask as plain text. This keeps decisions explicit and traceable.
+**Every question to you must use the structured-question tool** — never ask as plain text. This keeps decisions explicit and traceable.
 
 Everything else flows automatically.
