@@ -301,22 +301,31 @@ PY
 fi
 
 # ----------------------------------------------------------------------
-# oc-enforcement-plugin-throws
-# Deterministic, CI-safe unit test of the plugin's tool.execute.before hook:
-# unit-invoke the exported hook with SYNTHETIC inputs (no LLM, no OpenCode
-# runtime) and assert it THROWS for each deny case (wb-* task, wb-* skill,
-# out-of-root read, truncating write) and ALLOWS the legitimate cases (pm-* task,
-# in-root read, real write). Requires node; SKIPS cleanly if node is absent.
+# oc-plugin-esm-loadable + oc-enforcement-plugin-throws
+# Deterministic, CI-safe unit test of the plugin (tests/oc-plugin-unit.js). It
+# loads the GENERATED plugin THE WAY OPENCODE DOES — copies it to a temp `.mjs`
+# and dynamic-`import()`s it (ESM), NOT via require() — then:
+#   * oc-plugin-esm-loadable (slice-5 regression guard): asserts the plugin entry
+#     export `AiPmEnforcement` is a function AND the module exposes no
+#     non-function export. OpenCode treats every export as a plugin function, so a
+#     non-function export (e.g. the old exported WB_DENY_ROLES array) makes the
+#     real runtime fail with "Plugin export is not a function — failed to load
+#     plugin". This guard would have caught that defect.
+#   * oc-enforcement-plugin-throws: calls AiPmEnforcement({directory}) to get the
+#     tool.execute.before hook and asserts it THROWS for each deny case (wb-* task,
+#     wb-* skill, out-of-root read, truncating write) and ALLOWS the legitimate
+#     cases (pm-* task, in-root read, real write).
+# Requires node; SKIPS cleanly if node is absent.
 # Source: https://opencode.ai/docs/plugins/
 # ----------------------------------------------------------------------
 if command -v node >/dev/null 2>&1; then
     if node "$ROOT/tests/oc-plugin-unit.js"; then
-        pass "oc-enforcement-plugin-throws: the plugin hook throws for every deny case and allows the legitimate cases (deterministic unit test; https://opencode.ai/docs/plugins/)"
+        pass "oc-plugin-esm-loadable + oc-enforcement-plugin-throws: the plugin loads as an ESM single-function export (slice-5 load-shape guard) and its hook throws for every deny case / allows the legitimate cases (deterministic unit test; https://opencode.ai/docs/plugins/)"
     else
-        fail "oc-enforcement-plugin-throws: the plugin hook unit test failed (see node output above)"
+        fail "oc-plugin-esm-loadable + oc-enforcement-plugin-throws: the plugin ESM-load/behavior unit test failed (see node output above)"
     fi
 else
-    echo "SKIP: oc-enforcement-plugin-throws — node not on PATH (CI without node does not fail; the plugin form/behavior unit test is skipped)"
+    echo "SKIP: oc-plugin-esm-loadable + oc-enforcement-plugin-throws — node not on PATH (CI without node does not fail; the plugin ESM-load/behavior unit test is skipped)"
 fi
 
 # ----------------------------------------------------------------------

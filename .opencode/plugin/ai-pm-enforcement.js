@@ -23,6 +23,25 @@
 // on output.args.filePath). input.tool is the tool name; output.args is the
 // args object.
 //
+// PACKAGING / LOAD SHAPE (slice 5 fix — the must-not-regress part):
+// OpenCode loads each plugin file as an ES MODULE and treats EACH of its exports
+// as a plugin function. So the module MUST be ESM and MUST export exactly the
+// plugin function — nothing else. An earlier CommonJS shape
+// (`module.exports = fn`, plus exported `makeDenyHook` / a `WB_DENY_ROLES`
+// ARRAY) made the real runtime fail with
+// `ERROR service=plugin ... error=Plugin export is not a function — failed to
+// load plugin` (the exported array is not a function), so the plugin never
+// loaded and enforcement was silently off. This file is therefore an ES module
+// with a SINGLE named export — the plugin function `AiPmEnforcement` — and NO
+// other exports. The deny logic (and the single-sourced role set) lives in
+// module-scope consts/functions that are NOT exported, so the only export the
+// loader sees is the plugin function. Live-confirmed loading cleanly on OpenCode
+// 1.16.2 (`opencode run`, no "Plugin export is not a function"); matches the
+// working Spike-B plugin shape. The `oc-plugin-esm-loadable` regression guard
+// (tests/opencode.sh) asserts this load shape; oc-enforcement-plugin-throws
+// loads the module as ESM (a temp .mjs + dynamic import, the way the runtime
+// does) and exercises the four deny + four allow behaviors.
+//
 // OpenCode tool/arg mapping (verified against the OpenCode 1.16.2 runtime, not
 // only the docs):
 //   task   -> output.args.subagent_type   (the spawned subagent's id)
@@ -42,13 +61,14 @@
 // it). Version-pinned: re-verify on upgrade (#5894 is historically
 // version-sensitive).
 
-const path = require("node:path");
-const fs = require("node:fs");
+import path from "node:path";
+import fs from "node:fs";
 
 // The wb-* role-duplicator deny set. SINGLE-SOURCE: injected by the generator
 // from the Claude settings.json Task|Agent|Skill matcher. Both a task spawn
 // (subagent_type) and a skill load (name) of one of these is denied — mirroring
-// the Claude deny path that gates subagent_type // skill alike.
+// the Claude deny path that gates subagent_type // skill alike. Module-scope and
+// NOT exported (an exported array would break the ESM plugin load).
 const WB_DENY_ROLES = ["wb-development:coder", "wb-development:code-reviewer", "wb-development:design-review", "wb-development:plan-feature", "wb-development:pr-prep", "wb-git:workflow", "wb-git:pr-author"];
 
 const DENY_REASON_ROLE =
@@ -70,93 +90,83 @@ function isInsideRoot(root, resolved) {
   return resolved.startsWith(rootResolved + path.sep);
 }
 
-// Pure, CI-safe enforcement hook factory. `projectRoot` is the directory the
-// read-boundary is measured against. Returns the tool.execute.before hook —
-// callable directly with synthetic (input, output) in a unit test, no LLM, no
-// OpenCode runtime. Throws to deny; returns undefined to allow.
-function makeDenyHook(projectRoot) {
-  return async function toolExecuteBefore(input, output) {
-    const tool = input && input.tool;
-    const args = (output && output.args) || {};
+// OpenCode plugin entry — the SINGLE named export. Per
+// https://opencode.ai/docs/plugins/ the plugin is an async function receiving
+// { project, client, $, directory, worktree } and returning a hooks object; the
+// runtime treats every export of this module as a plugin function, so this is
+// the only export. The read-boundary root is the session's project directory
+// (directory/worktree); fall back to process.cwd() if absent. The deny logic is
+// inlined here so the module exposes nothing but this function.
+export const AiPmEnforcement = async (ctx) => {
+  const projectRoot = (ctx && (ctx.directory || ctx.worktree)) || process.cwd();
 
-    // (a) task -> deny a wb-* role-duplicator subagent spawn.
-    if (tool === "task") {
-      const sub = args.subagent_type;
-      if (typeof sub === "string" && WB_DENY_ROLES.includes(sub)) {
-        throw new Error(sub + DENY_REASON_ROLE);
-      }
-      return;
-    }
-
-    // (b) skill -> deny a wb-* role-duplicator skill load (mirror Claude skill).
-    if (tool === "skill") {
-      const name = args.name;
-      if (typeof name === "string" && WB_DENY_ROLES.includes(name)) {
-        throw new Error(name + DENY_REASON_ROLE);
-      }
-      return;
-    }
-
-    // (c) read -> deny a target path that resolves outside the project root.
-    if (tool === "read") {
-      const resolved = resolveTarget(projectRoot, args.filePath);
-      if (resolved !== null && !isInsideRoot(projectRoot, resolved)) {
-        throw new Error(
-          "Path outside project root: " +
-            args.filePath +
-            " (resolves to " +
-            resolved +
-            "). Reads must stay within the project root."
-        );
-      }
-      return;
-    }
-
-    // (d) write -> deny an empty/whitespace-only write over an existing
-    //     non-empty file (truncation guard; mirrors the Claude destructive-Write
-    //     guard / the 2026-06-06 doc-loss regression guard).
-    if (tool === "write") {
-      const content = typeof args.content === "string" ? args.content : "";
-      const stripped = content.replace(/[\s]/g, "");
-      if (stripped.length > 0) return; // non-empty content is fine
-      const resolved = resolveTarget(projectRoot, args.filePath);
-      if (resolved === null) return;
-      let existingNonEmpty = false;
-      try {
-        const st = fs.statSync(resolved);
-        existingNonEmpty = st.isFile() && st.size > 0;
-      } catch (_e) {
-        existingNonEmpty = false; // file does not exist -> creating is fine
-      }
-      if (existingNonEmpty) {
-        throw new Error(
-          "Empty/whitespace-only write over an existing non-empty file would" +
-            " zero authored content (truncation guard): " +
-            args.filePath +
-            ". A genuine truncate should use a different tool; additions should" +
-            " use edit. Regression guard for the 2026-06-06 doc-loss incident."
-        );
-      }
-      return;
-    }
-  };
-}
-
-// OpenCode plugin entry. Per https://opencode.ai/docs/plugins/ the plugin is an
-// async function receiving { project, client, $, directory, worktree } and
-// returning a hooks object. The read-boundary root is the session's project
-// directory (directory/worktree); fall back to process.cwd() if absent.
-const AiPmEnforcementPlugin = async (ctx) => {
-  const root =
-    (ctx && (ctx.directory || ctx.worktree)) || process.cwd();
   return {
-    "tool.execute.before": makeDenyHook(root),
+    // Throws to deny; returns undefined to allow. Behavior is UNCHANGED from the
+    // prior (CommonJS) shape — this slice is a packaging/export fix only.
+    "tool.execute.before": async (input, output) => {
+      const tool = input && input.tool;
+      const args = (output && output.args) || {};
+
+      // (a) task -> deny a wb-* role-duplicator subagent spawn.
+      if (tool === "task") {
+        const sub = args.subagent_type;
+        if (typeof sub === "string" && WB_DENY_ROLES.includes(sub)) {
+          throw new Error(sub + DENY_REASON_ROLE);
+        }
+        return;
+      }
+
+      // (b) skill -> deny a wb-* role-duplicator skill load (mirror Claude skill).
+      if (tool === "skill") {
+        const name = args.name;
+        if (typeof name === "string" && WB_DENY_ROLES.includes(name)) {
+          throw new Error(name + DENY_REASON_ROLE);
+        }
+        return;
+      }
+
+      // (c) read -> deny a target path that resolves outside the project root.
+      if (tool === "read") {
+        const resolved = resolveTarget(projectRoot, args.filePath);
+        if (resolved !== null && !isInsideRoot(projectRoot, resolved)) {
+          throw new Error(
+            "Path outside project root: " +
+              args.filePath +
+              " (resolves to " +
+              resolved +
+              "). Reads must stay within the project root."
+          );
+        }
+        return;
+      }
+
+      // (d) write -> deny an empty/whitespace-only write over an existing
+      //     non-empty file (truncation guard; mirrors the Claude destructive-Write
+      //     guard / the 2026-06-06 doc-loss regression guard).
+      if (tool === "write") {
+        const content = typeof args.content === "string" ? args.content : "";
+        const stripped = content.replace(/[\s]/g, "");
+        if (stripped.length > 0) return; // non-empty content is fine
+        const resolved = resolveTarget(projectRoot, args.filePath);
+        if (resolved === null) return;
+        let existingNonEmpty = false;
+        try {
+          const st = fs.statSync(resolved);
+          existingNonEmpty = st.isFile() && st.size > 0;
+        } catch (_e) {
+          existingNonEmpty = false; // file does not exist -> creating is fine
+        }
+        if (existingNonEmpty) {
+          throw new Error(
+            "Empty/whitespace-only write over an existing non-empty file would" +
+              " zero authored content (truncation guard): " +
+              args.filePath +
+              ". A genuine truncate should use a different tool; additions should" +
+              " use edit. Regression guard for the 2026-06-06 doc-loss incident."
+          );
+        }
+        return;
+      }
+    },
   };
 };
-
-module.exports = AiPmEnforcementPlugin;
-module.exports.AiPmEnforcementPlugin = AiPmEnforcementPlugin;
-// Named exports for the deterministic unit test (no LLM, no runtime): the pure
-// hook factory + the injected single-source role set.
-module.exports.makeDenyHook = makeDenyHook;
-module.exports.WB_DENY_ROLES = WB_DENY_ROLES;
