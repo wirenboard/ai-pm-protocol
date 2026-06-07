@@ -372,6 +372,69 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
     "bash", { command: "echo x >> " + path.join(SCRATCH, ".ai-pm", "backlog.md") }, hookOrch
   );
 
+  // ====================================================================
+  // SLICE 15 — bashWriteTargets parser hardening (review-loop fix pass).
+  //   DEFECT 1 (over-deny): a `>` that lives only INSIDE a quoted string, an
+  //   arithmetic `(( a > b ))`, or a `[[ a > b ]]` test is NOT a redirection and
+  //   must not be extracted as a write target — else legitimate work (including
+  //   the orchestrator's own .ai-pm bookkeeping) is falsely denied.
+  //   DEFECT 2 (under-deny): a cp/mv destination must be read UP TO any trailing
+  //   redirect, so a `cp src /out/dest > log` no longer lets `log` hijack the
+  //   destination and leave the real out-of-root `/out/dest` unchecked.
+  // ====================================================================
+
+  // DEFECT 1 — guard (g): a quoted `>` inside `printf 'a > b\n'` is not a target;
+  // the genuine `>> .ai-pm/backlog.md` redirect is the orchestrator's OWN
+  // bookkeeping -> ALLOWED (no phantom `b` target, no false denial).
+  await assertAllows(
+    "oc-slice15-fix1-(g): orchestrator bash `printf 'a > b\\n' >> .ai-pm/backlog.md` (quoted `>` is not a target) is allowed",
+    "bash", { command: "printf 'a > b\\n' >> " + path.join(SCRATCH, ".ai-pm", "backlog.md") }, hookOrch
+  );
+
+  // DEFECT 1 — guard (g): an arithmetic `(( a > b ))` comparison has no
+  // redirection -> ALLOWED for the orchestrator.
+  await assertAllows(
+    "oc-slice15-fix1-(g): orchestrator bash `if (( a > b )); then echo hi; fi` (arithmetic `>`, not a redirect) is allowed",
+    "bash", { command: "if (( a > b )); then echo hi; fi" }, hookOrch
+  );
+
+  // DEFECT 1 — guard (f): a literal `>` and an absolute path inside a quoted
+  // echo string are not a write target -> ALLOWED for a subagent (and so for
+  // every actor; the boundary guard must not fire on quoted text).
+  await assertAllows(
+    "oc-slice15-fix1-(f): subagent bash `echo \"see > /etc/passwd for x\"` (quoted `>` + quoted path, not a target) is allowed",
+    "bash", { command: 'echo "see > /etc/passwd for x"' }, hookSub
+  );
+
+  // DEFECT 1 — masking must NOT regress a genuine redirect to a QUOTED path: the
+  // quoted token immediately after `>` is still captured as the target. Here the
+  // quoted path is out-of-root -> DENY for a subagent (guard f).
+  await assertThrows(
+    "oc-slice15-fix1-(f): subagent bash `echo x > \"/tmp/oc q.txt\"` (quoted out-of-root redirect target) is still denied",
+    "bash", { command: 'echo x > "/tmp/oc-plugin-quoted out.txt"' }, hookSub
+  );
+
+  // DEFECT 2 — guard (f): the REAL out-of-root cp destination is no longer
+  // hijacked by a trailing redirect token. `cp data /tmp/oc-dest.txt > log`
+  // (with /tmp/... clearly outside the SCRATCH root) -> DENY for a subagent.
+  await assertThrows(
+    "oc-slice15-fix2-(f): subagent bash `cp data /tmp/oc-dest.txt > log` (trailing redirect no longer hides the real out-of-root cp dest) is denied",
+    "bash", { command: "cp data /tmp/oc-plugin-cp-dest.txt > " + path.join(SCRATCH, ".ai-pm", "log") }, hookSub
+  );
+
+  // POSITIVE guard (the masking/cut-at-redirect must NOT regress genuine
+  // redirects): orchestrator `echo x > src/foo.ts` still DENIED (guard g),
+  // subagent `echo x > /tmp/y` still DENIED (guard f). (Both also asserted
+  // above; restated here as the fix-pass regression anchor.)
+  await assertThrows(
+    "oc-slice15-fix-regress-(g): orchestrator bash `echo x > src/foo.ts` (genuine redirect to content path) is still denied",
+    "bash", { command: "echo x > " + path.join(SCRATCH, "src", "foo.ts") }, hookOrch
+  );
+  await assertThrows(
+    "oc-slice15-fix-regress-(f): subagent bash `echo x > /tmp/y` (genuine out-of-root redirect) is still denied",
+    "bash", { command: "echo x > /tmp/oc-plugin-regress-y" }, hookSub
+  );
+
   // A pure git op the orchestrator runs (git writes its own files) -> ALLOW.
   await assertAllows(
     "oc-slice15-(g): orchestrator bash `git commit` (pure git op) is allowed",

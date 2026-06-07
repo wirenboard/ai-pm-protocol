@@ -151,6 +151,38 @@ function findAbsolutePathArg(command) {
   return m ? m[1] : null;
 }
 
+// Mask the spans of a bash command in which a `>` / `>>` is NOT a redirection,
+// so the write-idiom scans below never mistake such a `>` (or a path that lives
+// only inside one of those spans) for a real redirect or write target. This is
+// the slice-15 fix for the over-deny defect. Three non-redirect span kinds are
+// neutralized:
+//   - QUOTED strings `"…"` / `'…'` — a `>` inside is literal text, and a path
+//     inside (`echo "see > /etc/passwd for x"`) is not a write target.
+//   - ARITHMETIC `(( … ))` — a `>` is a numeric comparison (`(( a > b ))`).
+//   - TEST `[[ … ]]` — a `>` is a string comparison (`[[ a > b ]]`).
+//
+// Each masked span is replaced with same-length `_` filler (delimiters included)
+// so the masked copy stays index-aligned with the original and the filler char
+// `_` carries none of the scans' delimiters. CARVE-OUT: a quoted span that
+// immediately follows a redirect operator (`>`/`>>`, optionally fd-prefixed) IS
+// a genuine redirect TARGET path (`echo x > "my file.txt"`), so it is PRESERVED
+// for the redirect scan to capture. (Arithmetic/test spans are never redirect
+// targets, so they are always masked.)
+function maskQuotedSpans(command) {
+  const fill = (s) => "_".repeat(s.length);
+  // First neutralize arithmetic `(( … ))` and test `[[ … ]]` spans (their `>` is
+  // a comparison, never a redirect). Done before the quote pass; these never
+  // contain a redirect target, so they are unconditionally masked.
+  let out = command.replace(/\(\([^)]*\)\)|\[\[[^\]]*\]\]/g, fill);
+  // Then mask quoted spans, EXCEPT a quoted redirect target (operator + optional
+  // spaces directly before the quote) — that quote is a real write path.
+  out = out.replace(/(\d?>>?\s*)?("[^"]*"|'[^']*')/g, (match, redirPrefix, quoted) => {
+    if (redirPrefix !== undefined) return match; // redirect target: keep intact
+    return fill(quoted); // mask the whole span (quotes included)
+  });
+  return out;
+}
+
 // Best-effort extraction of the file-write TARGET paths of a bash command, for
 // the out-of-root (f) + orchestrator-content (g) write guards. Mirrors the
 // conservative, heuristic style of findAbsolutePathArg / the Claude ssh-content
@@ -164,8 +196,15 @@ function findAbsolutePathArg(command) {
 // Returns an array of raw target tokens (possibly relative; the caller resolves
 // against the root). Tokens that are clearly options/streams (`-…`, `/dev/null`,
 // `&1`, `&2`) are skipped. A command with no recognized write idiom yields [].
+//
+// All scans run on a QUOTE-MASKED copy of the command (maskQuotedSpans), so a
+// `>` / path that appears only inside a quoted string is never extracted — only
+// a quoted token that is itself a redirect TARGET survives the mask (and is
+// captured below). This is the slice-15 over-deny fix.
 function bashWriteTargets(command) {
   if (typeof command !== "string" || command.length === 0) return [];
+  const masked = maskQuotedSpans(command);
+  command = masked;
   const targets = [];
   const isStream = (t) =>
     t === "/dev/null" || t === "/dev/stdout" || t === "/dev/stderr" ||
@@ -173,7 +212,8 @@ function bashWriteTargets(command) {
 
   // (1) Redirections: `>`, `>>`, optionally fd-prefixed (`1>`, `2>>`). Capture
   //     the following token (quotes stripped). `2>&1`-style fd dups are skipped
-  //     by the isStream filter.
+  //     by the isStream filter. Runs on the masked copy: a `>` inside a quoted
+  //     span has been masked to `_`, so only genuine redirect operators match.
   const redir = /(?:^|\s)\d?>>?\s*("[^"]*"|'[^']*'|[^\s|;&<>()]+)/g;
   let r;
   while ((r = redir.exec(command)) !== null) {
@@ -207,10 +247,17 @@ function bashWriteTargets(command) {
     }
   }
 
-  // (4) cp / mv: the destination is the LAST path-like token of the segment.
+  // (4) cp / mv: the destination is the LAST path-like token of the segment —
+  //     but ONLY up to any redirection. The segment regex `[^|;&\n]*` does not
+  //     stop at `>` / `>>` / `<`, so a trailing redirect's target would hijack
+  //     the "destination" (`cp data /out/dest > log` would take `log`, leaving
+  //     the real out-of-root `/out/dest` unchecked). Slice-15 fix: cut the cp/mv
+  //     args at the FIRST redirect operator before taking the last token (the
+  //     redirect target is already captured independently by scan (1) above).
   const cpmv = command.match(/(?:^|[\s;&|(])(?:cp|mv)\b([^|;&\n]*)/);
   if (cpmv) {
-    const toks = cpmv[1].split(/\s+/).filter((t) => t && !t.startsWith("-") && !isStream(t));
+    const argsBeforeRedirect = cpmv[1].split(/\d?>>?|</)[0];
+    const toks = argsBeforeRedirect.split(/\s+/).filter((t) => t && !t.startsWith("-") && !isStream(t));
     if (toks.length >= 1) targets.push(toks[toks.length - 1].replace(/^["']|["']$/g, ""));
   }
 
