@@ -88,14 +88,17 @@
 #     is OpenCode-only (on Claude the orchestrator IS the main session). Source:
 #     https://opencode.ai/docs/agents/
 #
-#   oc-orchestrator-cannot-author  (slice 12)
-#     the orchestrator's frontmatter `tools` map DENIES write + edit (it cannot
-#     author content artifacts — it must delegate to pm-coder / pm-architect) and
-#     GRANTS task + skill + read + bash (it can drive the pipeline + bookkeep). The
-#     question grant is the primary-only top-level permission (see
-#     oc-orchestrator-can-question). Runtime guarded-skip: the loader resolves ai-pm
-#     as a primary with edit=deny and no write grant while task=allow. Source:
-#     https://opencode.ai/docs/agents/
+#   oc-orchestrator-write-scoped  (slice 13)
+#     the orchestrator KEEPS write + edit (it legitimately authors the feature plan
+#     during planning + .ai-pm bookkeeping, like the Claude orchestrator) and GRANTS
+#     task + skill + read + bash, AND carries a per-agent `permission` whose `edit`
+#     and `write` keys ALLOW .ai-pm/** + doc/features/** and DENY ** (so code +
+#     canonical docs route to pm-coder / pm-architect). The persona is the real
+#     enforcement; the path-permission is a structural hint. The question grant is
+#     the primary-only top-level permission (see oc-orchestrator-can-question).
+#     Runtime guarded-skip: the loader resolves ai-pm's edit/write to the allow-
+#     .ai-pm/doc/features + deny-** rules while task=allow. Source:
+#     https://opencode.ai/docs/agents/, https://opencode.ai/docs/permissions/
 #
 #   oc-orchestrator-is-default  (slice 12)
 #     the downstream runs the SHIPPED orchestrator, not the default `build`:
@@ -783,65 +786,94 @@ else
 fi
 
 # ----------------------------------------------------------------------
-# oc-orchestrator-cannot-author  (slice 12)
-# The orchestrator is the seat that DRIVES the pipeline and NEVER authors content
-# artifacts — discipline by construction, not by instruction. Its frontmatter
-# `tools` map must DENY write + edit (so it physically cannot use the
-# content-authoring tools and is pushed to delegate to pm-coder / pm-architect)
-# while GRANTING task + question + skill + read + bash (it can drive the pipeline,
-# surface forks, and do git/.ai-pm bookkeeping). NOTE: `question` is granted to the
-# primary via the top-level opencode.json permission (oc-orchestrator-can-question
-# above), not in the per-agent tools map — so the tools-map assertion covers the
-# tool grants and the question grant is taken as already-asserted for the primary.
-# Source: https://opencode.ai/docs/agents/, plan scenario 2.
+# oc-orchestrator-write-scoped  (slice 13)
+# The orchestrator is the seat that DRIVES the pipeline. It KEEPS write + edit
+# because it legitimately authors its OWN artifacts (the feature plan during
+# planning + .ai-pm bookkeeping — state, backlog, contracts, decision/resolution
+# trails), exactly as the Claude orchestrator does. A per-agent path-`permission`
+# scopes those tools as a STRUCTURAL HINT (the persona is the real enforcement):
+#   (a) the `tools` map must GRANT write + edit (true) AND task + skill + read +
+#       bash (drive the pipeline + delegate + bookkeep);
+#   (b) the frontmatter must carry a `permission` block whose `edit` and `write`
+#       keys each map path-globs that ALLOW .ai-pm/** + doc/features/** and DENY **
+#       (so code + canonical doc/*.md route to pm-coder / pm-architect).
+# NOTE: `question` is granted to the primary via the top-level opencode.json
+# permission (oc-orchestrator-can-question above), not in this per-agent tools map.
+# Source: https://opencode.ai/docs/agents/, https://opencode.ai/docs/permissions/,
+# plan scenario 2 (CORRECTED — the slice-12 write:false/edit:false was wrong).
 # ----------------------------------------------------------------------
 if [ ! -f "$ORCH" ]; then
-    fail "oc-orchestrator-cannot-author: orchestrator agent missing at $ORCH"
+    fail "oc-orchestrator-write-scoped: orchestrator agent missing at $ORCH"
 elif python3 - "$ORCH" <<'PY'
 import sys, re, pathlib
+# Stdlib-only frontmatter parse (the rest of this suite avoids a YAML dep): a
+# shallow indentation walk over the two two-level blocks we care about — `tools:`
+# (scalar bools) and `permission:` (edit/write -> glob -> action). Both are
+# authored as a fixed 2-space nesting in the .fm; this is a form check, not a
+# general YAML parser.
 text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
 lines = text.split("\n")
 fences = [i for i, l in enumerate(lines) if l == "---"]
 if len(fences) < 2:
     print("no frontmatter block"); sys.exit(1)
 fm = lines[fences[0]+1:fences[1]]
+
 tools = {}
-in_tools = False
+perm = {}      # perm[edit|write][glob] = action
+section = None  # None | "tools" | ("perm", <edit|write>)
 for l in fm:
+    if re.match(r'^\s*#', l) or l.strip() == "":
+        continue
     if re.match(r'^tools:\s*$', l):
-        in_tools = True; continue
-    if in_tools:
+        section = "tools"; continue
+    if re.match(r'^permission:\s*$', l):
+        section = ("perm", None); continue
+    if re.match(r'^[a-z_]+:', l):  # any other top-level key ends the block
+        section = None; continue
+    if section == "tools":
         m = re.match(r'^\s+([a-z_]+):\s+(true|false)\s*$', l)
         if m:
-            tools[m.group(1)] = (m.group(2) == "true"); continue
-        if re.match(r'^\s+#', l):  # comment inside the block
-            continue
-        if re.match(r'^[a-z_]+:', l):  # a non-indented key ends the block
-            in_tools = False
+            tools[m.group(1)] = (m.group(2) == "true")
+    elif isinstance(section, tuple) and section[0] == "perm":
+        m = re.match(r'^  ([a-z_]+):\s*$', l)  # edit: / write: (2-space indent)
+        if m:
+            section = ("perm", m.group(1)); perm.setdefault(m.group(1), {}); continue
+        m = re.match(r'^    "([^"]+)":\s*(allow|deny)\s*$', l)  # 4-space glob rule
+        if m and section[1]:
+            perm[section[1]][m.group(1)] = m.group(2)
+
 errs = []
-# Must DENY the content-authoring tools.
-for t in ("write", "edit"):
-    if tools.get(t) is not False:
-        errs.append(f"{t} must be explicitly false (cannot author); got {tools.get(t)!r}")
-# Must GRANT the drive-the-pipeline + bookkeep tools.
-for t in ("task", "skill", "read", "bash"):
+# (a) Must GRANT write + edit (the orchestrator authors plan + bookkeeping) AND
+#     the drive-the-pipeline + bookkeep + delegate tools.
+for t in ("write", "edit", "task", "skill", "read", "bash"):
     if tools.get(t) is not True:
-        errs.append(f"{t} must be granted (true); got {tools.get(t)!r}")
+        errs.append(f"tools.{t} must be granted (true); got {tools.get(t)!r}")
+# (b) Must carry a `permission` block whose edit + write keys allow the
+#     orchestrator's own artifacts (.ai-pm/** + doc/features/**) and deny **.
+for key in ("edit", "write"):
+    sub = perm.get(key)
+    if not isinstance(sub, dict) or not sub:
+        errs.append(f"permission.{key} must be a path-glob map; got {sub!r}")
+        continue
+    for glob, want in ((".ai-pm/**", "allow"), ("doc/features/**", "allow"), ("**", "deny")):
+        if sub.get(glob) != want:
+            errs.append(f"permission.{key}[{glob!r}] must be {want!r}; got {sub.get(glob)!r}")
 if errs:
     for e in errs: print(e)
     sys.exit(1)
 sys.exit(0)
 PY
 then
-    pass "oc-orchestrator-cannot-author: ai-pm.md tools map sets write:false AND edit:false (cannot author content), and grants task/skill/read/bash (can drive the pipeline + bookkeep); the question grant is the primary-only top-level permission (https://opencode.ai/docs/agents/)"
+    pass "oc-orchestrator-write-scoped: ai-pm.md GRANTS write+edit (true) + task/skill/read/bash, AND its permission.edit/permission.write allow .ai-pm/** + doc/features/** and deny ** (path-scoped authoring; persona is the real enforcement; https://opencode.ai/docs/permissions/)"
 else
-    fail "oc-orchestrator-cannot-author: the orchestrator tools map does not deny write/edit and grant task/skill/read/bash (see above)"
+    fail "oc-orchestrator-write-scoped: the orchestrator tools/permission do not grant write+edit+task/skill/read/bash AND carry the path-scoped edit/write permission (see above)"
 fi
 
-# Runtime: the real loader must resolve ai-pm as a PRIMARY whose `edit` permission
-# is `deny` and whose `write` tool is not granted (the tools map's
-# write:false/edit:false take effect), while `task` is granted. GUARDED-SKIP when
-# opencode is absent. `--pure` resolves the agent set without a model round-trip.
+# Runtime: the real loader must resolve ai-pm as a PRIMARY whose `edit` AND `write`
+# permission rules show the deny-** + allow-.ai-pm/doc-features path scoping, while
+# `task` is allowed. GUARDED-SKIP when opencode is absent. `--pure` resolves the
+# agent set without a model round-trip (a live interactive session starves
+# non-pure calls).
 if command -v opencode >/dev/null 2>&1; then
     ODIR=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
     OAL="$ODIR/agentlist.txt"
@@ -875,30 +907,47 @@ try:
     rules = json.loads(raw[start:endpos])
 except Exception as e:
     print("ai-pm permission array did not parse: %s" % e); sys.exit(1)
-def eff(perm):
-    acts = [r["action"] for r in rules if r.get("permission") == perm]
-    return acts[-1] if acts else None
-edit_eff = eff("edit")
-write_eff = eff("write")
-task_eff = eff("task")
-# edit must resolve to deny; write must NOT be granted (no allow rule —
-# tools:false drops it from the active set); task must be allowed.
-ok = (edit_eff == "deny") and (write_eff != "allow") and (task_eff == "allow")
-if not ok:
-    print("ai-pm resolved: edit=%r (want deny) write=%r (want not-allow) task=%r (want allow)" % (edit_eff, write_eff, task_eff))
-sys.exit(0 if ok else 1)
+# The path-scoped edit/write resolve to per-pattern rules. For each of edit/write
+# the resolved rule set must show: a deny on the `**` catch-all AND an allow on the
+# .ai-pm and doc/features patterns. We match by the rule's pattern field (OpenCode
+# carries the glob alongside the permission/action).
+def rules_for(perm):
+    return [r for r in rules if r.get("permission") == perm]
+def has(perm, pat_substr, action):
+    for r in rules_for(perm):
+        pat = str(r.get("pattern", r.get("glob", "")))
+        if pat_substr in pat and r.get("action") == action:
+            return True
+    return False
+errs = []
+for perm in ("edit", "write"):
+    if not has(perm, "**", "deny") and not has(perm, "*", "deny"):
+        errs.append(f"{perm}: expected a deny rule on the ** catch-all")
+    if not has(perm, ".ai-pm", "allow"):
+        errs.append(f"{perm}: expected an allow rule on .ai-pm")
+    if not has(perm, "doc/features", "allow"):
+        errs.append(f"{perm}: expected an allow rule on doc/features")
+task_acts = [r["action"] for r in rules if r.get("permission") == "task"]
+if not task_acts or task_acts[-1] != "allow":
+    errs.append(f"task: expected allow; resolved {task_acts!r}")
+if errs:
+    for e in errs: print(e)
+    print("--- resolved ai-pm permission rules ---")
+    print(json.dumps(rules, indent=2))
+    sys.exit(1)
+sys.exit(0)
 PY
         then
-            pass "oc-orchestrator-cannot-author (runtime): the real loader resolves ai-pm as a primary with edit=deny and no write grant (content authoring impossible) while task=allow (it can delegate)"
+            pass "oc-orchestrator-write-scoped (runtime): the real loader resolves ai-pm as a primary whose edit + write are path-scoped (deny **, allow .ai-pm + doc/features) while task=allow (it can delegate)"
         else
-            fail "oc-orchestrator-cannot-author (runtime): the loader did not resolve ai-pm's no-author / can-delegate permissions correctly"
+            fail "oc-orchestrator-write-scoped (runtime): the loader did not resolve ai-pm's path-scoped edit/write + can-delegate permissions correctly"
         fi
     else
-        fail "oc-orchestrator-cannot-author (runtime): \`opencode agent list --pure\` exited non-zero"
+        fail "oc-orchestrator-write-scoped (runtime): \`opencode agent list --pure\` exited non-zero"
     fi
     rm -rf "$ODIR"
 else
-    echo "SKIP: oc-orchestrator-cannot-author (runtime) — opencode not on PATH (CI without opencode does not fail; the form check above still runs)"
+    echo "SKIP: oc-orchestrator-write-scoped (runtime) — opencode not on PATH (CI without opencode does not fail; the form check above still runs)"
 fi
 
 # ----------------------------------------------------------------------
