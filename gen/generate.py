@@ -2,30 +2,38 @@
 """generate.py — deterministic generator: neutral source + per-harness manifest
 -> a full harness adapter.
 
-Slice 1 builds the Claude adapter only. The generator is thin by design (arch
-note 'How thin the metalanguage can be'): for each adapter file it
+Builds the Claude adapter (slice 1) or the OpenCode adapter (slice 2) from the
+SAME neutral bodies under src/agents|commands/*.body.md — no re-carving. The
+generator is thin by design (arch note 'How thin the metalanguage can be'): for
+each adapter file it
 
   * inlines the neutral body (src/agents|commands/<name>.body.md), and
   * for agents, prepends the harness frontmatter from the manifest
     (src/manifests/<harness>/frontmatter/<name>.fm),
 
-then for the harness's capability artifacts (settings.json on Claude) copies the
-verbatim bytes from the manifest. There is NO parsing and NO re-serialization of
-any file, so the output is byte-identical to the carved source by construction —
-which is exactly what makes the byte-equivalence and diff-clean guarantees hold.
+then for the harness's capability artifacts (settings.json on Claude;
+opencode.json + AGENTS.md on OpenCode) copies the verbatim bytes from the
+manifest. There is NO parsing and NO re-serialization of any file, so the output
+is byte-identical to the carved source by construction — which is exactly what
+makes the byte-equivalence (Claude) and diff-clean (both) guarantees hold.
 
-Determinism: same inputs -> byte-identical outputs on every run. The only inputs
-are files under src/; names are taken in the manifest's listed order; bytes are
-copied, never reformatted.
+Determinism across BOTH harnesses: same inputs -> byte-identical outputs on
+every run. The only inputs are files under src/; agent/command names are taken
+in the manifest's listed order; artifacts are processed in the manifest's listed
+order; bytes are copied, never reformatted. Nothing in the generator reads the
+clock, the filesystem ordering, or any other non-deterministic source — the two
+harnesses share this one code path, so neither can drift from the other.
 
 Usage:
-    python3 gen/generate.py [--harness claude] [--out <dir>]
+    python3 gen/generate.py [--harness claude|opencode] [--out <dir>]
 
-  --harness  which harness manifest to build (default: claude; only 'claude' is
-             populated in slice 1).
+  --harness  which harness manifest to build (default: claude).
   --out      override the output root (default: the manifest's output_root,
-             i.e. .claude). Used by tests to build into a scratch dir and
-             compare against the golden without disturbing the live adapter.
+             i.e. .claude or .opencode). Used by tests to build into a scratch
+             dir and compare without disturbing the live adapter. A root_relative
+             artifact (e.g. OpenCode's AGENTS.md, which lives at the repo root,
+             not under .opencode/) is emitted as a sibling of the output root so
+             a scratch build keeps the AGENTS.md / .opencode/ relationship.
 
 Exit code 0 on success; non-zero with a diagnostic on any missing input.
 """
@@ -83,19 +91,28 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
         out.write_bytes(body)
         written.append(out.relative_to(out_root))
 
-    # --- settings.json: verbatim copy of the capability artifact ---
-    settings = manifest["settings"]
-    src_settings = MANIFESTS / harness / settings["source_file"]
-    out_settings = out_root / settings["output_file"]
-    out_settings.write_bytes(read_bytes(src_settings))
-    written.append(out_settings.relative_to(out_root))
+    # --- Verbatim capability artifacts (Claude: settings.json; OpenCode:
+    #     opencode.json + AGENTS.md). Copied byte-for-byte from the manifest, in
+    #     listed order, so the output is deterministic. A root_relative artifact
+    #     (OpenCode's AGENTS.md) lands beside the output root, not inside it. ---
+    for art in manifest.get("artifacts", []):
+        src_art = MANIFESTS / harness / art["source_file"]
+        if art.get("root_relative"):
+            out_art = out_root.parent / art["output_file"]
+            rel = out_art.name
+        else:
+            out_art = out_root / art["output_file"]
+            rel = out_art.relative_to(out_root)
+        out_art.parent.mkdir(parents=True, exist_ok=True)
+        out_art.write_bytes(read_bytes(src_art))
+        written.append(rel)
 
     return written
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Generate a harness adapter from neutral source.")
-    ap.add_argument("--harness", default="claude", help="harness manifest to build (default: claude)")
+    ap.add_argument("--harness", default="claude", help="harness manifest to build: claude|opencode (default: claude)")
     ap.add_argument("--out", default=None, help="output root override (default: manifest output_root)")
     args = ap.parse_args()
 

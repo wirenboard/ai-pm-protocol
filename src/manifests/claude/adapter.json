@@ -48,10 +48,12 @@
       "pm-research"
     ]
   },
-  "settings": {
-    "capability": "deny-list-enforcement + route-reminder",
-    "output_file": "settings.json",
-    "source_file": "settings.json",
-    "assembly": "verbatim-copy"
-  }
+  "artifacts": [
+    {
+      "capability": "deny-list-enforcement + route-reminder",
+      "output_file": "settings.json",
+      "source_file": "settings.json",
+      "assembly": "verbatim-copy"
+    }
+  ]
 }

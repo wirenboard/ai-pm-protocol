@@ -1,0 +1,14 @@
+---
+# OpenCode subagent frontmatter. Shape per https://opencode.ai/docs/agents/:
+# `description` + `mode` + `tools` OBJECT map (not Claude's comma-list); no
+# `name` key (filename is the id). Translated 1:1 from the Claude grant
+# (Read,Grep,Glob,Bash,Write).
+description: Plan compliance check after implementation. Verifies all plan scenarios are implemented and tested, contracts are honored, interaction scenarios covered, DoD satisfied. Technical code quality is handled separately by the built-in code-review skill. Read-only — never edits code, never commits.
+mode: subagent
+tools:
+  read: true
+  grep: true
+  glob: true
+  bash: true
+  write: true
+---

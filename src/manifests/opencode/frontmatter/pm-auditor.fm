@@ -1,0 +1,14 @@
+---
+# OpenCode subagent frontmatter. Shape per https://opencode.ai/docs/agents/:
+# `description` + `mode` + `tools` OBJECT map (not Claude's comma-list); no
+# `name` key (filename is the id). Translated 1:1 from the Claude grant
+# (Read,Grep,Glob,Bash,Write).
+description: Protocol compliance sweep. Checks that every merged feature has plan + review + contract artifacts, that plans match implementations, and that contracts and docs are current. Writes findings to .ai-pm/audits/audit-<YYYY-MM-DD>.md. Never edits code, never commits, never opens PRs.
+mode: subagent
+tools:
+  read: true
+  grep: true
+  glob: true
+  bash: true
+  write: true
+---

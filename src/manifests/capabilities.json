@@ -27,10 +27,10 @@
       },
       "opencode": {
         "primitive": "yaml-frontmatter-block",
-        "realized_by": "opencode/frontmatter/<name>.fm (mode + model + permission + tools OBJECT map)",
+        "realized_by": "opencode/frontmatter/<name>.fm (description + mode: subagent + tools OBJECT map; model/permission deferred — cross-model pins are a later slice)",
         "tools_form": "object-map",
         "source": "https://opencode.ai/docs/agents/",
-        "status": "doc-confirmed (not built in slice 1)"
+        "status": "BUILT in slice 2"
       }
     },
     "command-definition": {
@@ -41,9 +41,9 @@
       },
       "opencode": {
         "primitive": "markdown-body-with-optional-at-inline",
-        "realized_by": ".opencode/command/<name>.md (command bodies MAY use @file inline — an asymmetry; the generator must not over-apply it to agent bodies)",
+        "realized_by": ".opencode/command/<name>.md (neutral body emitted verbatim; command bodies MAY use @file inline — an asymmetry the generator does NOT over-apply to agent bodies)",
         "source": "https://opencode.ai/docs/commands/",
-        "status": "doc-confirmed (not built in slice 1)"
+        "status": "BUILT in slice 2"
       }
     },
     "deny-list-enforcement": {
@@ -80,9 +80,9 @@
       },
       "opencode": {
         "primitive": "instructions-array-entry",
-        "realized_by": "opencode.json instructions array entry (submodule-relative path); no @-import inside an instruction file",
+        "realized_by": ".opencode/opencode.json instructions[] -> .ai-pm/tooling/WORKFLOW.md (submodule-relative path); no @-import inside an instruction file",
         "source": "https://opencode.ai/docs/rules/",
-        "status": "doc-confirmed (not built in slice 1)"
+        "status": "BUILT in slice 2"
       }
     },
     "structured-question-tool": {
@@ -90,8 +90,9 @@
       "claude": { "primitive": "AskUserQuestion" },
       "opencode": {
         "primitive": "question",
+        "realized_by": "the OpenCode runtime `question` tool (no per-harness adapter file — the neutral agent bodies name the structured-question capability harness-agnostically); available to the slice-2 .opencode/ subagents",
         "source": "https://opencode.ai/docs/tools/",
-        "status": "doc-cited (unverified)"
+        "status": "BUILT in slice 2 (runtime tool; no emitted artifact)"
       }
     },
     "skill-invocation": {
@@ -99,8 +100,9 @@
       "claude": { "primitive": "Skill" },
       "opencode": {
         "primitive": "skill",
+        "realized_by": "the OpenCode runtime `skill` tool (no per-harness adapter file — the neutral bodies name skill-invocation harness-agnostically); available to the slice-2 .opencode/ subagents (e.g. pm-coder/pm-stack-researcher carry skill: true)",
         "source": "https://opencode.ai/docs/skills/",
-        "status": "doc-cited (unverified)"
+        "status": "BUILT in slice 2 (runtime tool; no emitted artifact)"
       }
     }
   }

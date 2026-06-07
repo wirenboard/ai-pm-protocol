@@ -1,0 +1,14 @@
+---
+# OpenCode subagent frontmatter. Shape per https://opencode.ai/docs/agents/:
+# `description` + `mode` + `tools` OBJECT map (not Claude's comma-list); no
+# `name` key (filename is the id). Translated 1:1 from the Claude grant
+# (Read,Grep,Glob,Bash,Write).
+description: Reads an existing codebase and writes raw drafts of docs/architecture.md and docs/user-journeys.md (and optional docs). Called from /pm-bootstrap full mode. Produces drafts — pm-architect owns and finalizes docs/architecture.md AND docs/user-journeys.md (and docs/threat-model.md when drafted) to canonical format afterward. Read-only on source code.
+mode: subagent
+tools:
+  read: true
+  grep: true
+  glob: true
+  bash: true
+  write: true
+---

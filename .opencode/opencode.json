@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "_comment": [
+    "OpenCode project config emitted verbatim into .opencode/opencode.json by",
+    "gen/generate.py. The `instructions` array is the OpenCode analogue of the",
+    "Claude `@WORKFLOW.md` import: it lists the always-on core file(s) every",
+    "session loads. Per https://opencode.ai/docs/config/ the array accepts",
+    "relative/glob paths, so the submodule-relative path to the protocol's",
+    "always-on core is expressible here. There is NO in-file @-import in an",
+    "instruction file (https://opencode.ai/docs/rules/) — the thin-core +",
+    "Read-on-demand topic-file split is re-expressed as this config entry plus",
+    "the harness-agnostic Read-on-demand pattern the protocol already uses for",
+    "workflow/*.md.",
+    "",
+    "PREVIEW: OpenCode is not yet enforcement-certified — see AGENTS.md for the",
+    "supported-harness declaration and the two named upstream gaps. The",
+    "enforcement plugin (tool.execute.before deny-list) is a LATER slice, gated",
+    "on Spike B; it is intentionally absent here."
+  ],
+  "instructions": [
+    ".ai-pm/tooling/WORKFLOW.md"
+  ]
+}
