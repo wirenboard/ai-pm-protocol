@@ -88,6 +88,40 @@ The `pm-*` agents are **subagents**: the orchestrator spawns them with `task`, t
 do their scoped work (read, write their artifact, run tests) and return findings.
 They do not surface forks to the PM themselves — that is the orchestrator's seat.
 
+## Review + research engines — OpenCode ships its own (no built-ins)
+
+On Claude the protocol delegates technical-quality review to the **built-in
+`code-review` engine** and deep research to the **built-in `deep-research`
+engine**. **OpenCode has no built-in equivalents** (verified on 1.16.2: the
+built-in agents are only `build` / `plan` / `general` / `explore` — no review or
+research engine). So this adapter **ships its own** review and research
+subagents, and the orchestrator delegates to them via the `task` tool:
+
+- **`code-review`** (`.opencode/agent/code-review.md`) — reviews the current git
+  diff for correctness bugs and reuse/simplification/efficiency cleanups, and
+  returns a concise `file:line` findings list. This is what the protocol's review
+  step (`WORKFLOW.md` Step 5, Pass 2) delegates to on OpenCode in place of the
+  Claude built-in.
+- **`deep-research`** (`.opencode/agent/deep-research.md`) — does multi-source
+  web research and returns a cited synthesis. This is the OpenCode binding for any
+  protocol delegation to the `deep-research` engine.
+
+These are **OpenCode-only**: Claude keeps its built-ins, so the two files are
+**not** added to the Claude adapter and are not shared neutral bodies. Their
+agent ids stay `code-review` and `deep-research` (matching the protocol's
+delegation points), and they are **allowed engines** — the enforcement plugin's
+`wb-*` role deny-list does **not** include them (the same way `code-review` /
+`deep-research` are not gated on Claude).
+
+> **PREVIEW honesty.** These are solid **single-agent** engines — they are **not**
+> a replica of Claude's **multi-agent** `code-review` / `deep-research`. And
+> **cross-model is not yet wired**: they run on the **same model as the session**
+> (a runtime per-`task` model override is unavailable on OpenCode — gap #17577,
+> below). A separate reviewer/researcher model (a different model than the
+> session, for independent blind spots) needs a second configured model + a PM
+> model pin and is a later slice. Treat them as capable same-model engines, not as
+> a drop-in equal of the Claude built-ins.
+
 ## Supported harnesses
 
 This protocol explicitly supports the following harnesses. The supported set is

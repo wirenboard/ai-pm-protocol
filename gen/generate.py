@@ -10,6 +10,9 @@ each adapter file it
   * inlines the neutral body (src/agents|commands/<name>.body.md), and
   * for agents, prepends the harness frontmatter from the manifest
     (src/manifests/<harness>/frontmatter/<name>.fm),
+  * for harness-local agents (an OpenCode-only section — the protocol-owned
+    review/research engines, where the OTHER harness has a native built-in),
+    inlines a body AND frontmatter that BOTH live under the manifest dir,
 
 then for the harness's capability artifacts (settings.json on Claude;
 opencode.json + AGENTS.md on OpenCode) copies the verbatim bytes from the
@@ -111,6 +114,32 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
         out = out_agents / f"{name}{agents['output_suffix']}"
         out.write_bytes(fm + body)
         written.append(out.relative_to(out_root))
+
+    # --- Harness-local agents (OpenCode only): frontmatter + body, BOTH from the
+    #     manifest dir, NOT from the shared src/agents/. These are agents that only
+    #     ONE harness ships because the other harness has a native built-in for the
+    #     same job — on OpenCode the protocol-owned `code-review` / `deep-research`
+    #     engines (OpenCode has no built-in equivalents; Claude keeps its built-ins,
+    #     so these are NOT added to the Claude adapter). Unlike the shared `agents`
+    #     section (body from src/agents/, frontmatter from the manifest), here BOTH
+    #     the body and the frontmatter live under src/manifests/<harness>/ — they are
+    #     harness-specific bodies, not neutral ones. Same thin assembly (frontmatter
+    #     + body, byte-copied, manifest order), so the diff-clean guarantee holds.
+    #     They land in the SAME output dir as the shared agents (.opencode/agent/),
+    #     and the filename is the agent id. See opencode-harness-support plan
+    #     scenario 6 (no built-in review/research engine). ---
+    local_agents = manifest.get("harness_local_agents")
+    if local_agents:
+        la_body_dir = MANIFESTS / harness / local_agents["body_dir"]
+        la_fm_dir = MANIFESTS / harness / local_agents["frontmatter_dir"]
+        out_local = out_root / local_agents["output_dir"]
+        out_local.mkdir(parents=True, exist_ok=True)
+        for name in local_agents["names"]:
+            fm = read_bytes(la_fm_dir / f"{name}{local_agents['frontmatter_suffix']}")
+            body = read_bytes(la_body_dir / f"{name}{local_agents['body_suffix']}")
+            out = out_local / f"{name}{local_agents['output_suffix']}"
+            out.write_bytes(fm + body)
+            written.append(out.relative_to(out_root))
 
     # --- Commands: body only (no frontmatter on Claude) ---
     commands = manifest["commands"]

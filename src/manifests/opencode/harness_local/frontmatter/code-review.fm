@@ -1,0 +1,29 @@
+---
+# OpenCode-ONLY engine subagent — code review. Shape per
+# https://opencode.ai/docs/agents/: `description` + `mode: subagent` + a `tools`
+# OBJECT map (not Claude's comma-list); no `name` key (filename is the agent id,
+# kept as `code-review` to match the protocol's delegation point). This engine
+# exists because OpenCode ships NO built-in `code-review` (verified 1.16.2); on
+# Claude the protocol delegates to the built-in engine instead, so this file is
+# NOT mirrored into the Claude adapter.
+#
+# Model: intentionally UNPINNED — inherits the session/primary model (DeepSeek
+# in the local config). True cross-model review (a different model than the
+# session, for independent blind spots) is a separate deferred item that needs a
+# second configured model + a PM pin; this engine runs SAME-MODEL for now.
+# Source on the no-runtime-override gap: https://github.com/anomalyco/opencode/pull/17577
+description: Reviews the current git diff for correctness bugs and reuse/simplification/efficiency cleanups (the dimensions the protocol's review step cares about), and returns a concise findings list (file:line, issue, why). OpenCode-only engine — the analogue of Claude's built-in code-review, which OpenCode lacks. Read-only on the tree; gets the diff via bash. Returns findings to the orchestrator; does not edit, commit, or push.
+mode: subagent
+tools:
+  read: true
+  grep: true
+  glob: true
+  bash: true
+permission:
+  # A subagent returns findings to the ORCHESTRATOR; it never prompts the PM
+  # directly. The adapter grants `question` to the primary via a top-level
+  # permission in opencode.json, which would otherwise cascade onto every agent
+  # (last-match-wins). This per-subagent re-deny keeps the grant scoped to the
+  # orchestrator. Source: https://opencode.ai/docs/permissions/
+  question: deny
+---

@@ -1,0 +1,30 @@
+---
+# OpenCode-ONLY engine subagent — deep research. Shape per
+# https://opencode.ai/docs/agents/: `description` + `mode: subagent` + a `tools`
+# OBJECT map (not Claude's comma-list); no `name` key (filename is the agent id,
+# kept as `deep-research` to match the protocol's delegation point). This engine
+# exists because OpenCode ships NO built-in `deep-research` (verified 1.16.2); on
+# Claude the protocol delegates to the built-in engine instead, so this file is
+# NOT mirrored into the Claude adapter.
+#
+# Model: intentionally UNPINNED — inherits the session/primary model (DeepSeek
+# in the local config). Same-model for now; cross-model is a separate deferred
+# item (see the code-review engine note and PR #17577).
+#
+# Tools: webfetch + websearch for multi-source web research; read to consult
+# in-project context; write to persist a long synthesis the orchestrator can
+# read back. No bash/edit — this engine researches and writes a report, it does
+# not run or change the project.
+description: Does multi-source web research on a question and returns a cited synthesis (claim -> source). OpenCode-only engine — the analogue of Claude's built-in deep-research, which OpenCode lacks. Fans out web searches, fetches sources, synthesizes with citations. Returns findings to the orchestrator; does not run or change the project.
+mode: subagent
+tools:
+  webfetch: true
+  websearch: true
+  read: true
+  write: true
+permission:
+  # A subagent returns findings to the ORCHESTRATOR; it never prompts the PM
+  # directly. Per-subagent re-deny so the primary-only `question` grant does not
+  # cascade here (last-match-wins). Source: https://opencode.ai/docs/permissions/
+  question: deny
+---

@@ -44,6 +44,48 @@
       "pm-stack-researcher"
     ]
   },
+  "harness_local_agents": {
+    "capability": "review-research-engine",
+    "_comment": [
+      "OpenCode-ONLY engine subagents. On Claude the protocol delegates",
+      "technical-quality review to the BUILT-IN `code-review` engine and deep",
+      "research to the BUILT-IN `deep-research` engine. OpenCode ships NO built-in",
+      "equivalents (verified OpenCode 1.16.2: built-in agents are only",
+      "build/plan/general/explore — opencode.ai/docs/agents/), so the adapter must",
+      "SHIP its own review + research subagents for the orchestrator to delegate to.",
+      "These are OpenCode-only — Claude keeps its built-ins, so they are NOT added",
+      "to the Claude adapter and are NOT shared neutral bodies.",
+      "",
+      "Distinct from the shared `agents` section: there the body is neutral (read",
+      "from src/agents/) and only the frontmatter is per-harness. Here BOTH the body",
+      "AND the frontmatter live under src/manifests/opencode/ (body_dir +",
+      "frontmatter_dir below) — they are harness-specific engine bodies. Same thin",
+      "assembly (frontmatter + body, byte-copied) and same output dir (.opencode/",
+      "agent/, filename = agent id), so single-source-diff-clean covers them too.",
+      "",
+      "Naming: the agent ids stay `code-review` and `deep-research` (the filename is",
+      "the agent id) so they match the protocol's delegation points. The enforcement",
+      "plugin's wb-* deny-list does NOT include them — they are ALLOWED engines, the",
+      "same way code-review/deep-research are not gated on Claude.",
+      "",
+      "Model: intentionally NO `model:` pin — they inherit the session/primary",
+      "model. True cross-model review (a DIFFERENT model than the session, for",
+      "independent blind spots) is a SEPARATE deferred item (needs a 2nd configured",
+      "model + a PM pin); these run same-model on OpenCode for now. See plan",
+      "scenario 6 + the no-built-in-review/research gap-handling decision."
+    ],
+    "output_dir": "agent",
+    "output_suffix": ".md",
+    "body_dir": "harness_local/body",
+    "body_suffix": ".body.md",
+    "frontmatter_dir": "harness_local/frontmatter",
+    "frontmatter_suffix": ".fm",
+    "assembly": "frontmatter + body",
+    "names": [
+      "code-review",
+      "deep-research"
+    ]
+  },
   "commands": {
     "capability": "command-definition",
     "output_dir": "command",
