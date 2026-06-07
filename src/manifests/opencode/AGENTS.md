@@ -96,17 +96,19 @@ the three things subagents must not do, **plus** the scoped-authoring discipline
   bookkeeping** (state, backlog, contracts, decision/resolution trails), exactly as
   the Claude orchestrator does. It does **not** author source code or the canonical
   `docs` (architecture, product, journeys, …) — those route to `pm-coder` /
-  `pm-architect`. A per-agent **path-`permission`** backstops this as a structural
-  hint: `ai-pm`'s frontmatter carries `permission.edit` AND `permission.write`
-  path-globs that **allow** `.ai-pm/**` + `doc/features/**` and **deny** `**`
-  (verified 1.16.2: per-agent `permission.edit`/`permission.write` accept path-glob
-  maps and the config stays valid — <https://opencode.ai/docs/permissions/>). The
-  **persona is the real enforcement**, not this block: `bash` (needed for git +
-  bookkeeping) bypasses any tool/permission restriction, and that bypass is governed
-  by the persona ("do not route around the path-permission via `bash`"), not by the
-  config. An airtight wall would need a plugin path/actor-aware `bash`-write deny
-  (the defense-in-depth follow-up). Verified on OpenCode 1.16.2: `ai-pm`'s `edit`
-  and `write` resolve to the allow-`.ai-pm`/`doc/features` + deny-`**` rules.
+  `pm-architect`. The **persona is the enforcement** (proven live): the body states
+  the orchestrator authors only its own artifacts and delegates code / canonical
+  docs. An earlier slice carried a per-agent **path-`permission`** map (allow
+  `.ai-pm/**` + `doc/features/**`, deny `**`) as a structural hint; it was
+  **removed** because it was broken AND bypassable. Broken: OpenCode matches the
+  globs against **absolute** paths, so the project-relative globs never matched and
+  **every** orchestrator write fell through to `**: deny` — denying the legitimate
+  `.ai-pm` writes the orchestrator must make. Bypassable: `bash` (needed for git +
+  bookkeeping) routes around any tool/permission restriction, so the block gave zero
+  real protection. The structural backstop is a future enforcement-plugin
+  path/actor-aware `bash`-write deny (a separate slice, after an actor-detection
+  feasibility check), not a per-agent permission map that can neither match the
+  paths nor resist `bash`.
 - **`question`** — surface PM decision-forks via the structured-question tool.
   This grant is given to the **primary only**: `.opencode/opencode.json` carries a
   top-level `permission: { question: "allow" }`, which the OpenCode loader resolves
