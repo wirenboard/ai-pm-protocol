@@ -41,6 +41,7 @@ Exit code 0 on success; non-zero with a diagnostic on any missing input.
 import argparse
 import json
 import pathlib
+import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -53,6 +54,37 @@ def load_manifest(harness: str) -> dict:
     if not path.is_file():
         raise FileNotFoundError(f"no adapter manifest for harness '{harness}': {path}")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def extract_wb_deny_roles() -> list:
+    """Single-source the wb-* role-duplicator deny set: extract it from the ONE
+    authored copy — the Claude settings.json Task|Agent|Skill matcher's
+    case-pattern. Reproducing that matcher's escaped shell bytes from a neutral
+    source is risky, so settings.json stays the verbatim home of the role set and
+    the OpenCode plugin DERIVES its copy here at build time. There is therefore
+    exactly one authored copy and the two adapters cannot drift (the single-source
+    test in tests/opencode.sh asserts the emitted set equals what is extracted
+    here). Order is preserved from the case-pattern, so the output is
+    deterministic."""
+    settings_path = MANIFESTS / "claude" / "settings.json"
+    if not settings_path.is_file():
+        raise FileNotFoundError(f"missing settings.json for role-set extraction: {settings_path}")
+    settings = json.loads(settings_path.read_text(encoding="utf-8"))
+    cmd = None
+    for grp in settings.get("hooks", {}).get("PreToolUse", []):
+        if grp.get("matcher") == "Task|Agent|Skill":
+            cmd = grp["hooks"][0]["command"]
+            break
+    if cmd is None:
+        raise ValueError("no Task|Agent|Skill matcher found in settings.json — cannot extract the wb-* role set")
+    # The deny set is the shell `case "$NAME" in <a>|<b>|...)` pattern.
+    m = re.search(r'case "\\?\$NAME" in ([^)]+)\)', cmd)
+    if not m:
+        raise ValueError("could not locate the case-pattern role set in the Task|Agent|Skill matcher command")
+    roles = [r.strip() for r in m.group(1).split("|") if r.strip()]
+    if not roles:
+        raise ValueError("extracted an empty wb-* role set from settings.json")
+    return roles
 
 
 def read_bytes(path: pathlib.Path) -> bytes:
@@ -90,6 +122,32 @@ def generate(harness: str, out_root: pathlib.Path) -> list:
         out = out_commands / f"{name}{commands['output_suffix']}"
         out.write_bytes(body)
         written.append(out.relative_to(out_root))
+
+    # --- Enforcement plugins (OpenCode only): emit each plugin from its template
+    #     with the single-sourced wb-* role deny-list injected. The role set is
+    #     EXTRACTED from the Claude settings.json (the one authored copy) and
+    #     substituted into the __WB_DENY_ROLES__ placeholder as a deterministic
+    #     JSON literal (case-pattern order preserved). The rest of the template is
+    #     copied verbatim — no parsing of the JS — so the output is deterministic.
+    #     See https://opencode.ai/docs/plugins/ (tool.execute.before throws to
+    #     deny). ---
+    plugins = manifest.get("plugins")
+    if plugins:
+        roles = extract_wb_deny_roles()
+        roles_literal = json.dumps(roles)  # deterministic: ["a","b",...] in order
+        out_plugins = out_root / plugins["output_dir"]
+        out_plugins.mkdir(parents=True, exist_ok=True)
+        for spec in plugins["files"]:
+            tmpl = read_bytes(MANIFESTS / harness / spec["template"]).decode("utf-8")
+            placeholder = spec["role_placeholder"]
+            if placeholder not in tmpl:
+                raise ValueError(
+                    f"plugin template {spec['template']} is missing the role placeholder {placeholder}"
+                )
+            rendered = tmpl.replace(placeholder, roles_literal)
+            out = out_plugins / spec["output_file"]
+            out.write_bytes(rendered.encode("utf-8"))
+            written.append(out.relative_to(out_root))
 
     # --- Verbatim capability artifacts (Claude: settings.json; OpenCode:
     #     opencode.json + AGENTS.md). Copied byte-for-byte from the manifest, in

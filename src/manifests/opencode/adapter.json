@@ -59,6 +59,33 @@
       "pm-research"
     ]
   },
+  "plugins": {
+    "capability": "deny-list-enforcement",
+    "output_dir": "plugin",
+    "_comment": [
+      "The OpenCode CORE enforcement plugin. Emitted from a template",
+      "(opencode/plugin/<name>.js.tmpl) with the wb-* role deny-list injected by",
+      "the generator FROM the Claude settings.json Task|Agent|Skill matcher (the",
+      "single authored copy of that role set). The __WB_DENY_ROLES__ placeholder",
+      "in the template is replaced with the extracted role array — so there is",
+      "exactly one authored copy and the two adapters cannot drift. Per",
+      "https://opencode.ai/docs/plugins/ : tool.execute.before throws to deny.",
+      "Verified subagent-effective on OpenCode 1.16.2 (Spike B, 2026-06-07).",
+      "",
+      "REGISTRATION: the file AUTO-LOADS from .opencode/plugin/ — confirmed on the",
+      "real loader (opencode debug config --pure lists it in the resolved plugin",
+      "set with NO opencode.json entry). An explicit `plugin` array entry would",
+      "DOUBLE-register the same file (auto-load + config), so opencode.json",
+      "deliberately carries no plugin entry."
+    ],
+    "files": [
+      {
+        "template": "plugin/ai-pm-enforcement.js.tmpl",
+        "output_file": "ai-pm-enforcement.js",
+        "role_placeholder": "__WB_DENY_ROLES__"
+      }
+    ]
+  },
   "artifacts": [
     {
       "capability": "always-on-core-import",

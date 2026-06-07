@@ -242,6 +242,98 @@ else
     fail "single-source-diff-clean (opencode): generator exited non-zero on the live OpenCode build"
 fi
 
+# ----------------------------------------------------------------------
+# oc-enforcement-plugin-single-source
+# The OpenCode enforcement plugin's wb-* role deny-list must be SINGLE-SOURCED
+# from the Claude settings.json Task|Agent|Skill matcher (the one authored copy
+# of the role set). We extract the role set from settings.json INDEPENDENTLY
+# (here, in the test) and assert the GENERATED plugin's injected WB_DENY_ROLES
+# array equals it, in order — proving no drift between the two adapters.
+# Source: https://opencode.ai/docs/plugins/
+# ----------------------------------------------------------------------
+PLUGIN="$OC/plugin/ai-pm-enforcement.js"
+if [ ! -f "$PLUGIN" ]; then
+    fail "oc-enforcement-plugin-single-source: generated plugin missing at $PLUGIN"
+else
+    if python3 - "$ROOT/src/manifests/claude/settings.json" "$PLUGIN" <<'PY'
+import json, re, sys
+settings_path, plugin_path = sys.argv[1], sys.argv[2]
+settings = json.load(open(settings_path))
+cmd = None
+for grp in settings.get("hooks", {}).get("PreToolUse", []):
+    if grp.get("matcher") == "Task|Agent|Skill":
+        cmd = grp["hooks"][0]["command"]
+        break
+if cmd is None:
+    print("no Task|Agent|Skill matcher in settings.json"); sys.exit(2)
+m = re.search(r'case "\\?\$NAME" in ([^)]+)\)', cmd)
+if not m:
+    print("no case-pattern role set in matcher"); sys.exit(2)
+authored = [r.strip() for r in m.group(1).split("|") if r.strip()]
+# Extract the injected literal from the generated plugin.
+src = open(plugin_path).read()
+pm = re.search(r'const WB_DENY_ROLES = (\[[^\]]*\]);', src)
+if not pm:
+    print("no WB_DENY_ROLES literal in generated plugin"); sys.exit(2)
+emitted = json.loads(pm.group(1))
+if authored != emitted:
+    print("DRIFT: settings.json role set %r != plugin role set %r" % (authored, emitted))
+    sys.exit(1)
+sys.exit(0)
+PY
+    then
+        pass "oc-enforcement-plugin-single-source: the generated plugin's wb-* role deny-list is byte-equal (and in order) to the Claude settings.json role set — no drift (one authored copy)"
+    else
+        fail "oc-enforcement-plugin-single-source: the plugin's role set drifted from the settings.json single source (or could not be extracted)"
+    fi
+fi
+
+# ----------------------------------------------------------------------
+# oc-enforcement-plugin-throws
+# Deterministic, CI-safe unit test of the plugin's tool.execute.before hook:
+# unit-invoke the exported hook with SYNTHETIC inputs (no LLM, no OpenCode
+# runtime) and assert it THROWS for each deny case (wb-* task, wb-* skill,
+# out-of-root read, truncating write) and ALLOWS the legitimate cases (pm-* task,
+# in-root read, real write). Requires node; SKIPS cleanly if node is absent.
+# Source: https://opencode.ai/docs/plugins/
+# ----------------------------------------------------------------------
+if command -v node >/dev/null 2>&1; then
+    if node "$ROOT/tests/oc-plugin-unit.js"; then
+        pass "oc-enforcement-plugin-throws: the plugin hook throws for every deny case and allows the legitimate cases (deterministic unit test; https://opencode.ai/docs/plugins/)"
+    else
+        fail "oc-enforcement-plugin-throws: the plugin hook unit test failed (see node output above)"
+    fi
+else
+    echo "SKIP: oc-enforcement-plugin-throws — node not on PATH (CI without node does not fail; the plugin form/behavior unit test is skipped)"
+fi
+
+# ----------------------------------------------------------------------
+# oc-config-valid (runtime-backed, GUARDED-SKIP)
+# The REAL OpenCode loader must ACCEPT the generated .opencode/opencode.json.
+# This is the check that would have caught the slice-2 `_comment` defect
+# (OpenCode rejects unrecognized config keys). Runs `opencode debug config
+# --pure` in a scratch build dir (--pure validates the config parse without
+# loading external plugins, so it neither hangs on plugin init nor needs the
+# network). SKIPS cleanly (prints SKIP, does NOT fail) when `opencode` is not on
+# PATH — CI without opencode must not break. The end-to-end validator for an
+# OpenCode adapter is "run the loader and observe" (doc/stack-notes.md § OpenCode
+# Required validators); this is that, guarded.
+# ----------------------------------------------------------------------
+if command -v opencode >/dev/null 2>&1; then
+    CFGDIR=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
+    python3 "$GEN" --harness opencode --out "$CFGDIR/.opencode" >/dev/null 2>&1
+    # --pure: validate config parse, skip external plugin load (avoids the
+    # debug-config-with-plugins hang and any network/model call).
+    if (cd "$CFGDIR" && timeout 60 opencode debug config --pure </dev/null >/dev/null 2>&1); then
+        pass "oc-config-valid: the real OpenCode loader accepts the generated .opencode/opencode.json (opencode debug config --pure, exit 0 — would catch a rejected key like the slice-2 _comment defect)"
+    else
+        fail "oc-config-valid: the real OpenCode loader REJECTED the generated .opencode/opencode.json (opencode debug config --pure exited non-zero — a config key is unrecognized or the config is invalid)"
+    fi
+    rm -rf "$CFGDIR"
+else
+    echo "SKIP: oc-config-valid — opencode not on PATH (CI without opencode does not fail; the runtime config-validity check is skipped)"
+fi
+
 # Determinism: two independent OpenCode builds must be byte-identical.
 S1=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
 S2=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }

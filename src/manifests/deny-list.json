@@ -1,0 +1,67 @@
+{
+  "_comment": [
+    "Harness-neutral CORE enforcement descriptor (opencode-harness-support, stage",
+    "(a), slice 3). Names — once, neutrally — the protocol's load-bearing CORE",
+    "deny rules so each harness's manifest realizes them in that harness's",
+    "primitive. The generator reads this to emit the OpenCode enforcement plugin",
+    "(.opencode/plugin/<name>.js); the Claude side realizes the same rules as the",
+    "PreToolUse hooks already authored verbatim in",
+    "src/manifests/claude/settings.json.",
+    "",
+    "SINGLE-SOURCE of the wb-* role set: this file does NOT re-list the wb-* role",
+    "names. The ONE authored copy of that set lives in the Claude settings.json",
+    "Task|Agent|Skill matcher (its escaped shell case-pattern is the verbatim",
+    "single home — reproducing those exact bytes from a neutral source is risky).",
+    "The generator EXTRACTS the role set from settings.json at build time and",
+    "injects it into the OpenCode plugin, so there is exactly one authored copy of",
+    "the role set and the two adapters cannot drift. The role_set_source field",
+    "below records where that single copy lives; the single-source test asserts",
+    "the emitted plugin's role set equals what settings.json declares.",
+    "",
+    "SCOPE — CORE rules only. The 'ask'-class guards in settings.json (force-push,",
+    "git commit --no-verify, ssh content-edit, ssh mutating action) are OUT OF",
+    "SCOPE here: OpenCode's tool.execute.before can only throw (hard deny) or",
+    "allow — it has no 'ask' return — so those map to OpenCode's permission",
+    "config, not this plugin (documented divergence; AGENTS.md records it). Only",
+    "the clear-DENY guards below are ported."
+  ],
+  "role_set_source": {
+    "file": "src/manifests/claude/settings.json",
+    "matcher": "Task|Agent|Skill",
+    "note": "The single authored copy of the wb-* role-duplicator set. The generator extracts the case-pattern role list from this matcher's command and injects it into the OpenCode plugin. No second hand-maintained list exists."
+  },
+  "rules": [
+    {
+      "id": "role-duplicator-task",
+      "neutral": "Block spawning a wb-* role-duplicator subagent (the role set is single-sourced from settings.json).",
+      "opencode_tool": "task",
+      "opencode_arg": "subagent_type",
+      "claude_realized_by": "settings.json Task|Agent|Skill matcher (subagent_type case)",
+      "source": "https://opencode.ai/docs/plugins/"
+    },
+    {
+      "id": "role-duplicator-skill",
+      "neutral": "Block loading a wb-* role-duplicator skill (mirror the Claude skill deny path).",
+      "opencode_tool": "skill",
+      "opencode_arg": "name",
+      "claude_realized_by": "settings.json Task|Agent|Skill matcher (skill case)",
+      "source": "https://opencode.ai/docs/plugins/"
+    },
+    {
+      "id": "read-outside-root",
+      "neutral": "Block a read whose target path resolves outside the project root.",
+      "opencode_tool": "read",
+      "opencode_arg": "filePath",
+      "claude_realized_by": "settings.json Read matcher (path-boundary hook)",
+      "source": "https://opencode.ai/docs/plugins/"
+    },
+    {
+      "id": "destructive-write-truncation",
+      "neutral": "Block an empty/whitespace-only write over an existing non-empty file (truncation guard).",
+      "opencode_tool": "write",
+      "opencode_arg": "filePath+content",
+      "claude_realized_by": "settings.json Write matcher (destructive-Write truncation guard)",
+      "source": "https://opencode.ai/docs/plugins/"
+    }
+  ]
+}
