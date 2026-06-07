@@ -76,12 +76,21 @@ fail() { echo "FAIL: $1"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
 command -v python3 >/dev/null 2>&1 || { echo "FAIL: python3 not available" >&2; exit 1; }
 
 # The in-scope neutralized corpus.
-#   BODIES  — the shared agent + command bodies (slice 1).
+#   BODIES  — the shared agent + command bodies (slice 1) PLUS the OpenCode
+#             harness-local agent bodies (the orchestrator `ai-pm` + the engines).
+#             The harness-local bodies are OpenCode-specific, not neutral, so they
+#             may legitimately name "Claude" in prose (e.g. the engines say "the
+#             analogue of Claude's built-in") — but they must still NOT carry a
+#             bare Claude PRIMITIVE (CLAUDE.md, AskUserQuestion, the Skill tool,
+#             settings.json PreToolUse, the @-import, .claude/). The orchestrator
+#             body must use the neutral vocabulary; this scan enforces it
+#             (opencode-orchestrator-primary plan, Test plan
+#             `oc-orchestrator-self-contained`).
 #   CORE    — the always-on core (slice 2): WORKFLOW.md + every workflow/*.md.
 #             These are ROOT files, NOT generated (the generator never touches
 #             them; they ship to both harnesses via the instruction-loading
 #             mechanism), so there is no golden impact — edited in place.
-BODIES="$ROOT/src/agents $ROOT/src/commands"
+BODIES="$ROOT/src/agents $ROOT/src/commands $ROOT/src/manifests/opencode/harness_local/body"
 CORE="$ROOT/WORKFLOW.md $ROOT/workflow"
 
 # The ONE allowlisted line in the core: the per-harness enforcement-mechanism
