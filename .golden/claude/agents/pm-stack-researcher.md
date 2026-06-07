@@ -25,7 +25,7 @@ A list of components and the project context. Each component is one of:
 - Target platform / host (e.g., Kubernetes cluster, embedded Linux board, browser, serverless runtime, mobile OS)
 - Integration system (e.g., systemd, Prometheus, a platform-provided config editor, a CI/CD platform)
 
-If invoked from `/pm-bootstrap` — `docs/architecture.md` already lists components, read it. If invoked from `/pm-plan` — caller passes the components touched by the feature.
+If invoked from `/pm-bootstrap` — `docs/architecture.md` already lists components, read it **targeted** per `### Targeted reading of large structured docs` in `workflow/pipeline.md` (the component sections — `## Tech stack` / `## File layout` / `## Dependencies` / `## External standards` — via the header index, not whole; widen when needed). If invoked from `/pm-plan` — caller passes the components touched by the feature.
 
 ## What to do
 
