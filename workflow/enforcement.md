@@ -52,6 +52,25 @@ The rules above are also enforced by the **enforcement layer** — a set of befo
 
 The **change-intent route reminder** injects a one-paragraph reminder of this route (Step 0 → `/pm-plan` → coder → review → pr-prep; orchestrator does not edit content artefacts; use `pm-*`, not `wb-*` role skills). Its **timing is a documented behavioral skew across harnesses** (see the harness-reference table's ⚠ note): on Claude it fires per-prompt on change-intent (and stays silent on ordinary conversation); on OpenCode, which has no per-prompt hook equivalent, the same reminder is baked into the always-on instruction content. Either way it is the soft counterpart to the hard deny/ask guards above — it keeps the protocol asserted without depending on a session re-reading this file.
 
+### Graceful subagent-failure — a failed gate is a MISSING gate, never a pass
+
+When the orchestrator spawns a `pm-*` agent or a built-in engine (`code-review`, `deep-research`) and that subagent **fails, refuses, crashes, or returns no usable artifact** — the canonical trigger is an environment crash mid-pipeline (e.g. the OpenCode session-insert long-session crash recorded in `docs/stack-notes.md`), but an explicit refusal or an empty/garbage return counts the same — the orchestrator follows one path and only one:
+
+- **Retry the SAME subagent, up to `N = 2` total attempts** (the original spawn plus up to two retries). A transient single crash is cheaply caught; a deterministic failure is not burned on indefinitely.
+- **On persistent failure, STOP the pipeline at that step and report to the PM in plain language** — which gate could not run, that you will **not** substitute its verdict, and the error text verbatim (and, when the cause is the known harness crash, the likely remedy: restart the harness).
+- **NEVER self-substitute a failed or absent subagent's output.** Not its verdict, not its source code, not its review/checker/advocate stamp, not a self-approval, not a self-merge. **A failed-agent artifact = a MISSING artifact, never a pass.** A subagent that **refuses** is treated identically to one that failed — its artifact is missing, not a pass. An environment crash is a failed gate, never a license to author the missing output yourself.
+
+This is the **persona-primary** rule (every transition — detecting the crash, deciding not to substitute, re-spawning, reporting — is a reasoning or positive act no before-tool guard can force or read). Its *consequences* are backstopped on the deny side: a self-authored content file is denied by the content-authoring guard, and a self-stamp-then-merge is denied by the **pre-ship merge gate** below — so even a persona lapse cannot ship the two worst self-substitutions.
+
+### Artifact gate — pre-ship merge and pre-code write (deny side)
+
+The enforcement layer also gates the two self-substitution *consequences* that surface as inspectable tool calls (where the realization supports it — on OpenCode the `tool.execute.before` plugin; the concept ports to a Claude before-tool Bash matcher as a follow-up):
+
+- **Pre-ship merge gate — denied.** A `git merge` / `git push` shipping a **feature branch** whose review artifact (`.ai-pm/reviews/<topic>_review.md`) is **missing or unstamped** (the load-bearing `## Code review:` line absent, or still reading `NOT YET RUN`) is denied. A **partially**-stamped artifact (plan-checker `## Verdict` present but the Pass-2 `## Code review:` line still `NOT YET RUN`) counts as **unsatisfied** — denied. The gate fails open on ambiguity (a non-feature merge such as `git merge main`, an unresolvable topic) so it never blocks a legitimate non-feature merge. This re-gates the merge that the pure-git-op exemption otherwise lets through, closing the self-stamp-then-merge path.
+- **Pre-code write gate — best-effort denied.** A `pm-coder` content write while **no plan artifact exists** for the active topic (`docs/features/<topic>_plan.md` absent) is denied — the structural floor under "a plan precedes code". Best-effort: where the write cannot be associated with a planless topic, it fails open (never a false denial). The positive "you must run `/pm-plan`" act stays persona-only — a before-tool guard can deny a tool call but cannot force a positive act.
+
+A denied merge is **not a retry-loop trigger**: treat the deny as "the review gate is not satisfied — stop and report to the PM", exactly the failure-path terminal above, never as a transient error to push past.
+
 Read-only ssh diagnostics (`cat` for reading, `ls`, `journalctl`, `systemctl status`, `docker logs`, `docker ps`, native status / audit / info commands) are not gated. Local mutating commands (anything not over ssh) are not gated either — they are normal dev work.
 
 Throwaway/diagnostic scripts go in a `tmp/` scratch subdir of the adapter directory (inside the project root, so they pass the path-boundary guards), not `/tmp`. The directory is git-ignored — it is scratch, never committed.

@@ -462,6 +462,90 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
     failOpenHooks["tool.execute.before"]
   );
 
+  // ====================================================================
+  // ANTI-CORNER-CUTTING piece 2 — the pre-ship MERGE GATE (h) + the pre-code
+  //   downgrade note. These gates read fixture artifacts off the SCRATCH project
+  //   root (.ai-pm/reviews/<topic>_review.md, doc/features/<topic>_plan.md) and a
+  //   synthetic .git/HEAD, exercised through the same synthetic (input,output)
+  //   pairs + mock ctx as the slice-15 cases. The gate rests on the
+  //   tool.execute.before throw-to-deny contract + the per-instance subagent-
+  //   containment fact (stack-notes (4b)):
+  //     https://opencode.ai/docs/plugins/
+  //     https://github.com/anomalyco/opencode/issues/5894
+  // ====================================================================
+
+  // Fixture helper: write `.ai-pm/reviews/<topic>_review.md` with the given
+  // stamp-line text (or omit the file when `stamp === null`).
+  function writeReview(topic, body) {
+    const dir = path.join(SCRATCH, ".ai-pm", "reviews");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, topic + "_review.md"), body);
+  }
+
+  // oc-gate-merge-deny-unstamped — intent: an orchestrator `git merge
+  // feature/<topic>` whose review artifact is ABSENT is denied (no reviewer ran).
+  // Scenario 5. Stack-notes (4b)/(plugins) throw-to-deny contract:
+  //   https://github.com/anomalyco/opencode/issues/5894
+  //   https://opencode.ai/docs/plugins/
+  await assertThrows(
+    "oc-gate-merge-deny-unstamped: orchestrator `git merge feature/<topic>` with a MISSING review artifact is denied",
+    "bash", { command: "git merge feature/oc-gate-absent" }, hookOrch
+  );
+
+  // oc-gate-merge-allow-stamped — intent: the same merge is ALLOWED once the
+  // review artifact carries a satisfied `## Code review:` stamp (no false denial).
+  // Scenario 7.
+  writeReview("oc-gate-stamped",
+    "## Verdict\n\napprove\n\n## Code review: 2026-06-08 — passed\n");
+  await assertAllows(
+    "oc-gate-merge-allow-stamped: orchestrator `git merge feature/<topic>` with a SATISFIED `## Code review:` stamp is allowed",
+    "bash", { command: "git merge feature/oc-gate-stamped" }, hookOrch
+  );
+
+  // oc-gate-partial-stamp-denied — intent (interaction scenario 3): a PARTIALLY
+  // stamped artifact (plan-checker `## Verdict` present but the Pass-2
+  // `## Code review:` line still `NOT YET RUN`) is read as UNSATISFIED -> deny, so
+  // a half-stamped artifact left by a failed run cannot be misread as satisfied.
+  writeReview("oc-gate-partial",
+    "## Verdict\n\napprove\n\n## Code review: NOT YET RUN\n");
+  await assertThrows(
+    "oc-gate-partial-stamp-denied: orchestrator merge of a PARTIALLY-stamped review (Verdict present, `## Code review: NOT YET RUN`) is denied",
+    "bash", { command: "git merge feature/oc-gate-partial" }, hookOrch
+  );
+
+  // oc-gate-bookkeeping-still-allowed — intent (s15 regression guard, scenario 7):
+  // a non-feature merge (`git merge main`) and the orchestrator's own `.ai-pm`
+  // bookkeeping writes stay ALLOWED — the gate fails open on a non-feature topic.
+  await assertAllows(
+    "oc-gate-bookkeeping-still-allowed: orchestrator `git merge main` (non-feature, unresolvable topic) is allowed (fail-open)",
+    "bash", { command: "git merge main" }, hookOrch
+  );
+  await assertAllows(
+    "oc-gate-bookkeeping-still-allowed: orchestrator `.ai-pm/state` bookkeeping write stays allowed (s15 regression)",
+    "write", { filePath: path.join(SCRATCH, ".ai-pm", "state", "current.md"), content: "state\n" }, hookOrch
+  );
+
+  // Fail-open on a feature merge by a NON-orchestrator actor: the gate applies
+  // only in the ship (orchestrator) session — a subagent merge with an absent
+  // review is NOT denied by (h) (no false denial outside the ship boundary).
+  await assertAllows(
+    "oc-gate-merge-nonorch-failopen: a SUBAGENT `git merge feature/<topic>` (absent review) is NOT denied by the pre-ship gate (orchestrator-session-scoped)",
+    "bash", { command: "git merge feature/oc-gate-absent" }, hookSub
+  );
+
+  // oc-gate-precode-no-plan-deny — DOWNGRADED to a persona rule (no clean
+  // structural write->topic signal; a "zero plans" proxy would contradict the s15
+  // (g) invariant that a subagent authors content legitimately). The plugin does
+  // NOT deny a pm-coder content write for a planless topic; the persona owns "a
+  // plan precedes code" and the deny-side FLOOR is the pre-ship merge gate (h)
+  // above. This case PINS the downgrade: a pm-coder content write with no plan on
+  // disk is ALLOWED at the plugin layer (so the s15 (g) subagent-authoring
+  // behavior is unchanged). See the (i) note in the plugin template.
+  await assertAllows(
+    "oc-gate-precode-no-plan-allowed-by-plugin: a pm-coder content write with no plan is allowed at the plugin layer (pre-code gate is persona-only; downgraded — see plugin (i) note)",
+    "write", { filePath: path.join(SCRATCH, "src", "precode.ts"), content: "export const x=1;\n" }, hookSub
+  );
+
   finish();
 })().catch((e) => {
   console.error("FAIL: unexpected error in oc-plugin-unit.js — " + (e && e.stack || e));
