@@ -30,3 +30,25 @@ Run in the main orchestrator session:
 | `/pm-fixup` | Fast path for trivial changes (≤ 50 lines, no behavior change, no stack-notes touch, no new code file). Skips `/pm-plan`; goes directly to `pm-coder` + `pm-plan-checker` in trivial mode. Falls back to `/pm-plan` if any condition fails. |
 
 `code-review` (a built-in engine on Claude; a protocol-shipped compact reviewer subagent on OpenCode) — full technical-quality sweep: bugs, security, dead code. Runs automatically as Pass 2 in the review loop after every feature, and as the optional whole-codebase sweep after `/pm-audit`. The whole-codebase sweep prefers `wb-development:code-review-orchestrator` when installed (the multi-aspect whole-project engine) and otherwise falls back to this `code-review` engine run over the whole tree — see `### Review typology` in `workflow/review-typology.md` for the engine-selection rule.
+
+### Role-delegation integrity — one designated agent per pipeline role, never a generic stand-in
+
+The "use only these — do not substitute" framing above is **not** only about cross-toolset `wb-*` look-alikes. It is the role-side statement of one rule: **every pipeline role has exactly one designated protocol agent or engine, and the orchestrator fills that seat with that agent — never with a generic harness built-in nor any other non-protocol agent standing in for the role.** The roles and their designated fillers:
+
+| Pipeline role | Designated filler (the ONLY thing that fills this seat) |
+|---|---|
+| Plan a feature | `/pm-plan` (orchestrator-driven command) |
+| Plan-compliance check | `pm-plan-checker` |
+| Product-readiness gate | `pm-product-advocate` |
+| Implementation | `pm-coder` |
+| Per-diff / whole-codebase review | the `code-review` **engine** (Claude built-in / the OpenCode compact reviewer), per `### Review typology` |
+| Protocol-compliance audit | `pm-auditor` |
+| Canonical docs / arch / journeys / threat-model | `pm-architect` |
+| Stack-rule research | `pm-stack-researcher` |
+| Existing-codebase deep read | `pm-codebase-reader` |
+
+A **generic harness built-in** — `general` (the catch-all subagent), `build`, `plan` — or any other non-protocol agent **carries none of the role's discipline**: spawn `general` to "do a review" and you get prose from an agent that has no severity scale, no nine review aspects, no verdict rubric, no secrets-hygiene pass; spawn it to "do an audit" and you get none of the auditor's dimensions. The output *looks* like the deliverable and is not it — the exact corner-cut the live incident named (a `general` subagent asked to "update the review file and run code-review," recognized as wrong, then rationalized as "very little actual code"). This is the **same violation family** as the `wb-*` role-duplicator deny — a non-protocol agent occupying a protocol seat — just sourced from the harness's own built-ins instead of an installed toolset. Name it as the extension, not a new rule: a generic does not become the reviewer by being asked to act like one.
+
+**The carve-out is unchanged.** The built-in **engines the protocol delegates to on purpose** — `code-review` (the designated review filler) and `deep-research` (the `/pm-research` engine) — are **not** generic stand-ins: they **are** the designated filler for their role. The line is *generic-catch-all-as-role-substitute* (denied), not *built-in-tool* (the protocol uses several on purpose). The protocol roster has **no "generic exploration" seat**: the orchestrator does its own read / grep inline and routes deep codebase reads to `pm-codebase-reader`, so a `task`-spawn of `general` is, by construction, a role substitution — there is no legitimate orchestrator use of it to over-block.
+
+**The Pass-2 review trail is the orchestrator's OWN work, not a delegation.** "Update the `## Code review` review-file trail" is the orchestrator's own carve-out (the edit-route carve-out in `workflow/enforcement.md`) — it writes that trail itself and does **not** hand the edit to a generic (or any) agent. What it delegates is only the **finding generation**, to the designated `code-review` engine it spawns this turn; the orchestrator then records those findings in the trail. Routing the trail edit through `general` is two violations at once: a generic standing in for the reviewer role **and** a content-edit the orchestrator owns being handed off. See `### Role-delegation integrity (full)` in `workflow/enforcement.md` for the enforcement realization.
