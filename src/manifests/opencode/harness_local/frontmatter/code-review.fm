@@ -16,7 +16,7 @@
 # is no one-line knob; absent that block, all four checking agents inherit the
 # session. See doc/stack-notes.md (OpenCode § control-layer model).
 # Source on the no-runtime-override gap: https://github.com/anomalyco/opencode/pull/17577
-description: Reviews the current git diff for correctness bugs and reuse/simplification/efficiency cleanups (the dimensions the protocol's review step cares about), and returns a concise findings list (file:line, issue, why). OpenCode-only engine — the analogue of Claude's built-in code-review, which OpenCode lacks. Read-only on the tree; gets the diff via bash. Returns findings to the orchestrator; does not edit, commit, or push.
+description: Reviews the current git diff in one compact pass across nine aspects (plan-compliance, security, stability, regressions, test-coverage, conventions, simplification, documentation, architecture), returning structured <finding> blocks with three severities and a consolidated verdict — plan-compliance is the hard blocker (any deviation → never Approve). OpenCode-only engine — the analogue of Claude's built-in code-review, which OpenCode lacks. Read-only on the tree; gets the diff via bash. Returns findings to the orchestrator; does not edit, commit, or push.
 mode: subagent
 tools:
   read: true
