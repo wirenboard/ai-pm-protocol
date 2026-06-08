@@ -628,6 +628,88 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
     "bash", { command: "git push origin feature/oc-gate-refspec-missing:main" }, hookOrch
   );
 
+  // ====================================================================
+  // ANTI-CORNER-CUTTING piece 0b — isOrchestratorAuthorable hardening.
+  //   (B) close the SELF-PATCH HOLE: `.ai-pm/tooling/**` (the protocol submodule —
+  //       the enforcer's own source + the deployed adapter reachable via the
+  //       `.opencode/{plugin,agent,command}` symlinks) is NO LONGER orchestrator-
+  //       authorable. The `.ai-pm/` exemption is now "under `.ai-pm/` EXCEPT
+  //       `.ai-pm/tooling/**`". This stops the live orchestrator editing the
+  //       deployed plugin to route around its own guard.
+  //   (A) FIX the doc/docs TRIGGER: the DOWNSTREAM plural `docs/features/<topic>_
+  //       plan.md` is now accepted as the orchestrator's plan (the singular
+  //       `doc/features/` of THIS repo still works). The legitimate downstream
+  //       plan write that triggered the incident is unblocked.
+  // Each case is NON-VACUOUS: it would FAIL if the isOrchestratorAuthorable fix
+  // were reverted (tooling exempted again / docs plural rejected again).
+  // ====================================================================
+
+  // (B) oc-self-patch-tooling-denied — the orchestrator may NOT write or edit the
+  //     protocol submodule under `.ai-pm/tooling/**`. The deployed plugin itself
+  //     (the self-patch target) and a bare submodule file both DENY.
+  await assertThrows(
+    "oc-self-patch-tooling-denied: orchestrator `write` to .ai-pm/tooling/.opencode/plugin/ai-pm-enforcement.js (the deployed enforcer — self-patch target) is denied",
+    "write",
+    { filePath: path.join(SCRATCH, ".ai-pm", "tooling", ".opencode", "plugin", "ai-pm-enforcement.js"), content: "// patched\n" },
+    hookOrch
+  );
+  await assertThrows(
+    "oc-self-patch-tooling-denied: orchestrator `edit` to .ai-pm/tooling/.opencode/plugin/ai-pm-enforcement.js (the deployed enforcer) is denied",
+    "edit",
+    { filePath: path.join(SCRATCH, ".ai-pm", "tooling", ".opencode", "plugin", "ai-pm-enforcement.js") },
+    hookOrch
+  );
+  await assertThrows(
+    "oc-self-patch-tooling-denied: orchestrator `write` to a bare .ai-pm/tooling/WORKFLOW.md (protocol submodule source) is denied",
+    "write",
+    { filePath: path.join(SCRATCH, ".ai-pm", "tooling", "WORKFLOW.md"), content: "# patched\n" },
+    hookOrch
+  );
+  await assertThrows(
+    "oc-self-patch-tooling-denied: orchestrator bash `echo x > .ai-pm/tooling/.opencode/plugin/ai-pm-enforcement.js` (the cat-bypass self-patch) is denied",
+    "bash",
+    { command: "echo x > " + path.join(SCRATCH, ".ai-pm", "tooling", ".opencode", "plugin", "ai-pm-enforcement.js") },
+    hookOrch
+  );
+
+  // (A) oc-docs-plural-plan-allowed — the DOWNSTREAM plural `docs/features/<topic>_
+  //     plan.md` is the orchestrator's plan -> ALLOWED. And the singular
+  //     `doc/features/<topic>_plan.md` (THIS repo) still ALLOWED.
+  await assertAllows(
+    "oc-docs-plural-plan-allowed: orchestrator `write` to docs/features/<topic>_plan.md (downstream PLURAL plan) is allowed",
+    "write",
+    { filePath: path.join(SCRATCH, "docs", "features", "oc-incident_plan.md"), content: "# plan\n" },
+    hookOrch
+  );
+  await assertAllows(
+    "oc-docs-plural-plan-allowed: orchestrator `write` to doc/features/<topic>_plan.md (this-repo SINGULAR plan) is still allowed",
+    "write",
+    { filePath: path.join(SCRATCH, "doc", "features", "oc-incident_plan.md"), content: "# plan\n" },
+    hookOrch
+  );
+
+  // (regression) oc-aipm-nontooling-still-allowed — the `.ai-pm` exemption MINUS
+  //     tooling did not over-deny: the orchestrator's own non-tooling `.ai-pm`
+  //     artifacts (state, reviews, contracts) stay ALLOWED.
+  await assertAllows(
+    "oc-aipm-nontooling-still-allowed: orchestrator `write` to .ai-pm/state/current.md (own bookkeeping) is still allowed",
+    "write",
+    { filePath: path.join(SCRATCH, ".ai-pm", "state", "current.md"), content: "state\n" },
+    hookOrch
+  );
+  await assertAllows(
+    "oc-aipm-nontooling-still-allowed: orchestrator `write` to .ai-pm/reviews/x_review.md (own review trail) is still allowed",
+    "write",
+    { filePath: path.join(SCRATCH, ".ai-pm", "reviews", "x_review.md"), content: "## Verdict\n" },
+    hookOrch
+  );
+  await assertAllows(
+    "oc-aipm-nontooling-still-allowed: orchestrator `write` to .ai-pm/contracts/x.md (own contract) is still allowed",
+    "write",
+    { filePath: path.join(SCRATCH, ".ai-pm", "contracts", "x.md"), content: "# contract\n" },
+    hookOrch
+  );
+
   finish();
 })().catch((e) => {
   console.error("FAIL: unexpected error in oc-plugin-unit.js — " + (e && e.stack || e));

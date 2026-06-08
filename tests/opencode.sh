@@ -1489,6 +1489,87 @@ else
 fi
 
 # ----------------------------------------------------------------------
+# oc-self-patch-ban-persona  (anti-corner-cutting piece 0b)
+# The persona echoes the self-patch-the-enforcer ban (workflow/enforcement.md):
+# when a guard blocks work you believe legitimate, you do NOT edit the enforcer /
+# plugin / agent-command defs / .ai-pm/tooling to route around it — you write a
+# protocol-feedback report + STOP / escalate to the PM, and the fix flows upstream
+# (submodule bump), never a local in-place patch. FORM (grep) over the GENERATED
+# body. NON-VACUOUS: each clause is a distinct load-bearing phrase the echo loses
+# if the self-patch-ban bullet were removed.
+# ----------------------------------------------------------------------
+if [ ! -f "$ORCH" ]; then
+    fail "oc-self-patch-ban-persona: orchestrator agent missing at $ORCH"
+else
+    pbody="$ORCH_BODY"
+    perrs=""
+    # The ban names the self-patch-the-enforcer rule.
+    if ! printf '%s\n' "$pbody" | grep -Eqi 'self-patch'; then
+        perrs="$perrs\n  - missing the 'self-patch-the-enforcer ban' name"
+    fi
+    # Do NOT edit the enforcer / plugin / tooling to route around a block.
+    if ! printf '%s\n' "$pbody" | grep -Eqi 'do NOT edit the enforcer|route around'; then
+        perrs="$perrs\n  - missing the 'do not edit the enforcer / route around the block' statement"
+    fi
+    if ! printf '%s\n' "$pbody" | grep -Eqi '\.ai-pm/tooling'; then
+        perrs="$perrs\n  - missing the '.ai-pm/tooling is off-limits' clause"
+    fi
+    # protocol-feedback report + STOP / escalate to the PM.
+    if ! printf '%s\n' "$pbody" | grep -Eqi 'protocol-feedback report'; then
+        perrs="$perrs\n  - missing the 'write a protocol-feedback report' instruction"
+    fi
+    if ! printf '%s\n' "$pbody" | grep -Eqi 'STOP / escalate|STOP.*escalate'; then
+        perrs="$perrs\n  - missing the 'STOP / escalate to the PM' instruction"
+    fi
+    # Fix flows upstream (submodule bump), never a local in-place patch.
+    if ! printf '%s\n' "$pbody" | grep -Eqi 'submodule bump'; then
+        perrs="$perrs\n  - missing the 'fix flows upstream through a submodule bump' clause"
+    fi
+    if [ -z "$perrs" ]; then
+        pass "oc-self-patch-ban-persona: the persona states the self-patch-the-enforcer ban — do not edit the enforcer / plugin / agent-command defs / .ai-pm/tooling to route around a block; write a protocol-feedback report + STOP / escalate to the PM; the fix flows upstream via a submodule bump"
+    else
+        fail "oc-self-patch-ban-persona: the persona body is missing one or more self-patch-ban clauses:$(printf '%b' "$perrs")"
+    fi
+fi
+
+# ----------------------------------------------------------------------
+# oc-transparency-rider-persona  (anti-corner-cutting piece 0b)
+# The persona echoes the transparency rider (workflow/pm-comms.md): when reading
+# an existing gate artifact (audit-*.md / _review.md / plan) for context before a
+# fresh spawn — (1) announce the read-for-context-not-reuse intent BEFORE reading,
+# and (2) do NOT relay the stale artifact's findings to the PM as the answer (the
+# PM-visible results come from the FRESH run). FORM (grep) over the GENERATED body.
+# NON-VACUOUS: each clause is a distinct load-bearing phrase the echo loses if the
+# transparency-rider bullet were removed.
+# ----------------------------------------------------------------------
+if [ ! -f "$ORCH" ]; then
+    fail "oc-transparency-rider-persona: orchestrator agent missing at $ORCH"
+else
+    tbody="$ORCH_BODY"
+    terrs=""
+    # The rider is named.
+    if ! printf '%s\n' "$tbody" | grep -Eqi 'transparency rider'; then
+        terrs="$terrs\n  - missing the 'transparency rider' name"
+    fi
+    # (1) announce the read-for-context-not-reuse intent BEFORE reading.
+    if ! printf '%s\n' "$tbody" | grep -Eqi 'announce the read-for-context-not-reuse intent BEFORE reading|announce.*BEFORE reading'; then
+        terrs="$terrs\n  - missing the 'announce the read-for-context-not-reuse intent BEFORE reading' clause"
+    fi
+    # (2) do NOT relay the stale artifact's findings as the answer.
+    if ! printf '%s\n' "$tbody" | grep -Eqi 'do NOT relay'; then
+        terrs="$terrs\n  - missing the 'do not relay the old artifact findings as the answer' clause"
+    fi
+    if ! printf '%s\n' "$tbody" | grep -Eqi 'FRESH agent.?s run|fresh run'; then
+        terrs="$terrs\n  - missing the 'results come from the FRESH run' clause"
+    fi
+    if [ -z "$terrs" ]; then
+        pass "oc-transparency-rider-persona: the persona states the transparency rider — announce the read-for-context-not-reuse intent BEFORE reading an existing gate artifact, and do NOT relay the stale artifact's findings to the PM as the answer (the results come from the fresh run)"
+    else
+        fail "oc-transparency-rider-persona: the persona body is missing one or more transparency-rider clauses:$(printf '%b' "$terrs")"
+    fi
+fi
+
+# ----------------------------------------------------------------------
 # Summary
 # ----------------------------------------------------------------------
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
