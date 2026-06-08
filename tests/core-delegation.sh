@@ -25,9 +25,9 @@
 #   edit-ownership-carveouts-preserved
 #     workflow/enforcement.md STILL names the two carve-outs (the Pass-2
 #     `## Code review` trail + the advocate `## Resolutions` trail) AND the
-#     orchestrator-own-output artefact list (backlog / state / Pass-2 code-review /
-#     advocate Resolutions / protocol-gap / git ops). Guards the broadened rule
-#     against dropping the carve-outs / over-blocking.
+#     orchestrator-own-output artefact list (backlog / `.ai-pm/state` / Pass-2
+#     code-review / advocate Resolutions / protocol-gap / git ops). Guards the
+#     broadened rule against dropping the carve-outs / over-blocking.
 #
 # Each grep is over a SPECIFIC load-bearing phrase that the kernel/rule would lose
 # if the clause were removed — non-vacuous by construction.
@@ -115,16 +115,17 @@ if ! grep -q 'A second carve-out' "$ENF"; then
 fi
 
 # The orchestrator-own-output artefact list tokens — each must still be present.
-#   backlog / state / Pass-2 `## Code review` trail / advocate `## Resolutions` /
-#   protocol-gap report / git ops.
-for tok in 'backlog' '## Code review' '## Resolutions' 'protocol-feedback report' 'git operations'; do
+#   backlog / `.ai-pm/state` (the execution-state carve-out) / Pass-2
+#   `## Code review` trail / advocate `## Resolutions` / protocol-gap report /
+#   git ops.
+for tok in 'backlog' '.ai-pm/state' '## Code review' '## Resolutions' 'protocol-feedback report' 'git operations'; do
     if ! grep -qF "$tok" "$ENF"; then
         cerrs="$cerrs\n  - enforcement.md artefact list dropped the token: [$tok]"
     fi
 done
 
 if [ -z "$cerrs" ]; then
-    pass "edit-ownership-carveouts-preserved: workflow/enforcement.md still names the two carve-outs (Pass-2 '## Code review' trail + advocate '## Resolutions' trail) and the orchestrator-own-output artefact list (backlog / Pass-2 code-review / advocate Resolutions / protocol-gap report / git ops) — the broadened rule did not over-block"
+    pass "edit-ownership-carveouts-preserved: workflow/enforcement.md still names the two carve-outs (Pass-2 '## Code review' trail + advocate '## Resolutions' trail) and the orchestrator-own-output artefact list (backlog / .ai-pm/state / Pass-2 code-review / advocate Resolutions / protocol-gap report / git ops) — the broadened rule did not over-block"
 else
     fail "edit-ownership-carveouts-preserved: a carve-out / artefact-list token was dropped (over-block risk):$(printf '%b' "$cerrs")"
 fi
