@@ -462,6 +462,172 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
     failOpenHooks["tool.execute.before"]
   );
 
+  // ====================================================================
+  // ANTI-CORNER-CUTTING piece 2 — the pre-ship MERGE GATE (h) + the pre-code
+  //   downgrade note. These gates read fixture artifacts off the SCRATCH project
+  //   root (.ai-pm/reviews/<topic>_review.md, doc/features/<topic>_plan.md) and a
+  //   synthetic .git/HEAD, exercised through the same synthetic (input,output)
+  //   pairs + mock ctx as the slice-15 cases. The gate rests on the
+  //   tool.execute.before throw-to-deny contract + the per-instance subagent-
+  //   containment fact (stack-notes (4b)):
+  //     https://opencode.ai/docs/plugins/
+  //     https://github.com/anomalyco/opencode/issues/5894
+  // ====================================================================
+
+  // Fixture helper: write `.ai-pm/reviews/<topic>_review.md` with the given
+  // stamp-line text (or omit the file when `stamp === null`).
+  function writeReview(topic, body) {
+    const dir = path.join(SCRATCH, ".ai-pm", "reviews");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, topic + "_review.md"), body);
+  }
+
+  // oc-gate-merge-deny-unstamped — intent: an orchestrator `git merge
+  // feature/<topic>` whose review artifact is ABSENT is denied (no reviewer ran).
+  // Scenario 5. Stack-notes (4b)/(plugins) throw-to-deny contract:
+  //   https://github.com/anomalyco/opencode/issues/5894
+  //   https://opencode.ai/docs/plugins/
+  await assertThrows(
+    "oc-gate-merge-deny-unstamped: orchestrator `git merge feature/<topic>` with a MISSING review artifact is denied",
+    "bash", { command: "git merge feature/oc-gate-absent" }, hookOrch
+  );
+
+  // oc-gate-merge-allow-stamped — intent: the same merge is ALLOWED once the
+  // review artifact carries a satisfied `## Code review:` stamp (no false denial).
+  // Scenario 7.
+  writeReview("oc-gate-stamped",
+    "## Verdict\n\napprove\n\n## Code review: 2026-06-08 — passed\n");
+  await assertAllows(
+    "oc-gate-merge-allow-stamped: orchestrator `git merge feature/<topic>` with a SATISFIED `## Code review:` stamp is allowed",
+    "bash", { command: "git merge feature/oc-gate-stamped" }, hookOrch
+  );
+
+  // oc-gate-partial-stamp-denied — intent (interaction scenario 3): a PARTIALLY
+  // stamped artifact (plan-checker `## Verdict` present but the Pass-2
+  // `## Code review:` line still `NOT YET RUN`) is read as UNSATISFIED -> deny, so
+  // a half-stamped artifact left by a failed run cannot be misread as satisfied.
+  writeReview("oc-gate-partial",
+    "## Verdict\n\napprove\n\n## Code review: NOT YET RUN\n");
+  await assertThrows(
+    "oc-gate-partial-stamp-denied: orchestrator merge of a PARTIALLY-stamped review (Verdict present, `## Code review: NOT YET RUN`) is denied",
+    "bash", { command: "git merge feature/oc-gate-partial" }, hookOrch
+  );
+
+  // oc-gate-bookkeeping-still-allowed — intent (s15 regression guard, scenario 7):
+  // a non-feature merge (`git merge main`) and the orchestrator's own `.ai-pm`
+  // bookkeeping writes stay ALLOWED — the gate fails open on a non-feature topic.
+  await assertAllows(
+    "oc-gate-bookkeeping-still-allowed: orchestrator `git merge main` (non-feature, unresolvable topic) is allowed (fail-open)",
+    "bash", { command: "git merge main" }, hookOrch
+  );
+  await assertAllows(
+    "oc-gate-bookkeeping-still-allowed: orchestrator `.ai-pm/state` bookkeeping write stays allowed (s15 regression)",
+    "write", { filePath: path.join(SCRATCH, ".ai-pm", "state", "current.md"), content: "state\n" }, hookOrch
+  );
+
+  // Fail-open on a feature merge by a NON-orchestrator actor: the gate applies
+  // only in the ship (orchestrator) session — a subagent merge with an absent
+  // review is NOT denied by (h) (no false denial outside the ship boundary).
+  await assertAllows(
+    "oc-gate-merge-nonorch-failopen: a SUBAGENT `git merge feature/<topic>` (absent review) is NOT denied by the pre-ship gate (orchestrator-session-scoped)",
+    "bash", { command: "git merge feature/oc-gate-absent" }, hookSub
+  );
+
+  // oc-gate-precode-no-plan-deny — DOWNGRADED to a persona rule (no clean
+  // structural write->topic signal; a "zero plans" proxy would contradict the s15
+  // (g) invariant that a subagent authors content legitimately). The plugin does
+  // NOT deny a pm-coder content write for a planless topic; the persona owns "a
+  // plan precedes code" and the deny-side FLOOR is the pre-ship merge gate (h)
+  // above. This case PINS the downgrade: a pm-coder content write with no plan on
+  // disk is ALLOWED at the plugin layer (so the s15 (g) subagent-authoring
+  // behavior is unchanged). See the (i) note in the plugin template.
+  await assertAllows(
+    "oc-gate-precode-no-plan-allowed-by-plugin: a pm-coder content write with no plan is allowed at the plugin layer (pre-code gate is persona-only; downgraded — see plugin (i) note)",
+    "write", { filePath: path.join(SCRATCH, "src", "precode.ts"), content: "export const x=1;\n" }, hookSub
+  );
+
+  // ====================================================================
+  // REVIEW-FIX PASS (orchestrator-anti-corner-cutting-p12) — defects in the
+  //   pre-ship merge gate (h) found by Pass-2 code-review.
+  //   FIX 1 (false-allow): an EMPTY `## Code review:` heading (the words
+  //     `NOT YET RUN` deleted) used to pass — the "skeleton looks filled" bypass.
+  //     Satisfied now requires NON-EMPTY content (and not `NOT YET RUN`).
+  //   FIX 2 (false-deny on documentation-kind): a documentation-kind review file
+  //     carries `## Validation:` and NO `## Code review:` line; the gate must
+  //     accept the `## Validation:` stamp too.
+  //   FIX 3 (false-deny): a refspec topic `git push origin feature/foo:main` used
+  //     to extract topic `foo:main` (terminator class didn't stop at `:`).
+  // ====================================================================
+
+  // FIX 1 — an EMPTY `## Code review:` heading (nothing after the colon) is the
+  //   "skeleton looks filled" bypass -> still DENY.
+  writeReview("oc-gate-empty-heading",
+    "## Verdict\n\napprove\n\n## Code review:\n");
+  await assertThrows(
+    "oc-gate-empty-stamp-denied: orchestrator merge with an EMPTY `## Code review:` heading (NOT YET RUN deleted, nothing after the colon) is denied",
+    "bash", { command: "git merge feature/oc-gate-empty-heading" }, hookOrch
+  );
+  // ...and a whitespace-only heading is equally empty -> DENY.
+  writeReview("oc-gate-ws-heading",
+    "## Verdict\n\napprove\n\n## Code review:   \t\n");
+  await assertThrows(
+    "oc-gate-empty-stamp-denied: orchestrator merge with a WHITESPACE-ONLY `## Code review:` heading is denied",
+    "bash", { command: "git merge feature/oc-gate-ws-heading" }, hookOrch
+  );
+
+  // FIX 1 — a real `FIXED — <sha>` stamp (no `— passed` token) is a legitimate
+  //   stamp -> ALLOW (the rule must not require a rigid `— passed`).
+  writeReview("oc-gate-fixed-stamp",
+    "## Verdict\n\napprove\n\n## Code review: FIXED — abc123\n");
+  await assertAllows(
+    "oc-gate-fixed-stamp-allowed: orchestrator merge with `## Code review: FIXED — abc123` (real non-`passed` content) is allowed",
+    "bash", { command: "git merge feature/oc-gate-fixed-stamp" }, hookOrch
+  );
+  // ...and the `<date> — passed` form is likewise allowed (explicit, in addition
+  //   to oc-gate-merge-allow-stamped above).
+  writeReview("oc-gate-date-passed",
+    "## Verdict\n\napprove\n\n## Code review: 2026-06-08 — passed\n");
+  await assertAllows(
+    "oc-gate-date-passed-allowed: orchestrator merge with `## Code review: <date> — passed` is allowed",
+    "bash", { command: "git merge feature/oc-gate-date-passed" }, hookOrch
+  );
+
+  // FIX 2 — a DOCUMENTATION-kind review file: only a satisfied `## Validation:`
+  //   line, NO `## Code review:` line -> ALLOW (no false denial of a validated
+  //   documentation-kind merge).
+  writeReview("oc-gate-validation-only",
+    "## Verdict\n\napprove\n\n## Validation: 2026-06-08 — editorial + clean-grep — passed\n");
+  await assertAllows(
+    "oc-gate-validation-only-allowed: orchestrator merge with ONLY a satisfied `## Validation:` line (documentation-kind, no `## Code review:`) is allowed",
+    "bash", { command: "git merge feature/oc-gate-validation-only" }, hookOrch
+  );
+  // ...but an EMPTY `## Validation:` heading is equally unsatisfied -> DENY
+  //   (the non-empty/not-NYR rule applies to the Validation stamp too).
+  writeReview("oc-gate-validation-empty",
+    "## Verdict\n\napprove\n\n## Validation:\n");
+  await assertThrows(
+    "oc-gate-validation-empty-denied: orchestrator merge with an EMPTY `## Validation:` heading is denied",
+    "bash", { command: "git merge feature/oc-gate-validation-empty" }, hookOrch
+  );
+
+  // FIX 3 — refspec topic mis-extraction: `git push origin feature/foo:main` must
+  //   resolve topic `foo` (terminator stops at `:`), so a stamped `foo_review.md`
+  //   ALLOWS the push (it must NOT look for a `foo:main_review.md` and fall
+  //   through to a missing-artifact deny). A stamped artifact under the true topic.
+  writeReview("oc-gate-refspec",
+    "## Verdict\n\napprove\n\n## Code review: 2026-06-08 — passed\n");
+  await assertAllows(
+    "oc-gate-refspec-topic-allowed: orchestrator `git push origin feature/oc-gate-refspec:main` (refspec) resolves topic `oc-gate-refspec` (stops at `:`) and is allowed with its stamped review",
+    "bash", { command: "git push origin feature/oc-gate-refspec:main" }, hookOrch
+  );
+  // ...and the same refspec is still DENIED when the resolved topic's review is
+  //   ABSENT (proving the topic resolves to `oc-gate-refspec-missing`, not to a
+  //   `…:main` artifact that happens not to exist for an unrelated reason).
+  await assertThrows(
+    "oc-gate-refspec-topic-denied: orchestrator `git push origin feature/oc-gate-refspec-missing:main` (refspec, topic `oc-gate-refspec-missing`) with a MISSING review is denied",
+    "bash", { command: "git push origin feature/oc-gate-refspec-missing:main" }, hookOrch
+  );
+
   finish();
 })().catch((e) => {
   console.error("FAIL: unexpected error in oc-plugin-unit.js — " + (e && e.stack || e));

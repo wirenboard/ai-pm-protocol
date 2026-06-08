@@ -102,6 +102,73 @@
 // subagent runs in its own child session; the per-instance plugin intercepts
 // it). Version-pinned: re-verify on upgrade (#5894 is historically
 // version-sensitive).
+//
+// ARTIFACT-GATE (anti-corner-cutting pieces — the deny-side complement to the
+// persona failure-path rule; two new deny arms, the existing (a)-(g) byte-
+// behavior-identical):
+//   (h) PRE-SHIP MERGE DENY (ORCHESTRATOR session). A `bash` `git merge` /
+//       `git push` that ships a FEATURE branch while the active feature's review
+//       artifact is MISSING or UNSTAMPED is denied. The topic is resolved
+//       structurally: from `git merge feature/<topic>` in the command string, or
+//       (for a `git push` / a merge with no feature arg) from the current branch
+//       read out of `<root>/.git/HEAD` (`ref: refs/heads/feature/<topic>`). The
+//       active feature's `.ai-pm/reviews/<topic>_review.md` must exist AND carry
+//       a SATISFIED pre-ship stamp: EITHER a `## Code review:` line (software-kind)
+//       OR a `## Validation:` line (documentation-kind, the no-code route), with
+//       NON-EMPTY content that is not `NOT YET RUN`. An EMPTY heading (just the
+//       words `NOT YET RUN` deleted) and a `NOT YET RUN` placeholder both count as
+//       UNSATISFIED. A PARTIALLY-stamped artifact (plan-checker `## Verdict`
+//       present but `## Code review: NOT YET RUN`) counts as UNSATISFIED ⇒ deny.
+//       NOTE: the gate checks stamp PRESENCE, not PROVENANCE — it cannot detect a
+//       FABRICATED stamp hand-written on behalf of a failed/absent reviewer; that
+//       stays persona-only (never self-stamp). This closes
+//       the live self-stamp-then-merge failure (c): s15 left it through because
+//       stamps live in orchestrator-owned `.ai-pm/reviews/` and `git merge` is a
+//       pure git op (exempt from (g)); (h) re-gates the merge on the stamp.
+//       FAIL-OPEN on ambiguity: a non-feature merge (`git merge main`), an
+//       unresolvable topic, or a non-orchestrator actor ⇒ ALLOW (never a false
+//       denial of a legitimate non-feature merge — the persona is the fail-safe).
+//       Subagent-containment + bash-throw-to-deny rest on stack-notes (4b) /
+//       the tool.execute.before contract: <https://opencode.ai/docs/plugins/>
+//       and <https://github.com/anomalyco/opencode/issues/5894>.
+//
+//       RESIDUAL FAIL-OPEN BYPASSES (known best-effort limitations — this gate is
+//       a FLOOR, not airtight; the REAL ship is the PM merging on GitHub). Each
+//       resolves topic=null ⇒ fail-open ⇒ unstamped work could ship through it:
+//         - `git push origin HEAD:main` — refspec ships the current HEAD by sha
+//           with no `feature/<topic>` token AND (because the topic comes from a
+//           `feature/` token or `.git/HEAD`) HEAD may be detached or non-feature.
+//         - `git checkout main && git merge <non-feature-branch>` — a topic branch
+//           NOT named `feature/<topic>` carries no resolvable topic.
+//         - detached HEAD — `.git/HEAD` holds a raw sha, not `ref: refs/heads/…`.
+//         - git WORKTREE — `.git` is a FILE (`gitdir: …`), not a dir, so the
+//           `<root>/.git/HEAD` read fails ⇒ fail-open.
+//       We deliberately do NOT add a "target is main/master ⇒ deny" arm: it would
+//       false-deny legitimate non-ship pushes (`git push origin main` to sync an
+//       already-merged main, `git push origin main --tags`) and the orchestrator's
+//       own bookkeeping flows, and a string-only command parse cannot tell a ship
+//       from a sync. The persona failure-path rule + the PM-owned GitHub merge are
+//       the real backstops for these residual paths; the same one-liner is noted in
+//       workflow/enforcement.md (the merge gate is a floor).
+//   (i) PRE-CODE WRITE — DOWNGRADED TO PERSONA (no clean structural signal).
+//       The plan's pre-code arm wants to deny a `pm-coder` subagent content write
+//       for an active topic that has NO plan (`doc/features/<topic>_plan.md`
+//       absent). The honest problem: `tool.execute.before` sees only the write
+//       PATH + the actor — it has NO reliable signal tying THIS write to a TOPIC,
+//       so it cannot tell "this write belongs to a planless topic" from "this
+//       write belongs to a planned topic." The only path-independent proxy would
+//       be "deny when ZERO plan files exist anywhere," but that is BOTH a fragile
+//       guess (it denies a legitimate pm-coder write the instant the tree happens
+//       to carry no plans yet) AND it directly contradicts the s15 (g) invariant
+//       that a SUBAGENT authors content legitimately (the s15 unit tests assert a
+//       pm-coder content write is ALLOWED). Per the plan's own instruction —
+//       "if a clean structural signal isn't available, DOWNGRADE to a persona
+//       rule + a note rather than a fragile guess" — the pre-code gate stays
+//       PERSONA-ONLY: "a plan precedes code — always; never spawn pm-coder until
+//       the plan exists" (the `ai-pm` body + workflow/enforcement.md). The
+//       deny-side floor under it is the PRE-SHIP merge gate (h): a planless,
+//       reviewless feature cannot SHIP, even if a content write slipped through.
+//       No plugin deny arm is added for (i) — by design, not omission.
 
 import path from "node:path";
 import fs from "node:fs";
@@ -323,6 +390,89 @@ async function isOrchestratorSession(client, sessionID) {
   }
 }
 
+// (h) helper — resolve the FEATURE topic a `git merge` / `git push` is shipping,
+// best-effort and STRUCTURAL. Two signals, in order:
+//   1. An explicit `feature/<topic>` branch token in the command string (the
+//      `git merge feature/<topic>` form) — the cleanest signal.
+//   2. The CURRENT branch read out of `<root>/.git/HEAD` (`ref: refs/heads/
+//      feature/<topic>`) — used for `git push` and a bare `git merge` with no
+//      feature arg, where the branch being shipped is the checked-out one.
+// Returns the `<topic>` string, or null when no feature topic can be resolved
+// (a non-feature merge like `git merge main`, a detached HEAD, an unreadable
+// HEAD) — the caller FAILS OPEN on null (allow). Conservative: only a
+// `feature/`-prefixed ref yields a topic; everything else is null.
+function resolveMergeTopic(command, root) {
+  if (typeof command !== "string" || command.length === 0) return null;
+  // 1. Explicit feature/<topic> token anywhere in the command (e.g.
+  //    `git merge feature/foo`, `git push origin feature/foo`). Topic stops at
+  //    the first whitespace / shell terminator AND at refspec/rev syntax — `:`
+  //    (a refspec `src:dst`, e.g. `git push origin feature/foo:main` ⇒ topic
+  //    `foo`, not `foo:main`), `~`/`^`/`@` (rev navigation, e.g. `feature/foo~1`).
+  const m = command.match(/feature\/([^\s;&|"':~^@]+)/);
+  if (m) return m[1];
+  // 2. Fall back to the current branch from .git/HEAD.
+  try {
+    const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
+    const hm = head.match(/^ref:\s*refs\/heads\/feature\/(.+)$/);
+    if (hm) return hm[1].trim();
+  } catch (_e) {
+    return null; // unreadable / detached HEAD -> fail open
+  }
+  return null;
+}
+
+// (h) helper — is the active feature's review artifact present AND carrying a
+// SATISFIED load-bearing stamp? Two load-bearing pre-ship stamps exist, depending
+// on the project kind:
+//   - SOFTWARE-kind: the Pass-2 `## Code review:` line (the per-diff code review).
+//   - DOCUMENTATION-kind: the `## Validation:` line (the no-code validation route,
+//     workflow/pipeline.md Step 5 — `## Validation: <date> — <method> — passed`).
+//     A documentation-kind review file has NO `## Code review:` line, so gating on
+//     `## Code review:` alone would FALSELY DENY a validated documentation merge.
+// SATISFIED therefore = the file exists AND EITHER stamp heading is present with
+// CONTENT that is non-empty (trimmed) AND not (case-insensitive) `NOT YET RUN`.
+// The unstamped placeholder reads `## Code review: NOT YET RUN`; an EMPTY heading
+// (`## Code review:` with nothing — or only whitespace — after the colon) is the
+// "skeleton looks filled" bypass (deleting just the words `NOT YET RUN`) and is
+// ALSO unsatisfied. We deliberately do NOT require a rigid `— passed` token: real
+// stamps vary (`## Code review: FIXED — <sha>`, `## Code review: <date> — passed`),
+// so an over-strict token would false-DENY legitimate stamps. The rule is simply:
+// reject empty + `NOT YET RUN`, accept any other real content. A missing file, or
+// neither stamp present-and-satisfied (a partially-stamped artifact — e.g.
+// plan-checker `## Verdict` present but Pass-2 still `NOT YET RUN` — interaction
+// scenario 3), ⇒ UNSATISFIED. Returns `{ satisfied, reason }`.
+function reviewStampSatisfied(root, topic) {
+  const file = path.join(path.resolve(root), ".ai-pm", "reviews", topic + "_review.md");
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch (_e) {
+    return { satisfied: false, reason: "the review artifact " + file + " is absent (no reviewer has run)" };
+  }
+  // True iff a `## <label>:` heading line exists with non-empty, non-NYR content.
+  const stampOK = (label) => {
+    const m = text.match(new RegExp("^##[ \\t]+" + label + ":[ \\t]*(.*)$", "m"));
+    if (!m) return false;
+    const content = m[1].trim();
+    if (content.length === 0) return false; // empty heading ("skeleton looks filled")
+    if (/^NOT YET RUN$/i.test(content)) return false; // the unstamped placeholder
+    return true;
+  };
+  // Satisfied if EITHER the software-kind `## Code review:` OR the
+  // documentation-kind `## Validation:` stamp is present-and-satisfied.
+  if (stampOK("Code review") || stampOK("Validation")) {
+    return { satisfied: true, reason: "" };
+  }
+  return {
+    satisfied: false,
+    reason:
+      "the review artifact carries no satisfied pre-ship stamp — neither a non-empty" +
+      " `## Code review:` line (software-kind) nor a non-empty `## Validation:` line" +
+      " (documentation-kind); an empty heading or a `NOT YET RUN` placeholder does" +
+      " not count (the review/validation has not run)",
+  };
+}
+
 // OpenCode plugin entry — the SINGLE named export. Per
 // https://opencode.ai/docs/plugins/ the plugin is an async function receiving
 // { project, client, $, directory, worktree } and returning a hooks object; the
@@ -487,6 +637,31 @@ export const AiPmEnforcement = async (ctx) => {
         );
         if (writeTargets.length > 0) {
           await enforceWriteTargets(writeTargets, "bash", isPureGitCommand(args.command));
+        }
+
+        // (h) PRE-SHIP MERGE GATE. A `git merge` / `git push` that ships a feature
+        //     branch with a missing/unstamped review artifact is denied — ONLY in
+        //     the ORCHESTRATOR (ship) session, and ONLY for a resolvable feature
+        //     topic. FAIL-OPEN otherwise (non-feature merge, unresolvable topic,
+        //     non-orchestrator actor). This re-gates the merge that s15 left exempt
+        //     as a pure git op (the self-stamp+merge failure (c)).
+        const cmd = typeof args.command === "string" ? args.command : "";
+        const isMergeOrPush = /(?:^|[\s;&|(])git[ \t]+(?:merge|push)\b/.test(cmd);
+        if (isMergeOrPush) {
+          const topic = resolveMergeTopic(cmd, projectRoot);
+          if (topic !== null && (await isOrchestratorSession(client, sessionID))) {
+            const verdict = reviewStampSatisfied(projectRoot, topic);
+            if (!verdict.satisfied) {
+              throw new Error(
+                "Pre-ship merge deny (" + topic + "): " + verdict.reason +
+                  ". The feature's review gate is NOT satisfied — do not merge/push." +
+                  " A failed/absent reviewer = a MISSING stamp, never a pass: stop" +
+                  " and report to the PM (the gate that could not run + the error)," +
+                  " never self-stamp the review. Run the review loop (pm-plan-checker" +
+                  " then code-review) and let it stamp `## Code review:` before shipping."
+              );
+            }
+          }
         }
         return;
       }

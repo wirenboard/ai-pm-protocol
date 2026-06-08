@@ -1332,6 +1332,120 @@ else
 fi
 
 # ----------------------------------------------------------------------
+# oc-failure-path-persona  (anti-corner-cutting piece 1)
+# A weak model under a subagent crash (the OpenCode session-insert SQLite bug)
+# self-substituted a failed gate's verdict/code/stamp/merge. The persona body must
+# carry the graceful-failure rule so a regression that drops it is caught: retry
+# N, then STOP + report, NEVER self-substitute; "failed = missing, never a pass".
+# FORM (presence/grep) over the GENERATED body, each clause matched by its
+# load-bearing tokens. Source: orchestrator-anti-corner-cutting plan scenarios
+# 1-4 + .ai-pm/arch/orchestrator-anti-corner-cutting_arch.md piece 1.
+# ----------------------------------------------------------------------
+if [ ! -f "$ORCH" ]; then
+    fail "oc-failure-path-persona: orchestrator agent missing at $ORCH"
+else
+    fbody=$(awk 'f{print} /^---$/{c++} c==2{f=1}' "$ORCH")
+    ferrs=""
+    # (1) Retry the SAME subagent up to N (the count is load-bearing: N=2).
+    if ! printf '%s\n' "$fbody" | grep -Eqi 'retry.*same.*subagent|retry the same'; then
+        ferrs="$ferrs\n  - missing the retry-the-same-subagent rule"
+    fi
+    if ! printf '%s\n' "$fbody" | grep -Eq 'N = 2|N=2|up to two retries'; then
+        ferrs="$ferrs\n  - missing the retry count N=2"
+    fi
+    # (2) On persistent failure STOP the pipeline AND report to the PM.
+    if ! printf '%s\n' "$fbody" | grep -Eqi 'STOP the pipeline'; then
+        ferrs="$ferrs\n  - missing the stop-the-pipeline rule"
+    fi
+    if ! printf '%s\n' "$fbody" | grep -Eqi 'report to the PM'; then
+        ferrs="$ferrs\n  - missing the report-to-the-PM rule"
+    fi
+    # (3) NEVER self-substitute the verdict/code/stamp/merge.
+    if ! printf '%s\n' "$fbody" | grep -Eqi 'never self-substitute|NEVER self-substitute'; then
+        ferrs="$ferrs\n  - missing the never-self-substitute rule"
+    fi
+    # (4) The load-bearing semantics: a failed-agent artifact = a MISSING artifact.
+    if ! printf '%s\n' "$fbody" | grep -Eqi 'missing artifact, never a pass|MISSING artifact'; then
+        ferrs="$ferrs\n  - missing the 'failed = missing, never a pass' rule"
+    fi
+    # (4b) A refusal is treated the same as a failure (categorical-sibling clause).
+    if ! printf '%s\n' "$fbody" | grep -Eqi 'REFUSES.*same|refusal'; then
+        ferrs="$ferrs\n  - missing the refusal-treated-as-failure rule"
+    fi
+    if [ -z "$ferrs" ]; then
+        pass "oc-failure-path-persona: the persona body states the graceful subagent-failure path — retry the same subagent (N=2), then STOP the pipeline + report to the PM, NEVER self-substitute the verdict/code/stamp/merge, a failed/refused gate = a MISSING artifact (never a pass)"
+    else
+        fail "oc-failure-path-persona: the persona body is missing one or more failure-path clauses:$(printf '%b' "$ferrs")"
+    fi
+fi
+
+# ----------------------------------------------------------------------
+# persona-conditional-default-on  (anti-corner-cutting rider)
+# The conditional pipeline steps must read as DEFAULT-ON / opt-out, so a weak
+# model does not under-count them: in-doubt-user-facing -> advocate; after coding
+# ALWAYS architect; an explicit "which agent did I call" self-check before ship.
+# FORM (presence/grep) over the GENERATED body. Source: plan rider + Test plan
+# `persona-conditional-default-on`.
+# ----------------------------------------------------------------------
+if [ ! -f "$ORCH" ]; then
+    fail "persona-conditional-default-on: orchestrator agent missing at $ORCH"
+else
+    cbody=$(awk 'f{print} /^---$/{c++} c==2{f=1}' "$ORCH")
+    cerrs=""
+    # (1) In doubt -> treat as user-facing -> advocate.
+    if ! printf '%s\n' "$cbody" | grep -Eqi 'doubt.*user-facing|in any doubt'; then
+        cerrs="$cerrs\n  - missing the in-doubt-treat-as-user-facing rule"
+    fi
+    if ! printf '%s\n' "$cbody" | grep -Eqi 'pm-product-advocate'; then
+        cerrs="$cerrs\n  - missing the spawn-pm-product-advocate clause"
+    fi
+    # (2) After coding ALWAYS spawn pm-architect.
+    if ! printf '%s\n' "$cbody" | grep -Eqi 'after coding.*always|ALWAYS spawn .?pm-architect'; then
+        cerrs="$cerrs\n  - missing the after-coding-ALWAYS-architect rule"
+    fi
+    # (3) The "which agent did I call at each step" self-check before ship.
+    if ! printf '%s\n' "$cbody" | grep -Eqi 'which agent did I call'; then
+        cerrs="$cerrs\n  - missing the which-agent-did-I-call self-check"
+    fi
+    if [ -z "$cerrs" ]; then
+        pass "persona-conditional-default-on: the persona body makes the conditional steps default-on/opt-out — in-doubt -> user-facing -> pm-product-advocate, after coding ALWAYS pm-architect, and a 'which agent did I call at each step' self-check before ship"
+    else
+        fail "persona-conditional-default-on: the persona body is missing one or more default-on conditional-step rules:$(printf '%b' "$cerrs")"
+    fi
+fi
+
+# ----------------------------------------------------------------------
+# oc-gate-deny-is-stop-not-loop  (anti-corner-cutting interaction scenario 2)
+# When the pre-ship merge gate (the enforcement plugin) DENIES a merge, the
+# persona must read that deny as "the review gate is not satisfied -> stop and
+# report to the PM", explicitly NOT a retry-loop of the merge and NOT a cue to
+# hand-set the stamp. FORM (presence/grep) over the GENERATED body. Source: plan
+# Interaction scenario 2 + Test plan `oc-gate-deny-is-stop-not-loop`.
+# ----------------------------------------------------------------------
+if [ ! -f "$ORCH" ]; then
+    fail "oc-gate-deny-is-stop-not-loop: orchestrator agent missing at $ORCH"
+else
+    dbody=$(awk 'f{print} /^---$/{c++} c==2{f=1}' "$ORCH")
+    derrs=""
+    # The persona names the pre-ship merge gate / a denied merge.
+    if ! printf '%s\n' "$dbody" | grep -Eqi 'merge gate|denies a .?git merge|pre-ship merge'; then
+        derrs="$derrs\n  - missing the pre-ship-merge-gate reference"
+    fi
+    # A denied merge = stop and report (not a retry-loop).
+    if ! printf '%s\n' "$dbody" | grep -Eqi 'NOT a transient error to retry-loop|not a retry-loop|not.*retry-loop'; then
+        derrs="$derrs\n  - missing the 'a denied merge is not a retry-loop' rule"
+    fi
+    if ! printf '%s\n' "$dbody" | grep -Eqi 'stop and report'; then
+        derrs="$derrs\n  - missing the stop-and-report-on-deny rule"
+    fi
+    if [ -z "$derrs" ]; then
+        pass "oc-gate-deny-is-stop-not-loop: the persona body states a denied pre-ship merge = 'the review gate is not satisfied -> stop and report to the PM', explicitly NOT a retry-loop of the merge and not a self-stamp cue"
+    else
+        fail "oc-gate-deny-is-stop-not-loop: the persona body is missing one or more denied-merge-is-stop rules:$(printf '%b' "$derrs")"
+    fi
+fi
+
+# ----------------------------------------------------------------------
 # Summary
 # ----------------------------------------------------------------------
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
