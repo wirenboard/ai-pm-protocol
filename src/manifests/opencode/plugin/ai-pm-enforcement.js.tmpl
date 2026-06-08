@@ -113,9 +113,15 @@
 //       (for a `git push` / a merge with no feature arg) from the current branch
 //       read out of `<root>/.git/HEAD` (`ref: refs/heads/feature/<topic>`). The
 //       active feature's `.ai-pm/reviews/<topic>_review.md` must exist AND carry
-//       a SATISFIED `## Code review:` stamp line (present and NOT `NOT YET RUN`).
-//       A PARTIALLY-stamped artifact (plan-checker `## Verdict` present but
-//       `## Code review: NOT YET RUN`) counts as UNSATISFIED ⇒ deny. This closes
+//       a SATISFIED pre-ship stamp: EITHER a `## Code review:` line (software-kind)
+//       OR a `## Validation:` line (documentation-kind, the no-code route), with
+//       NON-EMPTY content that is not `NOT YET RUN`. An EMPTY heading (just the
+//       words `NOT YET RUN` deleted) and a `NOT YET RUN` placeholder both count as
+//       UNSATISFIED. A PARTIALLY-stamped artifact (plan-checker `## Verdict`
+//       present but `## Code review: NOT YET RUN`) counts as UNSATISFIED ⇒ deny.
+//       NOTE: the gate checks stamp PRESENCE, not PROVENANCE — it cannot detect a
+//       FABRICATED stamp hand-written on behalf of a failed/absent reviewer; that
+//       stays persona-only (never self-stamp). This closes
 //       the live self-stamp-then-merge failure (c): s15 left it through because
 //       stamps live in orchestrator-owned `.ai-pm/reviews/` and `git merge` is a
 //       pure git op (exempt from (g)); (h) re-gates the merge on the stamp.
@@ -125,6 +131,25 @@
 //       Subagent-containment + bash-throw-to-deny rest on stack-notes (4b) /
 //       the tool.execute.before contract: <https://opencode.ai/docs/plugins/>
 //       and <https://github.com/anomalyco/opencode/issues/5894>.
+//
+//       RESIDUAL FAIL-OPEN BYPASSES (known best-effort limitations — this gate is
+//       a FLOOR, not airtight; the REAL ship is the PM merging on GitHub). Each
+//       resolves topic=null ⇒ fail-open ⇒ unstamped work could ship through it:
+//         - `git push origin HEAD:main` — refspec ships the current HEAD by sha
+//           with no `feature/<topic>` token AND (because the topic comes from a
+//           `feature/` token or `.git/HEAD`) HEAD may be detached or non-feature.
+//         - `git checkout main && git merge <non-feature-branch>` — a topic branch
+//           NOT named `feature/<topic>` carries no resolvable topic.
+//         - detached HEAD — `.git/HEAD` holds a raw sha, not `ref: refs/heads/…`.
+//         - git WORKTREE — `.git` is a FILE (`gitdir: …`), not a dir, so the
+//           `<root>/.git/HEAD` read fails ⇒ fail-open.
+//       We deliberately do NOT add a "target is main/master ⇒ deny" arm: it would
+//       false-deny legitimate non-ship pushes (`git push origin main` to sync an
+//       already-merged main, `git push origin main --tags`) and the orchestrator's
+//       own bookkeeping flows, and a string-only command parse cannot tell a ship
+//       from a sync. The persona failure-path rule + the PM-owned GitHub merge are
+//       the real backstops for these residual paths; the same one-liner is noted in
+//       workflow/enforcement.md (the merge gate is a floor).
 //   (i) PRE-CODE WRITE — DOWNGRADED TO PERSONA (no clean structural signal).
 //       The plan's pre-code arm wants to deny a `pm-coder` subagent content write
 //       for an active topic that has NO plan (`doc/features/<topic>_plan.md`
@@ -380,8 +405,10 @@ function resolveMergeTopic(command, root) {
   if (typeof command !== "string" || command.length === 0) return null;
   // 1. Explicit feature/<topic> token anywhere in the command (e.g.
   //    `git merge feature/foo`, `git push origin feature/foo`). Topic stops at
-  //    the first whitespace / shell terminator.
-  const m = command.match(/feature\/([^\s;&|"']+)/);
+  //    the first whitespace / shell terminator AND at refspec/rev syntax — `:`
+  //    (a refspec `src:dst`, e.g. `git push origin feature/foo:main` ⇒ topic
+  //    `foo`, not `foo:main`), `~`/`^`/`@` (rev navigation, e.g. `feature/foo~1`).
+  const m = command.match(/feature\/([^\s;&|"':~^@]+)/);
   if (m) return m[1];
   // 2. Fall back to the current branch from .git/HEAD.
   try {
@@ -395,14 +422,25 @@ function resolveMergeTopic(command, root) {
 }
 
 // (h) helper — is the active feature's review artifact present AND carrying a
-// SATISFIED load-bearing stamp? The protocol's load-bearing pre-ship stamp is the
-// Pass-2 `## Code review:` line; its unstamped placeholder reads
-// `## Code review: NOT YET RUN`. SATISFIED = the file exists AND a `## Code
-// review:` heading line is present AND that line is NOT the `NOT YET RUN`
-// placeholder. A missing file, a missing `## Code review:` line, or a
-// `NOT YET RUN` line ⇒ UNSATISFIED (a partially-stamped artifact — e.g.
-// plan-checker `## Verdict` present but Pass-2 still `NOT YET RUN` — is
-// UNSATISFIED, interaction scenario 3). Returns `{ satisfied, reason }`.
+// SATISFIED load-bearing stamp? Two load-bearing pre-ship stamps exist, depending
+// on the project kind:
+//   - SOFTWARE-kind: the Pass-2 `## Code review:` line (the per-diff code review).
+//   - DOCUMENTATION-kind: the `## Validation:` line (the no-code validation route,
+//     workflow/pipeline.md Step 5 — `## Validation: <date> — <method> — passed`).
+//     A documentation-kind review file has NO `## Code review:` line, so gating on
+//     `## Code review:` alone would FALSELY DENY a validated documentation merge.
+// SATISFIED therefore = the file exists AND EITHER stamp heading is present with
+// CONTENT that is non-empty (trimmed) AND not (case-insensitive) `NOT YET RUN`.
+// The unstamped placeholder reads `## Code review: NOT YET RUN`; an EMPTY heading
+// (`## Code review:` with nothing — or only whitespace — after the colon) is the
+// "skeleton looks filled" bypass (deleting just the words `NOT YET RUN`) and is
+// ALSO unsatisfied. We deliberately do NOT require a rigid `— passed` token: real
+// stamps vary (`## Code review: FIXED — <sha>`, `## Code review: <date> — passed`),
+// so an over-strict token would false-DENY legitimate stamps. The rule is simply:
+// reject empty + `NOT YET RUN`, accept any other real content. A missing file, or
+// neither stamp present-and-satisfied (a partially-stamped artifact — e.g.
+// plan-checker `## Verdict` present but Pass-2 still `NOT YET RUN` — interaction
+// scenario 3), ⇒ UNSATISFIED. Returns `{ satisfied, reason }`.
 function reviewStampSatisfied(root, topic) {
   const file = path.join(path.resolve(root), ".ai-pm", "reviews", topic + "_review.md");
   let text;
@@ -411,15 +449,28 @@ function reviewStampSatisfied(root, topic) {
   } catch (_e) {
     return { satisfied: false, reason: "the review artifact " + file + " is absent (no reviewer has run)" };
   }
-  // Find the load-bearing Pass-2 stamp heading line.
-  const stamp = text.match(/^##[ \t]+Code review:[ \t]*(.*)$/m);
-  if (!stamp) {
-    return { satisfied: false, reason: "the review artifact carries no `## Code review:` stamp line" };
+  // True iff a `## <label>:` heading line exists with non-empty, non-NYR content.
+  const stampOK = (label) => {
+    const m = text.match(new RegExp("^##[ \\t]+" + label + ":[ \\t]*(.*)$", "m"));
+    if (!m) return false;
+    const content = m[1].trim();
+    if (content.length === 0) return false; // empty heading ("skeleton looks filled")
+    if (/^NOT YET RUN$/i.test(content)) return false; // the unstamped placeholder
+    return true;
+  };
+  // Satisfied if EITHER the software-kind `## Code review:` OR the
+  // documentation-kind `## Validation:` stamp is present-and-satisfied.
+  if (stampOK("Code review") || stampOK("Validation")) {
+    return { satisfied: true, reason: "" };
   }
-  if (/NOT YET RUN/.test(stamp[1])) {
-    return { satisfied: false, reason: "the `## Code review:` stamp still reads `NOT YET RUN` (Pass-2 review has not run)" };
-  }
-  return { satisfied: true, reason: "" };
+  return {
+    satisfied: false,
+    reason:
+      "the review artifact carries no satisfied pre-ship stamp — neither a non-empty" +
+      " `## Code review:` line (software-kind) nor a non-empty `## Validation:` line" +
+      " (documentation-kind); an empty heading or a `NOT YET RUN` placeholder does" +
+      " not count (the review/validation has not run)",
+  };
 }
 
 // OpenCode plugin entry — the SINGLE named export. Per
