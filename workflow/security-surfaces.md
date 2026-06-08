@@ -12,6 +12,18 @@
 - **PII** — personally identifiable or otherwise sensitive personal data.
 - **Access control** — who may do what; roles, permissions, authorization checks.
 
+### Secrets are read from the committed template, never the live file
+
+A live secret file — `.env`, a credential file, a `*.pem` / `*.key`, a token store — is a **security-relevant surface that agents inspect through its committed template, not its live content**. When any agent (a reviewer, the orchestrator, any `pm-*`) needs to inspect environment / secret configuration — to check env-var wiring, that secrets are gitignored, or the documented config shape — it reads the **committed template** (`.env.example`, a `*.example` / `*.sample`, the config-template under version control) **and verifies `.gitignore` covers the real secret file**. It does **not** read the live `.env` (or any real secret file) into context.
+
+**Rationale.** The committed example mirrors the live file's **structure** — the same variable names (`DATABASE_URL`, `SESSION_SECRET`, …) — so nothing review-useful is lost by reading the template instead. The live file's only extra content is the real secret **values**, which (a) review never needs — validating live secret values is a runtime / ops concern, not a code-review concern — and (b) must never enter an agent's context, because a secret in an LLM transcript is an exposure. What review legitimately checks and where it looks:
+
+- **env-var declarations + wiring** → the `.example` template plus the consuming config (e.g. `docker-compose.yml`).
+- **secrets-not-committed** → `.gitignore` covers the live secret file.
+- **live secret values** → out of scope for review entirely.
+
+**Safety net, and the order of defense.** This rule is the discipline that keeps an agent from reaching for the live file in the first place. The backstop, when an agent reaches anyway, is the harness's own permission gate on reading a secret file (e.g. OpenCode prompts before reading `.env`) — discipline first, permission prompt as the catch. A structural read-deny on the live secret file that excludes the `*.example` template is a possible defense-in-depth follow-up; it is not built here.
+
 ### Threat-model lifecycle
 
 `docs/threat-model.md` has a full lifecycle on **security-bearing projects only** — a project is security-bearing exactly when `docs/threat-model.md` is present (it is drafted at bootstrap only when security is in play, so its presence is the durable on-disk signal). Non-security projects have no threat-model and are never flagged.
