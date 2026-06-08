@@ -170,7 +170,7 @@ Slice 1 (invariants index) shipped v2.21.0. Open:
 
 From the full `/pm-audit` smell/hygiene sweep (Sonnet, medium, `.ai-pm/audits/audit-2026-06-08.md` § Quality sweep). All maintainability-tier; the test/generator/plugin code is correct + well-tested. Disposition:
 - **accepted (quality-sweep-2026-06-08): hygiene tidy-up, non-urgent.** (2) `gen/generate.py` loads the manifest twice (`main()` + `generate()`) → pass the dict. (3) `tests/opencode.sh` two awk body-extraction idioms → one `extract_body()` helper (free if #1 done). (4) `gen/generate.py:304` `written[]` mixes `Path`/`str` (latent `TypeError` only if iterated). (6) plugin tmpl `args.command` accessed 3 direct + 1 guarded `cmd` → hoist one guarded `cmd` (accept — fail-open parity already correct). (7) `tests/opencode.sh` accreted 14 heredocs / 9 scratch dirs / 7 near-identical runtime-guard blocks over 15 slices → a `run_oc_check` helper (bigger refactor, correct as-is).
-- **Quick-wins (zero-risk, 1-3 lines) — do as a small `/pm-fixup` when convenient:** (1) `tests/opencode.sh:1295/1347/1393/1428` four redundant `awk` re-reads of `$ORCH` → extract once; (5) `tests/oc-plugin-unit.js:632-636` uncaught-error catch bypasses `finish()` (no summary on a mid-suite throw) → call `finish()`. PM-decision pending (fix-now vs fold into this cohort).
+- **Quick-wins — DONE (`/pm-fixup` `6f019e8`, trivial-verdict approve):** (1) `tests/opencode.sh` extracts `$ORCH` body once into `$ORCH_BODY`; (5) `tests/oc-plugin-unit.js` catch routes through `finish()` (summary prints on a mid-suite throw). Behavior identical; opencode 36/36, plugin-unit 54/54 unchanged.
 
 ## Markdown soft-break sweep — 2026-06-03 (this repo)
 
