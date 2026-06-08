@@ -33,11 +33,12 @@
 > and the `find`-boundary guard (a `find` whose first absolute-path argument
 > resolves outside the project root). The adapter is still **not fully
 > certified**: only the **"ask"-class** guards remain not-yet-ported (see the
-> divergence below — a permission-config follow-up). Cross-model review **is**
-> wired via static frontmatter pins (a PROVISIONAL preview default — see the
-> cross-model section below). Treat OpenCode as a preview harness, **never** as
-> fully-supported, until certification lands. "Preview" must never be read as
-> "certified".
+> divergence below — a permission-config follow-up). The control-layer model (the
+> reviewer model governing the four checking agents) defaults to the session model
+> with **no baked pins**; the override is a four-line personal-config block in the
+> PM's own `opencode.json` (see the control-layer section below). Treat OpenCode as
+> a preview harness, **never** as fully-supported, until certification lands.
+> "Preview" must never be read as "certified".
 
 ## Always-on protocol route (no per-prompt hook on OpenCode)
 
@@ -163,49 +164,63 @@ delegation points), and they are **allowed engines** — the enforcement plugin'
 
 > **PREVIEW honesty.** These are solid **single-agent** engines — they are **not**
 > a replica of Claude's **multi-agent** `code-review` / `deep-research`.
-> `code-review` **does** run cross-model (it is pinned to the control model — see
-> the cross-model section below); `deep-research` runs on the **same model as the
-> session** (it is not a control agent). Treat them as capable engines, not as a
+> `code-review` is a **compact one-pass reviewer** (one subagent reads the diff
+> once and reports all aspects — security, stability, conventions, regressions,
+> test-coverage, simplification, documentation, plan-compliance, architecture — in
+> one structured report, with plan-compliance a hard blocker). Both engines run on
+> the **session model by default**; `code-review` is one of the four checking
+> agents, so a reviewer model can be pointed at it via the control-layer block (see
+> the control-layer section below). Treat them as capable engines, not as a
 > drop-in equal of the Claude built-ins.
 
-## Cross-model review — static frontmatter pins (PROVISIONAL preview default)
+## Control-layer model — a four-line personal-config block (not a template pin)
 
-The protocol's cross-model rule (a control/review layer that runs a **different
-model** than the session, for an independent blind-spot check) is realized on
-OpenCode by **static model pins in agent frontmatter**. OpenCode has **no runtime
-per-`task` model override** — the implementing PR
+The protocol's control-layer rule is: the **four checking agents** —
+`code-review`, `pm-auditor`, `pm-plan-checker`, `pm-product-advocate` — run on a
+**reviewer model when the PM sets one, else the session model**. One choice
+governs the whole checking layer; the adapter bakes **no** per-agent model pin.
+
+**The default is the session model — with zero config.** The shipped
+`.opencode/opencode.json` sets only the top-level `model`
+(`deepseek/deepseek-v4-pro` in this preview); **every** generated agent —
+producers, the orchestrator, the engines, and the four checking agents — inherits
+it. There are **no baked per-agent `model:`/`variant:` pins** in any agent
+frontmatter, so there is nothing to clobber on a protocol bump.
+
+**The "reviewer model is set" half is a four-line block the PM pastes into their
+OWN `opencode.json`.** OpenCode has **no native cross-agent model inheritance**
+and **no runtime per-`task` model override** (PR
 [anomalyco/opencode#17577](https://github.com/anomalyco/opencode/pull/17577) is
-**closed, not merged** — so the protocol's cross-model rule **degrades to these
-static pins** on OpenCode.
+**closed, not merged**), so there is **no one-line knob**. The control-layer
+override is therefore **four lines, not one** — one `agent.<id>.model` entry per
+checking agent:
 
-- **Session / primary + producer subagents → `deepseek/deepseek-v4-pro`.** The
-  session model is set as the top-level `model` in `.opencode/opencode.json`. The
-  **producer** subagents (`pm-architect`, `pm-coder`, `pm-codebase-reader`,
-  `pm-stack-researcher`, `pm-pr-prep`, `deep-research`) carry **no `model:` pin**
-  — they **inherit** the session model.
-- **Control / review subagents → pinned `deepseek/deepseek-v4-flash`.** The
-  review/audit layer — `code-review`, `pm-plan-checker`, `pm-auditor`,
-  `pm-product-advocate` — carries an explicit `model:` pin in its generated
-  frontmatter, so it runs a **different model than the session**: an independent
-  cross-model check that does not share the session model's blind spots.
+```jsonc
+// in YOUR opencode.json (survives a protocol bump — the generator never touches
+// keys it does not own). Point the four checking agents at one reviewer model:
+"agent": {
+  "code-review":         { "model": "<your-reviewer-model>" },
+  "pm-auditor":          { "model": "<your-reviewer-model>" },
+  "pm-plan-checker":     { "model": "<your-reviewer-model>" },
+  "pm-product-advocate": { "model": "<your-reviewer-model>" }
+}
+```
 
-The same control/review agents also run at **low reasoning effort**
-(`variant: minimal`, injected into their frontmatter from `models.control_variant`
-in the same single source) — a per-operation effort tier that trims reasoning-token
-**count** on these routine/check operations. The **producers** + the orchestrator
-(`ai-pm`) carry **no `variant`**: planning, architecture, coding, and orchestration
-keep their full default reasoning. Model is the **cost** lever; variant is the
-reasoning-**count** lever — two orthogonal dials on the same `models` block.
+It is the **closest-to-one-knob** option that is bump-surviving and native: one
+model string, repeated across the four checking agents, living entirely in the
+PM's config layer. Omit the block and all four inherit the session. The canonical
+block + rationale + the spike-verified facts live in `doc/stack-notes.md`
+(OpenCode § control-layer model). **Do not read this as "one line"** — OpenCode
+has no cross-agent model set, so it is four `agent.<id>` entries.
 
 > **PROVISIONAL preview default — change it for your provider.** DeepSeek is the
 > **only authenticated provider** in this preview environment, so
-> `deepseek/deepseek-v4-pro` (session) / `deepseek/deepseek-v4-flash` (control)
-> is a **preview default, not a recommendation**. The choice is **single-sourced**
-> in the `models` block of `src/manifests/opencode/adapter.json` (two values +
-> the control-agent list); change those and regenerate — the model id is **never**
-> hand-edited into individual agent files. When/if a runtime per-`task` model
-> override (#17577-class) lands upstream, the adapter can adopt it and retire the
-> static pins.
+> `deepseek/deepseek-v4-pro` (session) is a **preview default, not a
+> recommendation**. The session model is **single-sourced** in the `models` block
+> of `src/manifests/opencode/adapter.json` (one value); change it and regenerate —
+> the model id is **never** hand-edited into individual agent files. The
+> control-layer reviewer model is set separately in the PM's own `opencode.json`
+> per the four-line block above.
 
 ## Supported harnesses
 
@@ -223,16 +238,19 @@ The OpenCode adapter tracks two named upstream gaps. One still blocks
 certification; the other was **verified in our favor on 1.16.2** (so the CORE
 enforcement plugin now ships), with a version-pinned caveat:
 
-1. **Runtime per-task model override is unavailable (still a gap; worked
-   around with static pins).** OpenCode's `task` tool has no per-invocation
-   `model` parameter. The implementing PR
+1. **Runtime per-task model override is unavailable (still a gap; control-layer
+   model handled by personal config instead).** OpenCode's `task` tool has no
+   per-invocation `model` parameter, and there is **no native cross-agent model
+   inheritance**. The implementing PR
    **[anomalyco/opencode#17577](https://github.com/anomalyco/opencode/pull/17577)**
    ("add model override for task tool subagents") is **CLOSED, NOT MERGED**.
-   Consequence: the protocol's cross-model review/audit mechanism cannot rely
-   on a runtime model override on OpenCode — so the reviewer/auditor model is
-   pinned **statically in agent frontmatter** instead (see the cross-model
-   section above). This is a working degradation, not a blocker: cross-model
-   review **is** wired in this preview via the static pins.
+   Consequence: the protocol's control-layer-model rule (one reviewer model for
+   the four checking agents) cannot be a runtime override or a one-line knob on
+   OpenCode — so the reviewer model lives in a **four-line `agent.<id>.model`
+   block in the PM's own `opencode.json`** (see the control-layer section above),
+   and the adapter bakes **no** per-agent pins. This is a working approach, not a
+   blocker: the default is the session model with zero config, and the override
+   is bump-surviving because it lives in the PM's config, not the template.
 
 2. **Subagent tool-hook containment — VERIFIED in our favor on 1.16.2
    (version-pinned).** Whether a plugin's `tool.execute.before` hook reliably
@@ -311,8 +329,10 @@ as full parity with the Claude `settings.json` **for the "ask"-class guards**.
     authored a source file via `bash cat > …`, routing around the old tool/permission
     restriction.
 
-The cross-model **model pins** are shipped as a **PROVISIONAL preview default**
-(session `deepseek/deepseek-v4-pro`, control `deepseek/deepseek-v4-flash`),
-single-sourced in `adapter.json`'s `models` block — see the cross-model section
-above. They statically realize the protocol's cross-model rule because OpenCode
-has no runtime per-task model override (#17577).
+The **session model** is shipped as a **PROVISIONAL preview default**
+(`deepseek/deepseek-v4-pro`), single-sourced in `adapter.json`'s `models` block —
+every generated agent inherits it, with **no baked per-agent pins**. The
+control-layer model (the reviewer model governing the four checking agents) is the
+PM's own four-line `opencode.json` block, **not** a template pin — OpenCode has no
+native cross-agent model inheritance and no runtime per-task model override
+(#17577). See the control-layer section above + `doc/stack-notes.md`.

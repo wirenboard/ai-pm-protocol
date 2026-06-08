@@ -7,12 +7,14 @@
 # Claude the protocol delegates to the built-in engine instead, so this file is
 # NOT mirrored into the Claude adapter.
 #
-# Model: this engine is a CONTROL agent (cross-model review). The `model:` line at
-# the top of this frontmatter is INJECTED BY THE GENERATOR from the manifest's
-# single-source `models.control` value (this .fm carries no model id of its own).
-# code-review runs a DIFFERENT model than the session — the independent
-# cross-model check for blind spots. OpenCode has no runtime per-task model
-# override (PR #17577 closed-not-merged), so the pin is STATIC frontmatter.
+# Model: intentionally UNPINNED — inherits the session model. The adapter bakes
+# NO `model:` line here. code-review is one of the four CHECKING agents; the
+# control-layer model (run the checking layer on a reviewer model) is set, when
+# the PM wants it, by a four-line `agent.<id>.model` block in the PM's OWN
+# opencode.json — NOT a template pin. OpenCode has no native cross-agent model
+# inheritance / runtime per-task override (PR #17577 closed-not-merged), so there
+# is no one-line knob; absent that block, all four checking agents inherit the
+# session. See doc/stack-notes.md (OpenCode § control-layer model).
 # Source on the no-runtime-override gap: https://github.com/anomalyco/opencode/pull/17577
 description: Reviews the current git diff for correctness bugs and reuse/simplification/efficiency cleanups (the dimensions the protocol's review step cares about), and returns a concise findings list (file:line, issue, why). OpenCode-only engine — the analogue of Claude's built-in code-review, which OpenCode lacks. Read-only on the tree; gets the diff via bash. Returns findings to the orchestrator; does not edit, commit, or push.
 mode: subagent

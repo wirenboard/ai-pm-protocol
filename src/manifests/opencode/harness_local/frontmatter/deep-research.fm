@@ -8,8 +8,10 @@
 # NOT mirrored into the Claude adapter.
 #
 # Model: intentionally UNPINNED — inherits the session/primary model (DeepSeek
-# in the local config). Same-model for now; cross-model is a separate deferred
-# item (see the code-review engine note and PR #17577).
+# in the local config). The adapter bakes no per-agent model pin; deep-research is
+# not a checking agent, so the control-layer model block (see the code-review
+# engine note + doc/stack-notes.md) does not apply to it — it always runs the
+# session model.
 #
 # Tools: webfetch + websearch for multi-source web research; read to consult
 # in-project context; write to persist a long synthesis the orchestrator can
