@@ -29,7 +29,7 @@ Every AI agent (confined to the project root and to the git change channel), and
 ## Acceptance checks
 
 - `tests/hooks.sh` — the unit suite asserting the path-boundary guards and the ssh-content-edit deny against the PreToolUse JSON contract.
-- `workflow/enforcement.md` § "Boundary, edit-ownership, and remote-system rules" — verifies the project-boundary rule, the submodule exclusion, and the remote-system forbidden/allowed lists.
+- `workflow/enforcement.md` § "Boundary, delegation & gate integrity, and remote-system rules (full)" — verifies the project-boundary rule, the submodule exclusion, and the remote-system forbidden/allowed lists.
 - `doc/architecture.md` § "Hooks layer for cross-session enforcement of WORKFLOW rules" — verifies the boundary guards are wired as enforcement-layer hooks, not prose-only.
 
 ## Out of scope
@@ -53,4 +53,4 @@ Every AI agent (confined to the project root and to the git change channel), and
 
 ## Behavioral contract
 
-The project-boundary rules are single-sourced, not restated here: the project-boundary rule, the submodule exclusion, and the remote-system forbidden/allowed lists in `workflow/enforcement.md` § "Boundary, edit-ownership, and remote-system rules"; the hook-level realization in `workflow/enforcement.md` § "Hook-level enforcement" and `doc/architecture.md` § "Hooks layer for cross-session enforcement of WORKFLOW rules"; the reporting-discipline boundary in `workflow/enforcement.md` § "Reporting discipline".
+The project-boundary rules are single-sourced, not restated here: the project-boundary rule, the submodule exclusion, and the remote-system forbidden/allowed lists in `workflow/enforcement.md` § "Boundary, delegation & gate integrity, and remote-system rules (full)"; the hook-level realization in `workflow/enforcement.md` § "Hook-level enforcement" and `doc/architecture.md` § "Hooks layer for cross-session enforcement of WORKFLOW rules"; the reporting-discipline boundary in `workflow/enforcement.md` § "Reporting discipline".

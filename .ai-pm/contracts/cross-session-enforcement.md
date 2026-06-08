@@ -54,4 +54,4 @@ The AI agent (whose tool calls pass through the guards), and the PM (who gets du
 
 ## Behavioral contract
 
-The enforcement rules are single-sourced, not restated here: the full guard list, the named deny-list, and the ask-class guards in `workflow/enforcement.md` § "Hook-level enforcement"; the boundary / remote-system / edit-ownership rules in `workflow/enforcement.md` § "Boundary, edit-ownership, and remote-system rules"; the hooks-layer decision in `doc/architecture.md` § "Hooks layer for cross-session enforcement of WORKFLOW rules".
+The enforcement rules are single-sourced, not restated here: the full guard list, the named deny-list, and the ask-class guards in `workflow/enforcement.md` § "Hook-level enforcement"; the boundary / remote-system / edit-ownership rules in `workflow/enforcement.md` § "Boundary, delegation & gate integrity, and remote-system rules (full)"; the hooks-layer decision in `doc/architecture.md` § "Hooks layer for cross-session enforcement of WORKFLOW rules".
