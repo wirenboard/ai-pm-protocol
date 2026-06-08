@@ -116,6 +116,9 @@ Built by:
 |---|---|---|
 | [opencode-harness-support](features/opencode-harness-support_plan.md) | 2026-06-07 |  |
 | [harness-neutral-prose](features/harness-neutral-prose_plan.md) | 2026-06-07 |  |
+| [opencode-orchestrator-primary](features/opencode-orchestrator-primary_plan.md) | 2026-06-07 |  |
+| [per-operation-effort-tiering](features/per-operation-effort-tiering_plan.md) | 2026-06-07 |  |
+| [opencode-compact-reviewer](features/opencode-compact-reviewer_plan.md) | 2026-06-08 | [review](../.ai-pm/reviews/opencode-compact-reviewer_review.md) |
 
 ## plan-fidelity
 
@@ -188,9 +191,9 @@ Built by:
 | [nfr-operational-limits-prompt](features/nfr-operational-limits-prompt_plan.md) | 2026-06-04 | [review](../.ai-pm/reviews/nfr-operational-limits-prompt_review.md) |
 | [contract-centric-product-map](features/contract-centric-product-map_plan.md) | 2026-06-02 |  |
 
-## Infrastructure (not yet mapped to a contract)
+## Infrastructure (no user-facing contract)
 
-Protocol-internal features (42) that strengthen the system but are not yet linked to a specific contract above.
+Protocol-internal features (47) that strengthen the system but are not linked to a specific contract above.
 
 | Feature | Added |
 |---|---|
@@ -206,6 +209,7 @@ Protocol-internal features (42) that strengthen the system but are not yet linke
 | [changelog-backfill](features/changelog-backfill_plan.md) | 2026-05-30 |
 | [changeset-hygiene](features/changeset-hygiene_plan.md) | 2026-06-05 |
 | [comment-restraint](features/comment-restraint_plan.md) | 2026-06-06 |
+| [context-leanness](features/context-leanness_plan.md) | 2026-06-07 |
 | [diagnostic-flow-discipline](features/diagnostic-flow-discipline_plan.md) | 2026-06-05 |
 | [diagnostic-probe-mode](features/diagnostic-probe-mode_plan.md) | 2026-06-02 |
 | [documentation-flavor](features/documentation-flavor_plan.md) | 2026-06-04 |
@@ -215,6 +219,10 @@ Protocol-internal features (42) that strengthen the system but are not yet linke
 | [invariants-index](features/invariants-index_plan.md) | 2026-06-04 |
 | [markdown-blank-line-sweep](features/markdown-blank-line-sweep_plan.md) | 2026-06-03 |
 | [on-hardware-blast-radius-preflight](features/on-hardware-blast-radius-preflight_plan.md) | 2026-06-04 |
+| [opencode-compact-reviewer](features/opencode-compact-reviewer_plan.md) | 2026-06-08 |
+| [opencode-orchestrator-primary](features/opencode-orchestrator-primary_plan.md) | 2026-06-07 |
+| [orchestrator-anti-corner-cutting](features/orchestrator-anti-corner-cutting_plan.md) | 2026-06-08 |
+| [per-operation-effort-tiering](features/per-operation-effort-tiering_plan.md) | 2026-06-07 |
 | [product-map-migration-detection](features/product-map-migration-detection_plan.md) | 2026-06-02 |
 | [product-map-value-first](features/product-map-value-first_plan.md) | 2026-06-03 |
 | [product-md-front-door](features/product-md-front-door_plan.md) | 2026-06-02 |

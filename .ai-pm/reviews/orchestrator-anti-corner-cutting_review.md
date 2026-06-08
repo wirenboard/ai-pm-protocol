@@ -90,9 +90,8 @@ Scope of THIS re-check: ONLY the `## EXTENSION (2026-06-08)` section of the plan
 ## Verdict
 approve
 
-<!-- Orchestrator owns the Pass-2 trail below. This is a pre-coding plan check;
-     no code exists yet, so the code-review stamp remains NOT YET RUN. -->
-## Code review findings
-(populated by orchestrator from code-review output; pm-coder reads and fixes these)
-
-## Code review: NOT YET RUN
+<!-- This file is the PRE-CODING PLAN review (Pass-1 plan-quality + the EXTENSION
+     validation), not a code review. The Pass-2 code review of the IMPLEMENTATION
+     lives in the per-slice review files, so no Pass-2 trail belongs here
+     (section intentionally omitted — the auditor's section-absence exemption). -->
+## Code review: n/a — plan review; implementation Pass-2 is in `orchestrator-anti-corner-cutting-p12_review.md` (`## Code review: FIXED — 60151f7`). Piece 0 / piece-1-echo extension reviews land in their own per-slice files when built.
