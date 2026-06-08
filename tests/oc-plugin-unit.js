@@ -710,6 +710,47 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
     hookOrch
   );
 
+  // ====================================================================
+  // ROLE-DELEGATION INTEGRITY — the generic-harness-built-in arm of the named
+  // role-substitution deny-list (workflow/enforcement.md `### Role-delegation
+  // integrity (full)`). A `task`-spawn whose target subagent is a generic
+  // harness built-in (general / build / plan) is denied the SAME way a wb-*
+  // role duplicator is. The on-purpose engines (code-review / deep-research)
+  // and all pm-* are NEVER gated — they are the designated fillers.
+  // ====================================================================
+
+  // oc-generic-builtin-task-denied — a `task` spawn targeting `general`, `build`,
+  //   or `plan` (a generic stand-in for a protocol role) -> DENY. Non-vacuous:
+  //   would FAIL (the spawn would be allowed) if the generics were not added to
+  //   the deny path. Driven via subagent_type (the 1.16.2 task arg), matching the
+  //   wb-* task-deny tests above.
+  for (const generic of ["general", "build", "plan"]) {
+    await assertThrows(
+      "oc-generic-builtin-task-denied: a `task` spawn of `" + generic + "` (generic built-in in a protocol seat) is denied",
+      "task",
+      { subagent_type: generic }
+    );
+  }
+  // Also denied when the runtime supplies the target under the alternate `agent`
+  //   arg name (the plugin reads subagent_type OR agent for the generic check).
+  await assertThrows(
+    "oc-generic-builtin-task-denied: a `task` spawn with agent=`general` (alternate arg name) is denied",
+    "task",
+    { agent: "general" }
+  );
+
+  // oc-protocol-agent-task-allowed (regression) — a `task` spawn of a protocol
+  //   agent (pm-coder / pm-auditor) or an on-purpose engine (code-review /
+  //   deep-research) is ALLOWED. The role-integrity deny is a NAMED list, not an
+  //   "everything-but-pm-*" block: the designated fillers are never gated.
+  for (const allowed of ["pm-coder", "pm-auditor", "code-review", "deep-research"]) {
+    await assertAllows(
+      "oc-protocol-agent-task-allowed: a `task` spawn of `" + allowed + "` (designated protocol agent/engine) is allowed",
+      "task",
+      { subagent_type: allowed }
+    );
+  }
+
   finish();
 })().catch((e) => {
   console.error("FAIL: unexpected error in oc-plugin-unit.js — " + (e && e.stack || e));

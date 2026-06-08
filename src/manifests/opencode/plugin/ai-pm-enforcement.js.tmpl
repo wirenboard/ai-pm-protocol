@@ -51,7 +51,10 @@
 //   bash   -> output.args.command          (the shell command string)
 //
 // CORE DENY SET (this plugin now enforces the SAME clear-DENY guards as the
-// Claude settings.json adapter): (a) wb-* role-duplicator task spawn,
+// Claude settings.json adapter): (a) wb-* role-duplicator task spawn — AND, on
+// the same task path, a GENERIC HARNESS BUILT-IN (general/build/plan) standing in
+// for a protocol role (the role-integrity arm of the same named deny-list; the
+// designated engines code-review/deep-research + all pm-* are never gated),
 // (b) wb-* role-duplicator skill load, (c) read outside the project root,
 // (d) empty/whitespace-only write over an existing non-empty file (truncation),
 // and (e) a `find` invocation whose first absolute-path argument resolves
@@ -191,11 +194,38 @@ import fs from "node:fs";
 // NOT exported (an exported array would break the ESM plugin load).
 const WB_DENY_ROLES = __WB_DENY_ROLES__;
 
+// The GENERIC HARNESS BUILT-IN deny set — the harness-built-in ARM of the SAME
+// named role-substitution deny-list (workflow/enforcement.md `### Role-delegation
+// integrity (full)`; workflow/roster.md `### Role-delegation integrity`). A
+// generic catch-all subagent (`general`) or the harness's own `build` / `plan`
+// agents standing in for a protocol role is a non-protocol agent occupying a
+// protocol seat — the SAME violation family as a wb-* role duplicator, only the
+// SOURCE differs (the harness's own built-ins, not an installed toolset). This is
+// a NAMED addition to the deny-list, NOT an "everything-but-pm-*" block: the
+// designated engines `code-review` and `deep-research` are NEVER gated (they ARE
+// the designated fillers for their roles), and `pm-*` agents are never gated. The
+// roster has no "generic exploration" seat (the orchestrator reads/greps inline
+// and routes deep reads to pm-codebase-reader), so a `task`-spawn of `general` is
+// by construction a role substitution — over-block risk is nil. Keyed on the
+// SAME spawned-subagent-id check the wb-* deny uses (the task target id), so the
+// generics are added to the deny path, not given a new mechanism. Module-scope,
+// NOT exported (an exported array would break the ESM plugin load).
+const GENERIC_BUILTIN_DENY = ["general", "build", "plan"];
+
 const DENY_REASON_ROLE =
   " duplicates a protocol role in this ai-pm project. Use the pm-* equivalent" +
   " (pm-coder / pm-plan-checker + code-review / pm-architect / /pm-plan /" +
   " pm-pr-prep / WORKFLOW.md git rules), not a wb-* role agent. code-review," +
   " deep-research and wb-knowledge skills stay available.";
+
+const DENY_REASON_GENERIC =
+  " is a generic harness built-in standing in for a protocol role. A generic" +
+  " carries none of the role's discipline (no reviewer severities/aspects/verdict" +
+  " rubric, no auditor dimensions). Use the designated protocol agent for this" +
+  " role (see the role table in workflow/roster.md `### Role-delegation" +
+  " integrity`): review = the code-review engine, audit = pm-auditor, code =" +
+  " pm-coder, plan = /pm-plan, etc. The code-review and deep-research engines are" +
+  " the designated fillers and stay available.";
 
 // Resolve a (possibly relative) target path against the project root.
 function resolveTarget(root, target) {
@@ -568,11 +598,22 @@ export const AiPmEnforcement = async (ctx) => {
         }
       };
 
-      // (a) task -> deny a wb-* role-duplicator subagent spawn.
+      // (a) task -> deny a wb-* role-duplicator subagent spawn, AND (role-integrity
+      //     arm) a generic harness built-in (general/build/plan) standing in for a
+      //     protocol role. Both are the SAME named deny-list keyed on the spawned
+      //     subagent id; the carve-out is identical (code-review / deep-research /
+      //     pm-* are never gated — they are not in either deny set). The target id
+      //     is read from `subagent_type` (the 1.16.2 task arg) OR `agent` (the
+      //     alternate arg name), so the generic deny holds regardless of which the
+      //     runtime supplies. The wb-* check below is byte-behavior-identical.
       if (tool === "task") {
         const sub = args.subagent_type;
         if (typeof sub === "string" && WB_DENY_ROLES.includes(sub)) {
           throw new Error(sub + DENY_REASON_ROLE);
+        }
+        const target = typeof sub === "string" ? sub : args.agent;
+        if (typeof target === "string" && GENERIC_BUILTIN_DENY.includes(target)) {
+          throw new Error(target + DENY_REASON_GENERIC);
         }
         return;
       }

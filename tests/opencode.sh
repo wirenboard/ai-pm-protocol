@@ -1612,6 +1612,57 @@ else
 fi
 
 # ----------------------------------------------------------------------
+# oc-role-integrity-persona  (role-delegation integrity)
+# The persona states the role-integrity rule (workflow/roster.md + enforcement.md
+# `### Role-delegation integrity`): one designated protocol agent/engine per
+# pipeline role; never a generic harness built-in (general/build/plan) as a
+# stand-in; review = the code-review engine; and the Pass-2 `## Code review` trail
+# is the orchestrator's OWN work (only the findings come from the code-review
+# engine, never the trail edit delegated to a generic). FORM (grep) over the
+# GENERATED body. NON-VACUOUS: each clause is a distinct load-bearing phrase the
+# echo loses if the role-integrity / Pass-2-trail bullets were removed.
+# ----------------------------------------------------------------------
+if [ ! -f "$ORCH" ]; then
+    fail "oc-role-integrity-persona: orchestrator agent missing at $ORCH"
+else
+    ribody="$ORCH_BODY"
+    rierrs=""
+    # The role-integrity ban is named.
+    if ! printf '%s\n' "$ribody" | grep -Eqi 'role-integrity ban'; then
+        rierrs="$rierrs\n  - missing the 'role-integrity ban' name"
+    fi
+    # One designated agent per role.
+    if ! printf '%s\n' "$ribody" | grep -Eqi 'one designated (protocol )?agent|designated protocol agent or engine'; then
+        rierrs="$rierrs\n  - missing the 'one designated agent per role' statement"
+    fi
+    # Never a generic harness built-in (general/build/plan) as a stand-in.
+    if ! printf '%s\n' "$ribody" | grep -Eq 'general.*build.*plan|generic harness built-in'; then
+        rierrs="$rierrs\n  - missing the 'never a generic harness built-in (general/build/plan)' clause"
+    fi
+    # Review = the code-review engine.
+    if ! printf '%s\n' "$ribody" | grep -Eqi 'review.*the .?code-review.? engine|review.*code-review.*engine'; then
+        rierrs="$rierrs\n  - missing the 'review = the code-review engine' designated-filler clause"
+    fi
+    # Same violation family as a wb-* role duplicator.
+    if ! printf '%s\n' "$ribody" | grep -Eqi 'wb-\* role duplicator|same violation family'; then
+        rierrs="$rierrs\n  - missing the 'same violation family as a wb-* role duplicator' framing"
+    fi
+    # The Pass-2 `## Code review` trail is the orchestrator's OWN work; only the
+    # findings come from the code-review engine.
+    if ! printf '%s\n' "$ribody" | grep -Eqi '## Code review.?.? trail is YOUR OWN|## Code review.?.? trail.*own work'; then
+        rierrs="$rierrs\n  - missing the 'Pass-2 ## Code review trail is your own work' clause"
+    fi
+    if ! printf '%s\n' "$ribody" | grep -Eqi 'only the findings|finding generation'; then
+        rierrs="$rierrs\n  - missing the 'only the findings are delegated to the code-review engine' clause"
+    fi
+    if [ -z "$rierrs" ]; then
+        pass "oc-role-integrity-persona: the persona states the role-integrity rule — one designated protocol agent/engine per role, never a generic harness built-in (general/build/plan) as a stand-in, review = the code-review engine (same violation family as a wb-* role duplicator), and the Pass-2 ## Code review trail is the orchestrator's own work (only the findings come from the code-review engine)"
+    else
+        fail "oc-role-integrity-persona: the persona body is missing one or more role-integrity clauses:$(printf '%b' "$rierrs")"
+    fi
+fi
+
+# ----------------------------------------------------------------------
 # Summary
 # ----------------------------------------------------------------------
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
