@@ -793,22 +793,45 @@ else
         cr_ok=0
     fi
 
-    # (e) substantially smaller than the wb SKILL.md + references combined.
+    # (e) compactness — TWO guards.
+    #   (e1) ABSOLUTE size ceiling — runs ALWAYS, off-machine too. The arch note
+    #        targets the generated reviewer at ~¼ of the ~58 KB wb SKILL.md+refs
+    #        source (~18.4 KB / 120-160 lines today). A 28000 B ceiling proves
+    #        "compact" (well under half the ~58 KB source) and fails if the body
+    #        bloated back toward the source, yet is generous enough that normal
+    #        edits to a ~18 KB body don't trip it. This is the only compactness
+    #        guard that runs on CI / a fresh clone (where $WBREFS is absent).
+    cr_bytes=$(wc -c < "$CR")
+    CR_CEILING=28000
+    if [ "$cr_bytes" -ge "$CR_CEILING" ]; then
+        fail "oc-compact-reviewer: reviewer ($cr_bytes B) is at/over the $CR_CEILING B compactness ceiling — it has bloated away from the arch-note ~18 KB / ~¼-of-source target"
+        cr_ok=0
+    fi
+    #   (e2) RELATIVE guard (BONUS, only when the wb source dir is present on this
+    #        dev machine) — a stronger check that the reviewer is well under half
+    #        the actual wb SKILL.md+refs source bulk. $WBREFS is .gitignored, so
+    #        this is absent off-machine and the absolute ceiling above stands alone.
+    cr_rel_checked=0
     if [ -d "$WBREFS" ]; then
         wb_bytes=$(cat "$WBREFS"/*.md 2>/dev/null | wc -c)
-        cr_bytes=$(wc -c < "$CR")
-        # "substantially smaller" => well under half the source bulk.
-        if [ "$wb_bytes" -gt 0 ] && [ "$((cr_bytes * 2))" -lt "$wb_bytes" ]; then
-            : # ok — less than half
-        else
-            fail "oc-compact-reviewer: reviewer ($cr_bytes B) is not substantially smaller than the wb source ($wb_bytes B) — expected well under half"
-            cr_ok=0
+        if [ "$wb_bytes" -gt 0 ]; then
+            cr_rel_checked=1
+            if [ "$((cr_bytes * 2))" -lt "$wb_bytes" ]; then
+                : # ok — less than half the actual source
+            else
+                fail "oc-compact-reviewer: reviewer ($cr_bytes B) is not substantially smaller than the wb source ($wb_bytes B) — expected well under half"
+                cr_ok=0
+            fi
         fi
-    else
-        echo "SKIP: oc-compact-reviewer size check — wb-review-refs not present (the form contract above still runs)"
     fi
 
-    [ "$cr_ok" -eq 1 ] && pass "oc-compact-reviewer: .opencode/agent/code-review.md is the compact ONE-PASS reviewer — single agent, no fan-out, covers the nine-aspect set, carries the severities + <finding> block + consolidated-report sections + the absolute plan-compliance-never-Approve verdict row, and is substantially smaller than the wb SKILL.md+refs source (https://opencode.ai/docs/agents/)"
+    if [ "$cr_ok" -eq 1 ]; then
+        if [ "$cr_rel_checked" -eq 1 ]; then
+            pass "oc-compact-reviewer: .opencode/agent/code-review.md is the compact ONE-PASS reviewer — single agent, no fan-out, covers the nine-aspect set, carries the severities + <finding> block + consolidated-report sections + the absolute plan-compliance-never-Approve verdict row, and is compact ($cr_bytes B, under the $CR_CEILING B ceiling; this run also confirmed it is well under half the wb SKILL.md+refs source) (https://opencode.ai/docs/agents/)"
+        else
+            pass "oc-compact-reviewer: .opencode/agent/code-review.md is the compact ONE-PASS reviewer — single agent, no fan-out, covers the nine-aspect set, carries the severities + <finding> block + consolidated-report sections + the absolute plan-compliance-never-Approve verdict row, and is compact ($cr_bytes B, under the $CR_CEILING B ceiling; the stronger wb-source-relative comparison runs only where the wb refs are present) (https://opencode.ai/docs/agents/)"
+        fi
+    fi
 fi
 
 # Runtime: the real loader must list the compact reviewer. GUARDED-SKIP when
@@ -908,7 +931,7 @@ if errs:
 sys.exit(0)
 PY
 then
-    pass "oc-single-model-default: the manifest models block carries only `session` (no control* keys), NO generated agent has a baked model:/variant: pin (every agent inherits the session), and opencode.json model == models.session (https://opencode.ai/docs/config/)"
+    pass "oc-single-model-default: the manifest models block carries only \`session\` (no control* keys), NO generated agent has a baked model:/variant: pin (every agent inherits the session), and opencode.json model == models.session (https://opencode.ai/docs/config/)"
 else
     fail "oc-single-model-default: a baked per-agent model/variant pin or a leftover control* key remains (see above)"
 fi
@@ -936,16 +959,18 @@ else
     fail "oc-builtins-hidden: opencode.json does not disable both build and plan (agent.build.disable / agent.plan.disable must be true)"
 fi
 
-# Runtime (GUARDED-SKIP): the real loader must ACCEPT the shipped config with the
-# build/plan disables AND no baked per-agent pins (opencode debug config --pure
-# exit 0). SKIPS cleanly when `opencode` is absent. Covers oc-single-model-default
-# (no pins) + oc-builtins-hidden (disables) at the loader level in one check.
-# `no_proxy` includes registry.npmjs.org so the runtime's npm-install does not hang.
+# Runtime (GUARDED-SKIP): the real loader must ACCEPT the shipped config (opencode
+# debug config --pure exit 0) — i.e. the config with the build/plan disables and
+# no baked per-agent pins PARSES / LOADS cleanly. This check verifies only that the
+# shipped config is valid to the real loader; the disables + no-pins are asserted by
+# the FORM checks above (oc-builtins-hidden, oc-single-model-default), not here.
+# SKIPS cleanly when `opencode` is absent. `no_proxy` includes registry.npmjs.org so
+# the runtime's npm-install does not hang.
 if command -v opencode >/dev/null 2>&1; then
     BDIR=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
     python3 "$GEN" --harness opencode --out "$BDIR/.opencode" >/dev/null 2>&1
     if (cd "$BDIR" && no_proxy="${no_proxy:-},registry.npmjs.org" NO_PROXY="${NO_PROXY:-},registry.npmjs.org" timeout 120 opencode debug config --pure </dev/null >/dev/null 2>&1); then
-        pass "oc-single-model-default + oc-builtins-hidden (runtime): the real OpenCode loader accepts the shipped config with build/plan disabled and no baked per-agent pins (opencode debug config --pure, exit 0)"
+        pass "oc-single-model-default + oc-builtins-hidden (runtime): the real OpenCode loader accepts the shipped config — it parses / loads cleanly (opencode debug config --pure, exit 0); the build/plan disables and no-baked-pins are verified by the FORM checks above"
     else
         fail "oc-single-model-default + oc-builtins-hidden (runtime): the real OpenCode loader REJECTED the config (opencode debug config --pure exited non-zero — a disable key or the no-pin config is invalid)"
     fi
@@ -966,10 +991,12 @@ fi
 #       (the default IS session, with nothing baked in the template);
 #   (b) the documented canonical block (doc/stack-notes.md + the AGENTS.md
 #       control-layer section) names exactly the four checking agents.
-# RUNTIME guarded-skip: lay a test 4-line agent.<id>.model block over a scratch
-# build and assert `opencode debug config --pure` resolves each of the four
-# checking agents to the override model (proving the config-layer override is
-# applied at the agent id). NOTE: the task-spawn resolution (does a checking agent
+# RUNTIME guarded-skip: lay a test 4-line agent.<id>.model block (using a DISTINCT
+# synthetic id, NOT the session model) over a scratch build and assert `opencode
+# debug config --pure` resolves each of the four checking agents to that override
+# model — proving the config-layer override MOVES them OFF the session (a session-
+# valued override could not distinguish "moved off" from "coerced back to session").
+# NOTE: the task-spawn resolution (does a checking agent
 # spawned as a Task by the orchestrator resolve to the override?) is the to-verify
 # residual — the in-tree spike was inconclusive due to parent-.opencode bleed;
 # this controlled scratch-dir check is the deterministic surrogate.
@@ -997,16 +1024,59 @@ else
     fail "oc-control-layer-model (form): the shipped opencode.json bakes an agent.<id>.model override — the control-layer model must be the PM's own config, not a template pin"
 fi
 
-# (b) the documented canonical block names exactly the four checking agents, in
-#     both doc homes (doc/stack-notes.md + the AGENTS.md control-layer section).
+# (b) the documented canonical control-layer BLOCK names EXACTLY the four checking
+#     agents — and no other agent id — in both doc homes (doc/stack-notes.md + the
+#     AGENTS.md control-layer section). A bare anywhere-in-the-file substring grep
+#     would pass even if the four ids were scattered across an 80 KB doc; instead
+#     scope to the canonical config block: the contiguous run of `"<id>": { "model"
+#     ... }` lines (the four-line `agent.<id>.model` block the docs ship verbatim).
+#     Assert all four expected ids appear inside that block AND no UNEXPECTED id
+#     does (so a stray fifth `agent.<id>.model` entry in the block is caught). This
+#     keys off the JSON config-line shape, not prose wording, so it is robust to
+#     surrounding rephrasing.
 clm_doc_ok=1
 for doc in "$ROOT/doc/stack-notes.md" "$ROOT/src/manifests/opencode/AGENTS.md"; do
-    for aid in $CHECKING_AGENTS; do
-        grep -q "\"$aid\"" "$doc" 2>/dev/null \
-            || { fail "oc-control-layer-model (docs): $doc does not name checking agent $aid in the control-layer block"; clm_doc_ok=0; }
-    done
+    if ! python3 - "$doc" "$CHECKING_AGENTS" <<'PY'
+import re, sys, pathlib
+doc, expected = pathlib.Path(sys.argv[1]), set(sys.argv[2].split())
+lines = doc.read_text(encoding="utf-8").split("\n")
+# A canonical-block line: `"<id>": { "model": ... }` (the agent.<id>.model entry).
+line_re = re.compile(r'^\s*"([A-Za-z0-9_-]+)"\s*:\s*\{\s*"model"')
+# Find the contiguous run that holds the most of these entries (the block).
+blocks, cur = [], []
+for l in lines:
+    m = line_re.match(l)
+    if m:
+        cur.append(m.group(1))
+    else:
+        if cur:
+            blocks.append(cur); cur = []
+if cur:
+    blocks.append(cur)
+if not blocks:
+    print(f"{doc}: no canonical control-layer config block (`\"<id>\": {{ \"model\" ... }}` lines) found")
+    sys.exit(1)
+# The control-layer block is the run that carries the checking agents.
+block = max(blocks, key=lambda b: len(set(b) & expected))
+ids = set(block)
+missing = expected - ids
+extra = ids - expected
+errs = []
+if missing:
+    errs.append(f"control-layer block is missing checking agent(s): {sorted(missing)}")
+if extra:
+    errs.append(f"control-layer block carries UNEXPECTED agent id(s): {sorted(extra)}")
+if errs:
+    print(f"{doc}: " + "; ".join(errs))
+    sys.exit(1)
+sys.exit(0)
+PY
+    then
+        fail "oc-control-layer-model (docs): $doc control-layer block does not name exactly the four checking agents (see above)"
+        clm_doc_ok=0
+    fi
 done
-[ "$clm_doc_ok" -eq 1 ] && pass "oc-control-layer-model (docs): the canonical four-line control-layer block names exactly the four checking agents (code-review, pm-auditor, pm-plan-checker, pm-product-advocate) in doc/stack-notes.md and the AGENTS.md control-layer section"
+[ "$clm_doc_ok" -eq 1 ] && pass "oc-control-layer-model (docs): the canonical control-layer config block names EXACTLY the four checking agents (code-review, pm-auditor, pm-plan-checker, pm-product-advocate) — and no other id — in doc/stack-notes.md and the AGENTS.md control-layer section"
 
 # RUNTIME (GUARDED-SKIP): lay a test 4-line agent.<id>.model block over a scratch
 # build and confirm the loader resolves the four checking agents to the override.
@@ -1016,13 +1086,19 @@ if command -v opencode >/dev/null 2>&1; then
     CLMDIR=$(mktemp -d) || { echo "FAIL: mktemp failed" >&2; exit 1; }
     python3 "$GEN" --harness opencode --out "$CLMDIR/.opencode" >/dev/null 2>&1
     # Overlay the 4-line control-layer block onto the scratch opencode.json (the
-    # PM's-own-config simulation), keeping the session model as the override id so
-    # the loader needs no unconfigured provider.
+    # PM's-own-config simulation). Use a DISTINCT synthetic override id (NOT the
+    # session model) so a pass proves the override actually MOVES the four agents
+    # OFF the session — a session-valued override could not tell "moved off
+    # session" from "coerced back to session". Verified against OpenCode 1.16.2:
+    # `debug config --pure` accepts an unknown model id in agent.<id>.model and
+    # echoes it back in the resolved config (no provider round-trip under --pure).
     OVERRIDE_MODEL=$(python3 - "$CLMDIR/.opencode/opencode.json" "$CHECKING_AGENTS" <<'PY'
 import json, sys
 path, checking = sys.argv[1], sys.argv[2].split()
 cfg = json.load(open(path))
-override = cfg["model"]  # reuse the session model id (no unconfigured provider)
+session = cfg["model"]
+override = "dummy-provider/dummy-control-model"  # distinct from the session model
+assert override != session, "override id must differ from the session model"
 cfg.setdefault("agent", {})
 for aid in checking:
     cfg["agent"].setdefault(aid, {})["model"] = override
@@ -1048,7 +1124,7 @@ if bad:
 sys.exit(0)
 PY
         then
-            pass "oc-control-layer-model (runtime): with a 4-line agent.<id>.model block laid over a scratch build, the loader resolves all four checking agents to the override model (the config-layer control-layer override is applied; opencode debug config --pure)"
+            pass "oc-control-layer-model (runtime): with a 4-line agent.<id>.model block (a DISTINCT id, not the session model) laid over a scratch build, the loader resolves all four checking agents to that override — proving the config-layer override MOVES them OFF the session model (opencode debug config --pure)"
         else
             fail "oc-control-layer-model (runtime): the loader did not resolve all four checking agents to the override model (see above)"
         fi
