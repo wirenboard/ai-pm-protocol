@@ -463,7 +463,7 @@ How a downstream project consumes the template, and what it commits to in return
 
 **Consumption:**
 
-1. **Submodule at `.ai-pm/tooling/`.** Downstream runs `git submodule add git@github.com:wirenboard/ai-pm-protocol.git .ai-pm/tooling`. The template's `git` semantics (the submodule lives at `$GIT_DIR/modules/ai-pm/tooling/` in the superproject's git directory; see `doc/stack-notes.md` § "git" submodule data model) apply. Default `git clone` of the downstream does not check out the submodule — `--recurse-submodules` or `git submodule update --init` is required (gotcha documented in `doc/stack-notes.md` § "git").
+1. **Submodule at `.ai-pm/tooling/`.** Downstream runs `git submodule add git@github.com:aadegtyarev/ai-pm-protocol-uni.git .ai-pm/tooling`. The template's `git` semantics (the submodule lives at `$GIT_DIR/modules/ai-pm/tooling/` in the superproject's git directory; see `doc/stack-notes.md` § "git" submodule data model) apply. Default `git clone` of the downstream does not check out the submodule — `--recurse-submodules` or `git submodule update --init` is required (gotcha documented in `doc/stack-notes.md` § "git").
 2. **Symlinks for agents, commands, settings.** Downstream creates three symlinks pointing into the submodule:
     - `.claude/agents` → `../.ai-pm/tooling/.claude/agents`
     - `.claude/commands` → `../.ai-pm/tooling/.claude/commands`

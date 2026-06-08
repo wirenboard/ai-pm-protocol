@@ -418,7 +418,7 @@ Do NOT start planning a feature until PM explicitly asks (interactive mode — i
 If `.claude/agents/` and `.claude/commands/` don't exist or aren't linked yet:
 
 ```bash
-git submodule add git@github.com:wirenboard/ai-pm-protocol.git .ai-pm/tooling
+git submodule add git@github.com:aadegtyarev/ai-pm-protocol-uni.git .ai-pm/tooling
 mkdir -p .claude
 ln -s ../.ai-pm/tooling/.claude/agents .claude/agents
 ln -s ../.ai-pm/tooling/.claude/commands .claude/commands
