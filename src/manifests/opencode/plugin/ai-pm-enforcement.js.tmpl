@@ -603,15 +603,14 @@ export const AiPmEnforcement = async (ctx) => {
       //     protocol role. Both are the SAME named deny-list keyed on the spawned
       //     subagent id; the carve-out is identical (code-review / deep-research /
       //     pm-* are never gated — they are not in either deny set). The target id
-      //     is read from `subagent_type` (the 1.16.2 task arg) OR `agent` (the
-      //     alternate arg name), so the generic deny holds regardless of which the
-      //     runtime supplies. The wb-* check below is byte-behavior-identical.
+      //     is resolved ONCE from `subagent_type` (the 1.16.2 task arg) OR `agent`
+      //     (the alternate arg name) and feeds BOTH denies, so neither can be
+      //     bypassed by supplying the role under the arg the other check ignores.
       if (tool === "task") {
-        const sub = args.subagent_type;
-        if (typeof sub === "string" && WB_DENY_ROLES.includes(sub)) {
-          throw new Error(sub + DENY_REASON_ROLE);
+        const target = typeof args.subagent_type === "string" ? args.subagent_type : args.agent;
+        if (typeof target === "string" && WB_DENY_ROLES.includes(target)) {
+          throw new Error(target + DENY_REASON_ROLE);
         }
-        const target = typeof sub === "string" ? sub : args.agent;
         if (typeof target === "string" && GENERIC_BUILTIN_DENY.includes(target)) {
           throw new Error(target + DENY_REASON_GENERIC);
         }

@@ -750,6 +750,26 @@ const SCRATCH = fs.mkdtempSync(path.join(os.tmpdir(), "oc-plugin-unit-"));
       { subagent_type: allowed }
     );
   }
+  // Same allow, but via the alternate `agent` arg (subagent_type absent) — the
+  //   unified target resolution must NOT false-deny a protocol agent/engine
+  //   supplied under the agent= form.
+  for (const allowed of ["pm-coder", "code-review"]) {
+    await assertAllows(
+      "oc-protocol-agent-task-allowed: a `task` spawn with agent=`" + allowed + "` (alternate arg, subagent_type absent) is allowed",
+      "task",
+      { agent: allowed }
+    );
+  }
+  // oc-wb-role-task-agent-arg-denied (FINDING-1 fix) — a wb-* role duplicator
+  //   spawned via the alternate `agent` arg (subagent_type absent) is now DENIED.
+  //   Non-vacuous: the OLD wb-* check read only subagent_type, so this spawn
+  //   bypassed BOTH denies (undefined subagent_type for wb-*, not in the generic
+  //   set for the agent= arm). Unifying the target resolution closes the bypass.
+  await assertThrows(
+    "oc-wb-role-task-agent-arg-denied: a `task` spawn with agent=`" + DENIED_ROLE + "` (wb-* via the alternate arg) is denied",
+    "task",
+    { agent: DENIED_ROLE }
+  );
 
   finish();
 })().catch((e) => {
