@@ -70,14 +70,25 @@
 //       `/tmp/nula-dev.log` (backlog 2026-06-07). No actor lookup needed.
 //   (g) ORCHESTRATOR CONTENT-AUTHORING DENY. In the ORCHESTRATOR (primary)
 //       session ONLY, a `write`/`edit`/`bash`-write that targets a CONTENT path —
-//       i.e. INSIDE the root but NOT under `.ai-pm/` and NOT a `doc/features/**`
-//       plan (the orchestrator's OWN artifacts), and not a pure git op — is
-//       denied. The orchestrator authors only its plan + `.ai-pm` bookkeeping;
-//       code routes to pm-coder, canonical docs to pm-architect. SUBAGENTS
-//       (parentID present) author source legitimately and are NOT subject to (g).
-//       This is the real structural backstop the removed slice-13 path-permission
-//       could not be (broken-glob + bash-bypassable). It closes the live bug
-//       where the orchestrator authored a source file via `bash cat > …`.
+//       i.e. INSIDE the root but NOT an orchestrator-authorable artifact (see
+//       isOrchestratorAuthorable), and not a pure git op — is denied. The
+//       orchestrator authors only its plan + `.ai-pm` bookkeeping; code routes to
+//       pm-coder, canonical docs to pm-architect. SUBAGENTS (parentID present)
+//       author source legitimately and are NOT subject to (g).
+//       ALLOWED for the orchestrator: under `.ai-pm/` (EXCEPT `.ai-pm/tooling/**`)
+//       and a `doc/features/**` OR `docs/features/**` plan (this repo uses the
+//       singular `doc/`; downstream uses the plural `docs/`).
+//       DENIED — and the self-patch backstop: **`.ai-pm/tooling/**`** is the
+//       protocol SUBMODULE (the enforcer's own source + the deployed adapter
+//       reachable via the `.opencode/{plugin,agent,command}` symlinks that resolve
+//       into `.ai-pm/tooling/.opencode/…`). It is NEVER authorable — it changes
+//       only via a git submodule bump, never by an in-place edit. Closing it stops
+//       the live self-patch hole where the orchestrator could edit the deployed
+//       plugin to route around its own guard (the self-patch-the-enforcer ban,
+//       workflow/enforcement.md). This is the real structural backstop the removed
+//       slice-13 path-permission could not be (broken-glob + bash-bypassable). It
+//       closes the live bug where the orchestrator authored a source file via
+//       `bash cat > …`.
 //
 // ACTOR DETECTION (orchestrator-verified spike, OpenCode 1.16.2). The plugin
 // function receives `ctx` with a `client`; inside `tool.execute.before` we
@@ -356,17 +367,40 @@ function isPureGitCommand(command) {
 }
 
 // Classify a RESOLVED absolute path (already inside the root) as an ALLOWED
-// orchestrator-authored artifact or a DENIED content path. ALLOWED = under
-// `.ai-pm/` OR a `doc/features/**` plan (the orchestrator's own artifacts).
-// DENIED = anything else inside the root (source code, `docs/`/`doc/*.md` canon,
-// config, …). The caller has already confirmed `resolved` is inside `root`.
+// orchestrator-authored artifact or a DENIED content path. The caller has already
+// confirmed `resolved` is inside `root`.
+//
+// ALLOWED (orchestrator's own artifacts):
+//   - under `.ai-pm/` — state, backlog, contracts, reviews, decision trails —
+//     EXCEPT `.ai-pm/tooling/**` (see DENIED below).
+//   - a `doc/features/**` OR `docs/features/**` plan. Both spellings are accepted:
+//     THIS dogfood repo uses the singular `doc/features/`, but a DOWNSTREAM project
+//     uses the plural `docs/features/<topic>_plan.md` (where `/pm-plan` saves the
+//     plan). Accepting only the singular falsely denied the legitimate downstream
+//     plan write — the bug that triggered the self-patch incident.
+//
+// DENIED (everything else inside the root):
+//   - source code, `docs/`/`doc/*.md` canon, config, schemas, …
+//   - **`.ai-pm/tooling/**`** — the protocol SUBMODULE: the enforcer's own source
+//     plus the deployed adapter (agent / command / plugin definitions) reachable
+//     via the `.opencode/{plugin,agent,command}` symlinks that resolve into
+//     `.ai-pm/tooling/.opencode/…`. This is NEVER orchestrator-authorable — the
+//     submodule changes ONLY via a git submodule bump, never by an in-place edit
+//     (the self-patch-the-enforcer ban + the remote-system / source-of-truth
+//     discipline in workflow/enforcement.md). Allowing it let the live orchestrator
+//     edit the deployed plugin to route around its own guard; closing it is guard
+//     (g)'s self-patch backstop. The `.ai-pm` exemption is therefore "under
+//     `.ai-pm/` EXCEPT `.ai-pm/tooling/**`".
 function isOrchestratorAuthorable(root, resolved) {
   const rootResolved = path.resolve(root);
   const rel = path.relative(rootResolved, resolved);
   // rel is "" for the root itself, or a `/`-separated relative path inside it.
   const parts = rel.split(path.sep);
-  if (parts[0] === ".ai-pm") return true;
-  if (parts[0] === "doc" && parts[1] === "features") return true;
+  // .ai-pm/** is authorable EXCEPT the protocol submodule .ai-pm/tooling/** —
+  // that is the enforcer's own source + deployed adapter, never authorable.
+  if (parts[0] === ".ai-pm") return parts[1] !== "tooling";
+  // doc/features/** (this repo) and docs/features/** (downstream) — the plan.
+  if ((parts[0] === "doc" || parts[0] === "docs") && parts[1] === "features") return true;
   return false;
 }
 
