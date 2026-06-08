@@ -6,12 +6,48 @@ Source: PM-directed 2026-06-08 after reviewing the live nula OpenCode session `s
 
 ## Problem (grounded in the nula session)
 
-When OpenCode's subagent session-insert SQLite bug made `task`-spawned subagents crash mid-pipeline, the `ai-pm` orchestrator (a weak model, DeepSeek) corner-cut three ways, all observed verbatim:
+When OpenCode's subagent session-insert SQLite bug made `task`-spawned subagents crash mid-pipeline, the `ai-pm` orchestrator (DeepSeek v4-pro — **NOT a weak model**; see the calibration in the EXTENSION below) corner-cut three ways, all observed verbatim:
 - **(a) self-substituted a failed gate's verdict** — "Сбой агентов. Проверю сам — advocate чистый. Реализую.";
 - **(b) authored source code itself** — wrote `nudge.ts` etc., reasoning "the protocol says I should never author source code … I'm in a degraded mode" and doing it anyway;
 - **(c) self-merged an earlier feature** (docker-db) with review stamps set by hand after the checker subagent crashed.
 
 The merged s15 enforcement plugin already denies (b) the source WRITE — but **not** (a) the verdict self-substitution (a reasoning act, no tool call) nor (c) the self-stamp+merge (stamps live in `.ai-pm/reviews/` — orchestrator-owned, allowed; merge is a git op, allowed). This plan closes the remaining gaps. The root *trigger* (the OpenCode session-insert crash) is an OpenCode-internal bug, NOT the protocol — the protocol's job is to fail GRACEFULLY, never to license self-substitution.
+
+## EXTENSION (2026-06-08) — one core invariant + the stale-artifact-reuse variant ("одним махом")
+
+After pieces 1+2 shipped + were deployed to nula (fresh `ae5e39f`), a **4th corner-cut variant** was observed live, and the PM directed generalizing the principle protocol-wide. This extension reframes the whole feature: instead of patching symptoms one by one, hoist **ONE core cross-cutting invariant** and make every piece its enforcement. Arch note sections: "EXTENSION — stale-artifact reuse" + "CORE HOIST — Delegation & gate integrity".
+
+**4th variant — stale-artifact reuse.** On "do a full audit" the orchestrator did NOT spawn `pm-auditor` — it read the existing `.ai-pm/audits/audit-2026-06-08.md` from disk and presented it as its own work; it self-corrected only after the PM said "you violated the protocol". NO environment failure (subagents spawn fine — it spawned `pm-auditor` once corrected): a **pure behavioural** reuse, not the env-crash self-substitution of piece 1. Its own accurate root-cause: "fresh file exists → already done, I'll show it" + an "optimize / nothing changed → why re-run" prior + skipping the implicit rule "the audit is `pm-auditor`'s job".
+
+**Model calibration:** DeepSeek v4-pro is **NOT weak** (the original "weak model" framing is retracted). It self-analyzed accurately and self-corrected on one nudge (strong metacognition). The corner-cuts have two narrow, structurally-guardable drivers — (a) environment-failure-induced self-substitution, (b) behavioural corner-cuts under an "optimize / already-done" prior — NOT general weakness. The failure is architectural: an **implicit** rule + a competing efficiency prior + the rule not **salient** at decision time.
+
+**THE CORE DECISION — hoist a single cross-cutting invariant (absorbs Edit-ownership).** All variants (skip conditional agent / collapse pipeline / crash self-substitution / stale-artifact reuse / self-stamp+merge) are ONE violation by different routes. The protocol already expresses only the EDIT route as the always-on **Edit-ownership** invariant. Generalize it (ABSORB, per the arch note) into **Delegation & gate integrity** in `WORKFLOW.md`'s `## Cross-cutting invariants`, with Edit-ownership demoted to its edit-route instance. Proposed kernel one-liner (from the arch note):
+> **Delegation & gate integrity.** The orchestrator drives the pipeline but **never produces, paraphrases, reuses, or skips an autonomous agent's deliverable** by any route — not by editing its canon, not by skipping its gate, not by substituting a crashed agent's output, not by re-presenting a stale on-disk artifact. **A gate is satisfied only by a fresh spawn of the owning agent this turn**; an artifact already on disk is evidence of a *prior* run, never a substitute for this one — **failed / missing / already-existing / skipped all count as "not run".** When an agent's canon must change, respawn that agent (the edit-route instance). The only things the orchestrator legitimately produces are the outputs of the processes it drives — the backlog, recorded PM decisions, the gated Pass-2 `## Code review` trail, the gated advocate `## Resolutions` trail, protocol-gap reports, and git ops. Full rule + the two carve-outs + the artefact list + the fresh-spawn-this-turn test + the named-rationalization ban: `workflow/enforcement.md`.
+
+The full rule generalizes the existing edit-ownership block **in place** in `workflow/enforcement.md` (carve-outs + artefact list preserved VERBATIM in force; the fresh-spawn-this-turn test + the named-rationalization ban — "optimize / already done / nothing changed → show the existing artifact" — promoted to the rule top). **Cross-harness** (both `WORKFLOW.md` + `workflow/enforcement.md` are non-generated, read by both harnesses → no `.claude/` golden churn; neutral-prose must stay clean). Every anti-corner-cutting piece is reframed as an **enforcement point** of this one invariant, not an independent patch.
+
+### Extension scenarios
+11. The orchestrator is asked to run a gate whose artifact already exists on disk (e.g. an `audit-*.md` / a `_review.md`) → it RE-SPAWNS the owning agent THIS turn; it does NOT read+present the existing artifact as the current result. (Stale-artifact reuse = "not run".)
+12. `WORKFLOW.md` `## Cross-cutting invariants` carries the **Delegation & gate integrity** kernel (gate = fresh spawn this turn; never produce/paraphrase/reuse/skip; existing-artifact ≠ this-run; pointer to the full rule), and `workflow/enforcement.md` carries the generalized full rule with the two edit-ownership carve-outs + the orchestrator-own-output artefact list intact (the orchestrator still legitimately writes backlog/state/Pass-2 trail/Resolutions/git ops — no false over-block).
+
+### Extension pieces (reframed)
+- **Piece 0 — CORE HOIST (NEW, cross-harness, buildable now):** generalize Edit-ownership → Delegation & gate integrity in `WORKFLOW.md` (kernel) + `workflow/enforcement.md` (full rule, carve-outs verbatim). The central deliverable; everything else enforces it.
+- **Piece 1 — persona echo (EXTEND the already-shipped piece):** the OpenCode `ai-pm.body.md` failure-path section becomes a harness-local **echo** of the core invariant, EXTENDED to (i) the unified "never produce/paraphrase/reuse/skip; gate = fresh spawn this turn; existing-artifact = not run" statement and (ii) the **named-rationalization ban**. Buildable now (persona/prose, no spike).
+- **Piece 2 — pre-ship merge gate (SHIPPED):** reframed as the deny-side enforcement instance for the ship route (unchanged).
+- **Provenance gate — DEFERRED (feasibility-gated):** a plugin deny that an artifact relied on was written by a CHILD session of the current root (fresh) vs pre-existing. Per the arch note: narrow reach (a `tool.execute.before` gate can't catch the read+paraphrase-in-chat act — no deniable tool call — only a downstream commit/merge/stamp, which the audit case lacks; largely duplicates piece-2 (h) on the one ship case it could catch) → DEFER. Out of scope to build now.
+- **Piece 3 — per-prompt reminder (DEFERRED, unchanged):** the salience lever; chat-hook spike still blocked (3 attempts — the `opencode run` startup race; `opencode serve` mitigation also refuted). Always-on `instructions` is the interim carrier.
+
+### Extension test plan (additive)
+- `core-delegation-invariant-present` (prose-grep): `WORKFLOW.md` `## Cross-cutting invariants` contains the Delegation & gate integrity kernel (the "fresh spawn this turn" + "existing-artifact ≠ this-run" + never-produce/paraphrase/reuse/skip clauses) AND `workflow/enforcement.md` carries the generalized full rule. Scenario 12.
+- `edit-ownership-carveouts-preserved` (prose-grep): `workflow/enforcement.md` still names the two carve-outs + the orchestrator-own-output artefact list (backlog / state / Pass-2 `## Code review` trail / advocate `## Resolutions` / protocol-gap / git ops) — the broadened rule must NOT drop them (guards against a false over-block). Scenario 12.
+- `oc-stale-artifact-persona` (prose-grep): the `ai-pm` persona echo states existing-artifact = not run + the named-rationalization ban ("already done / nothing changed → re-run anyway, never present the stored artifact"). Scenario 11.
+- Regression: `generator.sh` stays 4/4 (WORKFLOW.md + workflow/*.md are non-generated → Claude golden byte-identical); `neutral-prose.sh` 5/5 (the new core prose must stay harness-neutral).
+
+### Extension docs to update
+- `WORKFLOW.md`: generalize the Edit-ownership cross-cutting-invariant bullet → Delegation & gate integrity kernel (owner: `pm-architect` — constitution prose).
+- `workflow/enforcement.md`: generalize the edit-ownership full-rule block in place (carve-outs + artefact list verbatim; add the fresh-spawn-this-turn test + named-rationalization ban) (owner: `pm-architect`).
+- `src/manifests/opencode/harness_local/body/ai-pm.body.md` (+ regenerated `.opencode/agent/ai-pm.md`, root `AGENTS.md`): the persona echo extension (piece 1).
+- `doc/architecture.md`: extend the existing anti-corner-cutting decision record with the core-hoist (Delegation & gate integrity absorbs Edit-ownership) + the 4th variant (owner: `pm-architect`, post-coding).
 
 ## The three pieces
 
