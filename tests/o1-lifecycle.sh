@@ -22,12 +22,16 @@
 #     scaffolding instruction).
 #
 #   state-archive-superseded-clean
-#     clean-grep scoped to YOUR Slice-D files (workflow/state.md +
-#     workflow/pipeline.md): no LIVE text still asserts the persist-archive-on-branch
+#     FULL-REPO clean-grep (Slice E extended it from the Slice-D state.md+pipeline.md
+#     scope now that the template/bootstrap archive refs are removed): no LIVE text
+#     anywhere in the git-tracked tree still asserts the persist-archive-on-branch
 #     model (`.ai-pm/state/archive/`, "archive the state", "archived to").
-#     NON-VACUITY: re-introducing the phrase trips it.
-#     NOTE: the doc/architecture.md loci are pm-architect's (parallel agent) — out
-#     of scope here so the two agents do not race; a full-repo sweep is a follow-up.
+#     Excludes (legitimate non-live mentions): historical process files
+#     (doc/features/*_plan.md), the CHANGELOG (release history), the ADR's own
+#     self-describing supersede line in doc/architecture.md (it names the superseded
+#     model on purpose), generated/golden adapters + the test files themselves, and
+#     negation lines (a "not archived to a separate directory" pointer IS the
+#     supersede statement). NON-VACUITY: re-introducing the phrase trips it.
 #
 #   graduation-gate-procedural
 #     workflow/pipeline.md Step 6 carries the graduation checklist, names it as a
@@ -102,43 +106,60 @@ else
 fi
 
 # ----------------------------------------------------------------------
-# state-archive-superseded-clean (scoped to state.md + pipeline.md; with non-vacuity)
-# No LIVE text in YOUR Slice-D files still asserts the persist-archive-on-branch
-# model. We scan for the archive-model tokens. A pointer that says "not archived"
-# is the supersede statement itself — so we only flag the AFFIRMATIVE archive
-# assertion phrases, scoped to lines that do NOT negate.
+# state-archive-superseded-clean (FULL-REPO sweep; with non-vacuity)
+# No LIVE text ANYWHERE in the git-tracked tree still asserts the
+# persist-archive-on-branch model. We scan for the archive-model tokens and drop
+# the legitimate non-live mentions:
+#   - historical process files (doc/features/*_plan.md), the CHANGELOG, and the
+#     test files themselves are path-excluded;
+#   - generated/golden adapters mirror src/ and are path-excluded (the src/ home
+#     is what we assert);
+#   - the ADR's own supersede prose legitimately NAMES the superseded model — a
+#     line carrying a supersede cue (state-archive-home / Supersedes / superseded /
+#     rejected keep-archives) or a negation cue ("not archived", "not curated",
+#     "no separate", "incidentally", "never an archive") is the supersede
+#     statement itself, not an assertion of the model.
 # ----------------------------------------------------------------------
-scan_archive() {
-    # Args: file. Echoes any line affirming the archive-on-branch model.
-    # The supersede prose legitimately MENTIONS the path to deny it ("not curated
-    # into an archive directory", "not archived to a separate directory") — those
-    # are negations, not assertions, so we drop lines carrying a negation cue.
-    grep -nE '\.ai-pm/state/archive/|archive the state|archived to' "$1" \
-        | grep -viE 'not curated|not archived|no separate|incidentally|never an archive'
+filter_supersede_lines() {
+    # Drop negation lines and ADR-self-describing supersede-cue lines.
+    grep -viE 'not curated|not archived|no separate|incidentally|never an archive|state-archive-home|[Ss]upersede|rejected keep-archives'
 }
 
-aerrs=""
-for f in "$STATE" "$PIPE"; do
-    hits=$(scan_archive "$f")
-    if [ -n "$hits" ]; then
-        aerrs="$aerrs\n  - $(basename "$f") still affirms the archive model:\n$(printf '%s' "$hits" | sed 's/^/      /')"
-    fi
-done
+# Full-repo sweep over git-tracked files, with path exclusions for historical /
+# generated / test files.
+archive_sweep() {
+    git grep -nE '\.ai-pm/state/archive/|archive the state|archived to' -- \
+        ':!doc/features/*_plan.md' \
+        ':!CHANGELOG.md' \
+        ':!tests/*' \
+        ':!.claude/*' \
+        ':!.opencode/*' \
+        ':!.golden/*' \
+        ':!.ai-pm/*' \
+        2>/dev/null \
+        | filter_supersede_lines
+}
 
-if [ -z "$aerrs" ]; then
-    pass "state-archive-superseded-clean: no live text in workflow/state.md / workflow/pipeline.md still asserts the persist-archive-on-branch model"
+hits=$(archive_sweep)
+if [ -z "$hits" ]; then
+    pass "state-archive-superseded-clean: no live text anywhere in the git-tracked tree still asserts the persist-archive-on-branch model (full-repo sweep)"
 else
-    fail "state-archive-superseded-clean: the archive model survives the supersede:$(printf '%b' "$aerrs")"
+    fail "state-archive-superseded-clean: the archive model survives the supersede:\n$(printf '%s' "$hits" | sed 's/^/      /')"
 fi
 
-# Non-vacuity: inject an affirmative archive assertion into a scratch copy of
-# state.md and assert scan_archive() reports it. Proves the scan is live.
-{ cat "$STATE"; printf '\nWhen a task finishes, the file is archived to .ai-pm/state/archive/x-2026-01-01.md and reset.\n'; } > "$SCRATCH/state-dirty.md"
-if [ -n "$(scan_archive "$SCRATCH/state-dirty.md")" ]; then
-    pass "state-archive-superseded-clean-nonvacuous: re-introducing the archive assertion trips the scan (the clean-grep is live)"
+# Non-vacuity: a fresh tracked file affirming the archive model must trip the
+# sweep. We add+commit a scratch file inside the tree, run the sweep, then undo —
+# proving the full-repo grep is live and not vacuously excluded.
+NV_FILE="$ROOT/workflow/_nv_archive_probe.md"
+printf 'When a task finishes, the file is archived to .ai-pm/state/archive/x-2026-01-01.md and reset.\n' > "$NV_FILE"
+git -C "$ROOT" add "$NV_FILE" >/dev/null 2>&1
+if [ -n "$(archive_sweep)" ]; then
+    pass "state-archive-superseded-clean-nonvacuous: a fresh tracked file affirming the archive model trips the full-repo sweep (the clean-grep is live)"
 else
-    fail "state-archive-superseded-clean-nonvacuous: re-introducing the archive assertion did NOT trip the scan — the clean-grep is vacuous"
+    fail "state-archive-superseded-clean-nonvacuous: re-introducing the archive assertion did NOT trip the sweep — the clean-grep is vacuous"
 fi
+git -C "$ROOT" reset -q -- "$NV_FILE" >/dev/null 2>&1
+rm -f "$NV_FILE"
 
 # ----------------------------------------------------------------------
 # graduation-gate-procedural
