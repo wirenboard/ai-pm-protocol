@@ -456,7 +456,7 @@ When a feature is done, its **lasting facts** move into one of **four permanent 
 - rejected "just move it to git": empty gesture — git already keeps every version, so this curates nothing new.
 - rejected a separate generated file (`architecture.generated.md`): splits the one document we are trying to keep whole.
 
-**Supersedes `state-archive-home`** (the persist-archive-on-branch model recorded inline in `### Execution State as the single source of progress` above and the `## File layout` downstream-paths note): once the working notes evaporate to git there is nothing left to curate into `.ai-pm/state/archive/`. The in-place edits across the six supersede loci (`workflow/state.md`, `workflow/pipeline.md` Step 6, the two `architecture.md` loci, the pm-auditor confirmation, the `MIGRATIONS.md` entry) land in Slice D, per the plan.
+**Supersedes `state-archive-home`** (the persist-archive-on-branch model recorded inline in `### Execution State as the single source of progress` above and the `## File layout` downstream-paths note): once the working notes evaporate to git there is nothing left to curate into `.ai-pm/state/archive/`. The five in-protocol supersede loci (`workflow/state.md`, `workflow/pipeline.md` Step 6, the two `architecture.md` loci, the pm-auditor confirmation) land in Slice D; the `MIGRATIONS.md` supersede entry lands in Slice E (the downstream-migration slice, plan §16).
 
 **Technical details** (the O(1) artifact lifecycle, the Lost-in-the-Middle / F-pattern reading evidence, the generated-vs-authored section markers, and `gen/generate.py` staying a byte-copy adapter generator) → `.ai-pm/arch/doc-frugality_arch.md` §§ 1, 2, 4, 5 and `workflow/doc-style.md`.
 
