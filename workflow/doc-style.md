@@ -78,4 +78,4 @@ Durable knowledge graduates to one of a **closed enum of four homes** — a fact
 | A deferred finding / accepted tech-debt | `.ai-pm/backlog.md` |
 | A new stack rule / idiom | `docs/stack-notes.md` |
 
-This enum is the home; the full graduation **lifecycle and gates** (the O(1) dossier, distill-on-merge, the pre-ship merge gate, the auditor git-aware check) are defined separately in the artifact-lifecycle slice and check against this one list.
+This enum is the home; the full graduation **lifecycle and gates** (the fixed-size dossier, distill-on-merge, the pre-ship merge gate, the auditor git-aware check) are defined separately in the artifact-lifecycle slice and check against this one list.
