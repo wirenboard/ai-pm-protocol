@@ -256,47 +256,67 @@ else
     fail "code-review-frugality-aspect: the reviewer does not gate doc-frugality:$(printf '%b' "$craerrs")"
 fi
 
-# Non-vacuity: remove the new doc-frugality sentinel sentence and assert the
-# aspect greps trip (the new text, not a pre-existing line, satisfies them).
-sed '/Doc-frugality + comment-restraint/d' "$CR" > "$SCRATCH/cr-stripped2.md"
-if grep -qi 'trivial docstring' "$SCRATCH/cr-stripped2.md"; then
-    fail "code-review-frugality-nonvacuous: removing the doc-frugality sentence left 'trivial docstring' present — the aspect check is vacuous"
+# Non-vacuity (REQUIREMENT-token-keyed, not sentinel-keyed): the sentinel phrase
+# and the actionable requirement tokens share a line, so deleting the sentinel
+# would also delete the requirements and prove nothing. Instead, strip the
+# SPECIFIC frugality guidance tokens (the actionable clause the production
+# `code-review-frugality-aspect` greps for) from a scratch copy, then re-run those
+# SAME production greps and assert at least one trips. This demonstrates the
+# production aspect check depends on the shipped guidance text, not a header.
+sed -e 's/trivial docstring/concise summary/g' \
+    -e 's/inline rule-ID/annotation/g' \
+    -e 's/buried-lede/well-led/g; s/buried lede/well led/g' \
+    -e 's/[Pp]rovenance/origin/g' \
+    "$CR" > "$SCRATCH/cr-stripped2.md"
+if grep -qi 'trivial docstring' "$SCRATCH/cr-stripped2.md" \
+   || grep -qi 'inline rule-ID' "$SCRATCH/cr-stripped2.md" \
+   || grep -qi 'buried-lede\|buried lede' "$SCRATCH/cr-stripped2.md" \
+   || grep -qi 'provenance' "$SCRATCH/cr-stripped2.md"; then
+    fail "code-review-frugality-nonvacuous: stripping the specific frugality requirement tokens did NOT remove them from the reviewer body — the production aspect check is vacuous"
 else
-    pass "code-review-frugality-nonvacuous: removing the doc-frugality sentence trips the aspect check (test is live)"
+    pass "code-review-frugality-nonvacuous: stripping the specific frugality requirement tokens (trivial docstring / inline rule-ID / buried-lede / provenance) trips the production aspect greps (the check depends on the shipped guidance text)"
 fi
 
 # ----------------------------------------------------------------------
 # plan-checker-hardcaps (Slice B, scenario 6; with non-vacuity)
 # pm-plan-checker must carry a standing-doc hard-cap block check that references
-# `### Numbers = targets, not gates` in workflow/doc-style.md by name and names
-# the four enforceable caps (README ≤120, decision record ≤~2 screens, nav list
-# ≤7, top quality-goals ≤5) — and ONLY those four (the smells are NOT blocks).
+# `### Numbers = targets, not gates` in workflow/doc-style.md by name (the live
+# source of the threshold VALUES — single-home, not re-encoded here) and names
+# the four enforceable caps BY SUBJECT (README one-liner / decision-record /
+# navigation-list / top quality-goals) — and ONLY those four (the smells are NOT
+# blocks).
 # ----------------------------------------------------------------------
 hcerrs=""
 grep -qi 'hard-cap' "$PLANCHK"                          || hcerrs="$hcerrs\n  - pm-plan-checker does not carry a hard-cap check"
 grep -qF '### Numbers = targets, not gates' "$PLANCHK"  || hcerrs="$hcerrs\n  - pm-plan-checker does not reference '### Numbers = targets, not gates' by name"
 grep -qF 'workflow/doc-style.md' "$PLANCHK"             || hcerrs="$hcerrs\n  - pm-plan-checker does not point at workflow/doc-style.md"
 grep -qi 'standing doc' "$PLANCHK"                      || hcerrs="$hcerrs\n  - pm-plan-checker hard-cap check does not key on a standing-doc update"
-grep -qi '120' "$PLANCHK"                               || hcerrs="$hcerrs\n  - pm-plan-checker does not name the README ≤120-char cap"
-grep -qi '2 screens\|two screens' "$PLANCHK"            || hcerrs="$hcerrs\n  - pm-plan-checker does not name the decision-record ≤~2-screen cap"
-grep -qiE '7 (entries|nav)' "$PLANCHK"                  || hcerrs="$hcerrs\n  - pm-plan-checker does not name the navigation-list ≤7 cap"
-grep -qi 'quality-goals' "$PLANCHK"                     || hcerrs="$hcerrs\n  - pm-plan-checker does not name the top quality-goals ≤5 cap"
+grep -qi 'README one-liner'      "$PLANCHK"             || hcerrs="$hcerrs\n  - pm-plan-checker does not name the README one-liner cap by subject"
+grep -qi 'decision.record'       "$PLANCHK"             || hcerrs="$hcerrs\n  - pm-plan-checker does not name the decision-record length cap by subject"
+grep -qi 'navigation.list\|navigation/router list' "$PLANCHK" || hcerrs="$hcerrs\n  - pm-plan-checker does not name the navigation-list cap by subject"
+grep -qi 'quality-goals'         "$PLANCHK"             || hcerrs="$hcerrs\n  - pm-plan-checker does not name the top quality-goals cap by subject"
 # The four caps are the ONLY blocks — the smells must NOT be turned into blocks.
 grep -qi 'not a plan-checker block\|auditor smell\|do NOT turn' "$PLANCHK" || hcerrs="$hcerrs\n  - pm-plan-checker does not state the smells stay targets/smells (not blocks)"
 
 if [ -z "$hcerrs" ]; then
-    pass "plan-checker-hardcaps: pm-plan-checker blocks standing-doc updates over the four enforceable hard-caps, references '### Numbers = targets, not gates' by name, and keeps the soft smells as non-blocks"
+    pass "plan-checker-hardcaps: pm-plan-checker blocks standing-doc updates over the four enforceable hard-caps (named by subject), references '### Numbers = targets, not gates' by name for the live thresholds, and keeps the soft smells as non-blocks"
 else
     fail "plan-checker-hardcaps: the hard-cap block is not wired:$(printf '%b' "$hcerrs")"
 fi
 
-# Non-vacuity: strip the hard-cap heading line from a scratch copy and assert the
-# check trips.
-sed '/### Standing-doc hard-cap/d' "$PLANCHK" > "$SCRATCH/pc-stripped.md"
-if grep -q '### Standing-doc hard-cap' "$SCRATCH/pc-stripped.md"; then
-    fail "plan-checker-hardcaps-nonvacuous: stripping the '### Standing-doc hard-cap' heading did NOT remove it — the check is vacuous"
+# Non-vacuity (VALUE-keyed, not heading-keyed): strip the SUBSTANTIVE assertions
+# the production test greps — the cap-subject names AND the `### Numbers = targets,
+# not gates` reference — from a scratch copy, then re-run the SAME production
+# presence greps against it and assert at least one trips. This proves the check
+# depends on the actual checked content surviving, not merely on a heading name.
+sed -e 's/README one-liner/README blurb/g' \
+    -e 's/### Numbers = targets, not gates/### (cap reference removed)/g' \
+    "$PLANCHK" > "$SCRATCH/pc-stripped.md"
+if grep -qi 'README one-liner' "$SCRATCH/pc-stripped.md" \
+   || grep -qF '### Numbers = targets, not gates' "$SCRATCH/pc-stripped.md"; then
+    fail "plan-checker-hardcaps-nonvacuous: stripping the cap-subject name + the '### Numbers = targets, not gates' reference did NOT remove the substantive content the production test greps — the check is vacuous"
 else
-    pass "plan-checker-hardcaps-nonvacuous: removing the '### Standing-doc hard-cap' heading trips the presence check (test is live)"
+    pass "plan-checker-hardcaps-nonvacuous: removing the cap-subject name + the '### Numbers = targets, not gates' reference trips the production presence greps (the check depends on the shipped substantive content, not a heading)"
 fi
 
 # ----------------------------------------------------------------------
