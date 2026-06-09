@@ -84,8 +84,7 @@ Then create from templates:
 - `docs/product-map.md` — the **generated** contract→features map. On a fresh greenfield project there are no contracts yet, so it renders with just the component sections (from `docs/architecture.md`) plus a final `## Infrastructure (no user-facing contract)` section; rows appear as features are planned. Generate via the **Product map generation procedure** below.
 - `.ai-pm/decision-authority.md` — write from Q8 (the decision-authority answer): `mode: autonomous | interactive` (default `interactive`) + `veto-window-seconds: 15`. See `### Decision authority` in `workflow/decision-authority.md` for the keys, the default, and the timer-honesty caveat — do not re-encode the default here. This file is created at bootstrap, but no consumer may *require* it: its absence elsewhere ⇒ `interactive` (so every older project is unaffected and no migration is introduced).
 - `.ai-pm/review-config.md` — write from Q9 (the cross-model answer): the three model settings `review-diff-model` / `review-full-model` / `audit-model` (default `auto`) + `review-scope: auto`. See `### Cross-model review` in `workflow/review-typology.md` for the keys, the enum, the `absent file OR unrecognized ⇒ auto` default, and the Haiku-blacklist — do not re-encode them here. Created at bootstrap, but no consumer may *require* it: its absence elsewhere ⇒ `auto`. When Q9's answer is a single value (e.g. `opus`, or `session` to opt out), set all three model settings to it unless the PM scoped a specific setting.
-- `.ai-pm/state/current.md` from `state.md.tmpl` — initial state set to `Status: idle`; updated by every coder run thereafter
-- `.ai-pm/state/archive/` directory — completed task states get archived here
+- `.ai-pm/state/current.md` from `state.md.tmpl` — initial state set to `Status: idle`; updated by every coder run thereafter (reset to idle on task completion — git keeps the finished snapshot, no archive directory)
 - `.ai-pm/reviews/` directory — review artifacts (plan compliance + code review findings)
 - `.ai-pm/arch/` directory — per-feature architecture analysis notes
 - `.ai-pm/contracts/` directory — Product Contracts get created here as features are planned (one file per user-facing feature)
@@ -180,7 +179,7 @@ Write minimal docs — enough to start adding features:
 - `docs/product.md` — scaffold the **authored** front door from `product.md.tmpl` (funnel skeleton, no generator signature line). `pm-architect` fills it (see below); the orchestrator does not hand-write the prose.
 - `docs/product-map.md` — the **generated** map; generate using the **Product map generation procedure** below.
 - `.ai-pm/state/current.md` from `state.md.tmpl` — initial state `Status: idle`
-- `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` directories
+- `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` directories
 - Ensure `.ai-pm/tmp/` is git-ignored — append `.ai-pm/tmp/` to the project `.gitignore` (creating it if absent); the agents' scratch dir never enters the committed tree
 - Optional docs — skip; create only if code clearly requires them (e.g., obvious security constraints)
 
@@ -219,7 +218,7 @@ After the extractor finishes:
 - Create `docs/features/` directory if it doesn't exist
 - Create `docs/product.md` — the **authored** front door. Scaffold from `product.md.tmpl` (no generator signature line) so `pm-architect` (above) can author it.
 - Create `docs/product-map.md` — the **generated** map; generate using the **Product map generation procedure** below.
-- Create `.ai-pm/state/current.md` from template (`Status: idle`), `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` (pm-codebase-reader already drafted contracts into the contracts/ directory — surface their count and `(needs PM validation)` markers in the PM brief)
+- Create `.ai-pm/state/current.md` from template (`Status: idle`), `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` (pm-codebase-reader already drafted contracts into the contracts/ directory — surface their count and `(needs PM validation)` markers in the PM brief)
 
 Present to PM. Follow the PM communication rules in `workflow/pm-comms.md`: plain language, user perspective, no code, no unexplained technical terms. Structure as follows:
 
