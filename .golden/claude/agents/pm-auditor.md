@@ -37,9 +37,11 @@ Optional parameters:
 
    The **merged-feature** inventory comes from `git log` **+ the `docs/product-map.md` ledger** (the durable, self-contained feature list — name + date per feature, under each contract's `Built by:` and the `## Infrastructure` bucket; see the **Product map generation procedure** in `pm-bootstrap`). Under the O(1) lifecycle (`### One transient dossier per in-flight feature` in `workflow/state.md`) a merged feature's `docs/features/*_plan.md` has **evaporated to git**, so the inventory must **not** depend on it: read `docs/features/*_plan.md` **only for in-flight / not-yet-merged features** (whose plan survives on the branch). **Mixed-project tolerance:** a feature present in git / the ledger **OR** carrying a surviving plan file counts — never flag a feature absent merely because its plan evaporated. `docs/features/_index.md` is **never** an inventory source — if it is present, it is the un-migrated v2.2 template structure (see `### Pending-migration detection` in `MIGRATIONS.md`); do not read it as a feature list. Carry its presence into the Docs currency dimension as a note (see dimension 5) and keep building the inventory from git + the ledger.
 
-3. **Fill the contract check table — do this before applying any dimension.** Create the output file now and write the `## Contract check` section first. For each feature in the inventory: open the plan file, read the first sentence of scenario 1, write the row. Do not proceed to step 4 until every feature has a row and every `yes + MISSING` combination is identified as a blocking finding.
+3. **Fill the contract check table — do this before applying any dimension.** Create the output file now and write the `## Contract check` section first. For each feature in the inventory, write its row. Do not proceed to step 4 until every feature has a row and every `yes + MISSING` combination is identified as a blocking finding.
 
-   This is not optional and is not satisfied by reading a previous audit. Read each plan file directly.
+   **Where the row sources from depends on the feature's lifecycle state (O(1) model — `### One transient dossier per in-flight feature` in `workflow/state.md`).** For an **in-flight / not-yet-merged** feature the plan survives on the branch: open `docs/features/<topic>_plan.md`, read the first sentence of scenario 1, derive the row. For a **MERGED** feature the plan has **evaporated to git** — there is no plan file to open — so the row sources from the **durable contract registry** (`.ai-pm/contracts/<feature>.md`, a `### Graduation targets` home that survives merge) plus the `docs/product-map.md` ledger: a contract present for the feature ⇒ `Needs contract: yes` / `Contract file: present`; a merged feature with no contract and no human-role surface in the ledger ⇒ `no` / `n/a`. The contract presence/currency itself is still checked — the registry is durable, not evaporating evidence. Keep the "every `yes + MISSING` row is blocking" logic and the mixed-project tolerance (a surviving plan file satisfies the in-flight path).
+
+   This is not optional and is not satisfied by reading a previous audit. Source each row directly — the plan file for in-flight features, the contract registry + ledger for merged ones.
 
 4. **Apply the remaining 5 dimensions** (plan existence, plan↔implementation parity, contract currency, docs currency, frugality). For each finding capture: severity (blocking | note), artifact reference, what it is, why it matters, remediation.
 
@@ -94,12 +96,12 @@ Remediation: file a plan to add the missing implementation or test.
 
 ### 3. Implementation → plan parity
 
-From git log: identify commits with substantial new behavior not covered by any plan in `docs/features/`. Signs:
-- Merged feature/* branch without a matching `_plan.md`.
-- `feat:` commits directly on main with significant line count.
-- A module or subsystem with observable user-facing behavior and no plan covering it.
+From git log: identify commits with substantial new behavior that **no feature in the inventory covers**. Under the O(1) lifecycle a merged feature's `_plan.md` has **evaporated to git** (`### One transient dossier per in-flight feature` in `workflow/state.md`), so a merged feature is **not** an orphan merely because its plan file is gone — it is an orphan only when **nothing records it as a planned feature** (no ledger entry, and no surviving plan for in-flight work). Signs:
+- Merged feature/* branch whose topic appears in **neither** the `docs/product-map.md` ledger **nor** a surviving in-flight `_plan.md` (a genuinely unrecorded feature — not one whose plan merely evaporated).
+- `feat:` commits directly on main with significant line count and no inventory entry.
+- A module or subsystem with observable user-facing behavior and no feature in the inventory covering it.
 
-Each orphaned implementation = **blocking**. Remediation: retroactive `/pm-plan <topic>`.
+Each orphaned implementation = **blocking**. Remediation: retroactive `/pm-plan <topic>` (write what was built).
 
 ### 4. Contract currency
 
@@ -119,7 +121,7 @@ For every `.ai-pm/contracts/<feature>.md`:
   - Once the map exists, re-derive it from source (`.ai-pm/contracts/` + git) and compare **by content**, not by byte format; do not trust the existing file. The re-derivation source matches the **Product map generation procedure** in `pm-bootstrap` — the durable contract registry plus git history; it deliberately does **not** read `docs/features/` or `.ai-pm/reviews/`, because under the O(1) lifecycle those evaporate to git on merge and the map is the ledger that survives them. Feature rows are read from the per-contract table under the `Built by:` label (in an old-format map the same table sits directly under the `Guarantees:` line, or under the pre-English-canonical `Чем построено:` label — read it either way). The value lines (`- **User value:**` / `- **Out of scope:**`, or the pre-English-canonical `Что даёт:` / `Границы:`) are **not** a required-presence content check: their absence is never a stale-map finding, and the auditor must not police their prose.
   - **Structural token note (non-blocking).** A map value line — `- **User value:**` or `- **Out of scope:**` — carries a **wire-token** (topic path — a leading-slash MQTT-style topic like `/devices/.../on`, **not** a relative `docs/architecture.md` `## Behavioral contract` reference, which is never flagged; `<x>_<y>` grammar `matter_export_<…>`, dotted config key `bridge.*` / `mqtt.socketPath`, protocol flag `retain` / `QoS`, raw value-range `0..254`) → **note** (structural). Domain vocabulary (`DimmableLight`, `Matter`, `fabric`) is **never** flagged. The leak originates in the contract the line projects; remediation is the same contract two-layer migration (`### Pending-migration detection` in `MIGRATIONS.md`). **This is the same structural shape-match as in the contract dimension above — a match on token shapes, never a judgment of prose meaning or quality.** It is fully consistent with the no-prose-policing rule on the value-lines content check just above (which still holds for *presence/wording*): this note matches only wire-token *shapes*, it never validates intent or prose.
   - A contract in `.ai-pm/contracts/` not rendered under any component → **note** (stale map).
-  - A feature plan in `docs/features/` appearing neither under a contract's table nor in the `## Infrastructure (no user-facing contract)` bucket → **note** (stale map).
+  - A feature in the inventory (from git + the ledger — **not** the evaporated `docs/features/`, which survives only for in-flight work) appearing neither under a contract's `Built by:` table nor in the `## Infrastructure (no user-facing contract)` bucket → **note** (stale map).
   - A contract's `Built/changed by` list out of sync with the features that actually touched it → **note**.
   - A feature row in the `Built by:` ledger missing its `Added` date (a `—` placeholder where git yields a landing date) → **note**. The map is a **name + date** ledger — it carries **no** `Review` link column and **no** `Done` date-of-review column (those targets evaporate to git under the O(1) lifecycle), so there is no link-integrity or review-date sub-check to run against it.
   - A contract grouped under a component that doesn't match `docs/architecture.md` → **note**.
@@ -172,7 +174,7 @@ All five are **note**-severity smells (subject only to the dimension-wide two-co
 
 **Scale-guard → shard remediation.** When the **size** signal trips the **scale-guard threshold** (a standing doc grown past the soft size target by a wide margin — the doc no longer fits in one readable pass), flag it for **shard**: split it into a **thin-core + on-demand sub-files** — the same progressive-disclosure pattern `WORKFLOW.md` applies (a thin constitution + router that reads its topic files on demand). The remediation is to **spawn `pm-architect` to perform the shard as a compaction** (the doc-owner does the split; the auditor only flags) — the same remediation-points-at-`pm-architect` shape every docs-currency finding uses. Surface this as a **note** with the shard remediation named.
 
-**Git-aware graduation check (load-bearing — the structural twin of the pre-ship Step-6 graduation gate).** For **every merged feature** in the inventory (built from `git log` + `docs/features/*_plan.md` in step 2 — the same inventory the other dimensions use), assert its **durable knowledge is present in the living reference**: each durable bit graduated into one of the four `### Graduation targets` homes (`workflow/doc-style.md`) — a decision → a decision record in `docs/architecture.md`; a contract → `.ai-pm/contracts/`; a deferred finding → `.ai-pm/backlog.md`; a new stack rule → `docs/stack-notes.md`.
+**Git-aware graduation check (load-bearing — the structural twin of the pre-ship Step-6 graduation gate).** For **every merged feature** in the inventory (built from `git log` + the `docs/product-map.md` ledger in step 2 — the durable merged-feature list; a merged feature's `docs/features/*_plan.md` has evaporated to git, so it is **not** an inventory source here — same inventory the other dimensions use), assert its **durable knowledge is present in the living reference**: each durable bit graduated into one of the four `### Graduation targets` homes (`workflow/doc-style.md`) — a decision → a decision record in `docs/architecture.md`; a contract → `.ai-pm/contracts/`; a deferred finding → `.ai-pm/backlog.md`; a new stack rule → `docs/stack-notes.md`.
 
 Verify this **git-aware**: read `git log` + the standing docs themselves — **NOT** N per-feature evidence files (under the O(1) model those no longer exist; the dossier evaporated on merge). A merged feature whose dossier evaporated **without** graduating its durable bits is **silent knowledge loss** — the only copy went to git and nothing re-reads it as canon → **blocking** (this is the one frugality finding that is blocking, not a note; it is the recover/backstop half of the prevent-and-recover twin, the only gate that still works once the dossier is gone).
 
@@ -194,13 +196,14 @@ For `scope: diff`, prefix the heading with `(diff scope)`:
 ## Contract check
 
 Fill this table for EVERY feature in the inventory before writing Blocking/Notes.
-Extract the subject of the first sentence of each scenario — do not infer from feature name or category.
+For an **in-flight** feature (plan survives) extract the subject of the first sentence of each scenario — do not infer from feature name or category. For a **MERGED** feature (plan evaporated to git per the O(1) model) the row sources from the durable contract registry + the ledger; record `n/a (plan evaporated — sourced from contract registry)` in the subject column rather than a fabricated subject.
 
 | Feature | Scenario 1 subject | Needs contract | Contract file |
 |---|---|---|---|
-| <topic> | <first noun from scenario 1> | yes / no | present / MISSING / n/a |
+| <topic, in-flight> | <first noun from scenario 1> | yes / no | present / MISSING / n/a |
+| <topic, merged> | n/a (plan evaporated — sourced from contract registry) | yes / no | present / n/a |
 
-Rule: subject is a human role (integrator, operator, user, admin, developer, …) → `yes`. Subject is a system/process/file → `no`. Every `yes` + `MISSING` row → **blocking**.
+Rule (in-flight): subject is a human role (integrator, operator, user, admin, developer, …) → `yes`. Subject is a system/process/file → `no`. Every `yes` + `MISSING` row → **blocking**. For a merged feature the contract registry is the source of truth — a contract present ⇒ `yes` / `present`; no contract and no human-role surface in the ledger ⇒ `no` / `n/a`.
 
 ## Blocking
 

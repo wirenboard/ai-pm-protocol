@@ -280,13 +280,22 @@ fi
 #   (b) the product-map RE-DERIVE source list is .ai-pm/contracts/ + git ONLY —
 #       it no longer names docs/features/ or .ai-pm/reviews/ as re-derivation
 #       sources (matching the updated generation procedure in pm-bootstrap).
+#   (c) step 3 (the contract-check table) sources a MERGED feature's row from the
+#       durable contract registry + the ledger (the merged plan has EVAPORATED to
+#       git — there is no plan file to open), keeping the in-flight arm that opens
+#       the surviving _plan.md and reads scenario 1.
+#   (d) dimension 5 matches the name+date `| Feature | Added |` ledger shape (no
+#       Review link column, no Done review-date column), and its stale-map "feature
+#       not rendered" sub-check sources from git + the ledger, NOT the evaporated
+#       docs/features/.
 # This pins the reconciliation so a future edit cannot silently re-source the
-# inventory / map from the now-evaporating per-feature evidence files.
+# inventory / map / contract-check from the now-evaporating per-feature evidence
+# files, nor re-introduce the old map shape.
 #
-# We extract the inventory-building step (the "merged-feature inventory comes from"
-# sentence) and the product-map re-derive bullet (the "re-derive it from source"
-# line) and assert the new sourcing. Non-vacuity: restoring the OLD re-derive
-# source list (which named docs/features/ + .ai-pm/reviews/) trips the check.
+# We extract the inventory-building step, the product-map re-derive bullet, step 3,
+# and dimension 5 from the auditor body and assert the new sourcing/shape.
+# Non-vacuity: restoring the OLD re-derive source list (which named docs/features/ +
+# .ai-pm/reviews/) trips (b); stripping the step-3 MERGED-arm wording trips (c).
 # ----------------------------------------------------------------------
 ierrs=""
 
@@ -319,8 +328,46 @@ printf '%s' "$SRCLIST" | grep -qF 'docs/features/' \
 printf '%s' "$SRCLIST" | grep -qF '.ai-pm/reviews/' \
     && ierrs="$ierrs\n  - product-map re-derive source list STILL names the evaporated .ai-pm/reviews/ as a re-derivation source"
 
+# (c) Step-3 contract-check sourcing: for a MERGED feature the row sources from the
+# durable contract registry + the ledger, NOT the evaporated plan; the plan file is
+# opened ONLY for an in-flight feature. Extract step 3 (the "Fill the contract check
+# table" step, up to the next numbered step "4.") and assert both arms.
+STEP3=$(awk '
+    /^3[.] [*][*]Fill the contract check table/ {grab=1}
+    grab && /^4[.] / {grab=0}
+    grab {print}
+' "$AUDITOR")
+[ -n "$STEP3" ] \
+    || ierrs="$ierrs\n  - could not extract step 3 (the contract-check table step)"
+# The MERGED arm sources from the contract registry (durable home), not the plan.
+printf '%s' "$STEP3" | grep -qi 'MERGED feature.*contract registry\|contract registry.*ledger\|evaporated to git' \
+    || ierrs="$ierrs\n  - step 3 does not source a MERGED feature's contract-check row from the durable contract registry + ledger"
+# It explicitly states the merged plan has evaporated (no plan file to open).
+printf '%s' "$STEP3" | grep -qi 'evaporated to git\|no plan file to open\|plan has .*evaporated' \
+    || ierrs="$ierrs\n  - step 3 does not state a MERGED feature's plan has evaporated (so the plan cannot be opened)"
+# The in-flight arm still opens the plan file (the plan survives on the branch).
+printf '%s' "$STEP3" | grep -qi 'in-flight.*plan survives\|in-flight.*open.*_plan.md\|open .*_plan.md.*scenario 1' \
+    || ierrs="$ierrs\n  - step 3 does not keep the in-flight arm (open the surviving plan file, read scenario 1)"
+# It names the O(1) lifecycle model by its single home.
+printf '%s' "$STEP3" | grep -qF 'One transient dossier per in-flight feature' \
+    || ierrs="$ierrs\n  - step 3 does not reference the O(1) lifecycle model in workflow/state.md"
+
+# (d) Dimension 5 stale-map shape: the ledger is a name+date `| Feature | Added |`
+# shape with NO `Review` link column and NO `Done` review-date column; the
+# now-evaporated-plan stale-map sub-check sources from the ledger, not docs/features/.
+DIM5=$(dim_section "$AUDITOR" '^### 5[.] Docs currency' '^### 6[.]')
+[ -n "$DIM5" ] \
+    || ierrs="$ierrs\n  - could not extract dimension 5 (docs currency)"
+# The ledger shape is name+date with no Review/Done column.
+printf '%s' "$DIM5" | grep -qi 'name . date ledger\|name + date\|no .*Review.* column\|no .*Done.* .*column' \
+    || ierrs="$ierrs\n  - dimension 5 does not describe the ledger as a name+date shape with no Review/Done column"
+# The stale-map "feature not rendered" sub-check sources from git + the ledger, NOT
+# the evaporated docs/features/.
+printf '%s' "$DIM5" | grep -qi 'from git . the ledger.*not.*the evaporated\|not.*the evaporated.*docs/features/' \
+    || ierrs="$ierrs\n  - dimension 5 stale-map sub-check still sources from the evaporated docs/features/ instead of git + the ledger"
+
 if [ -z "$ierrs" ]; then
-    pass "auditor-inventory-from-ledger: the merged-feature inventory is sourced from git + the docs/product-map.md ledger (plan files read only for in-flight work), and the product-map re-derive source list is .ai-pm/contracts/ + git only (docs/features/ + .ai-pm/reviews/ dropped)"
+    pass "auditor-inventory-from-ledger: the merged-feature inventory is sourced from git + the docs/product-map.md ledger (plan files read only for in-flight work); the product-map re-derive source list is .ai-pm/contracts/ + git only (docs/features/ + .ai-pm/reviews/ dropped); step 3 sources a MERGED feature's contract-check row from the contract registry + ledger (not its evaporated plan), keeping the in-flight open-the-plan arm; and dimension 5 matches the name+date ledger shape (no Review/Done column, stale-map check off the ledger not docs/features/)"
 else
     fail "auditor-inventory-from-ledger: the inventory/map O(1) re-sourcing is not fully wired:$(printf '%b' "$ierrs")"
 fi
@@ -335,6 +382,23 @@ if printf '%s' "$NV_SRCLIST" | grep -qF 'docs/features/'; then
     pass "auditor-inventory-from-ledger-nonvacuous: restoring the OLD re-derive source list (naming docs/features/ + .ai-pm/reviews/) trips the (b) source check (the assertion reads the real re-derive line)"
 else
     fail "auditor-inventory-from-ledger-nonvacuous: restoring the OLD re-derive source list did NOT trip the (b) check — the assertion is vacuous"
+fi
+
+# Non-vacuity for (c): a copy of the auditor body whose step-3 MERGED-arm wording is
+# stripped (the "contract registry" + "evaporated to git" cues removed) must trip the
+# step-3 (c) check — proving the grep reads the real reconciled step 3, not a vacuous
+# always-true. We neutralize the registry/evaporated cues that the merged arm adds.
+NV_STEP3="$SCRATCH/pm-auditor-step3-novacuum.body.md"
+sed 's/contract registry/PLAN-FILE/g; s/evaporated to git/still on disk/g' "$AUDITOR" > "$NV_STEP3"
+NV_S3=$(awk '
+    /^3[.] [*][*]Fill the contract check table/ {grab=1}
+    grab && /^4[.] / {grab=0}
+    grab {print}
+' "$NV_STEP3")
+if printf '%s' "$NV_S3" | grep -qi 'MERGED feature.*contract registry\|contract registry.*ledger\|evaporated to git'; then
+    fail "auditor-inventory-from-ledger-step3-nonvacuous: stripping the step-3 MERGED-arm wording (contract registry / evaporated) did NOT neutralize the (c) check — the assertion is vacuous"
+else
+    pass "auditor-inventory-from-ledger-step3-nonvacuous: removing the step-3 MERGED-arm wording trips the (c) check (the assertion reads the real reconciled step 3, not a vacuous always-true)"
 fi
 
 # ----------------------------------------------------------------------
