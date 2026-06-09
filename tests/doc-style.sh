@@ -355,9 +355,17 @@ grep -qi 'file-sprawl'                 "$AUD" || afderrs="$afderrs\n  - pm-audit
 # Size keyed to the doc-style numbers home by name (single-home, not re-encoded).
 grep -qF '### Numbers = targets, not gates' "$AUD" || afderrs="$afderrs\n  - pm-auditor size smell does not reference '### Numbers = targets, not gates' by name"
 grep -qF 'workflow/doc-style.md'       "$AUD" || afderrs="$afderrs\n  - pm-auditor does not point at workflow/doc-style.md"
-# The carried plain-language readability-grade smell, referencing the named rule.
+# The carried plain-language readability-grade smell. Its numeric target's single
+# home is `### Numbers = targets, not gates` (referenced by name, number not
+# re-encoded); `### Plain language / human-readable` defines WHAT readability is.
 grep -qi 'readability-grade\|readability grade\|Flesch' "$AUD" || afderrs="$afderrs\n  - pm-auditor is missing the measurable readability-grade smell"
-grep -qF '### Plain language / human-readable' "$AUD" || afderrs="$afderrs\n  - pm-auditor readability smell does not reference '### Plain language / human-readable' by name"
+grep -qF '### Plain language / human-readable' "$AUD" || afderrs="$afderrs\n  - pm-auditor readability smell does not reference '### Plain language / human-readable' for what readability means"
+# The readability smell must source its target from the numbers home, not hardcode
+# it — assert the smell region references '### Numbers = targets, not gates' and
+# carries no inline grade number (the drift the single-home fix removed).
+readregion=$(awk '/[Rr]eadability-grade/{f=1} f' "$AUD")
+printf '%s\n' "$readregion" | grep -qF '### Numbers = targets, not gates' || afderrs="$afderrs\n  - pm-auditor readability smell does not source its target from '### Numbers = targets, not gates'"
+printf '%s\n' "$readregion" | grep -qE 'grade.{0,4}9|9.{0,3}10|≤ ~9' && afderrs="$afderrs\n  - pm-auditor readability smell re-encodes an inline grade number (should reference the numbers home instead)"
 # It must frame readability as a metric, NOT prose-policing.
 grep -qi 'not.*prose-policing\|never.*prose-policing\|NOT.*prose-policing' "$AUD" || afderrs="$afderrs\n  - pm-auditor does not frame the frugality dimension as structure-not-prose"
 # Scale-guard -> shard, remediation = pm-architect compaction.
@@ -450,7 +458,7 @@ if ! grep -qiE 'without graduating.*blocking|never graduat.*blocking|silent know
     # Fall back to a two-line proximity check: the never-graduated phrasing and a
     # `**blocking**` token co-occur in the graduation-check region.
     region=$(awk '/git-aware graduation check/{f=1} f' "$AUD")
-    if printf '%s\n' "$region" | grep -qi 'without graduating' \
+    if printf '%s\n' "$region" | grep -qi 'without.*graduating' \
        && printf '%s\n' "$region" | grep -qi 'blocking'; then
         :
     else
