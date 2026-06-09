@@ -91,6 +91,7 @@ Then create from templates:
 - `.ai-pm/contracts/` directory — Product Contracts get created here as features are planned (one file per user-facing feature)
 - `.ai-pm/research/` directory — research artifacts written by `/pm-research`
 - `.ai-pm/audits/` directory — protocol audit reports
+- Ensure `.ai-pm/tmp/` is git-ignored — append a `.ai-pm/tmp/` line to the project `.gitignore` (creating it if absent). This is the agents' scratch dir; scratch never enters the committed tree.
 
 **Documentation-kind scaffolding (only when Q0 = `documentation`).** On a `documentation`-kind project (`### Project kind` in `workflow/project-kind.md`), the deliverable is one or several human-facing documents, not code. Adjust the scaffolding:
 
@@ -180,6 +181,7 @@ Write minimal docs — enough to start adding features:
 - `docs/product-map.md` — the **generated** map; generate using the **Product map generation procedure** below.
 - `.ai-pm/state/current.md` from `state.md.tmpl` — initial state `Status: idle`
 - `.ai-pm/state/archive/`, `.ai-pm/contracts/`, `.ai-pm/reviews/`, `.ai-pm/arch/`, `.ai-pm/audits/`, `.ai-pm/research/` directories
+- Ensure `.ai-pm/tmp/` is git-ignored — append `.ai-pm/tmp/` to the project `.gitignore` (creating it if absent); the agents' scratch dir never enters the committed tree
 - Optional docs — skip; create only if code clearly requires them (e.g., obvious security constraints)
 
 **Stack literacy onboarding (mandatory, no PM questions).** Once stack components are identified from the code, spawn `pm-stack-researcher` (`subagent_type: "pm-stack-researcher"`) with that list. It fills `docs/stack-notes.md`. Take its "New validators" list and add commands to the Pipeline block in the project entry file. **Wire the AI-specific minimums into the `<lint command>` config** via its AI-minimums→linter-rule mapping (same as the greenfield stack-setup step above — config carries the numbers, never re-declares them; convention-only minimums stay AI-backstopped). Take its "Open questions" — surface to PM as caveats.

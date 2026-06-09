@@ -23,7 +23,7 @@ The protocol has two human roles: the **PM** (describes the product, makes produ
 | 3. | Confirms the plan (and an architecture decision, if a structural question was raised) | If a new part of the stack is involved, its canon is researched and cited; if the feature touches shared state or async behavior, interaction scenarios are added; a Product Contract is drafted for a user-facing feature | A user-facing feature is under-defined → an independent product-readiness gate surfaces the gaps and blocks coding until each is answered or consciously descoped |
 | 4. | Waits while the work happens (does not watch iterations) | The coder implements on the branch and runs the pipeline; a two-pass review loop runs — plan-compliance first, then technical quality — and any findings go back to the coder automatically until both passes are clean | Review finds a bug, a security issue, dead code, or a missed scenario → returned to the coder and re-reviewed; the PM never sees the churn |
 | 5. | Reads the result | Hears, in product terms: what the feature now does, how to try it step by step, and any product notes that need a decision (scope, visible behavior) | A product note appears → the PM decides: fix now, add to backlog, or ignore |
-| 6. | Says how to ship | Offered three ship options — test first (deploy + checklist), open a PR and test before merging, or ship now; the state is archived into the same PR; the PR is opened on the PM's go | PM is not ready → nothing is opened; merge/ship is always the PM's manual action |
+| 6. | Says how to ship | Offered three ship options — test first (deploy + checklist), open a PR and test before merging, or ship now; before the PR opens, the feature's lasting facts are distilled into the living reference and the working notes are dropped (git keeps them); the PR is opened on the PM's go | PM is not ready → nothing is opened; merge/ship is always the PM's manual action |
 | 7. | Merges the PR on the platform | The release is tagged and published automatically from the changelog; main is pulled locally, ready for the next feature | — |
 
 **Drop-off points:** an unclear plan at step 2 (mitigated by plain-language confirmation); too many product-note decisions at once (the system batches and recommends).
@@ -32,7 +32,7 @@ The protocol has two human roles: the **PM** (describes the product, makes produ
 
 - By step 1: the project is bootstrapped (a project entry file and `doc/` exist) and the git tree is clean, or the PM has chosen to continue on an in-progress branch.
 - By step 4: every plan scenario must have both an implementation and a test before the feature can pass plan-compliance; a Product Contract violation blocks the PR.
-- By step 6: a load-bearing review stamp must be written before the PR can be released; merge stays manual.
+- By step 6: a load-bearing review stamp must be written before the PR can be released; the feature's lasting facts must have graduated into the living reference before the working notes are dropped (the pre-ship graduation gate); merge stays manual.
 - The pipeline-step taxonomy (Step 0–7), the two review passes, and the load-bearing review stamp are defined once in `../WORKFLOW.md` and `../workflow/pipeline.md`; this journey references them rather than restating them.
 
 ---
