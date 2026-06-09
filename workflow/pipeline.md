@@ -96,7 +96,9 @@ After the loop clears, I tell you:
 > B) **Open PR, test before merging** — you test from CI artifacts or the branch, then merge.
 > C) **Ship now** — open PR, merge straight away."
 
-Before running `pm-pr-prep`, I archive the state: copy `.ai-pm/state/current.md` to `.ai-pm/state/archive/<topic>-<date>.md`, reset `current.md` to `Status: idle`, and commit both on the feature branch. The archive therefore lands in the same PR as the feature it describes.
+**Before running `pm-pr-prep`, I run the graduation checklist** — a procedural Step-6 gate, not a plugin deny. While the feature dossier (`.ai-pm/features/<topic>.md`) is still on disk, I walk each durable bit in it and confirm it has landed in its permanent home (the closed enum in `### Graduation targets` in `workflow/doc-style.md`): each decision in an architecture decision record, each contract in `.ai-pm/contracts/`, each deferred finding in `.ai-pm/backlog.md`, each new stack rule in stack-notes. Anything not yet graduated is graduated now (or, for a decision, handed to `pm-architect`). This fires here because the dossier is about to stop being maintained: a durable bit not graduated before then is lost silently. The enforcement plugin cannot check this — verifying that a *semantic* durable bit reached its home is beyond a structural deny (the same feasibility limit that deferred the anti-corner-cutting provenance gate) — so it is a checklist I run, with the auditor's git-aware graduation check (it reads git history against the standing docs) as the structural backstop that still works after the dossier is gone.
+
+Then I reset `.ai-pm/state/current.md` to `Status: idle` and commit on the feature branch. The dossier is not archived to a separate directory — git retains its bytes incidentally; nothing re-reads them as canon.
 
 I wait for your answer before running `pm-pr-prep`. After merge: `git checkout main && git pull`.
 

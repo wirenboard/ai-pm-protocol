@@ -6,9 +6,19 @@ One file — `.ai-pm/state/current.md` — holds the live snapshot of the active
 
 This means: if you pause for a week, come back, and re-enter Claude Code, my first move is to open that file and continue. You do not need to re-explain. You can open the file yourself to see where we are, but you don't write to it — agents do.
 
-When a task finishes, the file is archived to `.ai-pm/state/archive/<topic>-<date>.md` and reset to `Status: idle`; the archive is committed on the feature branch as the final step before `pm-pr-prep`, so it merges with the feature it describes.
+When a task finishes, `current.md` resets to `Status: idle`. The prior snapshot is not curated into an archive directory — git already retains it incidentally; we keep no separate `.ai-pm/state/archive/`.
 
-The durable hand-off between agents is what is on disk — `state/current.md`, the review file, any scratch note — not what is in agent memory. `continue-the-same-agent` is an optional optimization: it saves tokens when available and breaks nothing when it is not. The protocol must never depend on it.
+### One transient dossier per in-flight feature
+
+A feature in flight carries **one transient dossier** — `.ai-pm/features/<topic>.md`. It holds the plan, the architecture rationale, and the merged review trail (the plan-compliance, code-review, and advocate sections in one file). There are no separate per-feature plan / review / advocate / arch-note files — one feature, one dossier.
+
+The dossier is **process evidence**: it justifies *getting to* the feature, and once the feature merges it has done its job. On merge, the durable knowledge inside it is distilled out (see below); the dossier then ceases to be a maintained file. Git keeps the bytes for forensics; nothing re-reads them as canon.
+
+### Distill on merge
+
+When a feature merges, its durable knowledge moves out of the dossier into the four permanent homes — the closed enum in `### Graduation targets` in `workflow/doc-style.md` (a decision → an architecture decision record; a contract → `.ai-pm/contracts/`; a deferred finding → `.ai-pm/backlog.md`; a new stack rule → stack-notes). Distillation happens before the dossier stops being maintained: skip it and the durable bit is lost silently when the dossier evaporates, which is worse than bloat. Two checks guard against that miss — a pre-ship checklist at Step 6 (`workflow/pipeline.md`) and the auditor's git-aware graduation check.
+
+The durable hand-off between agents is what is on disk — `state/current.md`, the feature dossier, any scratch note — not what is in agent memory. `continue-the-same-agent` is an optional optimization: it saves tokens when available and breaks nothing when it is not. The protocol must never depend on it.
 
 For user-facing features, a parallel set of files lives in `.ai-pm/contracts/` — one Product Contract per feature, with what must work, what must not break, and the acceptance checks that prove it. Coder reads the contract before implementing; reviewer verifies the diff against it; auditor flags missing or stale contracts. The contract is how we keep a feature recognizable across many small changes — without it, the product slowly drifts.
 
