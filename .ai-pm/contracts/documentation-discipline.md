@@ -44,11 +44,11 @@ The documentation-owning agents (which bootstrap and maintain each doc), the AI 
 
 ## Built/changed by
 
-- [template-v2](../../doc/features/template-v2_plan.md) — the agent/command structure that bootstraps and owns the doc set.
-- [architect-owns-architecture-md](../../doc/features/architect-owns-architecture-md_plan.md) — single ownership of the architecture doc by pm-architect.
-- [legacy-reader-role-split](../../doc/features/legacy-reader-role-split_plan.md) — the drafts-vs-owns split and journeys ownership consolidation under pm-architect.
-- [threat-model-ownership-and-lifecycle](../../doc/features/threat-model-ownership-and-lifecycle_plan.md) — the full threat-model lifecycle owned by pm-architect on security-bearing projects.
-- [doc-migration-on-template-bump](../../doc/features/doc-migration-on-template-bump_plan.md) — PM-collaborative remediation of doc disciplines a new template version introduces.
+- template-v2 — 2026-05-28 — the agent/command structure that bootstraps and owns the doc set.
+- architect-owns-architecture-md — 2026-05-30 — single ownership of the architecture doc by pm-architect.
+- legacy-reader-role-split — 2026-06-04 — the drafts-vs-owns split and journeys ownership consolidation under pm-architect.
+- threat-model-ownership-and-lifecycle — 2026-06-04 — the full threat-model lifecycle owned by pm-architect on security-bearing projects.
+- doc-migration-on-template-bump — 2026-06-04 — PM-collaborative remediation of doc disciplines a new template version introduces.
 
 ---
 

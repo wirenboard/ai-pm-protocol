@@ -47,10 +47,10 @@ The orchestrating AI agent (which classifies each fork and decides resolve-or-es
 
 ## Built/changed by
 
-- [automode](../../doc/features/automode_plan.md) — the `autonomous | interactive` mode, the derivability test, the escalate-cap, announce-before-act, the dual citation backstop, and merge-always-manual.
-- [automode-procedural-gates](../../doc/features/automode-procedural-gates_plan.md) — announce-and-proceed through routine procedural checkpoints, derive-or-escalate only at genuine product forks.
-- [pm-decision-via-askuserquestion](../../doc/features/pm-decision-via-askuserquestion_plan.md) — surfacing substantive forks to the PM via the structured-question tool.
-- [pm-product-advocate](../../doc/features/pm-product-advocate_plan.md) — the product-readiness gate whose gap output the authority engine routes.
+- automode — 2026-06-04 — the `autonomous | interactive` mode, the derivability test, the escalate-cap, announce-before-act, the dual citation backstop, and merge-always-manual.
+- automode-procedural-gates — 2026-06-04 — announce-and-proceed through routine procedural checkpoints, derive-or-escalate only at genuine product forks.
+- pm-decision-via-askuserquestion — 2026-06-03 — surfacing substantive forks to the PM via the structured-question tool.
+- pm-product-advocate — 2026-06-04 — the product-readiness gate whose gap output the authority engine routes.
 
 ---
 

@@ -45,8 +45,8 @@ The product advocate (the independent referee that finds the gaps), the orchestr
 
 ## Built/changed by
 
-- [pm-product-advocate](../../doc/features/pm-product-advocate_plan.md) — the independent product referee, the Step 3.5 gate, the `gaps: N` / `clean` verdict, the owner-split-with-gate, and the two backstops.
-- [integrate-consultancy](../../doc/features/integrate-consultancy_plan.md) — the foundational-questions and contract groundwork the gate matches against.
+- pm-product-advocate — 2026-06-04 — the independent product referee, the Step 3.5 gate, the `gaps: N` / `clean` verdict, the owner-split-with-gate, and the two backstops.
+- integrate-consultancy — 2026-05-30 — the foundational-questions and contract groundwork the gate matches against.
 
 ---
 

@@ -44,10 +44,10 @@ Every AI agent (confined to the project root and to the git change channel), and
 
 ## Built/changed by
 
-- [protocol-integrity-and-stack-literacy](../../doc/features/protocol-integrity-and-stack-literacy_plan.md) — early structural-gap closure including boundary integrity.
-- [protocol-builtins-realignment](../../doc/features/protocol-builtins-realignment_plan.md) — the enforcement-layer guards including the path-boundary and ssh-content-edit denies.
-- [orchestrator-read-discipline](../../doc/features/orchestrator-read-discipline_plan.md) — read-discipline within the boundary.
-- [agent-reporting-discipline](../../doc/features/agent-reporting-discipline_plan.md) — the verify-or-stay-silent and lane-discipline reporting rules that keep boundary/VCS claims honest.
+- protocol-integrity-and-stack-literacy — 2026-05-30 — early structural-gap closure including boundary integrity.
+- protocol-builtins-realignment — 2026-06-02 — the enforcement-layer guards including the path-boundary and ssh-content-edit denies.
+- orchestrator-read-discipline — 2026-06-05 — read-discipline within the boundary.
+- agent-reporting-discipline — 2026-06-06 — the verify-or-stay-silent and lane-discipline reporting rules that keep boundary/VCS claims honest.
 
 ---
 

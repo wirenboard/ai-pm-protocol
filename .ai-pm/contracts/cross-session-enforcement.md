@@ -45,10 +45,10 @@ The AI agent (whose tool calls pass through the guards), and the PM (who gets du
 
 ## Built/changed by
 
-- [protocol-integrity-and-stack-literacy](../../doc/features/protocol-integrity-and-stack-literacy_plan.md) — early structural-gap closure feeding the enforcement layer.
-- [protocol-builtins-realignment](../../doc/features/protocol-builtins-realignment_plan.md) — the `wb-*` role-duplicator deny-list with built-ins explicitly not gated.
-- [bootstrap-write-loss-guards](../../doc/features/bootstrap-write-loss-guards_plan.md) — the empty-write truncation guard.
-- [deny-review-orchestrator](../../doc/features/deny-review-orchestrator_plan.md) — the per-diff review-engine routing discipline (and its later reframe off a hard deny).
+- protocol-integrity-and-stack-literacy — 2026-05-30 — early structural-gap closure feeding the enforcement layer.
+- protocol-builtins-realignment — 2026-06-02 — the `wb-*` role-duplicator deny-list with built-ins explicitly not gated.
+- bootstrap-write-loss-guards — 2026-06-06 — the empty-write truncation guard.
+- deny-review-orchestrator — 2026-06-05 — the per-diff review-engine routing discipline (and its later reframe off a hard deny).
 
 ---
 

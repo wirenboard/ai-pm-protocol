@@ -43,9 +43,9 @@ The plan-compliance checker (which verifies the diff against the plan), the AI c
 
 ## Built/changed by
 
-- [integrate-consultancy](../../doc/features/integrate-consultancy_plan.md) — the Definition-of-Done subsection with its hard checks and explicit verdict token.
-- [protocol-integrity-and-stack-literacy](../../doc/features/protocol-integrity-and-stack-literacy_plan.md) — the categorical scope check that blocks silent scope deformation.
-- [optimize-without-losing-rigor](../../doc/features/optimize-without-losing-rigor_plan.md) — the dimension consolidation and change-type matrix the DoD scopes against.
+- integrate-consultancy — 2026-05-30 — the Definition-of-Done subsection with its hard checks and explicit verdict token.
+- protocol-integrity-and-stack-literacy — 2026-05-30 — the categorical scope check that blocks silent scope deformation.
+- optimize-without-losing-rigor — 2026-05-30 — the dimension consolidation and change-type matrix the DoD scopes against.
 
 ---
 

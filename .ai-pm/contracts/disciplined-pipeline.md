@@ -44,10 +44,10 @@ The orchestrating AI agent (which must move every change through the named steps
 
 ## Built/changed by
 
-- [template-v2](../../doc/features/template-v2_plan.md) — the v2 rewrite that established the agent/command pipeline shape.
-- [integrate-consultancy](../../doc/features/integrate-consultancy_plan.md) — Execution State, Product Contracts, and the explicit Definition of Done subsection.
-- [review-stamp-gate](../../doc/features/review-stamp-gate_plan.md) — the load-bearing, gate-not-discipline review stamp.
-- [optimize-without-losing-rigor](../../doc/features/optimize-without-losing-rigor_plan.md) — the change-type matrix and the `/pm-fixup` trivial fast path.
+- template-v2 — 2026-05-28 — the v2 rewrite that established the agent/command pipeline shape.
+- integrate-consultancy — 2026-05-30 — Execution State, Product Contracts, and the explicit Definition of Done subsection.
+- review-stamp-gate — 2026-06-04 — the load-bearing, gate-not-discipline review stamp.
+- optimize-without-losing-rigor — 2026-05-30 — the change-type matrix and the `/pm-fixup` trivial fast path.
 
 ---
 

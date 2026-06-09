@@ -43,13 +43,13 @@ The AI coder (which must not break a recorded promise without a plan that explic
 
 ## Built/changed by
 
-- [integrate-consultancy](../../doc/features/integrate-consultancy_plan.md) — Product Contracts as the product-side complement to stack-notes; the must-work / must-not-break shape.
-- [contract-two-layer-token-lint](../../doc/features/contract-two-layer-token-lint_plan.md) — the migrate-without-dropping-a-guarantee block and the token-free PM layer.
-- [nfr-operational-limits-prompt](../../doc/features/nfr-operational-limits-prompt_plan.md) — user-facing quantified limits homed as must-not-break invariants.
-- [contract-centric-product-map](../../doc/features/contract-centric-product-map_plan.md) — contracts as the source of truth, with the per-feature artifact check as a DoD/auditor backstop.
+- integrate-consultancy — 2026-05-30 — Product Contracts as the product-side complement to stack-notes; the must-work / must-not-break shape.
+- contract-two-layer-token-lint — 2026-06-03 — the migrate-without-dropping-a-guarantee block and the token-free PM layer.
+- nfr-operational-limits-prompt — 2026-06-04 — user-facing quantified limits homed as must-not-break invariants.
+- contract-centric-product-map — 2026-06-02 — contracts as the source of truth, with the per-feature artifact check as a DoD/auditor backstop.
 
 ---
 
 ## Behavioral contract
 
-The regression-protection rules are single-sourced, not restated here: the contract shape and its check wiring in `doc/_templates/contract.md.tmpl`; the contract lifecycle and one-per-feature rule in `doc/architecture.md` § "Product Contracts as the product-side complement to stack-notes"; the two-layer / migrate-without-loss discipline in `doc/architecture.md` § "Contracts are two-layer" and `doc/features/contract-two-layer-token-lint_plan.md`.
+The regression-protection rules are single-sourced, not restated here: the contract shape and its check wiring in `doc/_templates/contract.md.tmpl`; the contract lifecycle and one-per-feature rule in `doc/architecture.md` § "Product Contracts as the product-side complement to stack-notes"; the two-layer / migrate-without-loss discipline in `doc/architecture.md` § "Contracts are two-layer".

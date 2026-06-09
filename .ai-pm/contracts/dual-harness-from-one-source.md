@@ -45,8 +45,8 @@ The AI agent (which loads the generated adapter for its harness), and the PM/mai
 
 ## Built/changed by
 
-- [opencode-harness-support](../../doc/features/opencode-harness-support_plan.md) — the build-time single-source two-repo split, the generator, both adapters, the byte-equivalence integrity checks, and the OpenCode preview labeling.
-- [harness-neutral-prose](../../doc/features/harness-neutral-prose_plan.md) — the neutral-noun instruction prose and the harness-reference resolution table.
+- opencode-harness-support — 2026-06-07 — the build-time single-source two-repo split, the generator, both adapters, the byte-equivalence integrity checks, and the OpenCode preview labeling.
+- harness-neutral-prose — 2026-06-07 — the neutral-noun instruction prose and the harness-reference resolution table.
 
 ---
 

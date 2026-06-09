@@ -44,9 +44,9 @@ The orchestrating AI agent (which resolves and pins the review/audit model), and
 
 ## Built/changed by
 
-- [cross-model-review](../../doc/features/cross-model-review_plan.md) — the cross-model model settings, the opinionated default, the Haiku blacklist, the model-pinned subagent, the per-review announce, and graceful fallback.
-- [review-typology-framework](../../doc/features/review-typology-framework_plan.md) — the review-type registry the cross-model axis is orthogonal to and named beside.
-- [review-engine-selection](../../doc/features/review-engine-selection_plan.md) — the which-engine axis distinguished from the which-model axis.
+- cross-model-review — 2026-06-06 — the cross-model model settings, the opinionated default, the Haiku blacklist, the model-pinned subagent, the per-review announce, and graceful fallback.
+- review-typology-framework — 2026-06-05 — the review-type registry the cross-model axis is orthogonal to and named beside.
+- review-engine-selection — 2026-06-05 — the which-engine axis distinguished from the which-model axis.
 
 ---
 
