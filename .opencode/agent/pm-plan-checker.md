@@ -61,14 +61,14 @@ Every scenario in the plan's **Scenarios** section must be implemented and have 
 
 ### Standing-doc hard-cap (blocking)
 
-When the plan under review **updates a standing doc** — `docs/architecture.md` (or a decision record in it), the README, a navigation/router list, or a top quality-goals list — verify the update against the **enforceable hard-cap set** in `### Numbers = targets, not gates` in `workflow/doc-style.md` (reference it by name; do not re-encode the rule). The four caps are the **only** gate-able numbers:
+When the plan under review **updates a standing doc** — `docs/architecture.md` (or a decision record in it), the README, a navigation/router list, or a top quality-goals list — verify the update against the **enforceable hard-cap set** defined in `### Numbers = targets, not gates` in `workflow/doc-style.md`. Apply the thresholds **as defined there** (read the section on demand for the live values — do not re-encode them here, so they cannot drift). The four caps named by subject are the **only** gate-able numbers:
 
-- README one-liner **≤ 120 chars**
-- a decision record **≤ ~2 screens**
-- a navigation list **≤ 7 entries**
-- top quality-goals **≤ 5**
+- the README one-liner length cap
+- the decision-record length cap
+- the navigation-list length cap
+- the top quality-goals count cap
 
-An update that pushes one of these four over its cap → **blocking** (reproduce the cap and the measured value in the verdict). **Every other frugality number is an authoring target / auditor smell, not a plan-checker block** — do NOT turn the soft smells (section length, comment density, file sprawl) into blocks here; those surface at authoring (review note) and audit, per the same rule. This is a presence-of-violation check against four named caps, not prose-policing.
+An update that pushes one of these four over the cap defined in `### Numbers = targets, not gates` → **blocking** (reproduce the cap and the measured value in the verdict). **Every other frugality number is an authoring target / auditor smell, not a plan-checker block** — do NOT turn the soft smells (section length, comment density, file sprawl) into blocks here; those surface at authoring (review note) and audit, per the same rule. This is a presence-of-violation check against four named caps, not prose-policing.
 
 ### Interaction scenario coverage
 
