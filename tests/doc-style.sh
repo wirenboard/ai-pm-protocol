@@ -39,6 +39,24 @@
 #     by REFERENCE, not duplication: the template Comment-restraint section names
 #     doc-style.md as the single source it realizes.
 #
+#   auditor-frugality-dimension (Slice C, scenarios 7-9)
+#     pm-auditor.body.md carries the size/node-density/lost-in-the-middle/
+#     file-sprawl frugality smells + the carried plain-language readability-grade
+#     smell (referencing `### Plain language / human-readable`), the git-aware
+#     graduation check (referencing `### Graduation targets`), and the scale-guard
+#     shard flag; pm-audit.body.md lists the shard/compaction remediation. All
+#     measurable structure, never prose-policing. NON-VACUITY included.
+#
+#   audit-mixed-project (Slice C interaction scenario)
+#     the auditor body states the git-aware graduation check tolerates a mixed
+#     old/new project — presence-in-a-home (EITHER an old per-feature file OR the
+#     living reference), never absence-of-old-files — so it cannot false-block
+#     mid-migration. NON-VACUITY included.
+#
+#   graduation-check-blocking (Slice C, scenario 9)
+#     the auditor marks a never-graduated merged feature as BLOCKING (not a note);
+#     the other frugality smells stay note-severity.
+#
 # Exit code: 0 if every case matches expectation, 1 if any case fails.
 # One line per case is printed: "PASS: ..." or "FAIL: ...".
 #
@@ -62,13 +80,15 @@ STACK="$ROOT/src/agents/pm-stack-researcher.body.md"
 CODER="$ROOT/src/agents/pm-coder.body.md"
 CR="$ROOT/src/manifests/opencode/harness_local/body/code-review.body.md"
 PLANCHK="$ROOT/src/agents/pm-plan-checker.body.md"
+AUD="$ROOT/src/agents/pm-auditor.body.md"
+AUDSKILL="$ROOT/src/commands/pm-audit.body.md"
 
 PASS_COUNT=0
 FAIL_COUNT=0
 pass() { echo "PASS: $1"; PASS_COUNT=$((PASS_COUNT + 1)); }
 fail() { echo "FAIL: $1"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
 
-for f in "$WF" "$PMC" "$TMPL" "$ARCH" "$STACK" "$CODER" "$CR" "$PLANCHK"; do
+for f in "$WF" "$PMC" "$TMPL" "$ARCH" "$STACK" "$CODER" "$CR" "$PLANCHK" "$AUD" "$AUDSKILL"; do
     [ -f "$f" ] || { echo "FAIL: required file missing at $f" >&2; exit 1; }
 done
 
@@ -317,6 +337,142 @@ if grep -qi 'README one-liner' "$SCRATCH/pc-stripped.md" \
     fail "plan-checker-hardcaps-nonvacuous: stripping the cap-subject name + the '### Numbers = targets, not gates' reference did NOT remove the substantive content the production test greps — the check is vacuous"
 else
     pass "plan-checker-hardcaps-nonvacuous: removing the cap-subject name + the '### Numbers = targets, not gates' reference trips the production presence greps (the check depends on the shipped substantive content, not a heading)"
+fi
+
+# ----------------------------------------------------------------------
+# auditor-frugality-dimension (Slice C, scenarios 7-9; with non-vacuity)
+# pm-auditor.body.md must carry the frugality dimension (size / node-density /
+# lost-in-the-middle / file-sprawl) + the carried plain-language readability smell
+# (referencing `### Plain language / human-readable`) + the git-aware graduation
+# check + the scale-guard shard flag; pm-audit.body.md must list the
+# shard/compaction remediation. All measurable structure, never prose-policing.
+# ----------------------------------------------------------------------
+afderrs=""
+# The four frugality smells.
+grep -qi 'node-density'                "$AUD" || afderrs="$afderrs\n  - pm-auditor is missing the node-density frugality smell"
+grep -qi 'lost-in-the-middle'          "$AUD" || afderrs="$afderrs\n  - pm-auditor is missing the lost-in-the-middle frugality smell"
+grep -qi 'file-sprawl'                 "$AUD" || afderrs="$afderrs\n  - pm-auditor is missing the file-sprawl frugality smell"
+# Size keyed to the doc-style numbers home by name (single-home, not re-encoded).
+grep -qF '### Numbers = targets, not gates' "$AUD" || afderrs="$afderrs\n  - pm-auditor size smell does not reference '### Numbers = targets, not gates' by name"
+grep -qF 'workflow/doc-style.md'       "$AUD" || afderrs="$afderrs\n  - pm-auditor does not point at workflow/doc-style.md"
+# The carried plain-language readability-grade smell. Its numeric target's single
+# home is `### Numbers = targets, not gates` (referenced by name, number not
+# re-encoded); `### Plain language / human-readable` defines WHAT readability is.
+grep -qi 'readability-grade\|readability grade\|Flesch' "$AUD" || afderrs="$afderrs\n  - pm-auditor is missing the measurable readability-grade smell"
+grep -qF '### Plain language / human-readable' "$AUD" || afderrs="$afderrs\n  - pm-auditor readability smell does not reference '### Plain language / human-readable' for what readability means"
+# The readability smell must source its target from the numbers home, not hardcode
+# it — assert the smell region references '### Numbers = targets, not gates' and
+# carries no inline grade number (the drift the single-home fix removed).
+readregion=$(awk '/[Rr]eadability-grade/{f=1} f' "$AUD")
+printf '%s\n' "$readregion" | grep -qF '### Numbers = targets, not gates' || afderrs="$afderrs\n  - pm-auditor readability smell does not source its target from '### Numbers = targets, not gates'"
+printf '%s\n' "$readregion" | grep -qE 'grade.{0,4}9|9.{0,3}10|≤ ~9' && afderrs="$afderrs\n  - pm-auditor readability smell re-encodes an inline grade number (should reference the numbers home instead)"
+# It must frame readability as a metric, NOT prose-policing.
+grep -qi 'not.*prose-policing\|never.*prose-policing\|NOT.*prose-policing' "$AUD" || afderrs="$afderrs\n  - pm-auditor does not frame the frugality dimension as structure-not-prose"
+# Scale-guard -> shard, remediation = pm-architect compaction.
+grep -qi 'scale-guard'                 "$AUD" || afderrs="$afderrs\n  - pm-auditor is missing the scale-guard threshold"
+grep -qi 'shard'                       "$AUD" || afderrs="$afderrs\n  - pm-auditor does not flag a scale-tripped doc for shard"
+grep -qi 'thin-core\|thin core'        "$AUD" || afderrs="$afderrs\n  - pm-auditor shard flag does not name the thin-core + on-demand pattern"
+# The git-aware graduation check, referencing the four graduation homes by name.
+grep -qi 'graduation check'            "$AUD" || afderrs="$afderrs\n  - pm-auditor is missing the graduation check"
+grep -qi 'git-aware'                   "$AUD" || afderrs="$afderrs\n  - pm-auditor graduation check is not git-aware"
+grep -qF '### Graduation targets'      "$AUD" || afderrs="$afderrs\n  - pm-auditor graduation check does not reference '### Graduation targets' by name"
+# The skill lists the shard/compaction remediation.
+grep -qi 'shard'                       "$AUDSKILL" || afderrs="$afderrs\n  - pm-audit skill does not list the shard remediation"
+grep -qi 'compaction'                  "$AUDSKILL" || afderrs="$afderrs\n  - pm-audit skill does not name the shard as a compaction remediation"
+
+if [ -z "$afderrs" ]; then
+    pass "auditor-frugality-dimension: pm-auditor carries the size/node-density/lost-in-the-middle/file-sprawl smells + the readability-grade smell (referencing '### Plain language'), the git-aware graduation check (referencing '### Graduation targets'), and the scale-guard shard flag; pm-audit lists the shard/compaction remediation"
+else
+    fail "auditor-frugality-dimension: the frugality dimension is not fully wired:$(printf '%b' "$afderrs")"
+fi
+
+# Non-vacuity: strip the SPECIFIC frugality-dimension requirement tokens from a
+# scratch copy of the auditor body, then re-run the SAME production presence greps
+# against it and assert at least one trips. Proves the production check depends on
+# the shipped guidance text, not on a heading name.
+# Case-insensitive (gI) — the tokens appear both lowercased in prose and
+# capitalized at bullet heads (**Node-density**, Scale-guard, Git-aware); the
+# production greps are -i, so the strip must be -i too.
+sed -e 's/node-density/section-count/gI' \
+    -e 's/lost-in-the-middle/middle-placement/gI' \
+    -e 's/file-sprawl/extra-files/gI' \
+    -e 's/git-aware/history-aware/gI' \
+    -e 's/scale-guard/size-guard/gI' \
+    "$AUD" > "$SCRATCH/aud-stripped.md"
+if grep -qi 'node-density' "$SCRATCH/aud-stripped.md" \
+   || grep -qi 'lost-in-the-middle' "$SCRATCH/aud-stripped.md" \
+   || grep -qi 'file-sprawl' "$SCRATCH/aud-stripped.md" \
+   || grep -qi 'git-aware' "$SCRATCH/aud-stripped.md" \
+   || grep -qi 'scale-guard' "$SCRATCH/aud-stripped.md"; then
+    fail "auditor-frugality-nonvacuous: stripping the specific frugality requirement tokens did NOT remove them from the auditor body — the production check is vacuous"
+else
+    pass "auditor-frugality-nonvacuous: stripping the specific frugality requirement tokens (node-density / lost-in-the-middle / file-sprawl / git-aware / scale-guard) trips the production presence greps (the check depends on the shipped guidance text)"
+fi
+
+# ----------------------------------------------------------------------
+# audit-mixed-project (Slice C interaction scenario; with non-vacuity)
+# The auditor body must state the git-aware graduation check tolerates a mixed
+# old/new project: a durable bit present in EITHER a surviving per-feature file OR
+# the living reference satisfies graduation (presence-in-a-home, never
+# absence-of-old-files) — so it cannot false-block a project mid-migration.
+# ----------------------------------------------------------------------
+mperrs=""
+grep -qi 'mixed.*project\|mid-migration\|mid migration' "$AUD" || mperrs="$mperrs\n  - pm-auditor does not address a mixed old/new (mid-migration) project"
+grep -qi 'presence-in-a-durable-home\|presence-in-a-home\|presence in a.*home' "$AUD" || mperrs="$mperrs\n  - pm-auditor does not assert presence-in-a-home as the test"
+grep -qi 'never.*absence-of-old-files\|not.*absence-of-old-files\|never the test' "$AUD" || mperrs="$mperrs\n  - pm-auditor does not state absence-of-old-files is never the test"
+grep -qi 'EITHER.*OR\|either.*or' "$AUD" || mperrs="$mperrs\n  - pm-auditor does not state a bit in EITHER an old per-feature file OR the living reference satisfies graduation"
+grep -qi 'false-block\|false block' "$AUD" || mperrs="$mperrs\n  - pm-auditor does not state the check must not false-block mid-migration"
+
+if [ -z "$mperrs" ]; then
+    pass "audit-mixed-project: the auditor's git-aware graduation check tolerates a mixed old/new project (presence-in-a-home, EITHER an old file OR the living reference, never absence-of-old-files) so it cannot false-block mid-migration"
+else
+    fail "audit-mixed-project: the mixed-project tolerance is not wired:$(printf '%b' "$mperrs")"
+fi
+
+# Non-vacuity: strip the mixed-project tolerance tokens from a scratch copy and
+# re-run the production greps; at least one must trip.
+sed -e 's/mid-migration/in-transition/gI' \
+    -e 's/presence-in-a-durable-home/landed-somewhere/gI; s/presence-in-a-home/landed-somewhere/gI' \
+    -e 's/false-block/over-flag/gI' \
+    "$AUD" > "$SCRATCH/aud-mixed-stripped.md"
+if grep -qi 'mid-migration' "$SCRATCH/aud-mixed-stripped.md" \
+   || grep -qi 'presence-in-a-durable-home\|presence-in-a-home' "$SCRATCH/aud-mixed-stripped.md" \
+   || grep -qi 'false-block' "$SCRATCH/aud-mixed-stripped.md"; then
+    fail "audit-mixed-project-nonvacuous: stripping the mixed-project tolerance tokens did NOT remove them — the check is vacuous"
+else
+    pass "audit-mixed-project-nonvacuous: stripping the mixed-project tolerance tokens (mid-migration / presence-in-a-home / false-block) trips the production greps (the check depends on the shipped text)"
+fi
+
+# ----------------------------------------------------------------------
+# graduation-check-blocking (Slice C, scenario 9)
+# The auditor body must mark a never-graduated merged feature as BLOCKING — not a
+# note. The git-aware graduation check is the only blocking finding in the
+# frugality dimension (every other frugality smell is note-severity); assert the
+# blocking severity is bound to the never-graduated case, not the smells.
+# ----------------------------------------------------------------------
+gcberrs=""
+# The graduation-check section must carry the blocking severity bound to the
+# never-graduated / silent-knowledge-loss case. Extract the lost-bearing sentence
+# region and assert blocking is asserted there.
+if ! grep -qiE 'without graduating.*blocking|never graduat.*blocking|silent knowledge loss.*blocking|blocking.*\(this is the one frugality finding that is blocking' "$AUD"; then
+    # Fall back to a two-line proximity check: the never-graduated phrasing and a
+    # `**blocking**` token co-occur in the graduation-check region.
+    region=$(awk '/git-aware graduation check/{f=1} f' "$AUD")
+    if printf '%s\n' "$region" | grep -qi 'without.*graduating' \
+       && printf '%s\n' "$region" | grep -qi 'blocking'; then
+        :
+    else
+        gcberrs="$gcberrs\n  - the never-graduated merged feature is not marked blocking in the graduation-check region"
+    fi
+fi
+# And the dimension must make clear this is the blocking exception (the other
+# frugality smells are notes).
+grep -qi 'note-severity\|note.severity smell\|all five are .*note\|the one frugality finding that is blocking' "$AUD" || gcberrs="$gcberrs\n  - pm-auditor does not state the frugality smells are note-severity (only the graduation miss is blocking)"
+
+if [ -z "$gcberrs" ]; then
+    pass "graduation-check-blocking: the auditor marks a never-graduated merged feature as blocking (the one blocking finding in the frugality dimension; the size/density/sprawl/readability smells stay note-severity)"
+else
+    fail "graduation-check-blocking: the blocking severity is not bound to the never-graduated case:$(printf '%b' "$gcberrs")"
 fi
 
 # ----------------------------------------------------------------------

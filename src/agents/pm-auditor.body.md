@@ -36,13 +36,13 @@ Optional parameters:
 
    This is not optional and is not satisfied by reading a previous audit. Read each plan file directly.
 
-4. **Apply the remaining 4 dimensions** (plan existence, plan↔implementation parity, contract currency, docs currency). For each finding capture: severity (blocking | note), artifact reference, what it is, why it matters, remediation.
+4. **Apply the remaining 5 dimensions** (plan existence, plan↔implementation parity, contract currency, docs currency, frugality). For each finding capture: severity (blocking | note), artifact reference, what it is, why it matters, remediation.
 
 5. **Write the full report** to `.ai-pm/audits/audit-<YYYY-MM-DD>.md` — append Blocking, Notes, What looks healthy, Priority order to the already-written contract check table. Pre-existing audit files are not edited. Create `.ai-pm/audits/` if it does not exist.
 
 5. **Return a structured summary** to the caller.
 
-## The 5 dimensions
+## The 6 dimensions
 
 ### 1. Artifact completeness
 
@@ -146,6 +146,30 @@ For every `.ai-pm/contracts/<feature>.md`:
 - **AI-minimums linter-encoding** (mirrors the dim-9 validator-present discipline at audit cadence — the periodic half of the AI-minimums-encoded-in-the-linter check the per-diff `pm-plan-checker` DoD carries). **Presence-conditional:** silent unless the project declares the AI-specific minimums (`docs/architecture.md` `### AI-specific minimums` present) **and** has a `<lint command>` lint config to inspect. When both exist: the project declares the minimums but its lint config does **not** encode them per the `docs/stack-notes.md` AI-minimums→linter-rule mapping (the un-wired-project case — the rule the mapping names is absent from the config) → **note**. **Structural / shape-not-meaning only** — match whether the mapped rule is **present in the config** (e.g. the max-file rule the mapping names is set); **never** judge whether the configured number is "correct" (the number's single home is `### AI-specific minimums`; a config parameter that carries it is enforcement, not a second authority) or whether the lint is otherwise well-tuned. A minimum the mapping records as **convention-only** (the stack's linter cannot express it) is **not** an un-wired finding — it is intentionally not in the config. **Note, never blocking** — additive, the PM opts in to wiring (scenario 6: never a retroactive forced rewrite). Remediation: re-run the bootstrap stack-setup wiring (or `pm-stack-researcher` refresh) to encode the mapped rules into the lint config.
 
 Notes, not blocking — docs can lag slightly, but the same gap flagged in two consecutive full audits upgrades to blocking.
+
+### 6. Frugality
+
+**Measure the shape of the standing docs; never judge the prose.** This dimension reports whether the living reference stayed lean and whether durable knowledge actually landed in its home. Every signal here is **measurable structure** — a line count, a position, a presence-in-a-home — the same shape-not-meaning discipline as the threat ↔ constraint and System-invariants checks above. It does **not** read whether the writing is good (that is the no-prose-policing rule below, in force here too).
+
+**Per-standing-doc frugality smells (note).** For each standing doc (`docs/architecture.md`, `docs/user-journeys.md`, `docs/product.md`, `docs/stack-notes.md`, `docs/threat-model.md`, `README.md`), report:
+
+- **Size** — line / byte count vs the soft targets named in `### Numbers = targets, not gates` in `workflow/doc-style.md` (referenced by name — do not re-encode the numbers). The **four hard-caps** there (README one-liner ≤ chars, decision record ≤ ~2 screens, navigation list ≤ entries, top quality-goals ≤ count) are gate-able; a doc over any **other** soft target is a **note** (a size smell), never a block.
+- **Node-density** — count of `###`/`####` sub-sections under a single `##` home; a home with an out-of-proportion sub-section count (many small fragments under one heading) → **note** (a density smell — the doc may want a compaction).
+- **Lost-in-the-middle risk** — a **measurable length/position signal**: a single `##` section whose body runs past a soft length threshold *and* buries its load-bearing material away from the front (the long-section / front-load signal). This is a length-and-position measurement, **not** a read of whether the middle is "important" → **note**.
+- **File-sprawl** — process-evidence files that should have evaporated under the O(1) artifact-lifecycle model (Slice D): a surviving per-feature `.ai-pm/reviews/<topic>_review.md` or `.ai-pm/arch/<topic>_arch.md` for an **already-merged** feature, or a stale `.ai-pm/features/<topic>.md` dossier for a feature whose branch is already merged → **note** (the dossier should have ceased to be a maintained file on merge — see the git-aware graduation check below). This is presence-of-a-file-that-should-be-gone, a count, never a meaning judgement.
+- **Readability-grade** (the carried plain-language smell, Slice A) — a **purely mechanical metric** computed from two quantities only: average sentence length (words per sentence) and average word length (syllables per word), a Flesch-Kincaid-style grade level. It is a **count, not a judgement**: it never reads whether the prose is good, clear, important, or correct — only that the sentence-length / word-length number sits above the soft target → **note**. The target is the standing-doc readability grade named in `### Numbers = targets, not gates` in `workflow/doc-style.md` (referenced by name — do not re-encode the number); `### Plain language / human-readable` there defines **what** readability means (the non-specialist-lede authoring rule the smell carries). This is the measurement, **NOT** prose-policing. The legibility *act* (read-before-ship) stays the orchestrator's, not the auditor's.
+
+All five are **note**-severity smells (subject only to the dimension-wide two-consecutive-full-audits → blocking rule). They are authoring targets and audit smells, not merge-gates — consistent with `### Numbers = targets, not gates`.
+
+**Scale-guard → shard remediation.** When the **size** signal trips the **scale-guard threshold** (a standing doc grown past the soft size target by a wide margin — the doc no longer fits in one readable pass), flag it for **shard**: split it into a **thin-core + on-demand sub-files** — the same progressive-disclosure pattern `WORKFLOW.md` applies (a thin constitution + router that reads its topic files on demand). The remediation is to **spawn `pm-architect` to perform the shard as a compaction** (the doc-owner does the split; the auditor only flags) — the same remediation-points-at-`pm-architect` shape every docs-currency finding uses. Surface this as a **note** with the shard remediation named.
+
+**Git-aware graduation check (load-bearing — the structural twin of the pre-ship Step-6 graduation gate).** For **every merged feature** in the inventory (built from `git log` + `docs/features/*_plan.md` in step 2 — the same inventory the other dimensions use), assert its **durable knowledge is present in the living reference**: each durable bit graduated into one of the four `### Graduation targets` homes (`workflow/doc-style.md`) — a decision → a decision record in `docs/architecture.md`; a contract → `.ai-pm/contracts/`; a deferred finding → `.ai-pm/backlog.md`; a new stack rule → `docs/stack-notes.md`.
+
+Verify this **git-aware**: read `git log` + the standing docs themselves — **NOT** N per-feature evidence files (under the O(1) model those no longer exist; the dossier evaporated on merge). A merged feature whose dossier evaporated **without** graduating its durable bits is **silent knowledge loss** — the only copy went to git and nothing re-reads it as canon → **blocking** (this is the one frugality finding that is blocking, not a note; it is the recover/backstop half of the prevent-and-recover twin, the only gate that still works once the dossier is gone).
+
+**Mixed-project tolerance — assert presence-in-a-durable-home, never absence-of-old-files.** On a project **mid-migration** (some features still carry old per-feature `_review.md` / `_arch.md` files, some have evaporated), a durable bit present in **EITHER** a surviving per-feature file (old model) **OR** the living reference (new model) **satisfies** graduation. The check confirms the durable bit lives in *some* durable home; it must **NOT** flag a surviving old file as a problem and must **NOT** false-block a project that has not finished migrating. Presence-in-a-home is the test, absence-of-old-files is never the test. Remediation for a real miss: spawn `pm-architect` to graduate the durable bit into its home (decision record / contract / backlog / stack-notes), or PM accepts-with-context.
+
+**Structure-not-prose, restated:** size/density/lost-in-the-middle/sprawl/readability-grade are all measurable; the graduation check is presence-in-a-home. None of them reads meaning — the no-prose-policing rule below is in full force for this dimension.
 
 ## Output file format
 

@@ -58,7 +58,11 @@ This is the **definition** of comment-restraint — a **first-class protocol rul
 
 ### Numbers = targets, not gates
 
-Numeric norms are **authoring targets and auditor smells, not merge-gates** — a doc over a soft target earns a review/audit note, not a block. The exception is a small **enforceable hard-cap set**:
+Numeric norms are **authoring targets and auditor smells, not merge-gates** — a doc over a soft target earns a review/audit note, not a block. Soft targets include:
+
+- standing-doc readability grade ≤ ~9–10 (a sentence-length / word-length metric — a smell, not a gate)
+
+The exception is a small **enforceable hard-cap set**:
 
 - README one-liner ≤ 120 chars
 - decision record ≤ ~2 screens
