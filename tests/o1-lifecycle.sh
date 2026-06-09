@@ -57,13 +57,14 @@ PIPE="$ROOT/workflow/pipeline.md"
 GITIGNORE="$ROOT/.gitignore"
 BOOT="$ROOT/src/commands/pm-bootstrap.body.md"
 ORCH="$ROOT/src/manifests/opencode/harness_local/body/ai-pm.body.md"
+AUDITOR="$ROOT/src/agents/pm-auditor.body.md"
 
 PASS_COUNT=0
 FAIL_COUNT=0
 pass() { echo "PASS: $1"; PASS_COUNT=$((PASS_COUNT + 1)); }
 fail() { echo "FAIL: $1"; FAIL_COUNT=$((FAIL_COUNT + 1)); }
 
-for f in "$STATE" "$PIPE" "$GITIGNORE" "$BOOT" "$ORCH"; do
+for f in "$STATE" "$PIPE" "$GITIGNORE" "$BOOT" "$ORCH" "$AUDITOR"; do
     [ -f "$f" ] || { echo "FAIL: required file missing at $f" >&2; exit 1; }
 done
 
@@ -191,6 +192,82 @@ if [ -z "$gerrs" ]; then
     pass "graduation-gate-procedural: Step 6 carries the graduation checklist named as procedural (not a plugin deny) with the auditor git-aware check as backstop, and the OpenCode persona echoes it"
 else
     fail "graduation-gate-procedural: the procedural graduation gate is not fully wired:$(printf '%b' "$gerrs")"
+fi
+
+# ----------------------------------------------------------------------
+# auditor-dims-defer-to-c9
+# Dimensions 1 (artifact completeness — plan/review existence) and 2 (plan->impl
+# parity, which reads the per-feature _review.md as evidence) must be O(1)-aware:
+# for a MERGED feature whose per-feature plan/review evidence has EVAPORATED to
+# git AND whose durable bits GRADUATED into their `### Graduation targets` homes,
+# they DEFER to the C.9 git-aware graduation check — a merged + graduated +
+# evaporated feature reads as CLEAN through dims 1+2, not as a missing-artifact
+# finding. The file-existence expectations apply to in-flight / not-yet-distilled
+# features (and to the durable contract registry). This pins the reconciliation
+# so a future edit cannot silently re-introduce the FALSE-BLOCK of every collapsed
+# merged feature.
+#
+# We extract dimension 1 (### 1. … up to ### 2.) and dimension 2 (### 2. … up to
+# ### 3.) from the auditor body and assert each carries the defer-to-C.9 wording,
+# names the O(1) model, and (for dim 1) keeps the in-flight / contract-registry
+# carve-out. Non-vacuity: stripping the dim-1 defer sentence trips the check.
+# ----------------------------------------------------------------------
+dim_section() {
+    # $1 = section file, $2 = start heading, $3 = stop heading
+    awk -v start="$2" -v stop="$3" '
+        $0 ~ start {grab=1}
+        grab && $0 ~ stop && $0 != start {grab=0}
+        grab {print}
+    ' "$1"
+}
+
+DIM1=$(dim_section "$AUDITOR" '^### 1[.] Artifact completeness' '^### 2[.]')
+DIM2=$(dim_section "$AUDITOR" '^### 2[.] Plan' '^### 3[.]')
+
+aerrs=""
+
+# Dimension 1 defers a MERGED feature to the C.9 graduation check.
+printf '%s' "$DIM1" | grep -qi 'merged feature.*defer\|defer.*C\.9\|defers to.*graduation' \
+    || aerrs="$aerrs\n  - dimension 1 does not state a MERGED feature defers to the C.9 graduation check"
+# It names the O(1) lifecycle model by its single home.
+printf '%s' "$DIM1" | grep -qF 'One transient dossier per in-flight feature' \
+    || aerrs="$aerrs\n  - dimension 1 does not reference the O(1) lifecycle model in workflow/state.md"
+# It keeps the file-existence checks scoped to in-flight / not-yet-distilled work.
+printf '%s' "$DIM1" | grep -qi 'in-flight' \
+    || aerrs="$aerrs\n  - dimension 1 does not scope the file-existence checks to in-flight features"
+# The durable contract registry is NOT treated as evaporating evidence.
+printf '%s' "$DIM1" | grep -qi 'contract registry\|durable home' \
+    || aerrs="$aerrs\n  - dimension 1 does not keep the contract registry as a durable (non-evaporating) home"
+# It references the graduation-targets homes by name (single-home, not re-encoded).
+printf '%s' "$DIM1" | grep -qF '### Graduation targets' \
+    || aerrs="$aerrs\n  - dimension 1 does not reference '### Graduation targets' by name"
+
+# Dimension 2 inherits the same scoping — a merged feature whose review evaporated
+# defers to C.9 (absent review is not itself a parity finding).
+printf '%s' "$DIM2" | grep -qi 'merged.*defer\|defer.*C\.9\|evaporated.*defer' \
+    || aerrs="$aerrs\n  - dimension 2 does not defer a merged feature's absent review to the C.9 check"
+printf '%s' "$DIM2" | grep -qi 'in-flight' \
+    || aerrs="$aerrs\n  - dimension 2 does not scope its review-as-evidence check to in-flight features"
+
+if [ -z "$aerrs" ]; then
+    pass "auditor-dims-defer-to-c9: dimensions 1+2 are O(1)-aware — a merged + graduated + evaporated feature defers to the C.9 graduation check (not a missing-artifact finding), with file-existence checks scoped to in-flight work and the contract registry kept durable"
+else
+    fail "auditor-dims-defer-to-c9: the dims-1+2 -> C.9 reconciliation is not fully wired:$(printf '%b' "$aerrs")"
+fi
+
+# Non-vacuity: a copy of the auditor body with the dim-1 defer wording removed
+# must trip the dim-1 defer assertion (proves the grep reads real text, not a
+# vacuous always-true).
+NV_AUD="$SCRATCH/pm-auditor-novacuum.body.md"
+# Neutralize every "defer"/"defers" verb so the positive grep's defer-keyed
+# patterns can no longer match — this is exactly the wording the reconciliation
+# adds; stripping it must reinstate the old always-block reading.
+sed 's/defers/checks-existence/g; s/defer/always-block/g' "$AUDITOR" > "$NV_AUD"
+NV_DIM1=$(dim_section "$NV_AUD" '^### 1[.] Artifact completeness' '^### 2[.]')
+if printf '%s' "$NV_DIM1" | grep -qi 'merged feature.*defer\|defer.*C\.9\|defers to.*graduation'; then
+    fail "auditor-dims-defer-to-c9-nonvacuous: stripping the defer-to-C.9 wording did NOT trip the dim-1 check — the assertion is vacuous"
+else
+    pass "auditor-dims-defer-to-c9-nonvacuous: removing the defer-to-C.9 wording trips the dim-1 check (the assertion reads real text)"
 fi
 
 # ----------------------------------------------------------------------
