@@ -302,6 +302,8 @@ Used by bootstrap (all modes) and by `/pm-plan` to regenerate `docs/product-map.
 
 > **This procedure writes only `docs/product-map.md`; it never creates or edits the authored `docs/product.md`.** The authored front door is owned by `pm-architect`; this generated map and that authored funnel are separate files that never share a writer.
 
+> **Sibling derivation:** `docs/architecture.md` has its own derived regions — the `File layout (module map)` and `### Current dependencies` tables, derived from the source tree + package manifest by the **Architecture-section derivation procedure** (in `pm-architect`, run on every architecture-doc write). Same family as this procedure (source → overwrite a delimited region, idempotent), a different source and a different writer (`pm-architect` owns `docs/architecture.md`). Neither shares a writer with `gen/generate.py`, which builds adapters by byte-copy and never touches `docs/` content.
+
 ### Structure: group → contract → features
 
 1. **Group** — read `docs/architecture.md`, extract the major components/subsystems. Each becomes a `## <Component>` section.
