@@ -135,7 +135,12 @@
 //       present but `## Code review: NOT YET RUN`) counts as UNSATISFIED ⇒ deny.
 //       NOTE: the gate checks stamp PRESENCE, not PROVENANCE — it cannot detect a
 //       FABRICATED stamp hand-written on behalf of a failed/absent reviewer; that
-//       stays persona-only (never self-stamp). This closes
+//       stays persona-only (never self-stamp). Likewise the pre-ship GRADUATION
+//       check (durable bits distilled into their homes before the dossier
+//       evaporates) is a PROCEDURAL Step-6 gate in workflow/pipeline.md, NOT
+//       plugin-enforced — verifying a semantic durable bit reached its home is
+//       beyond a structural deny; the auditor's git-aware check is its backstop.
+//       This closes
 //       the live self-stamp-then-merge failure (c): s15 left it through because
 //       stamps live in orchestrator-owned `.ai-pm/reviews/` and `git merge` is a
 //       pure git op (exempt from (g)); (h) re-gates the merge on the stamp.
