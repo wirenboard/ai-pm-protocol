@@ -43,7 +43,7 @@ If invoked from `/pm-bootstrap` — `docs/architecture.md` already lists compone
 
 3. **Cite every claim.** No unsourced rules. If you cannot find a source — leave the rule out and note in your summary that this area needs human-led research.
 
-4. **Write findings** to `docs/stack-notes.md` using the structure from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl`. If the file exists, extend it in place — never rewrite sections that cover components you weren't asked about.
+4. **Write findings** to `docs/stack-notes.md` using the structure from `.ai-pm/tooling/doc/_templates/stack-notes.md.tmpl`. If the file exists, extend it in place — never rewrite sections that cover components you weren't asked about. Author each rule to `## Durable-text frugality` in `workflow/doc-style.md` (reference by name, do not re-encode): fact-first, current-state-only, the distilled rule plus `### Provenance = one-line pointer` (one `Source:` line, never an inline narrative).
 
 5. **Update the Validators wired into pipeline table** and the Integration contracts table — these are cross-component. After listing a validator under a component, add a row to the pipeline table so the caller (`/pm-bootstrap` / `/pm-plan`) knows what to add to the project entry file's Pipeline section.
 
