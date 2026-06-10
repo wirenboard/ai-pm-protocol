@@ -29,9 +29,13 @@ function check(name, cond) {
 }
 
 // The fragment text's distinguishing marker (present iff the module composed in).
-const FRAGMENT_MARK = "SKELETON (Slice 1)";
+const FRAGMENT_MARK = "The **threat-model** module is on";
 // A floor-body distinguishing line — must be present under EVERY config.
-const REVIEWER_FLOOR = "secrets read from a committed template";
+const REVIEWER_FLOOR = "a security-relevant change names its threats";
+// A `[rich]`-only checklist item — present at rich depth, STRIPPED at light depth.
+const RICH_ONLY = "Supply chain";
+// A `[light]`-core item — present at EVERY depth.
+const LIGHT_CORE = "Attack surface";
 
 // ── 1. enabledModules — the resolver's on/off decision ────────────────────────
 console.log("RESOLVER — enabled/disabled + fail-safe-to-ON:");
@@ -80,6 +84,35 @@ check("omit: disabled ⇒ floor STILL present", composedOff.includes(REVIEWER_FL
 for (const cfg of [{}, { modules: {} }, { modules: { "threat-model": "garbage" } }, { kind: "documentation" }]) {
   check(`floor-always: ${JSON.stringify(cfg)} ⇒ floor present`,
     composeBody(ROOT, reviewerFloor, "reviewer", registry, cfg).includes(REVIEWER_FLOOR));
+}
+
+// ── 3b. DEPTH — rich composes the full enumeration, light the core subset only ──
+console.log("DEPTH — rich vs light (light gets genuinely less):");
+function reviewerComposed(modulesCfg) {
+  return composeBody(ROOT, reviewerFloor, "reviewer", registry, modulesCfg);
+}
+const richBody = reviewerComposed({ kind: "software", modules: { "threat-model": { depth: "rich" } } });
+check("rich: light-core item present", richBody.includes(LIGHT_CORE));
+check("rich: rich-only item present", richBody.includes(RICH_ONLY));
+check("rich: banner names rich depth", richBody.includes("Depth: **rich**"));
+check("rich: no authoring tag leaks into composed prose", !/\[(light|rich)\]/.test(richBody));
+
+const lightBody = reviewerComposed({ kind: "software", modules: { "threat-model": { depth: "light" } } });
+check("light: light-core item present", lightBody.includes(LIGHT_CORE));
+check("light: rich-only item STRIPPED", !lightBody.includes(RICH_ONLY));
+check("light: banner names light depth", lightBody.includes("Depth: **light**"));
+check("light: genuinely shorter than rich", lightBody.length < richBody.length);
+
+// Per-kind default drives depth with no explicit override: documentation ⇒ light.
+const docDefault = reviewerComposed({ kind: "documentation" });
+check("depth-default: documentation kind ⇒ light (rich-only stripped)", !docDefault.includes(RICH_ONLY));
+const swDefault = reviewerComposed({ kind: "software" });
+check("depth-default: software kind ⇒ rich (rich-only kept)", swDefault.includes(RICH_ONLY));
+
+// FAIL-SAFE: a malformed/unknown depth ⇒ rich (the stricter side) — never silently thin.
+for (const bad of ["garbage", "LIGHT", "", 42, null]) {
+  const body = reviewerComposed({ kind: "software", modules: { "threat-model": { depth: bad } } });
+  check(`depth fail-safe: depth ${JSON.stringify(bad)} ⇒ rich (rich-only kept)`, body.includes(RICH_ONLY));
 }
 
 // A floor body with NO marker (the orchestrator — no module targets it) is returned

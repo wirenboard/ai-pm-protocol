@@ -31,17 +31,23 @@ Before writing anything, capture the plan in the transient plan file `.ai-pm/pla
 
 ## Threat model
 
-> **SKELETON (Slice 1)** — this proves the module assembles into the Builder; the
-> full plan-time threat-enumeration procedure (the `rich`/`light` depth) is Slice 2.
-> Flesh out here, not in the floor body.
+The **threat-model** module is on, so the plan's **Security surface** question is
+deepened from one threat-and-mitigation line to a plan-time **enumeration**: where the
+change touches auth, secrets, untrusted input, or a network boundary, walk the surfaces
+below and record each live threat WITH its mitigation and the `file:line` that closes
+it. Silence on a surface means "considered, not exposed" — not skipped. `[persona]`:
+this sharpens the plan, denies nothing.
 
-The capability module **threat-model** is enabled for this project, so the plan's
-**Security surface** question is deepened: where the change touches auth, secrets,
-untrusted input, or a network boundary, do not stop at one threat-and-mitigation
-line — **enumerate** the attack surface, the data and secret exposure, and the trust
-boundaries the change moves, and record each with its mitigation in the plan. This
-sharpens the floor question; it does not replace it — the floor (name the threat and
-the mitigation for a security-relevant change) holds whether or not this module is on.
+- **Attack surface** — every new input / endpoint / parser / format / interface this change exposes; validate each where untrusted data first enters.
+- **Secrets & credentials** — any secret the change reads / writes / logs; source it from a git-ignored file, never hard-code or commit a key.
+- **Trust boundaries** — each point untrusted input crosses into trusted code; put the validation AT the boundary.
+- **Injection & unsafe ops** — guard any shell / SQL / path / template construction, `eval`, or deserialization fed a tainted value.
+- **Fail-open vs fail-closed** — design every error path to tighten, never relax, a guard; default to the strict side.
+- **Data & privacy exposure** — scope reads to what's needed; keep PII out of logs; don't widen a data flow.
+- **AuthZ / AuthN** — give each new surface its access check; match the strictest peer, don't leave a privileged path open.
+- **Supply chain** — name and justify any new dependency; confirm its source is trusted before adding it.
+
+> Depth: **rich** — the full enumeration.
 
 ## Build
 

@@ -112,10 +112,34 @@ export function effectiveToggle(mod, config) {
 // ── compose ─────────────────────────────────────────────────────────────────
 export const MARKER = "<!-- ai-pm:modules -->";
 
+// Apply the resolved DEPTH to a fragment's tagged checklist. A fragment marks each
+// item with a leading code-span tag — `[light]` (the core subset every depth keeps)
+// or `[rich]` (kept only at full depth). At light the rich lines are STRIPPED, so a
+// light project gets
+// genuinely less text — not the same prose with a label. The depth tags are then
+// removed from the kept lines (they are an authoring signal, not reader prose), and a
+// one-line banner names the resolved depth so the role knows which set it is reading.
+// Fail-safe: anything other than the literal "light" ⇒ rich (the stricter side),
+// mirroring the module's fail-safe-to-ON — a malformed depth can never silently thin
+// the checklist.
+function applyDepth(text, depth) {
+  const light = depth === "light";
+  const kept = [];
+  for (const line of text.split("\n")) {
+    const m = line.match(/^(\s*[-*]\s*)`\[(light|rich)\]`\s*(.*)$/);
+    if (!m) { kept.push(line); continue; }
+    if (light && m[2] === "rich") continue; // rich-only item dropped at light depth
+    kept.push(`${m[1]}${m[3]}`); // strip the authoring tag from a kept item
+  }
+  const banner = `> Depth: **${light ? "light" : "rich"}** — ${light ? "the core subset" : "the full enumeration"}.`;
+  return kept.join("\n").replace(/\n\n+/g, "\n\n") + "\n\n" + banner;
+}
+
 // Read the fragment text a module contributes to a role, or null when the module
-// does not target that role. MISSING fragment for a targeted+enabled module is a
-// HARD ERROR (never a silent drop). Path safety is enforced by resolveFragmentPath.
-function fragmentFor(root, mod, role) {
+// does not target that role, with the module's resolved DEPTH applied. MISSING
+// fragment for a targeted+enabled module is a HARD ERROR (never a silent drop).
+// Path safety is enforced by resolveFragmentPath.
+function fragmentFor(root, mod, role, config) {
   const pointer = mod.fragments && mod.fragments[role];
   if (!pointer) return null; // this module does not target this role
   const fpath = resolveFragmentPath(root, pointer);
@@ -124,7 +148,10 @@ function fragmentFor(root, mod, role) {
       `enabled module "${mod.id}" names a fragment for role "${role}" that is missing on disk: ${pointer}`
     );
   }
-  return fs.readFileSync(fpath, "utf8").trim();
+  const raw = fs.readFileSync(fpath, "utf8").trim();
+  // A fragment carries depth tags only when its module declares a `depth` toggle; a
+  // tag-free fragment is returned as-is (applyDepth is a no-op on untagged lines).
+  return applyDepth(raw, effectiveToggle(mod, config).depth);
 }
 
 // Compose a role's FLOOR body with the enabled modules' fragments for that role.
@@ -134,7 +161,7 @@ function fragmentFor(root, mod, role) {
 export function composeBody(root, floorBody, role, registry, config) {
   const fragments = [];
   for (const { mod } of enabledModules(registry, config)) {
-    const text = fragmentFor(root, mod, role);
+    const text = fragmentFor(root, mod, role, config);
     if (text) fragments.push(text);
   }
   if (!floorBody.includes(MARKER)) return floorBody; // no insertion point ⇒ no modules

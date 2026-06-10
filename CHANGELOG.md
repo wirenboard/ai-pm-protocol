@@ -13,6 +13,21 @@
 
 ---
 
+## [3.4.1] — 2026-06-10
+
+**threat-model Slice 2 — the real content + the `depth` toggle.** The first module's skeleton is fleshed into a tight, actionable threat enumeration, and its `depth` toggle is realized honestly.
+
+### Added
+
+- **The threat-model fragments are real** (`modules/threat-model/{reviewer,builder}.md`, 17 lines each): 8 surfaces — attack surface, secrets, data/privacy, trust boundaries, injection/unsafe ops, authz/authn, supply chain, fail-open/closed — each tied to the `file:line` that opens or closes it. Reviewer = verify-named-and-handled (an unhandled exposure or a security over-claim blocks via the verdict); Builder = name-threats-and-mitigations-at-plan. `[persona]` — sharpens judgement, denies nothing.
+
+### Changed
+
+- **The `depth` toggle is realized honestly.** Each checklist item is tagged `[light]` (core) or `[rich]` (full-only); the assembler **strips** the `[rich]` items at `depth: light` so a light project gets genuinely less (not the same prose relabeled), strips the tags, and bakes a `Depth:` banner. **Fail-safe: any non-`light` value ⇒ rich** (the stricter side). One tagged fragment per role (not two variant files) keeps single-home.
+- **The Reviewer security floor is generalized** (`agents/reviewer.md`) from a repo-specific committed-template note to the general class: a security-relevant change names its threats and handles its exposures; an unhandled exposure or a security over-claim blocks. Floor (the always-on duty) and fragment (the enumeration) stay single-home.
+
+---
+
 ## [3.4.0] — 2026-06-10
 
 **The capability-module constructor + threat-model (pillar 2), Slice 1 — infrastructure + skeleton.** The protocol becomes a *constructor*: capabilities are toggleable modules a project assembles, not a fixed monolith. (Rich threat-enumeration content is Slice 2.)
