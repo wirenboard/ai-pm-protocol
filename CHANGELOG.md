@@ -13,6 +13,24 @@
 
 ---
 
+## [3.2.0] — 2026-06-10
+
+**Setup triggers (Slice B) + the OpenCode `inject` class realized.** The shipped `## Setup` procedure now fires without the Operator hunting for it: **lazily** (a work request to an unconfigured project gets a short "run setup, or proceed on defaults?" offer — not a block) and **explicitly** (a `/setup` command on both platforms). Building the lazy nudge surfaced — and this release fixes — a pre-existing gap: the **`inject` enforcement class was never realized on OpenCode** (its plugin wired only `tool.execute.before`/deny), so the nudge *and* the older `change-route-reminder` never reached the model. Now realized via OpenCode's `chat.message` hook. **Live-verified on opencode 1.17.x** (the orchestrator offered setup instead of editing an unconfigured project; `/setup` discovered the environment + 9 models + ran the dialog).
+
+### Added
+
+- **Setup triggers** — lazy (a `[persona]` act reinforced by the `no-config-run-setup` inject; offer-not-block, declines proceed on zero-config defaults) + an explicit **`/setup`** command on both platforms (one neutral body + per-platform frontmatter, a thin wrapper over `## Setup`). Neutral "detect missing config" / "invoke setup" contract points in `architecture.md`.
+- **OpenCode `inject` realization** — a `chat.message` hook routes the user prompt through the shared engine and pushes the inject text as a one-shot context part (the UserPromptSubmit analog). Single-source: the rules stay in `deny-rules.json` + `engine.mjs`; the plugin supplies only the mechanism.
+- **`adapter/opencode-inject.test.mjs`** — asserts the deployed plugin *applies* the inject, not just that the engine decides it (the test-strategy gap that let the bug ship to a live run).
+
+### Fixed
+
+- The prior "inject always-on OpenCode" over-claim → replaced with the truth (OpenCode realizes **deny** + **inject**; `ask` = persona), honestly split into live-verified vs unit-proven scope (config write + reviewer model-pin bake remain unit-proven).
+- The setup mode question now presents `interactive` as the safe default (invariant 7) instead of recommending `autonomous` — a contradiction caught in the live run.
+- The lazy nudge + `## Setup` reactive line made short and deterministic (offer-or-defaults, stop, no repo-exploring/git).
+
+---
+
 ## [3.1.0] — 2026-06-10
 
 **The `setup` procedure, realized (Slice A — the "brain").** `setup` was a one-line promise; it is now a neutral, orchestrator-driven procedure: **discover the environment's available models → ask the Operator (structured-question) → write `ai-pm.config.json`**. The protocol asks the environment at config time instead of pre-knowing anyone's models, so it stays agnostic to a downstream's providers (DeepSeek, Claude, Qwen, …). Invoked manually for now; the auto/command triggers are Slice B (deferred — see the backlog).

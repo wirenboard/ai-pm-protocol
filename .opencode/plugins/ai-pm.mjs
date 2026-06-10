@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "../../adapter/engine.mjs";
-import { decide } from "../../adapter/opencode/normalise.mjs";
+import { decide, decidePrompt } from "../../adapter/opencode/normalise.mjs";
 
 const ADAPTER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "adapter");
 
@@ -23,6 +23,16 @@ export const AiPmEnforcement = async (ctx) => {
       const isOrch = await isOrchestrator(ctx && ctx.client, input && input.sessionID);
       const r = decide(input && input.tool, (output && output.args) || {}, root, isOrch, config);
       if (r.verdict === "deny") throw new Error("[ai-pm] " + r.reason);
+    },
+    "chat.message": async (input, output) => {
+      const parts = (output && output.parts) || [];
+      const userText = parts
+        .filter((p) => p && p.type === "text" && typeof p.text === "string")
+        .map((p) => p.text)
+        .join("\n");
+      const isOrch = await isOrchestrator(ctx && ctx.client, input && input.sessionID);
+      const r = decidePrompt(userText, root, isOrch, config);
+      if (r.verdict === "inject") output.parts.push({ type: "text", text: r.reason });
     },
   };
 };

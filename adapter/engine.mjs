@@ -138,6 +138,12 @@ function reviewStampSatisfied(root, topic) {
 function fileNonEmpty(p) {
   try { return fs.statSync(p).size > 0; } catch (_e) { return false; }
 }
+// Is the project configured? True iff ai-pm.config.json exists at the project
+// root. Root-relative, fs-checked — the lazy-setup predicate reads only this
+// presence (it adds context, never executes), within invariant 2.
+function projectConfigured(root) {
+  return fs.existsSync(path.join(path.resolve(root), "ai-pm.config.json"));
+}
 
 // ── predicates: (input, config) => boolean ───────────────────────────────────
 // A predicate inspects only the neutral input + the rule data in config. The
@@ -218,6 +224,15 @@ const PREDICATES = {
   promptMatchesChangeVerb(input, config) {
     const pat = config.change_verbs?.pattern;
     return !!pat && new RegExp(pat, "i").test(input.prompt || "");
+  },
+  // Lazy-setup nudge: a work-request prompt (same change_verbs list — no second
+  // verb list) to a project with NO ai-pm.config.json. Reinforces the persona
+  // act, never forces it. False once the config is present (a configured project
+  // gets the change-route-reminder instead).
+  promptNeedsSetup(input, config) {
+    const pat = config.change_verbs?.pattern;
+    if (!pat || !new RegExp(pat, "i").test(input.prompt || "")) return false;
+    return !projectConfigured(input.root);
   },
 };
 

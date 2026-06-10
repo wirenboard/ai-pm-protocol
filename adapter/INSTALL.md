@@ -39,13 +39,26 @@ The orchestrator **is** the session; the Builder and Reviewer are spawned (below
 
 The two spawnable roles are assembled into Claude agent files by **`node adapter/claude/install-agents.mjs`**. It reads each neutral role body (`agents/<role>.md`) + the Claude frontmatter (`adapter/claude/agents/<role>.fm`) and writes `.claude/agents/<agentId>.md`, taking the **agent id from `ai-pm.config.json` `roles`** (so `builder` → `pm-builder`, `reviewer` → `pm-reviewer`). It is concatenation, not a generator — the neutral body stays the single source. Re-run it whenever a role body, its frontmatter, or the config binding changes. The orchestrator spawns each by that id, on the model `ai-pm.config.json` resolves.
 
+### Command (the explicit setup trigger)
+
+**`node adapter/claude/install-commands.mjs`** assembles the `/setup` slash-command into **`.claude/commands/setup.md`** — the neutral command body (`adapter/commands/setup.body.md`) + the Claude frontmatter (`adapter/claude/commands/setup.fm`). The filename without extension is the command (`setup.md` → `/setup`); the body becomes the prompt injected into the session, and the orchestrator **is** the session, so it runs its own `## Setup`. The body is a thin pointer — no copy of the dialog (single home, invariant 6). Re-run it whenever the neutral body or the frontmatter changes.
+
 ## OpenCode
 
 **OpenCode loads plugins from `.opencode/plugins/` and agents from `.opencode/agents/` — PLURAL.** Dogfooded on opencode 1.17.0: the singular forms (`.opencode/plugin/`, `.opencode/agent/`) are **not** loaded, so nothing in them takes effect.
 
-### Enforce a deny (the plugin)
+### Enforce deny + inject (the plugin)
 
-Install drops one entry — `opencode/plugin-entry.mjs` — into `.opencode/plugins/`. It must **DEFINE** the plugin function inline, NOT import-and-re-expose it: opencode 1.17 does not register `tool.execute.before` off an imported/re-exported binding (verified live — a write into `.ai-pm/tooling/` sailed through an own-export entry, and is blocked by an inline-defined one). So the thin wrapper — resolve root, resolve the actor, call `decide`, throw on deny — is **inline in the entry**; only the rule logic (`decide` + the engine) is imported from the adapter tree, which sits outside the scanned plugin dir. The rules stay single-sourced. No registration in `opencode.json` is needed.
+Install drops one entry — `opencode/plugin-entry.mjs` — into `.opencode/plugins/`. It must **DEFINE** the plugin function inline, NOT import-and-re-expose it: opencode 1.17 does not register a hook off an imported/re-exported binding (verified live — a write into `.ai-pm/tooling/` sailed through an own-export entry, and is blocked by an inline-defined one). So the thin wrappers are **inline in the entry**; only the rule logic (`decide`/`decidePrompt` + the engine) is imported from the adapter tree, which sits outside the scanned plugin dir. The rules stay single-sourced. No registration in `opencode.json` is needed.
+
+The entry registers **two** hooks — the two enforcement classes OpenCode realises:
+
+- **`tool.execute.before`** (deny) — resolve root, resolve the actor, call `decide`, **throw** on a deny verdict (the throw is OpenCode's block).
+- **`chat.message`** (inject) — OpenCode's analog of Claude's `UserPromptSubmit`: it fires once per user message before the LLM call and `output.parts` is mutable. The entry joins the text parts into `userText`, calls `decidePrompt`, and on an inject verdict **pushes** `{ type: "text", text: reason }` onto `output.parts` — one-shot context for that turn. This is how the lazy-setup nudge (`no-config-run-setup`) and the `change-route-reminder` reach the model on OpenCode.
+
+**Live-verified on opencode 1.17.x:** on an unconfigured project a work request fired the `chat.message` inject and the nudge **reached the model** — the orchestrator offered `setup` instead of starting the task. From there the explicit `/setup` ran: env discovery (`opencode models` → 9 models, session `deepseek/deepseek-v4-pro`) and the structured-question dialog both worked end-to-end. **Still unit-proven only** (the live run was interrupted at the mode question, so not shown end-to-end): the full config **write** and the reviewer model-**pin bake** into the assembled reviewer — these are covered by `install-commands.test.mjs` / `install-model.test.mjs`, not yet by a live run.
+
+`ask` has no plugin-hook realisation on OpenCode, so an `ask`-class rule falls back to persona (recorded per-rule in `deny-rules.json` `fallback`). The plugin supplies only the mechanism — the verb list and predicates stay in `deny-rules.json` + the engine.
 
 ### Load instructions + the orchestrator personality
 
@@ -67,3 +80,9 @@ The generic `build`/`plan` primaries are disabled so none can fill the orchestra
 `node adapter/opencode/install-agents.mjs` assembles the three role agents into `.opencode/agents/`: each neutral role body (`agents/<role>.md`) + its OpenCode frontmatter (`adapter/opencode/agents/<role>.fm`) → `.opencode/agents/<agentId>.md` (agent id from `ai-pm.config.json` `roles`: orchestrator → `ai-pm` with `mode: primary`; builder → `pm-builder`, reviewer → `pm-reviewer` with `mode: subagent`). On OpenCode the filename *is* the agent id, so the frontmatter carries no `name` key. Concatenation, not a generator — the neutral body stays the single source, shared with the Claude adapter. Re-run it whenever a role body, its frontmatter, or the config binding changes.
 
 **Live-verified on opencode 1.17.0:** the session runs as `ai-pm` (the personality loads) and a write into `.ai-pm/tooling/` is mechanically blocked by the plugin (the engine's self-patch deny). The three bugs the live dogfood caught — singular vs plural dirs, the missing primary orchestrator agent, and the inline-vs-imported plugin function — are fixed here.
+
+### Command (the explicit setup trigger)
+
+**`node adapter/opencode/install-commands.mjs`** assembles the `/setup` command into **`.opencode/commands/setup.md`** (**PLURAL** — same dir convention as `.opencode/agents/` and `.opencode/plugins/`; verified against opencode 1.17.1 and the current docs, which both name the plural `commands/` dir — the older singular `.opencode/command/` is NOT loaded). The command body (`adapter/commands/setup.body.md`, shared with Claude) is the prompt template; the frontmatter (`adapter/opencode/commands/setup.fm`) carries `description` + **`agent: ai-pm`** so the command targets the orchestrator primary, which runs its own `## Setup`. It is a thin pointer — no copy of the dialog (single home, invariant 6). Re-run it whenever the neutral body or the frontmatter changes.
+
+> **Fallback (no dir guess needed):** if a future opencode stops loading the markdown command dir, define the command inline in `opencode.json` under the `command` key — the SDK `Config.command` schema (`{ template, description, agent, model, subtask }`, confirmed in `@opencode-ai/sdk`) takes the same body as `template` and `agent: ai-pm`. The markdown-dir form is preferred here because it shares the one neutral body file with Claude.

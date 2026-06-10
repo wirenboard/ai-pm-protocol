@@ -73,6 +73,7 @@ Adding a platform = write **only** its shim (input-normaliser + verdict-mapper +
 - **Swap a role.** Bind a different agent in `ai-pm.config.json` `roles` — any agent that honours the seat's contract (`PROTOCOL.md` `## Role contracts`), zero core edit.
 - **Add a quality tool.** Drop its config in `quality/` and a row in `quality/tools.json` (what it checks · the command · the beat). No core edit (`PROTOCOL.md` `## Quality tools`).
 - **List available models.** A neutral contract point setup uses to put real model choices before the Operator (the orchestrator's `## Setup`). Each adapter realises it: Claude returns its known model pair, OpenCode discovers the environment's models — realisation noted in `tool-map.json` `models`, no environment-specific id in the core.
+- **Detect missing config / invoke setup.** Two neutral acts that fire the setup procedure. *Detect* — a work request to a project with no `ai-pm.config.json` runs setup first (the orchestrator's `## Setup` "when it fires", a `[persona]` act), reinforced by the `no-config-run-setup` inject row in `deny-rules.json` (it nudges, never blocks). *Invoke* — an explicit per-platform setup command runs it on demand; its assembly + deploy is the install step (`adapter/INSTALL.md`). Both point at the one home — the procedure is never restated.
 
 ## Open assumptions
 

@@ -427,3 +427,7 @@ The "always & everywhere" wiring for the realized `setup` procedure (Slice A bui
 - **Explicit:** a command / slash-command to (re)run setup on an existing project anytime.
 - **Cross-platform:** both adapters (Claude skill/slash + hook-or-procedure detection; OpenCode command + detection). A new neutral contract point "invoke setup" + "detect missing config".
 Keep it agnostic and thin; reuse the Slice A brain (don't duplicate the dialog).
+
+## fixup: misleading test-case name in adapter/parity.test.mjs (Slice B review, non-blocking) — 2026-06-10
+
+The Slice B review (approve) flagged that the parity case named `no-config:non-change-prompt-allows` actually runs against the CONFIGURED root (`CFG`), not an unconfigured one. Behavior is correct (a non-change-verb prompt always allows), only the NAME misleads. Rename it for clarity in a fixup (or fold into the next touch of that test). Cosmetic — no coverage/correctness impact.

@@ -16,7 +16,7 @@
 
 import { loadConfig } from "./engine.mjs";
 import { decide as claudeDecide } from "./claude/shim.mjs";
-import { decide as ocDecide } from "./opencode/normalise.mjs";
+import { decide as ocDecide, decidePrompt as ocDecidePrompt } from "./opencode/normalise.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -99,10 +99,15 @@ const FIXTURE = [
     claude: { tool_name: "Bash", tool_input: { command: "git commit --no-verify -m wip" } },
     opencode: { tool: "bash", args: { command: "git commit --no-verify -m wip" } } },
 
-  // inject is prompt-act: Claude realises it via UserPromptSubmit; OpenCode has no
-  // prompt hook (realised always-on), so there is no OpenCode payload to test.
-  { name: "change-route-reminder", expect: "inject",
-    claude: { hook_event_name: "UserPromptSubmit", prompt: "please implement the new export feature" } },
+  // inject is prompt-act: Claude realises it via UserPromptSubmit, OpenCode via the
+  // chat.message hook. The engine DECISION is asserted here for both platforms; that
+  // the OpenCode plugin APPLIES the verdict (pushes a message part) is covered by
+  // opencode-inject.test.mjs (driving the chat.message hook directly). A change-verb
+  // prompt on the shared (UNconfigured) ROOT yields an inject; WHICH inject (setup vs
+  // route) is asserted by ruleId in block 1b below.
+  { name: "change-verb-prompt-injects", expect: "inject",
+    claude: { hook_event_name: "UserPromptSubmit", prompt: "please implement the new export feature" },
+    opencodePrompt: "please implement the new export feature" },
 
   { name: "allow-read-inside-root", expect: "allow",
     claude: { tool_name: "Read", tool_input: { file_path: path.join(ROOT, "README.md") } },
@@ -126,15 +131,48 @@ for (const c of FIXTURE) {
     ov = ocDecide(c.opencode.tool, c.opencode.args, ROOT, c.opencode.isOrchestrator ?? false, config).verdict;
     check(`opencode:${c.name}`, ov, c.opencodeExpect ?? c.expect);
   }
+  // Prompt-act cases drive the OpenCode chat.message path (decidePrompt) rather
+  // than the tool path — same shared engine, asserting OpenCode reaches the same
+  // verdict as Claude on a prompt.
+  if (c.opencodePrompt) {
+    ov = ocDecidePrompt(c.opencodePrompt, ROOT, false, config).verdict;
+    check(`opencode:${c.name}`, ov, c.opencodeExpect ?? c.expect);
+  }
   // Cross-check: where both platforms run and NO divergence is declared, the two
   // shims must agree byte-for-byte on the verdict — the real anti-drift assertion.
-  if (c.claude && c.opencode && !c.divergence) check(`parity:${c.name}`, cv, ov);
+  if (c.claude && (c.opencode || c.opencodePrompt) && !c.divergence) check(`parity:${c.name}`, cv, ov);
   if (c.divergence) divergences.push(`${c.name}: claude=${cv} opencode=${ov}`);
 }
 if (divergences.length) {
   console.log("  documented capability divergences (NOT drift — recorded per-case):");
   for (const d of divergences) console.log(`    • ${d}`);
 }
+
+// ── 1b. CONFIG-SENSITIVE INJECT: which inject fires depends on config presence ─
+// Both inject rules match a change-verb prompt; the engine returns the FIRST, and
+// no-config-run-setup is ordered ahead of change-route-reminder. So an UNCONFIGURED
+// project (no ai-pm.config.json) gets the setup nudge; a CONFIGURED one gets the
+// route reminder. Asserted by ruleId (verdict is `inject` either way) — this is the
+// only place the two injects are told apart. The ruleId distinction is engine-level
+// and platform-independent (both Claude's UserPromptSubmit and OpenCode's chat.message
+// reach the same engine), so it is asserted once via the Claude prompt path.
+console.log("CONFIG-SENSITIVE INJECT (no config ⇒ setup nudge; configured ⇒ route reminder):");
+const changePrompt = { hook_event_name: "UserPromptSubmit", prompt: "please implement the new export feature" };
+
+// Unconfigured root: a fresh tmp dir with NO ai-pm.config.json.
+const NOCFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-nocfg-"));
+check("no-config-run-setup:fires", claudeDecide(changePrompt, NOCFG, config).ruleId, "no-config-run-setup");
+fs.rmSync(NOCFG, { recursive: true, force: true });
+
+// Configured root: same dir once ai-pm.config.json exists ⇒ promptNeedsSetup is
+// false ⇒ change-route-reminder fires instead.
+const CFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-cfg-"));
+fs.writeFileSync(path.join(CFG, "ai-pm.config.json"), "{}");
+check("change-route-reminder:fires-when-configured", claudeDecide(changePrompt, CFG, config).ruleId, "change-route-reminder");
+// A non-change prompt on an unconfigured root ⇒ neither inject fires (allow).
+check("no-config:non-change-prompt-allows",
+  claudeDecide({ hook_event_name: "UserPromptSubmit", prompt: "good morning" }, CFG, config).verdict, "allow");
+fs.rmSync(CFG, { recursive: true, force: true });
 
 // ── 2. SINGLE-ENGINE: no rule logic leaked into a shim ───────────────────────
 // Tokens that appear ONLY in rule data/predicates (deny-rules.json / engine.mjs),

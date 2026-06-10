@@ -8,13 +8,13 @@
     "spawn-a-sub-agent":      { "claude": "Task",            "opencode": "task" },
     "ask-a-structured-question": { "claude": "AskUserQuestion", "opencode": "question" },
     "the-project-entry-file": { "claude": "CLAUDE.md",       "opencode": "AGENTS.md" },
-    "the-enforcement-layer":  { "claude": "settings.json PreToolUse hook", "opencode": "tool.execute.before plugin (throw)" },
+    "the-enforcement-layer":  { "claude": "settings.json PreToolUse + UserPromptSubmit hooks", "opencode": "tool.execute.before plugin (throw, deny) + chat.message plugin (push part, inject)" },
     "load-instructions":      { "claude": "@-import in CLAUDE.md", "opencode": "instructions[] in opencode.json" }
   },
   "class_support": {
-    "_doc": "Which enforcement return classes each platform realises. A rule whose class is unsupported falls back to persona (recorded per-rule in deny-rules.json `fallback`).",
+    "_doc": "Which enforcement return classes each platform realises. A rule whose class is unsupported falls back to persona (recorded per-rule in deny-rules.json `fallback`). Claude realises all three (deny + ask via PreToolUse, inject via UserPromptSubmit). OpenCode realises deny (tool.execute.before, throw) and inject (chat.message — a per-turn part pushed before the LLM call, the analog of UserPromptSubmit); ask falls back to persona (no ask-return in the plugin hooks). Both OpenCode classes are live-verified on opencode 1.17.x: deny blocked a write into .ai-pm/tooling/, and inject fired on an unconfigured project — the no-config-run-setup nudge reached the model and the orchestrator offered setup.",
     "claude":   { "deny": true, "ask": true,  "inject": true },
-    "opencode": { "deny": true, "ask": false, "inject": "always-on" }
+    "opencode": { "deny": true, "ask": false, "inject": true }
   },
   "models": {
     "_doc": "Per-platform model policy for the project config's role `model` field (ai-pm.config.json). ZERO-CONFIG by default — works with no setup. `session` = the orchestrator's model. `auto` = a different model for independent blind spots IF the platform offers one out of the box, ELSE it falls back to `session` (never an error). Names are environment-dependent — that is why this lives in the adapter, not the neutral config. This block is also the home of the **list-available-models** contract point (architecture.md `## Extension points`): per platform, HOW setup learns which models the environment offers — `discover` below.",

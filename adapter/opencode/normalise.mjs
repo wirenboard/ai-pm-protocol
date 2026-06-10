@@ -57,3 +57,20 @@ export function decide(tool, args, root, isOrchestrator, config) {
   if (!input) return { verdict: "allow", ruleId: null, reason: "" };
   return evaluate(input, config);
 }
+
+// ── prompt act: OpenCode chat.message (the analog of Claude UserPromptSubmit) ──
+// The chat.message hook fires once per user message before the LLM call; the
+// plugin entry joins the message text parts into `userText` and threads in the
+// actor signal. The neutral shape MUST match the Claude shim's UserPromptSubmit
+// branch — `{ act: "prompt", root, prompt }` — so the single engine decides the
+// prompt-class rules (no-config-run-setup, change-route-reminder) identically.
+export function normalisePrompt(userText, root, isOrchestrator) {
+  if (typeof userText !== "string" || !userText) return null;
+  return { act: "prompt", root, prompt: userText, isOrchestrator };
+}
+
+export function decidePrompt(userText, root, isOrchestrator, config) {
+  const input = normalisePrompt(userText, root, isOrchestrator);
+  if (!input) return { verdict: "allow", ruleId: null, reason: "" };
+  return evaluate(input, config);
+}
