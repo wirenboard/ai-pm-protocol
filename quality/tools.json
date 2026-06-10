@@ -26,6 +26,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "install-plugin",
+      "checks": "OpenCode plugin generation — the committed deployed plugin (.opencode/plugins/ai-pm.mjs) is byte-identical to the generator's output, so source and deployed cannot drift; the adapter-path rewrite is correct per layout",
+      "config": null,
+      "run": "node adapter/install-plugin.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "neutral-prose",
       "checks": "the core (PROTOCOL.md, agents, architecture.md) names no bare platform primitive",
       "config": null,

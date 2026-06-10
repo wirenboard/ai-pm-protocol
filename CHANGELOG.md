@@ -13,6 +13,20 @@
 
 ---
 
+## [3.2.3] — 2026-06-10
+
+**The deployed OpenCode plugin is now generated from source — no more hand-copy drift.** `.opencode/plugins/ai-pm.mjs` was a hand-maintained copy of `adapter/opencode/plugin-entry.mjs` (OpenCode registers hooks only off an inline-defined function, so it can't be a thin re-export). The two had already drifted — the copy had dropped the source's hook comments and diverged on a `catch` binding.
+
+### Fixed
+
+- **`adapter/opencode/install-plugin.mjs`** generates the deployed plugin from the source, rewriting ONLY the adapter import path (on-disk layout detection: downstream `.ai-pm/tooling/adapter` vs dev `adapter`); hook bodies pass through verbatim. The deployed plugin joins the assembled agents/commands as **generated, not hand-edited**. Behaviorally identical to the prior live-verified copy (only inert comments / a `_e` binding differ), so the live-verification carries over.
+
+### Added
+
+- **`adapter/install-plugin.test.mjs`** (build-beat) — asserts the deployed plugin is byte-identical to the generator's output (a future hand-edit or un-regenerated source change now fails the gate) and checks both layout directions. Makes the no-drift guarantee mechanical, not disciplinary — closing the enforcement-layer drift risk the doc audit flagged.
+
+---
+
 ## [3.2.2] — 2026-06-10
 
 **Documentation de-duplication + a root-cause guard.** A manifesto-rule-1 audit found duplication that had crept in across the setup-feature slices — and one copy had already begun to rot.

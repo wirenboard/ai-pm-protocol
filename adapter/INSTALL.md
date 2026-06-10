@@ -51,7 +51,7 @@ The two spawnable roles are assembled into Claude agent files by **`node adapter
 
 ### Enforce deny + inject (the plugin)
 
-Install drops one entry — `opencode/plugin-entry.mjs` — into `.opencode/plugins/`. It must **DEFINE** the plugin function inline, NOT import-and-re-expose it: opencode 1.17 does not register a hook off an imported/re-exported binding (an own-export entry's deny fails open; an inline-defined one blocks). So the thin wrappers are **inline in the entry**; only the rule logic (`decide`/`decidePrompt` + the engine) is imported from the adapter tree, which sits outside the scanned plugin dir. The rules stay single-sourced. No registration in `opencode.json` is needed.
+**`node adapter/opencode/install-plugin.mjs`** generates the deployed plugin — `.opencode/plugins/ai-pm.mjs` — FROM the source entry `adapter/opencode/plugin-entry.mjs`, retargeting only the adapter location to where the target vendors it (downstream: `.ai-pm/tooling/adapter`, no rewrite; dev/this repo: `adapter`). It must **DEFINE** the plugin function inline, NOT import-and-re-expose it: opencode 1.17 does not register a hook off an imported/re-exported binding (an own-export entry's deny fails open; an inline-defined one blocks). So the thin wrappers are **inline in the entry**; only the rule logic (`decide`/`decidePrompt` + the engine) is imported from the adapter tree, which sits outside the scanned plugin dir. The rules stay single-sourced. The deployed file is **generated, not hand-copied** — so it cannot drift from the source (`adapter/install-plugin.test.mjs` guards byte-identity); re-run it whenever the entry changes. No registration in `opencode.json` is needed.
 
 The entry registers **two** hooks — the two enforcement classes OpenCode realises:
 
