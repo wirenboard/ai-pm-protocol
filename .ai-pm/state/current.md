@@ -2,19 +2,25 @@
 
 > Resume pointer — lean by design (a pointer, **not** a log). On resume READ THIS FIRST, by this exact path. Deferred work lives in `.ai-pm/backlog.md`; full history in the commit log + CHANGELOG. Keep this file short.
 
-**Status (2026-06-10): no active feature. Working tree clean, `main` = `uni/main` = `0acd92a`. Setup feature complete + live-verified; docs de-duplicated; the deployed opencode plugin is now generated (no hand-copy drift).**
+**Status (2026-06-10): no active feature. Working tree clean, `main` = `uni/main` = `b7308b1`.**
 
-Shipped to `uni/main`, newest first:
+## Active direction — the protocol as a product-creation engine
 
-- **#7 `0acd92a` — 3.2.3 the deployed OpenCode plugin is generated from source.** `adapter/opencode/install-plugin.mjs` produces `.opencode/plugins/ai-pm.mjs` from `plugin-entry.mjs` (rewriting only the adapter path; hook bodies verbatim) — it joins the assembled agents/commands as generated-not-hand-edited. Anti-drift test (`install-plugin.test.mjs`) asserts byte-identity with the generator output, so the enforcement-layer drift the doc audit flagged is now mechanically impossible. Behaviorally identical to the prior live-verified copy.
-- **#6 `30a3b10` — 3.2.2 doc de-duplication + a root-cause guard.** A manifesto-rule-1 audit found duplication that crept across the setup slices (model policy in 3 homes, one drifted to a stale Haiku blacklist; INSTALL.md narrative stamped 6×; twin Apply-config sections). Collapsed to one home + pointers, no fact lost (`INSTALL.md` −18% words). Root cause = the review gate checks each change in isolation, never the whole doc surface (same shape as the inject-class miss); added a **whole-surface no-dup check** to the Reviewer's checklist (`agents/reviewer.md`).
-- **#5 `a155df9` — 3.2.1 setup applies the config it writes.** `## Setup` now re-assembles the agents after writing (a chosen reviewer model actually takes effect; idempotent for zero-config). Neutral `apply-config` contract point. **Full `/setup` live-verified end-to-end on opencode 1.17.x** (dialog → write → apply → reviewer pin `deepseek/deepseek-v4-flash` baked into the deployed agent; reconfigure shown) — the 3.2.0 unit-proven residual is now cleared. README gained a `## Configure` onboarding section.
-- **#4 `bf563e9` — 3.2.0 setup triggers (Slice B) + OpenCode `inject` class realized.** Lazy offer on an unconfigured project (not a block) + an explicit `/setup` command on both platforms. Fixed a pre-existing gap the live run exposed: the `inject` class was never realized on OpenCode (plugin wired only `tool.execute.before`); now via the `chat.message` hook.
-- **#3 `ea6a2a1` — 3.1.0 setup procedure (Slice A brain).** `setup` = a neutral orchestrator procedure: discover models → structured-question dialog → write `ai-pm.config.json`. OpenCode reviewer model-pin baked at install. Renamed the human role **PM → Operator** across the protocol.
-- **#1 `50f5ffb` / #2 `a6af179`** — 3.0.0 minimal env-agnostic core + the opencode-live-fix (see CHANGELOG / earlier history).
+Compass: **`.ai-pm/design/direction-product-engine.md`** (read it). The protocol is a development *engine*; products on it are arbitrary. Four pillars, each growing as **side-tools / config / checklists, NEVER core bloat** (`PROTOCOL.md` stays one-sitting), under the whole-surface no-dup guard:
+1. **Configurable rigor — SHIPPED (3.3.0).** `profile: full|lite|solo` in `ai-pm.config.json`; the floor (independent review · honesty · merge-stamp · Operator merges) is never cuttable; engine fails safe to `full`.
+2. **Threat model — first-class.** NEXT (bigger/fuzzier — design as a side-tool, carefully).
+3. **Product discovery** (market/competitors/users/feature-landing) — after threat model.
+4. **Relentless discipline** — ongoing (doc/code brevity, no rookie errors, no comment-prose).
 
-**Conventions:** conversation = Russian; artifacts/commits = English; the human role is the **Operator**. Decision authority = **`interactive`** (`ai-pm.config.json` `mode`) — surface forks to the Operator; merge/ship always manual (Operator authorizes each). Quality gates live in `quality/tools.json` (parity 55, neutral-prose, install-commands, install-model, opencode-inject).
+Competitor/market research lands per-pillar when there's something concrete to position — not up front.
 
-**Remotes:** `uni` (`aadegtyarev/ai-pm-protocol-uni`) is the live fork — local `main` tracks it. `origin` (public `aadegtyarev/ai-pm-protocol`) `main` is OLD (pre-redesign); a public sync is a deferred decision (backlog).
+## Shipped to `uni/main`, newest first
+- **#8 `b7308b1` 3.3.0** — configurable rigor (pillar 1, above).
+- **#3–#7 (3.1.0–3.2.3) — the setup feature, complete + fully live-verified on opencode.** `setup` = a neutral orchestrator procedure (discover models → dialog → write config → re-assemble/apply); lazy + `/setup` triggers; the OpenCode `inject` class realized (`chat.message`); docs audited + de-duplicated (+ a whole-surface no-dup guard added to the Reviewer); the deployed opencode plugin is now generated (no hand-copy drift); **PM → Operator** rename. Details in CHANGELOG.
+- **#1/#2 (3.0.0)** — minimal env-agnostic core + opencode-live-fix.
 
-**Local branch cleanup pending:** `backup-2026-06-10` (safety net from the earlier git-untangle — deletable once trusted) + stale `feature/opencode-harness-support--*` slice branches (superseded by #1).
+**Conventions:** conversation = Russian; artifacts/commits = English; the human role is the **Operator**. Decision authority = **`interactive`** (`ai-pm.config.json` `mode`); merge/ship always manual (Operator authorizes each). THIS repo runs `profile: full`. Quality gates in `quality/tools.json` (parity 55, neutral-prose, install-{model,commands,plugin}, opencode-inject, rigor-profile).
+
+**Remotes:** `uni` (`aadegtyarev/ai-pm-protocol-uni`) is the live fork — local `main` tracks it. `origin` (public) `main` is OLD (pre-redesign); a public sync is deferred (backlog).
+
+**Local branch cleanup pending:** `backup-2026-06-10` + stale `feature/opencode-harness-support--*` slices (superseded by #1).
