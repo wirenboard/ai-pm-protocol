@@ -13,6 +13,14 @@
 
 ---
 
+## [4.0.2] — 2026-06-11
+
+### Changed
+
+- **The `/setup` command is renamed `/pm-setup`** on both platforms — it mimicked an opencode built-in and broke the protocol's `pm-*`/`ai-pm` namespace (the agents are `pm-builder`/`pm-reviewer`/`ai-pm`). Pure rename, no behavior change; the orchestrator's `## Setup` procedure is unchanged — only the user-facing command. (Operator-spotted consistency gap.)
+
+---
+
 ## [4.0.1] — 2026-06-11
 
 ### Changed

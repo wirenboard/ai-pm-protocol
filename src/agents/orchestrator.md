@@ -26,8 +26,8 @@ Defaults stand if the Operator declines every cross-model choice: no pin ⇒ one
 
 **When it fires.** Two triggers, both **your** persona act (the enforcement floor cannot *force* a positive act, so neither is mechanical — a reminder may nudge, but running setup is yours):
 
-- **Reactive** — on the Operator's first real work request, you MUST check whether `ai-pm.config.json` exists **before** doing any of the work. If it does not, the project is unconfigured: **stop immediately** and give a SHORT plain-language offer of exactly two choices — run `setup` now, or proceed on the safe defaults — then wait. Do not start the task, do not explore the repo, do not run git, do not write a multi-topic essay. This is an **offer, not a block** — if the Operator declines ("not now, let's go"), proceed on the documented zero-config defaults (`interactive` mode, the adapter's zero-config model), announcing that plainly. A configured project skips this — the check is a no-op when the config is present.
-- **Explicit** — the `setup` command re-runs these steps on demand (to reconfigure an already-configured project, anytime). It carries no dialog of its own — it points here, the single home.
+- **Reactive** — on the Operator's first real work request, you MUST check whether `ai-pm.config.json` exists **before** doing any of the work. If it does not, the project is unconfigured: **stop immediately** and give a SHORT plain-language offer of exactly two choices — run `/pm-setup` now, or proceed on the safe defaults — then wait. Do not start the task, do not explore the repo, do not run git, do not write a multi-topic essay. This is an **offer, not a block** — if the Operator declines ("not now, let's go"), proceed on the documented zero-config defaults (`interactive` mode, the adapter's zero-config model), announcing that plainly. A configured project skips this — the check is a no-op when the config is present.
+- **Explicit** — the `/pm-setup` command re-runs these steps on demand (to reconfigure an already-configured project, anytime). It carries no dialog of its own — it points here, the single home.
 
 ## When something is off
 

@@ -1,6 +1,6 @@
 // OpenCode realisation of the adapter's explicit-setup-command contract point.
-// Assembles the platform-neutral command body (src/adapter/commands/setup.body.md) +
-// the OpenCode per-command frontmatter (src/adapter/opencode/commands/setup.fm) into
+// Assembles the platform-neutral command body (src/adapter/commands/pm-setup.body.md) +
+// the OpenCode per-command frontmatter (src/adapter/opencode/commands/pm-setup.fm) into
 // an OpenCode command file in **.opencode/commands/** (PLURAL — opencode 1.17
 // loads the plural command dir, matching its plural agents/ + plugins/ dirs; the
 // singular .opencode/command/ is NOT loaded, the same dogfood finding as the other
@@ -24,12 +24,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 // read the result without re-deriving it.
 export function install(outDir) {
   fs.mkdirSync(outDir, { recursive: true });
-  const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "opencode", "commands", "setup.fm"), "utf8").trim();
-  const body = fs.readFileSync(path.join(ROOT, "src", "adapter", "commands", "setup.body.md"), "utf8").trimStart();
+  const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "opencode", "commands", "pm-setup.fm"), "utf8").trim();
+  const body = fs.readFileSync(path.join(ROOT, "src", "adapter", "commands", "pm-setup.body.md"), "utf8").trimStart();
   const out = `---\n${fm}\n---\n\n${body}`;
-  const outPath = path.join(outDir, "setup.md");
+  const outPath = path.join(outDir, "pm-setup.md");
   fs.writeFileSync(outPath, out);
-  console.log(`wrote ${path.relative(ROOT, outPath)}  (/setup command, agent ai-pm)`);
+  console.log(`wrote ${path.relative(ROOT, outPath)}  (/pm-setup command, agent ai-pm)`);
   return outPath;
 }
 

@@ -1,4 +1,4 @@
-// Command-assembly test — proves the `/setup` explicit-trigger command assembles
+// Command-assembly test — proves the `/pm-setup` explicit-trigger command assembles
 // correctly for BOTH platforms from ONE neutral body + per-platform frontmatter,
 // and that it stays a THIN WRAPPER (no copy of the `## Setup` dialog). The contract
 // this locks (PROTOCOL.md invariant 6, single home):
@@ -44,8 +44,8 @@ const DIALOG_MARKERS = [
 ];
 
 for (const [platform, install, wantBase, wantFm] of [
-  ["claude", claudeInstall, "setup.md", null],
-  ["opencode", opencodeInstall, "setup.md", "agent: ai-pm"],
+  ["claude", claudeInstall, "pm-setup.md", null],
+  ["opencode", opencodeInstall, "pm-setup.md", "agent: ai-pm"],
 ]) {
   const { text, base } = assembled(install);
   check(`${platform}: writes ${wantBase}`, base === wantBase);
@@ -65,4 +65,4 @@ check("both platforms share the one neutral body (no per-platform dialog copy)",
 
 console.log(`\nINSTALL-COMMANDS: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
-console.log("PASS — /setup assembles for both platforms, thin wrapper, one shared body");
+console.log("PASS — /pm-setup assembles for both platforms, thin wrapper, one shared body");
