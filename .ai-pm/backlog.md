@@ -407,3 +407,15 @@ Ideas extracted from `docs/features/protocol-hardening_plan.md` (branch `feature
 - Possibly widen what the orchestrator offloads to safe built-ins (less inline work, more parallel read-only fan-out) without weakening the role-substitution deny.
 
 **Relation:** directly extends **"Reconsider the `general`/`build`/`plan` task-deny scope"** (2026-06-08) — that item already concluded read-only ad-hoc routes through `explore`/`pm-codebase-reader` and flagged the missing persona doc; this item is the broader *systematic survey* of OpenCode built-ins + the safe-to-delegate mapping. Also touches the harness-reference table (`gen/harness-reference.md`) which maps abstract tools → per-harness concretes. *Path:* `/pm-research` (OpenCode built-in tool/agent inventory + containment facts → `doc/stack-notes.md`), then a small `/pm-plan` (persona + roster wiring of the safe set). Severity: low-medium (capability/ergonomics, not safety — the safety floor already holds via the named deny-list). PM-parked 2026-06-09.
+
+## Leftover old-model artifacts in `.ai-pm/` survived the redesign archive — cleanup — 2026-06-10
+
+The minimal model's `.ai-pm/` working area is `state/`, `backlog.md`, `plans/`, `reviews/` (+ `arch/`). These old-protocol dirs/files still sit there: `audits/`, `contracts/`, `decision-authority.md`, `protocol-feedback/`, `research/`, `review-config.md`, `tmp/`. (`design/minimal-ai-pm.md` is worth keeping as redesign provenance.) None is shipped surface, so harmless, but it is clutter. Sweep — delete the dead ones in one pass, keep `design/`.
+
+## state.md / backlog.md tracking — should the resume pointer be gitignored? — 2026-06-10
+
+`state.md` is per-session orchestrator bookkeeping, yet it is git-tracked — which creates a recurring tension with "never commit to `main`": refreshing it between features has no feature branch to ride, and committing it to `main` re-diverges local `main` from `uni/main`. Decide: gitignore `.ai-pm/state/` (pure local pointer) vs keep it tracked-but-feature-branch-only. Same question, lighter, for `backlog.md`. Resolving this removes the "where do I commit the resume pointer" ambiguity for good.
+
+## deepseek-v4-flash as the OpenCode default cross-model reviewer — 2026-06-10 (idea)
+
+Cross-model independence needs the Reviewer on a *different* model than the maker, not a *weaker* one. If `deepseek-v4-flash` is review-grade (distinct enough from `deepseek-v4-pro` to catch its blind spots), it could be the OpenCode `reviewer.model` default via `tool-map.json` `models` allow/auto. Validate review quality before defaulting; opt-in until then.
