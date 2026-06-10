@@ -13,6 +13,23 @@
 
 ---
 
+## [4.0.0] — 2026-06-11
+
+**The repo dogfoods the clean structure it gives downstream — `docs/` + `src/` (restructure Slice B).** A protocol that must keep documentation and code laconic, structured, and duplicate-free has to model it on itself. **Breaking: the layout changed** (an existing install's paths must update).
+
+### Changed
+
+- **`docs/`** — the human-readable documentation: `architecture.md`; `contracts/` (compacted ~55 → ~25 lines each — guarantee · value · must-work · must-not-break; dead `workflow/*`/`pm-*` paths dropped, git history is the archive); `decisions/` — the compacted compass + rationale + the Operator's **mechanism principle** (*a mechanism counts only if it fires without the Operator's vigilance — if the Operator still has to notice a failure class, the mechanism failed*).
+- **`src/`** — the machinery: `adapter/`, `agents/`, `quality/`, `modules/`, `templates/`.
+- **Root** keeps only the entries + project config: `PROTOCOL.md` (the harness-loaded operating constitution), `README.md`, `CHANGELOG.md`, `LICENSE`, `ai-pm.config.json`, `modules.json`, `AGENTS.md`, `CLAUDE.md`.
+- **Every path rewired** and verified: the Claude deny hook (`.claude/settings.json` → `src/adapter/claude/shim.mjs`), `CLAUDE.md` `@`-imports, the install scripts' root-resolution, the OpenCode plugin trio in lockstep (byte-identity guard holds), the engine/assembler resolution, `tool-map.json`, `INSTALL.md`, the quality run-commands, the neutral-prose surface, every test import, and the **downstream tooling-submodule convention** (`.ai-pm/tooling/src/adapter/…`). Live enforcement (deny hook + merge-gate + plugin) verified from the new paths.
+
+### Migration
+
+An existing downstream updates its adapter path one level: `.ai-pm/tooling/adapter/…` → `.ai-pm/tooling/src/adapter/…` (the deny hook command, the install commands; `src/adapter/INSTALL.md` carries the new convention). No behavioral change — purely structural.
+
+---
+
 ## [3.4.2] — 2026-06-11
 
 **Retention discipline — the protocol stops accumulating its own graveyard (restructure Slice A).** Dogfooding pillar 3 on ourselves before the `docs/`+`src/` move (Slice B).

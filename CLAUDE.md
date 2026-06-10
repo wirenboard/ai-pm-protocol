@@ -6,9 +6,9 @@ This repo **is** the ai-pm protocol, and it **develops itself under its own prot
 
 ## Project kind: software
 
-The deliverable is the protocol's own source — `PROTOCOL.md` (the constitution), the `agents/` role definitions, the `adapter/` (engine + rules + shims), `architecture.md`, and the `templates/` + `quality/` scaffolding. Verification is the `quality/` checks (the parity + neutral-prose tests) plus editorial review; there is no stack linter (this repo is Node + markdown-prose).
+The deliverable is the protocol's own source — `PROTOCOL.md` (the constitution), the `src/agents/` role definitions, the `src/adapter/` (engine + rules + shims), `docs/architecture.md`, and the `src/templates/` + `src/quality/` scaffolding. Verification is the `src/quality/` checks (the parity + neutral-prose tests) plus editorial review; there is no stack linter (this repo is Node + markdown-prose).
 
 ---
 
 @PROTOCOL.md
-@agents/orchestrator.md
+@src/agents/orchestrator.md

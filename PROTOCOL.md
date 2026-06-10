@@ -1,6 +1,6 @@
 # The AI-PM Protocol
 
-> **Read this whole file in one sitting.** That is the design constraint, not a suggestion: if it ever grows past what a person holds in their head, the protocol has failed and must be cut back. One constitution, no on-demand topic files, no per-command essays. The detail that isn't here is in three places only: `architecture.md` (the system's mental model), the adapter data (the platform specifics), and git history (why a past decision was made).
+> **Read this whole file in one sitting.** That is the design constraint, not a suggestion: if it ever grows past what a person holds in their head, the protocol has failed and must be cut back. One constitution, no on-demand topic files, no per-command essays. The detail that isn't here is in three places only: `docs/architecture.md` (the system's mental model), the adapter data (the platform specifics), and git history (why a past decision was made).
 
 An operator builds software by describing what they want. A small set of AI roles plan it, build it, review it independently, and ship it. The Operator decides *what* and *why*, talks in their own language, approves plans, and merges — and never reads code.
 
@@ -34,7 +34,7 @@ Eight specialised personas collapse into three. The one split that carries relia
 
 The Orchestrator is the running session. The Builder and Reviewer are **separate spawned sub-agents** — separate contexts. That separation is load-bearing: it is what makes "the reviewer is independent" true, and it is what lets the enforcement layer tell "the orchestrator authored content" apart from "a sub-agent authored content" (`## Enforcement`).
 
-Specialised concerns the old personas owned — the architect's data-flow honesty, the auditor's frugality and graduation checks, the advocate's foundational product questions — live as **one-line prompts** in each role's own checklist (in its `agents/<role>.md`), not as separate roles. A generalist reviewer may miss what a dedicated advocate once caught; that risk is accepted and mitigated by sharp checklists, not by more roles.
+Specialised concerns the old personas owned — the architect's data-flow honesty, the auditor's frugality and graduation checks, the advocate's foundational product questions — live as **one-line prompts** in each role's own checklist (in its `src/agents/<role>.md`), not as separate roles. A generalist reviewer may miss what a dedicated advocate once caught; that risk is accepted and mitigated by sharp checklists, not by more roles.
 
 ---
 
@@ -47,7 +47,7 @@ understand → plan → build → review → ship
         (Operator ok)       (independent) (Operator merges)
 ```
 
-1. **Understand.** A session resuming prior work FIRST reads the resume pointer **`.ai-pm/state/current.md`** (by that exact path — never via file-search, which hides dot-directories on some harnesses) to recover where it left off. Then the Orchestrator checks git is clean and on a fresh branch off `main`, and reads the project context it needs (`architecture.md`, the user journeys, the touched feature docs). Grounds the plan in the real system, not a guess.
+1. **Understand.** A session resuming prior work FIRST reads the resume pointer **`.ai-pm/state/current.md`** (by that exact path — never via file-search, which hides dot-directories on some harnesses) to recover where it left off. Then the Orchestrator checks git is clean and on a fresh branch off `main`, and reads the project context it needs (`docs/architecture.md`, the user journeys, the touched feature docs). Grounds the plan in the real system, not a guess.
 2. **Plan.** Builder drafts the change against its plan checklist into a **transient plan file** (`.ai-pm/plans/<topic>.md`) — the plan plus a progress note it carries through the loop; **`.ai-pm/state/current.md`** points at the active one (so a dropped session resumes mid-feature). Orchestrator shows it to the Operator **in plain language** and waits for approval. The approved plan is the contract the review checks against. For a user-facing change, the product questions in the checklist must each have a recorded answer or be consciously descoped before build.
 3. **Build.** Builder implements on the feature branch in **atomic, one-purpose steps**: the project's `build`-beat quality tools green at the end (`## Quality tools`), **never edits an existing test to make it pass**, touches only what the plan named. It **hands the change back without committing** — git is the Orchestrator's (it commits the reviewed change; `## Git flow`).
 4. **Review.** A **freshly spawned Reviewer** — never the Builder, never a stale artifact — checks the work against the plan and its review checklist. It stamps a verdict. A failed, missing, or skipped review counts as *not reviewed*; there is no shortcut around a real, this-turn review (`## Invariants`, gate integrity).
@@ -79,7 +79,7 @@ These hold on **every** action, whatever beat you are in. Each says, in one line
 
 ## Role contracts
 
-A role is defined here by its **contract** — what it must guarantee — never by *how* it does the work. The concrete procedure and checklist of each role live in its agent definition (`agents/<role>.md`) and are **swappable**: drop in a different agent (a stricter reviewer, an external review engine) and the core does not change, as long as the new agent honours the contract. This is the same core/adapter split as the platforms, applied to the **role axis** — the checklist is the agent's business, the contract is the core's.
+A role is defined here by its **contract** — what it must guarantee — never by *how* it does the work. The concrete procedure and checklist of each role live in its agent definition (`src/agents/<role>.md`) and are **swappable**: drop in a different agent (a stricter reviewer, an external review engine) and the core does not change, as long as the new agent honours the contract. This is the same core/adapter split as the platforms, applied to the **role axis** — the checklist is the agent's business, the contract is the core's.
 
 - **Builder.** Plans before it builds. *Guarantees:* a plan the Operator can approve before any code; a structural choice surfaced for the Operator, not silently taken; the change confined to what the plan named; the `build`-beat quality tools green; existing tests never weakened.
 - **Reviewer.** Independently judges the built change. *Guarantees:* a fresh context, separate from the Builder; the work checked against the approved plan; a verdict the ship-gate can read; every finding backed by concrete evidence, not assertion; **a plan deviation or a dishonest over-claim blocks** — never waved through.
@@ -91,11 +91,11 @@ The checklists that *realise* these contracts — the Builder's plan questions, 
 
 ## Quality tools
 
-A project's checks — linters, formatters, type-checkers, test runners, a security scanner — are **not** hard-coded here; the core stays stack-agnostic. They live in a **quality layer**: a `quality/` directory holding each tool's native config plus a small `tools.json` registry — per tool, *what it checks*, *the command to run it*, *which beat it runs in* (`build` / `review` / `ship`), and *a one-line init*. The **Builder** runs the `build`-beat tools and hands back only when they pass; the **Reviewer** confirms the `review`-beat tools ran and reads their output. A red tool is *not green* — the build isn't done.
+A project's checks — linters, formatters, type-checkers, test runners, a security scanner — are **not** hard-coded here; the core stays stack-agnostic. They live in a **quality layer**: a `src/quality/` directory holding each tool's native config plus a small `tools.json` registry — per tool, *what it checks*, *the command to run it*, *which beat it runs in* (`build` / `review` / `ship`), and *a one-line init*. The **Builder** runs the `build`-beat tools and hands back only when they pass; the **Reviewer** confirms the `review`-beat tools ran and reads their output. A red tool is *not green* — the build isn't done.
 
-The template ships only the **shape** — the registry format and one or two example rows. A project brings its own configs for its own stack. Adding a tool = drop its config in `quality/` and add a registry row; **no core edit**. This is the one home for "what does *green* mean here", folding what used to be scattered across stack-notes, the project-kind validation, and per-linter features.
+The template ships only the **shape** — the registry format and one or two example rows. A project brings its own configs for its own stack. Adding a tool = drop its config in `src/quality/` and add a registry row; **no core edit**. This is the one home for "what does *green* mean here", folding what used to be scattered across stack-notes, the project-kind validation, and per-linter features.
 
-The same registry-driven extension runs on the **role-content** axis: a project's enabled **capability modules** — toggleable, per-`kind`-defaulted bundles of role-checklist depth (threat-modelling, product discovery, …) catalogued in `modules.json`, composed into the role agents at assembly, `[persona]` prose that sharpens a role's reasoning and blocks nothing mechanically, an absent/unrecognised toggle resolving **on** (fail-safe to more rigor) — with the mechanism homed in `architecture.md` `## Capability modules` + the registry, the core only naming the axis.
+The same registry-driven extension runs on the **role-content** axis: a project's enabled **capability modules** — toggleable, per-`kind`-defaulted bundles of role-checklist depth (threat-modelling, product discovery, …) catalogued in `modules.json`, composed into the role agents at assembly, `[persona]` prose that sharpens a role's reasoning and blocks nothing mechanically, an absent/unrecognised toggle resolving **on** (fail-safe to more rigor) — with the mechanism homed in `docs/architecture.md` `## Capability modules` + the registry, the core only naming the axis.
 
 ## Enforcement
 
@@ -128,7 +128,7 @@ The single invariant these collapse into — *a deliverable is satisfied only by
 One file binds a project's choices, so the core depends on **no specific agent**. `ai-pm.config.json` (project root) carries:
 - **mode** — `autonomous | interactive`: the value-home for invariant 7 (absent or unrecognised ⇒ `interactive`).
 - **profile** — `full | lite | solo` (absent/unrecognised ⇒ `full`): the speed↔trust tradeoff. States only the wish for the cuttable levers (who builds, plan ceremony); the floor — independent review by a separate fresh Reviewer, the honesty gates, the merge stamp, the Operator merges — holds in every profile, enforced regardless. A profile that cuts the floor is no protocol. Value-home: `ai-pm.config.json` `_profile`.
-- **roles** — each seat binds an **agent** and an optional **model**. Defaults to this repo's `agents/`; **swap the agent for any one that honours the seat's contract** (`## Role contracts`) — that is how you plug in a different reviewer with zero core edit. The config states only the *wish* (`session` / `auto` / a per-platform pin); the model policy — what `auto` resolves to, and each platform's model authority — lives in the platform adapter (`adapter/tool-map.json` `models`).
+- **roles** — each seat binds an **agent** and an optional **model**. Defaults to this repo's `src/agents/`; **swap the agent for any one that honours the seat's contract** (`## Role contracts`) — that is how you plug in a different reviewer with zero core edit. The config states only the *wish* (`session` / `auto` / a per-platform pin); the model policy — what `auto` resolves to, and each platform's model authority — lives in the platform adapter (`src/adapter/tool-map.json` `models`).
 - **platform** — the active adapter (`claude | opencode`); **kind** — the project kind, which seeds the quality-layer defaults and review route.
 
 The Orchestrator resolves a seat through `roles` before spawning, and reads `mode` for decision authority. A swapped-in agent is bound by the role contract, not by being ours — the ship-gate checks the verdict's *form*, not its author. This is the one home for what used to be a separate decision-authority marker, the project-kind marker, and an implicit role wiring.
@@ -137,7 +137,7 @@ The Orchestrator resolves a seat through `roles` before spawning, and reads `mod
 
 The protocol is **one neutral core + one thin adapter per platform**. This is the load-bearing architecture, not an optimisation.
 
-**The core** — this file, the role definitions, the checklists, `architecture.md` — is written in abstract acts only: *read a file*, *write a file*, *spawn a sub-agent*, *ask the Operator a structured question*, *deny a write outside the root*. It names **no** platform, tool, hook, or plugin. A person reads the core and understands the protocol without knowing which harness runs it.
+**The core** — this file, the role definitions, the checklists, `docs/architecture.md` — is written in abstract acts only: *read a file*, *write a file*, *spawn a sub-agent*, *ask the Operator a structured question*, *deny a write outside the root*. It names **no** platform, tool, hook, or plugin. A person reads the core and understands the protocol without knowing which harness runs it.
 
 **Each adapter** realises a small, fixed, enumerated **contract** for one platform — and nothing more:
 

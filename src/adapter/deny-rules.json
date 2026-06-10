@@ -1,0 +1,136 @@
+{
+  "_doc": "The shared enforcement registry — ONE authored copy of every guard, read by every platform's thin shim. A rule carries INTENT + CLASS + which neutral act it watches + the PREDICATE that decides + any DATA params. The predicate names a function in the shared engine (src/adapter/engine.mjs); the engine holds the logic, this file holds the rules and their data. A platform adapter normalises its harness input to {act, path, command, content, spawnTarget, actor} and asks the engine to evaluate; the engine returns allow | deny | ask | inject. A platform that cannot realise a class (e.g. OpenCode has no 'ask' return) FALLS BACK to persona for that rule — recorded in `fallback`, never silently dropped. Adding a platform = write its input-normaliser + map the three return classes; touch nothing here.",
+  "classes": {
+    "deny": "block the tool call",
+    "ask": "block and ask the Operator to confirm; a platform with no ask-return falls back to persona",
+    "inject": "do not block; add a context note to the turn"
+  },
+  "role_deny_set": {
+    "_doc": "Single home for the role-duplicator + generic-builtin deny set. A spawn whose target is in this list never fills a protocol seat. code-review / deep-research and wb-* KNOWLEDGE skills are NOT here — they are designated engines/aids, not seat substitutes.",
+    "role_duplicators": [
+      "wb-development:coder",
+      "wb-development:code-reviewer",
+      "wb-development:design-review",
+      "wb-development:plan-feature",
+      "wb-development:pr-prep",
+      "wb-git:workflow",
+      "wb-git:pr-author"
+    ],
+    "generic_builtins": ["general", "build", "plan"]
+  },
+  "change_verbs": {
+    "_doc": "Used by the change-route-reminder (inject). RU+EN verbs that signal a repo-change request.",
+    "pattern": "implement|refactor|feature|deploy|release|\\bfix\\b|\\badd\\b|\\bchange\\b|\\bbuild\\b|\\bcommit\\b|\\bmerge\\b|\\bbug\\b|\\bremove\\b|\\bdelete\\b|\\bdrop\\b|\\brename\\b|\\bextract\\b|\\bupdate\\b|сдела|делай|поправ|добав|исправ|реализ|почини|зарелиз|закоммит|смерж|внедри|перепиш|рефактор|фич|убери|убрать|удали|сними|вынеси|переименуй|обнови"
+  },
+  "orchestrator_writable": {
+    "_doc": "Paths the orchestrator session MAY author (everything else source/canonical is sub-agent-only). Covers its state, backlog, the transient plan files (.ai-pm/plans/), and the project config. The tooling submodule is never writable (self-patch guard).",
+    "allow_prefixes": [".ai-pm/", "ai-pm.config.json"],
+    "never": [".ai-pm/tooling/"]
+  },
+  "rules": [
+    {
+      "id": "read-outside-root",
+      "intent": "Block a read whose target resolves outside the project root.",
+      "class": "deny",
+      "act": "read",
+      "predicate": "pathOutsideRoot"
+    },
+    {
+      "id": "find-outside-root",
+      "intent": "Block a `find` that searches outside the project root.",
+      "class": "deny",
+      "act": "bash",
+      "predicate": "findTargetOutsideRoot"
+    },
+    {
+      "id": "write-outside-root",
+      "intent": "Block any write whose target resolves outside the project root (write/edit and bash redirect, tee, sed -i, cp/mv dest, dd of=).",
+      "class": "deny",
+      "act": "write|bash",
+      "predicate": "writeTargetOutsideRoot"
+    },
+    {
+      "id": "truncating-write",
+      "intent": "Block an empty/whitespace-only write over an existing non-empty file (truncation guard; 2026-06-06 doc-loss regression).",
+      "class": "deny",
+      "act": "write",
+      "predicate": "emptyWriteOverNonEmpty"
+    },
+    {
+      "id": "orchestrator-authors-content",
+      "intent": "Block the orchestrator session writing a source/canonical-doc path; sub-agents author content, the orchestrator routes. Allowed: its own state and a feature plan, and any source/doc when the project's `profile` is lite/solo (configurable rigor — the orchestrator builds directly; the floor denies below are never relaxed). Fails OPEN on an unknown actor (never a false denial).",
+      "class": "deny",
+      "act": "write",
+      "predicate": "orchestratorWritingContent"
+    },
+    {
+      "id": "self-patch-enforcer",
+      "intent": "Block any write into the tooling submodule — the enforcer's own source + the deployed adapter change only via a git submodule bump, never an in-place edit.",
+      "class": "deny",
+      "act": "write|bash",
+      "predicate": "writesIntoTooling"
+    },
+    {
+      "id": "merge-while-unstamped",
+      "intent": "Block a git merge/push of feature/<topic> whose review file lacks a satisfied review/validation stamp. Checks stamp PRESENCE, not authorship (fabrication stays persona). Fails OPEN on ambiguity.",
+      "class": "deny",
+      "act": "bash",
+      "predicate": "mergeWithUnstampedReview"
+    },
+    {
+      "id": "role-duplicator-or-generic-in-seat",
+      "intent": "Block spawning a role-duplicator or a generic built-in into a protocol seat (role_deny_set). The designated pm-* role / code-review / deep-research are never blocked.",
+      "class": "deny",
+      "act": "spawn",
+      "predicate": "spawnTargetInDenySet"
+    },
+    {
+      "id": "ssh-content-edit",
+      "intent": "Block an in-place content edit on a remote system (ssh + sed -i / vi / vim / nano / tee / > redirect). Repo-owned files change via git, never a remote in-place edit.",
+      "class": "deny",
+      "act": "bash",
+      "predicate": "sshContentEdit",
+      "fallback": "persona on a platform without remote-edit detection"
+    },
+    {
+      "id": "ssh-mutating-action",
+      "intent": "Confirm before a mutating action on a remote system (ssh + systemctl/docker/apt/npm/kubectl/rm/cp/mv/mkdir/touch). Legitimate for deploy/maintenance/runtime-state; never for editing a repo-owned file.",
+      "class": "ask",
+      "act": "bash",
+      "predicate": "sshMutatingAction",
+      "fallback": "persona on a platform with no ask-return (e.g. OpenCode)"
+    },
+    {
+      "id": "force-push",
+      "intent": "Confirm a git push --force / -f / --force-with-lease — it rewrites remote history; never force-push main.",
+      "class": "ask",
+      "act": "bash",
+      "predicate": "gitForcePush",
+      "fallback": "persona on a platform with no ask-return"
+    },
+    {
+      "id": "git-commit-no-verify",
+      "intent": "Confirm a git commit --no-verify / --no-gpg-sign — it skips pre-commit hooks or signing; fix the failing hook instead of bypassing it.",
+      "class": "ask",
+      "act": "bash",
+      "predicate": "gitCommitNoVerify",
+      "fallback": "persona on a platform with no ask-return"
+    },
+    {
+      "id": "no-config-run-setup",
+      "intent": "This project is not configured (no ai-pm.config.json). Before doing the task, offer the Operator exactly two choices — run `setup` now, or proceed on the safe defaults — then STOP and wait for their answer. Do not start the task, do not explore the repo, do not run git. Keep the offer short.",
+      "class": "inject",
+      "act": "prompt",
+      "predicate": "promptNeedsSetup",
+      "fallback": "always-on instruction text on a platform with no prompt hook"
+    },
+    {
+      "id": "change-route-reminder",
+      "intent": "On a repo-change request (change_verbs), inject a reminder to follow the loop (plan -> build -> review -> ship) and route work to the owning role, not the orchestrator. Fires once the project is configured (an unconfigured one gets no-config-run-setup first).",
+      "class": "inject",
+      "act": "prompt",
+      "predicate": "promptMatchesChangeVerb",
+      "fallback": "always-on instruction text on a platform with no prompt hook"
+    }
+  ]
+}

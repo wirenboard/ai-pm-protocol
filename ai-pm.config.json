@@ -16,12 +16,12 @@
   "modules": {
     "threat-model": { "depth": "rich", "nonSecurity": true }
   },
-  "_modules": "The enabled capability modules and their toggle values (architecture.md `## Capability modules`; the catalog + per-kind defaults are homed in modules.json). A key set to `false` turns a module OFF; anything else (an object, `true`, or an absent key) leaves it ON with the per-`kind` default merged under any override here (fail-safe to MORE rigor — a bad/typo'd value can never silently disable the rigor). This repo (kind: software) enables `threat-model` at `rich` depth, including for non-security changes. A module is `[persona]` prompt content composed into the role agents at assembly — it sharpens reasoning, it blocks nothing mechanically.",
+  "_modules": "The enabled capability modules and their toggle values (docs/architecture.md `## Capability modules`; the catalog + per-kind defaults are homed in modules.json). A key set to `false` turns a module OFF; anything else (an object, `true`, or an absent key) leaves it ON with the per-`kind` default merged under any override here (fail-safe to MORE rigor — a bad/typo'd value can never silently disable the rigor). This repo (kind: software) enables `threat-model` at `rich` depth, including for non-security changes. A module is `[persona]` prompt content composed into the role agents at assembly — it sharpens reasoning, it blocks nothing mechanically.",
 
   "roles": {
     "orchestrator": { "agent": "ai-pm" },
     "builder": { "agent": "pm-builder" },
     "reviewer": { "agent": "pm-reviewer", "model": "auto" }
   },
-  "_roles": "Each seat binds an `agent` and an optional `model`. `agent` = the id the active platform knows (a Claude subagent_type / an OpenCode agent id); swap it for ANY agent that honours the seat's contract — that is how you plug in a different reviewer (stricter, or an external engine) with zero core edit. `model` states only the WISH ('session' / 'auto' / a per-platform pin); the platform adapter realises it. Omitted ⇒ 'session', EXCEPT the reviewer defaults to 'auto' (a maker-model can't see its own blind spots). The model policy — what 'auto' resolves to and each platform's model authority — is homed in the platform adapter: adapter/tool-map.json `models`."
+  "_roles": "Each seat binds an `agent` and an optional `model`. `agent` = the id the active platform knows (a Claude subagent_type / an OpenCode agent id); swap it for ANY agent that honours the seat's contract — that is how you plug in a different reviewer (stricter, or an external engine) with zero core edit. `model` states only the WISH ('session' / 'auto' / a per-platform pin); the platform adapter realises it. Omitted ⇒ 'session', EXCEPT the reviewer defaults to 'auto' (a maker-model can't see its own blind spots). The model policy — what 'auto' resolves to and each platform's model authority — is homed in the platform adapter: src/adapter/tool-map.json `models`."
 }

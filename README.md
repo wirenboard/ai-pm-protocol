@@ -22,43 +22,48 @@ The whole protocol is one short constitution you can read in one sitting: **[`PR
 
 ## Platform-neutral by design
 
-The protocol is **one neutral core + one thin adapter per platform**. The core (`PROTOCOL.md`, the `agents/` roles, `architecture.md`) names only abstract acts — *read a file*, *spawn a sub-agent*, *deny a write outside the project*. Each platform (Claude Code, OpenCode, the next one) is a thin **adapter** (`adapter/`) that maps those acts to its concrete tools. Adding a platform is its adapter and **zero edits to the core**.
+The protocol is **one neutral core + one thin adapter per platform**. The core (`PROTOCOL.md`, the `src/agents/` roles, `docs/architecture.md`) names only abstract acts — *read a file*, *spawn a sub-agent*, *deny a write outside the project*. Each platform (Claude Code, OpenCode, the next one) is a thin **adapter** (`src/adapter/`) that maps those acts to its concrete tools. Adding a platform is its adapter and **zero edits to the core**.
 
-Part of that adapter is a real **enforcement layer** — a deny layer that mechanically blocks certain tool calls (reading or writing outside the project, spawning a look-alike role into a protocol seat, merging an unreviewed change). What is mechanically enforced versus held by the prose alone is labelled honestly throughout (`PROTOCOL.md` `## Enforcement`, `architecture.md`).
+Part of that adapter is a real **enforcement layer** — a deny layer that mechanically blocks certain tool calls (reading or writing outside the project, spawning a look-alike role into a protocol seat, merging an unreviewed change). What is mechanically enforced versus held by the prose alone is labelled honestly throughout (`PROTOCOL.md` `## Enforcement`, `docs/architecture.md`).
 
 ## Install
 
-Status: both **Claude Code** and **OpenCode** are live-verified — on each, the session loads as the orchestrator and the deny layer mechanically blocks a guarded write. Parity 50/50 (`adapter/parity.test.mjs`). Per-platform wiring: `adapter/INSTALL.md`.
+Status: both **Claude Code** and **OpenCode** are live-verified — on each, the session loads as the orchestrator and the deny layer mechanically blocks a guarded write. Parity 50/50 (`src/adapter/parity.test.mjs`). Per-platform wiring: `src/adapter/INSTALL.md`.
 
-The protocol is consumed as a git submodule; the active platform's adapter is then wired — the deny hooks, the role agents, and the `PROTOCOL.md` import. The concrete, per-platform wiring lives in **[`adapter/INSTALL.md`](adapter/INSTALL.md)** — the single home for where each file lands and how each platform is hooked up. After wiring, start a fresh session so the harness loads the protocol.
+The protocol is consumed as a git submodule; the active platform's adapter is then wired — the deny hooks, the role agents, and the `PROTOCOL.md` import. The concrete, per-platform wiring lives in **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)** — the single home for where each file lands and how each platform is hooked up. After wiring, start a fresh session so the harness loads the protocol.
 
 ## Configure
 
 Once wired, run **`setup`** to configure the project — platform, mode, roles, and models. It is a plain-language dialog: it discovers the models your environment actually offers and asks you to pick, then writes `ai-pm.config.json`. You need not run it by hand — on a fresh, unconfigured project the orchestrator offers setup on your first work request (an offer you may decline to proceed on safe defaults).
 
-Re-run it anytime — the `/setup` command, or just ask to reconfigure — when you change models or switch platform. It reads the current config, shows what changes, rewrites it, and re-applies so the new models take effect. The full procedure lives in **[`agents/orchestrator.md`](agents/orchestrator.md)** `## Setup` (`PROTOCOL.md` `## The loop` frames it; `adapter/INSTALL.md` has the per-platform command).
+Re-run it anytime — the `/setup` command, or just ask to reconfigure — when you change models or switch platform. It reads the current config, shows what changes, rewrites it, and re-applies so the new models take effect. The full procedure lives in **[`src/agents/orchestrator.md`](src/agents/orchestrator.md)** `## Setup` (`PROTOCOL.md` `## The loop` frames it; `src/adapter/INSTALL.md` has the per-platform command).
 
 ## Layout
 
 ```
 PROTOCOL.md        the constitution — the loop, the roles, the invariants, the honest enforcement map
-agents/            the three role definitions (neutral bodies)
-adapter/           the only platform-specific code:
-  engine.mjs         the shared enforcement engine (one copy, every platform)
-  deny-rules.json    every guard, as data
-  tool-map.json      neutral act -> each platform's concrete tool
-  claude/            the Claude shim, hooks, and agent assembler
-  opencode/          the OpenCode shim, plugin entry, and agent assembler
-  INSTALL.md         where each file lands, per platform
-architecture.md    the engineer's mental model — how the pieces fit
-quality/           what "green" means here (the parity + neutral-prose checks)
-templates/         the lean scaffold a downstream project starts from
+docs/              human-readable documentation:
+  architecture.md    the engineer's mental model — how the pieces fit
+  contracts/         the product promises, one compact file each
+  decisions/         the compacted decision-base — why the protocol is shaped this way
+src/               the machinery:
+  agents/            the three role definitions (neutral bodies)
+  adapter/           the only platform-specific code:
+    engine.mjs         the shared enforcement engine (one copy, every platform)
+    deny-rules.json    every guard, as data
+    tool-map.json      neutral act -> each platform's concrete tool
+    claude/            the Claude shim, hooks, and agent assembler
+    opencode/          the OpenCode shim, plugin entry, and agent assembler
+    INSTALL.md         where each file lands, per platform
+  modules/           the optional capability modules (e.g. threat-model)
+  quality/           what "green" means here (the parity + neutral-prose checks)
+  templates/         the lean scaffold a downstream project starts from
 ai-pm.config.json  the project's choices — roles, mode, platform, kind
 ```
 
 ## Contributing
 
-This repo develops itself under its own protocol — the same loop, roles, and checks it ships. Start with `PROTOCOL.md` (the rules), `architecture.md` (how it is built), and the `quality/` checks: `node adapter/parity.test.mjs` and `node quality/neutral-prose.test.mjs`.
+This repo develops itself under its own protocol — the same loop, roles, and checks it ships. Start with `PROTOCOL.md` (the rules), `docs/architecture.md` (how it is built), and the `src/quality/` checks: `node src/adapter/parity.test.mjs` and `node src/quality/neutral-prose.test.mjs`.
 
 ## License
 

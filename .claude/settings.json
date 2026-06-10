@@ -5,14 +5,14 @@
       {
         "matcher": "Read|Write|Edit|Bash|Task|Skill",
         "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/adapter/claude/shim.mjs\"" }
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/src/adapter/claude/shim.mjs\"" }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/adapter/claude/shim.mjs\"" }
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/src/adapter/claude/shim.mjs\"" }
         ]
       }
     ]
