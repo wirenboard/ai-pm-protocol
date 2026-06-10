@@ -144,6 +144,17 @@ function fileNonEmpty(p) {
 function projectConfigured(root) {
   return fs.existsSync(path.join(path.resolve(root), "ai-pm.config.json"));
 }
+// The project's rigor profile (ai-pm.config.json `profile`). Fails SAFE to the
+// strict default "full" on absent / unreadable / malformed / unknown value — so a
+// bad value can only ever DENY more, never widen a floor (mirrors absent-mode →
+// the safer "interactive"). Only "lite"/"solo" relax; everything else ⇒ "full".
+// Same presence/value read within invariant 2 as projectConfigured — never a write.
+function projectProfile(root) {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(path.resolve(root), "ai-pm.config.json"), "utf8"));
+    return cfg.profile === "lite" || cfg.profile === "solo" ? cfg.profile : "full";
+  } catch (_e) { return "full"; }
+}
 
 // ── predicates: (input, config) => boolean ───────────────────────────────────
 // A predicate inspects only the neutral input + the rule data in config. The
@@ -179,6 +190,12 @@ const PREDICATES = {
   orchestratorWritingContent(input, config) {
     if (!input.isOrchestrator) return false;
     if (input.act === "bash" && isPureGitCommand(input.command)) return false;
+    // Configurable rigor: a lite/solo profile lets the orchestrator build directly,
+    // so it MAY author source/doc paths — relax THIS predicate only. The tooling
+    // (self-patch), boundary, truncation, and merge-gate denies are SEPARATE
+    // predicates and untouched, so the floor never relaxes (`## Project config`).
+    const profile = projectProfile(input.root);
+    if (profile === "lite" || profile === "solo") return false;
     const ow = config.orchestrator_writable;
     return writeTargetsOf(input).some((t) => {
       const r = resolveTarget(input.root, t);
@@ -258,4 +275,4 @@ export function evaluate(input, config) {
   return ask || { verdict: "allow", ruleId: null, reason: "" };
 }
 
-export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, PREDICATES };
+export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, projectProfile, PREDICATES };

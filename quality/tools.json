@@ -34,6 +34,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "rigor-profile",
+      "checks": "configurable rigor — the engine relaxes the orchestrator-content deny under a lite/solo profile and denies under full/absent/unknown/malformed; the floor (tooling, boundary, truncation, merge-gate) never relaxes under any profile",
+      "config": null,
+      "run": "node adapter/rigor-profile.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "neutral-prose",
       "checks": "the core (PROTOCOL.md, agents, architecture.md) names no bare platform primitive",
       "config": null,

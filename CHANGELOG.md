@@ -13,6 +13,26 @@
 
 ---
 
+## [3.3.0] — 2026-06-10
+
+**Configurable rigor — the speed↔trust tradeoff becomes the project's choice.** First pillar of the product-engine direction (`.ai-pm/design/direction-product-engine.md`): the protocol is a development *engine*, and a project now picks how much ceremony it pays — without ever cutting the value.
+
+### Added
+
+- **`profile: full | lite | solo`** in `ai-pm.config.json` (absent/unrecognised/malformed ⇒ `full`):
+  - **full** — spawn a Builder + spawn a Reviewer + full plan beat (this repo stays `full`).
+  - **lite** — the orchestrator builds directly + a separate Reviewer + a light plan.
+  - **solo** — the orchestrator builds directly + a separate Reviewer + no plan ceremony.
+  The load-bearing split is **builder ≠ Reviewer**, not orchestrator ≠ builder — so "the orchestrator holds the pen" is a legitimate lite/solo lever while a fresh independent Reviewer always reviews. `setup` asks for the profile (recommends `full`, names `solo`'s trust cost, never recommends `solo` silently).
+- **`adapter/rigor-profile.test.mjs`** — proves the fail-safe, the relax-only-orchestrator-content scope, and that the floor never relaxes under `solo`.
+
+### Changed
+
+- **The floor is sacred in every profile and is never cuttable:** independent review by a separate fresh context, the honesty gates, the merge-gate stamp, and the Operator merges. A profile that cuts the floor is no protocol.
+- **Minimal core touch** (`PROTOCOL.md` +1 line, no new section, still one-sitting): four clause qualifiers mark which rigor is configurable down to the floor. The engine (`adapter/engine.mjs`) now reads the profile and **fails safe to `full`** (a broken config fails *closed*, strict), gating ONLY the orchestrator-content deny; the tooling / out-of-root / truncation / merge-gate floors are separate predicates, never profile-gated. Honest per-platform split: the relaxation is mechanical on OpenCode (the engine resolves the actor) and a no-op on Claude (the content-deny there already fails open).
+
+---
+
 ## [3.2.3] — 2026-06-10
 
 **The deployed OpenCode plugin is now generated from source — no more hand-copy drift.** `.opencode/plugins/ai-pm.mjs` was a hand-maintained copy of `adapter/opencode/plugin-entry.mjs` (OpenCode registers hooks only off an inline-defined function, so it can't be a thin re-export). The two had already drifted — the copy had dropped the source's hook comments and diverged on a `catch` binding.

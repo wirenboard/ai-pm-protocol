@@ -58,7 +58,7 @@
     },
     {
       "id": "orchestrator-authors-content",
-      "intent": "Block the orchestrator session writing a source/canonical-doc path; sub-agents author content, the orchestrator routes. Allowed: its own state and a feature plan. Fails OPEN on an unknown actor (never a false denial).",
+      "intent": "Block the orchestrator session writing a source/canonical-doc path; sub-agents author content, the orchestrator routes. Allowed: its own state and a feature plan, and any source/doc when the project's `profile` is lite/solo (configurable rigor — the orchestrator builds directly; the floor denies below are never relaxed). Fails OPEN on an unknown actor (never a false denial).",
       "class": "deny",
       "act": "write",
       "predicate": "orchestratorWritingContent"

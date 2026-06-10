@@ -4,6 +4,9 @@
   "mode": "interactive",
   "_mode": "autonomous | interactive — value-home for PROTOCOL.md invariant 7. Absent or unrecognised ⇒ interactive (the safe default; never an error).",
 
+  "profile": "full",
+  "_profile": "full | lite | solo — the speed↔trust tradeoff (PROTOCOL.md `## Project config`). Absent or unrecognised ⇒ full (the safe default; zero-config = full rigor, never an error). States only the WISH for the CUTTABLE levers (who builds, plan ceremony). The FLOOR — independent review by a separate fresh Reviewer, the honesty gates, the merge stamp, and the Operator merges — holds in EVERY profile, enforced regardless of this value. A profile that cuts the floor is not a faster protocol; it is no protocol. - full: orchestrator routes, spawns a Builder; full plan + Operator approval (today). - lite: orchestrator MAY build directly; plan ceremony may be trimmed (fixup-grade). - solo: lite + plan ceremony off by default. Same floor.",
+
   "platform": "claude",
   "_platform": "claude | opencode — which adapter realises the contract on this project. Usually auto-detected; pinned here when needed.",
 
