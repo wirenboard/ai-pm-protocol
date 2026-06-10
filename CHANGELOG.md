@@ -13,6 +13,20 @@
 
 ---
 
+## [3.4.2] — 2026-06-11
+
+**Retention discipline — the protocol stops accumulating its own graveyard (restructure Slice A).** Dogfooding pillar 3 on ourselves before the `docs/`+`src/` move (Slice B).
+
+### Changed
+
+- **Transient working artifacts are deleted after use** (`PROTOCOL.md` beat 5, one home): a feature's plan, its review stamp, and any audit run for it are removed at ship — the durable record is the commit + CHANGELOG + contracts; no graveyard accumulates. The stamp goes last (after push + PR), since the merge-gate reads it at push and fails closed. The orchestrator ship procedure points at the rule; the engine/merge-gate predicate is unchanged.
+
+### Removed
+
+- Swept the accumulated `.ai-pm/` graveyard (git history is the archive): 18 spent review stamps, 6 audits, 8 research files, `protocol-feedback/`, 21 superseded `state/archive/` pointers, 2 orphan configs, `tmp/` — ~4279 lines. The keep-set (state, backlog, active plans, the design compass, contracts) is intact.
+
+---
+
 ## [3.4.1] — 2026-06-10
 
 **threat-model Slice 2 — the real content + the `depth` toggle.** The first module's skeleton is fleshed into a tight, actionable threat enumeration, and its `depth` toggle is realized honestly.

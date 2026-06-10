@@ -1,3 +1,0 @@
-# Execution State (archived)
-
-- **Shipped:** `state-model-section` — EPIC cross-document-consistency auditor slice 4 (third whole-system gap). Conditional `## State model` section in architecture.md (states×transitions referencing the Behavioral-contract enum; born `N/A`, A2-walk/A4-exclude) + conditional `/pm-plan` State-model check (state-bearing core; no hook, no hard gate, already-captured guard). Selected autonomously. Plan-check approve; code-review 2 fixed via owners (example-drift, false-anchor). Released v2.25.0, PR #214 merged 2026-06-05 (CHANGELOG conflict with #215 resolved on merge; v2.25.0 above v2.24.1).

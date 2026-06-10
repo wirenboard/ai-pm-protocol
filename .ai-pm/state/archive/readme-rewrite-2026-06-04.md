@@ -1,3 +1,0 @@
-# Execution State (archived)
-
-- **Shipped:** `readme-rewrite` — PM-directed front-door rewrite of the protocol's own README.md. Install moved to top; two-path quickstart (greenfield + legacy onboarding); inline v1.x→v2.0 migration removed → MIGRATIONS.md; update/migration sections consolidated; risk list strongly cut + moved up as "why"; canonical что→зачем→установка→подробности→лицензия order. PM consulted + confirmed structure. pm-architect authored; plan-check approve; editorial code-review 1 fixed (settings.json in auto-update list). Released v2.24.1, PR #215 merged 2026-06-05. Follow-up queued: bake the canonical README shape into doc/_templates/README.md.tmpl + discipline.
