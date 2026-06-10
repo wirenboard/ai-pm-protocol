@@ -73,7 +73,7 @@ The protocol's decomposition runs on one more axis than platform / role / qualit
 The pieces and their single homes:
 
 ```
- modules.json            the registry — the catalog (toggle shape · per-kind
+ src/modules/registry.json   the registry — the catalog (toggle shape · per-kind
                          defaults · targets · fragment pointers). NO floor prose.
  src/modules/<id>/<role>.md  a FRAGMENT — the deepening one module adds to one role
                          (core prose; subject to the neutral-prose guard).
@@ -97,7 +97,7 @@ The shipped module is **threat-model**: it deepens the Reviewer's always-on secu
 ## Extension points
 
 - **Add a platform.** `src/adapter/<platform>/` — the input-normaliser, the verdict-mapper, the install glue — plus a `tool-map.json` column and a parity-fixture pair. Nothing else.
-- **Add a capability module.** A row in `modules.json` (toggle · per-kind defaults · targets · fragment pointers) + its `src/modules/<id>/<role>.md` fragments + a `<!-- ai-pm:modules -->` marker in each targeted role's floor body. Both install-agents shims compose it for free — they share the one assembler (`src/adapter/modules.mjs`). No core edit.
+- **Add a capability module.** A row in `src/modules/registry.json` (toggle · per-kind defaults · targets · fragment pointers) + its `src/modules/<id>/<role>.md` fragments + a `<!-- ai-pm:modules -->` marker in each targeted role's floor body. Both install-agents shims compose it for free — they share the one assembler (`src/adapter/modules.mjs`). No core edit.
 - **Add a deny rule.** A row in `deny-rules.json` (intent · class · act · predicate); if the check is new, a predicate in `engine.mjs`; a case in `parity.test.mjs`. Both shims pick it up for free — they read the one list.
 - **Swap a role.** Bind a different agent in `ai-pm.config.json` `roles` — any agent that honours the seat's contract (`PROTOCOL.md` `## Role contracts`), zero core edit.
 - **Add a quality tool.** Drop its config in `src/quality/` and a row in `src/quality/tools.json` (what it checks · the command · the beat). No core edit (`PROTOCOL.md` `## Quality tools`).

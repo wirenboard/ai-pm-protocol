@@ -95,7 +95,7 @@ A project's checks — linters, formatters, type-checkers, test runners, a secur
 
 The template ships only the **shape** — the registry format and one or two example rows. A project brings its own configs for its own stack. Adding a tool = drop its config in `src/quality/` and add a registry row; **no core edit**. This is the one home for "what does *green* mean here", folding what used to be scattered across stack-notes, the project-kind validation, and per-linter features.
 
-The same registry-driven extension runs on the **role-content** axis: a project's enabled **capability modules** — toggleable, per-`kind`-defaulted bundles of role-checklist depth (threat-modelling, product discovery, …) catalogued in `modules.json`, composed into the role agents at assembly, `[persona]` prose that sharpens a role's reasoning and blocks nothing mechanically, an absent/unrecognised toggle resolving **on** (fail-safe to more rigor) — with the mechanism homed in `docs/architecture.md` `## Capability modules` + the registry, the core only naming the axis.
+The same registry-driven extension runs on the **role-content** axis: a project's enabled **capability modules** — toggleable, per-`kind`-defaulted bundles of role-checklist depth (threat-modelling, product discovery, …) catalogued in `src/modules/registry.json`, composed into the role agents at assembly, `[persona]` prose that sharpens a role's reasoning and blocks nothing mechanically, an absent/unrecognised toggle resolving **on** (fail-safe to more rigor) — with the mechanism homed in `docs/architecture.md` `## Capability modules` + the registry, the core only naming the axis.
 
 ## Enforcement
 

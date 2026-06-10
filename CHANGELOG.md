@@ -13,6 +13,14 @@
 
 ---
 
+## [4.0.1] — 2026-06-11
+
+### Changed
+
+- **The module registry moved into its subsystem:** `modules.json` (root) → **`src/modules/registry.json`**, mirroring `src/quality/tools.json`. The catalog of capability modules is machinery, not project config — it belongs with the modules subsystem, not at the root. Pure move + path rewire (the assembler's `loadRegistry`, the `setup` reference, `ai-pm.config.json` `_modules`, `docs/architecture.md`, `PROTOCOL.md`); registry content unchanged. Root now holds only the entries + project config.
+
+---
+
 ## [4.0.0] — 2026-06-11
 
 **The repo dogfoods the clean structure it gives downstream — `docs/` + `src/` (restructure Slice B).** A protocol that must keep documentation and code laconic, structured, and duplicate-free has to model it on itself. **Breaking: the layout changed** (an existing install's paths must update).

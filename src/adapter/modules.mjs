@@ -8,7 +8,7 @@
 // What is whose home (PROTOCOL.md manifesto, no duplication):
 //   • the floor PROSE (always-on role text, e.g. the Reviewer's security item) lives
 //     in src/agents/<role>.md and is NEVER a module fragment — the marker only ADDS;
-//   • modules.json carries the catalog (toggle shape · per-kind defaults · targets ·
+//   • src/modules/registry.json carries the catalog (toggle shape · per-kind defaults · targets ·
 //     fragment pointers), never floor prose;
 //   • src/modules/<id>/<role>.md carries the DEEPENING a module adds to a role.
 //
@@ -18,7 +18,7 @@
 //
 // THREE security checks the assembler enforces (its own threat model):
 //   1. a fragment pointer that escapes the repo root (absolute, or `..`-bearing) is
-//      REJECTED — a typo'd/hostile pointer in modules.json cannot read outside root
+//      REJECTED — a typo'd/hostile pointer in the registry cannot read outside root
 //      (invariant 2; mirrors the engine's isInsideRoot);
 //   2. a fragment file NAMED by an ENABLED module but MISSING on disk is a HARD ERROR
 //      — never silently ship a role missing its security section (the dangerous drop);
@@ -37,7 +37,7 @@ function isInsideRoot(root, resolved) {
 
 // Resolve a registry-relative fragment pointer against the root, REJECTING any
 // pointer that is absolute or escapes the root. A fragment pointer is data in
-// modules.json; this is the trust boundary for it.
+// the registry; this is the trust boundary for it.
 export function resolveFragmentPath(root, pointer) {
   if (typeof pointer !== "string" || pointer.length === 0) {
     throw new Error(`module fragment pointer is empty or not a string: ${JSON.stringify(pointer)}`);
@@ -54,7 +54,7 @@ export function resolveFragmentPath(root, pointer) {
 
 // ── registry ──────────────────────────────────────────────────────────────────
 export function loadRegistry(root) {
-  return JSON.parse(fs.readFileSync(path.join(path.resolve(root), "modules.json"), "utf8"));
+  return JSON.parse(fs.readFileSync(path.join(path.resolve(root), "src", "modules", "registry.json"), "utf8"));
 }
 
 // ── enabled-resolution (fail-safe to ON / strict side) ────────────────────────
