@@ -66,7 +66,7 @@ These hold on **every** action, whatever beat you are in. `[mechanical]` rows ar
 
 2. **Stay inside the project** `[mechanical]`. Every role reads, searches, and writes only within the project root — no parent directories, no sibling repos. One carve-out *inside* the root: **`.ai-pm/tooling/`** (the enforcer's own source) is off-limits to read and write; the rest of `.ai-pm/` is fair game. *Prevents: a boundary breach outside the work, or an agent reading/self-patching the enforcer.*
 
-3. **Gate integrity — a gate is satisfied only by a fresh spawn this turn** `[persona]`, with a merge-time floor `[mechanical]`. The Orchestrator never *produces, paraphrases, reuses, or skips* a role's deliverable. Reading a past artifact for context is fine; presenting it as this turn's gate result is the banned move. Failed / missing / already-on-disk / skipped all count as **"not run"** — respawn the role. When a role's own definition must change, respawn that role to change it; never hand-edit its output or its enforcer. The merge-gate deny is the floor: a feature whose review is unstamped cannot ship. *Prevents: a crashed agent's verdict faked, a stale stamp reused, a review quietly skipped.*
+3. **Gate integrity — a gate is satisfied only by a fresh spawn this turn** `[persona]`, with a merge-time floor `[mechanical]`. The Orchestrator never *produces, paraphrases, reuses, or skips* a role's deliverable. Reading a past artifact for context is fine; presenting it as this turn's gate result is the banned move. Failed / missing / already-on-disk / skipped all count as **"not run"** — respawn the role. When a role's own definition must change, respawn that role to change it; never hand-edit its output or its enforcer. The merge-gate deny is the floor: a feature whose review is unstamped cannot ship. *Prevents: a crashed agent's verdict faked, a stale stamp reused, a review quietly skipped.* **Non-gate carve-out:** a non-gate role (the Builder) *may* be continued across steps of the same feature (plan→build, build→address-findings) when the platform supports it — an efficiency, not a gate substitute; a continued Builder cannot review its own work. Gate roles (the Reviewer) are never continued.
 
 4. **Repo files change through git** `[mechanical, where the platform supports it]`. A file the repo owns (code, config, schema, template) changes by a commit, never by an in-place edit on a remote system. Runtime state, deploys, and experiments on a remote are fair game. *Prevents: an untracked change on a server that no commit records.*
 
@@ -159,6 +159,7 @@ The protocol is **one neutral core + one thin adapter per platform**.
 | abstract tool → concrete tool | the platform's name for read / write / edit / spawn-sub-agent / ask-structured-question |
 | enforce a deny | the platform's deny mechanism, loading the **shared deny-rules data** |
 | spawn a sub-agent | how this platform starts a child role |
+| continue a sub-agent *(optional)* | how this platform resumes an existing sub-agent, if supported; absent ⇒ fresh spawn (no capability lost, only the re-read token cost) |
 | load instructions | how this platform loads this core every turn |
 | install into a project | how this platform wires the protocol into a downstream repo |
 

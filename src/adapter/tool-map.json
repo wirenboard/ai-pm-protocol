@@ -6,6 +6,7 @@
     "edit-a-file":            { "claude": "Edit",            "opencode": "edit" },
     "run-a-shell-command":    { "claude": "Bash",            "opencode": "bash" },
     "spawn-a-sub-agent":      { "claude": "Task",            "opencode": "task" },
+    "continue-a-sub-agent":   { "claude": "SendMessage",     "opencode": null, "_fallback": "spawn-a-sub-agent", "_doc": "Resume an existing sub-agent. Optional — absent or null ⇒ fall back to spawn-a-sub-agent (no loss of capability, only the re-read token cost). Never use to continue a gate role (Reviewer): invariant 3 non-gate carve-out only." },
     "ask-a-structured-question": { "claude": "AskUserQuestion", "opencode": "question" },
     "the-project-entry-file": { "claude": "CLAUDE.md",       "opencode": "AGENTS.md" },
     "the-enforcement-layer":  { "claude": "settings.json PreToolUse + UserPromptSubmit hooks", "opencode": "tool.execute.before plugin (throw, deny) + chat.message plugin (push part, inject)" },

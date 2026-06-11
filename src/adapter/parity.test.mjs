@@ -179,7 +179,7 @@ fs.mkdirSync(path.join(CFG, "docs"));
 fs.writeFileSync(path.join(CFG, "docs", "product.md"), "brief");
 check("change-route-reminder:fires-when-configured-with-brief", claudeDecide(changePrompt, CFG, config).ruleId, "change-route-reminder");
 // A non-change prompt on a configured root ⇒ no inject fires (allow).
-check("no-config:non-change-prompt-allows",
+check("configured:non-change-prompt-allows",
   claudeDecide({ hook_event_name: "UserPromptSubmit", prompt: "good morning" }, CFG, config).verdict, "allow");
 fs.rmSync(CFG, { recursive: true, force: true });
 

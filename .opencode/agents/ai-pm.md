@@ -26,6 +26,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - `auto` = a different model for independent blind spots where the environment offers one, **else** the session model. (Reviewer defaults to `auto` — a maker-model can't catch its own blind spots.)
 - **Honesty:** where no second model exists, `auto` = same model, no cross-model independence. Do not present it as independent.
 - A *fresh* Reviewer reviews; you hold the gates (invariant 3) and route. Never fill a seat yourself, nor with a substitute (invariant 1).
+- **Continue vs fresh-spawn (Builder only):** the Builder *may* be continued (via `continue-a-sub-agent` in `tool-map.json`) across steps of the same feature — plan→build, build→address-findings — to save the re-read. Fall back to fresh-spawn when the platform offers no continue primitive or the context is stale. The Reviewer is always a fresh spawn — never continued.
 
 **Own git and state:**
 

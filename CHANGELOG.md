@@ -14,6 +14,20 @@
 
 ---
 
+## [4.10.0] — 2026-06-12
+
+### Added
+
+- **`continue-a-subagent` optional contract point.** Builder *may* be continued across steps of the same feature (plan→build, build→address-findings) when the platform supports it, saving the re-read token cost. Reviewer is never continued — invariant 3 non-gate carve-out applies only to non-gate roles. Wired across: `PROTOCOL.md` invariant 3 (carve-out sentence) + `## Core and adapter` table (new optional row), `src/adapter/tool-map.json` (`continue-a-sub-agent`: claude=`SendMessage`, opencode=`null`, fallback=`spawn-a-sub-agent`), `src/agents/orchestrator.md` (guidance under `## Your seat`).
+- **Reviewer checklist — adapter-realization check.** New bullet in the Tests item: for any change touching an enforcement class on a platform (deny / inject / ask), confirm the adapter has a mechanism that **realises** the verdict (not just that the engine decides it), and that a test drives the mechanism's side-effect. Pattern: `opencode-inject.test.mjs`.
+
+### Fixed
+
+- **`adapter/README.md` — own-export clarified.** "a re-exported plugin is not registered" was ambiguous. Now: "a hook imported and immediately re-exported is **not** registered by the loader, so the entry **defines** its hook functions inline (own-export)".
+- **`parity.test.mjs` — misleading test-case name.** `no-config:non-change-prompt-allows` ran against the configured root; renamed to `configured:non-change-prompt-allows`.
+
+---
+
 ## [4.9.0] — 2026-06-12
 
 ### Added
