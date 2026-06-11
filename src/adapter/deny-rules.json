@@ -72,10 +72,18 @@
     },
     {
       "id": "merge-while-unstamped",
-      "intent": "Block a git merge/push of any branch (prefix stripped — feature/, fix/, hotfix/, …) whose review file lacks a satisfied review/validation stamp. Checks stamp PRESENCE, not authorship (fabrication stays persona). Fails OPEN on ambiguity.",
+      "intent": "Block a git merge/push of any branch (prefix stripped — feature/, fix/, hotfix/, …) whose review file lacks a satisfied review/validation stamp. Checks stamp PRESENCE, not authorship (fabrication stays persona). An unresolvable topic is escalated by the sibling ask rule (merge-topic-unresolvable), never silently passed.",
       "class": "deny",
       "act": "bash",
       "predicate": "mergeWithUnstampedReview"
+    },
+    {
+      "id": "merge-topic-unresolvable",
+      "intent": "Confirm a git merge/push whose branch topic cannot be resolved (detached HEAD and no branch ref in the command) — the merge-gate cannot check the review stamp, so an unresolved topic means ask, never pass.",
+      "class": "ask",
+      "act": "bash",
+      "predicate": "mergeTopicUnresolvable",
+      "fallback": "persona on a platform with no ask-return"
     },
     {
       "id": "role-duplicator-or-generic-in-seat",

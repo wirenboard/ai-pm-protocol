@@ -243,8 +243,15 @@ const PREDICATES = {
   mergeWithUnstampedReview(input) {
     if (!/git\s+(merge|push)\b/.test(input.command || "")) return false;
     const topic = resolveMergeTopic(input.command, input.root);
-    if (!topic) return false; // fail open
+    if (!topic) return false; // unresolved topic ⇒ the sibling ask rule (mergeTopicUnresolvable), never a silent pass
     return !reviewStampSatisfied(input.root, topic);
+  },
+  // The merge-gate's no-silent-pass companion: a merge/push whose topic cannot be
+  // resolved (detached HEAD and no branch ref in the command) leaves the stamp
+  // uncheckable — escalate to the Operator instead of passing.
+  mergeTopicUnresolvable(input) {
+    if (!/git\s+(merge|push)\b/.test(input.command || "")) return false;
+    return resolveMergeTopic(input.command, input.root) === null;
   },
   spawnTargetInDenySet(input, config) {
     const set = [

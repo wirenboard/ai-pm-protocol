@@ -6,45 +6,15 @@ Observations and follow-ups recorded during reviews/audits.
 
 **Decision (Operator, 2026-06-12):** the `[who] × [speed↔quality]` matrix was retracted from `README.md` (4.10.3) — the `[who]` axis had zero implementation and its tech-lead cell ("you see the diff") contradicted `PROTOCOL.md` "Never show code". The honest surface today is the one-axis `profile` dial.
 
-**If/when the non-technical-PM bet is taken** (it is a recorded hypothesis in `docs/product.md` §1, not a served segment), the axis is its own coherent epic, not scattered fixes: a `scenario` (or `operator`) key in `ai-pm.config.json` with 2–3 presets (e.g. `pm` / `tech-lead`) parameterizing diff visibility, question depth, and the auto-decide ceiling; amending "Never show code" into a scenario-conditioned rule; plus the lighter-profile compensator (review-time product-fit check) and a friendlier on-ramp. Sequence together — see the two items below.
+**If/when the non-technical-PM bet is taken** (it is a recorded hypothesis in `docs/product.md` §1, not a served segment), the axis is its own coherent epic, not scattered fixes: a `scenario` (or `operator`) key in `ai-pm.config.json` with 2–3 presets (e.g. `pm` / `tech-lead`) parameterizing diff visibility, question depth, and the auto-decide ceiling; amending "Never show code" into a scenario-conditioned rule; and a friendlier on-ramp. (The lighter-profile compensator — the Reviewer's review-time product-fit check — is a floor checklist item since 4.11.0; the epic may deepen it.)
 
-## Mechanical floor hardening — two small features — 2026-06-12 (from product analysis, finding 2b)
+## Stamp-authorship signal on OpenCode — 2026-06-12 (from product analysis, finding 2b; second half)
 
-- **Merge-gate fail-closed on unresolved topic:** today the gate fails OPEN when the topic can't be resolved from the branch — a miss should mean "ask", not "pass". One engine change + tests.
-- **Stamp-authorship signal on OpenCode:** the platform resolves the actor, so the reviewer could write a marker the orchestrator's write path can't produce — narrows "stamp presence, not authorship". Claude stays presence-only (no actor signal); label honestly.
-
-## Review-time product-fit compensator for light profiles — 2026-06-12 (from product analysis, finding 7)
-
-In `lite`/`solo` the plan ceremony is lighter, so a wrong product call is less likely to be caught at plan time. Compensator: the Reviewer checklist gains a mandatory product-fit question (does the change match `docs/product.md`?) when the profile is light — rigor moves from plan-time to review-time instead of disappearing. Cheap: `[persona]` checklist text, one module or agent edit. Until built, `docs/product.md` §7 records the descope.
-
-## Downstream upgrade note — before user #2 — 2026-06-12 (from product analysis, finding 5)
-
-A minimal note: what a protocol version bump requires of a downstream (re-run install, re-read CHANGELOG), and what a MAJOR breaks. Free while N=0 downstreams; required before the first real one. One doc, small.
+The platform resolves the actor, so the reviewer could write a marker the orchestrator's write path can't produce — narrows the merge-gate's "stamp presence, not authorship". Claude stays presence-only (no actor signal in the hook payload); label honestly. (The first half — merge-gate ask-on-unresolvable-topic — is in since 4.11.0.)
 
 ## Vendor-watch standing item — platform absorption — 2026-06-12 (from product analysis, finding 4)
 
 Claude Code natively ships agent teams, review subagents, deny hooks; vendors absorb orchestration primitives over time (precedent: Agent-OS retired its phases). At each release-audit, check what the platforms absorbed and re-aim: the durable parts are cross-platform parity, the honesty map, and product discovery — never re-wrap a primitive the vendor ships.
-
-## Ship beat missing: state update is not the last step — 2026-06-11 (8D)
-
-**Root cause:** `orchestrator.md` describes the ship beat as a narrative (version + CHANGELOG + push + PR + delete artifacts) with no explicit final step to update `.ai-pm/state/current.md`. State gets updated at the START of work (pointing to what's active) but never at CLOSE — so after merge, state is stale until the Operator notices.
-
-**Systemic measure:** add a ship-beat checklist to `orchestrator.md` with an explicit final step: update `state/current.md` (version shipped, what's next) and commit on main. It is Orchestrator-authored (its lane), requires no review, and is the natural close of every feature loop.
-
-Path: `fixup` — a short ordered list added to the ship section of `orchestrator.md`.
-
-## fixup: `adapter/README.md` still calls the OpenCode plugin entry a "re-export" — 2026-06-10 (final ship review, non-blocking N1)
-
-The final-review Reviewer (approve) flagged that `adapter/README.md:46` still describes the plugin entry as a "re-export"/"re-exported plugin". The actual, dogfood-confirmed form is an **own-export** (`import { X as impl }; export const X = impl`) — a bare re-export loads but its `before` hook never fires. The correct form is already documented in three other homes (`architecture.md`, `adapter/INSTALL.md`, the plugin files). Factually stale, no safety over-claim → ruled non-blocking and post-ship. Fix the one sentence via a `fixup` pass (Builder authors; it is a canonical doc).
-
-## continue-a-subagent (SendMessage) — a neutral OPTIONAL contract point to save the re-read between a role's steps — 2026-06-10 (minimal redesign; PM-approved direction)
-
-Observed during the minimal-core proof run: spawning a FRESH Builder for the build beat re-read ~39k tokens of context it had already read in the plan beat. Continuing the same live sub-agent (Claude's SendMessage) would skip that re-read and keep context — a real, if modest, token saving.
-
-**Approved design (PM + orchestrator agree), to build as its own feature through the loop:**
-- **Builder MAY be continued** across steps of one feature (plan→build, build→address-findings) — it is not a gate. **Reviewer is NEVER continued** — it is the gate; invariant 3 (a gate is satisfied only by a fresh, independent spawn this turn) is untouched and explicitly excludes continuation. A crashed/failed agent is still a fresh re-spawn, never a "continue" (invariant 3's failed=not-run holds).
-- **Platform-agnostic shape:** a neutral contract point `continue-a-subagent` that the adapter realises IF the platform supports it, with a **fresh-spawn fallback** where it does not — so no platform is blocked, the savings are just absent there. Claude → SendMessage; OpenCode → fallback unless it offers an equivalent. It is an optimisation with a safe universal default, never a core requirement.
-- **Touch points (its plan):** PROTOCOL.md invariant 3 (add the non-gate-may-continue carve-out, carefully) + `## Core and adapter` (the optional contract point) + `agents/orchestrator.md` (when to continue vs fresh-spawn) + `adapter/tool-map.json` (the per-platform continue primitive + its absence→fallback). Good candidate as the next minimal-core proof feature — a real change spanning core + contract + adapter.
 
 ## Old-template downstream (nula) → minimal core — design the one-time migration — 2026-06-10 (minimal redesign)
 

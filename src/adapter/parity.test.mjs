@@ -75,6 +75,13 @@ const FIXTURE = [
     claude: { tool_name: "Bash", tool_input: { command: "git push origin feature/foo" } },
     opencode: { tool: "bash", args: { command: "git push origin feature/foo" } } },
 
+  // The merge-gate's no-silent-pass companion: an UNRESOLVABLE topic (ROOT has no
+  // .git HEAD ref, and a bare push names no branch ref) leaves the stamp
+  // uncheckable — ask, never pass.
+  { name: "merge-topic-unresolvable", expect: "ask",
+    claude: { tool_name: "Bash", tool_input: { command: "git push" } },
+    opencode: { tool: "bash", args: { command: "git push" } } },
+
   { name: "role-generic-in-seat", expect: "deny",
     claude: { tool_name: "Task", tool_input: { subagent_type: "general" } },
     opencode: { tool: "task", args: { subagent_type: "general" } } },

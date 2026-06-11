@@ -117,6 +117,7 @@ A platform's deny layer can **block a tool call** (and, on some platforms, **ask
 - A force-push.
 - A commit that skips verification.
 - An in-place edit or a mutating action on a remote system.
+- A merge or push whose branch topic the merge-gate cannot resolve — the stamp is uncheckable, so the gate asks instead of passing.
 
 **Inject-class** (the platform adds a context note to the turn — it nudges, never blocks; only *reinforces* a `[persona]` act, the act itself stays the Orchestrator's; realised mechanically where a platform has a prompt hook, always-on instruction text where it does not):
 

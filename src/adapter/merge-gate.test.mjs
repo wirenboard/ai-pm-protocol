@@ -165,5 +165,63 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// ── 4. UNRESOLVABLE TOPIC — ask, never a silent pass ──────────────────────────
+// Guards the no-silent-pass companion (merge-topic-unresolvable, ask-class): when
+// neither HEAD nor the command yields a topic, the stamp is UNCHECKABLE — the old
+// behavior allowed the push (fail open); now the Operator is asked.
+console.log("UNRESOLVABLE TOPIC (ask, never pass):");
+
+// A root whose HEAD is DETACHED (raw sha, no ref) — the HEAD signal yields nothing.
+function rootDetached() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-mergegate-det-"));
+  fs.mkdirSync(path.join(root, ".git"));
+  fs.writeFileSync(path.join(root, ".git", "HEAD"), "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678\n");
+  return root;
+}
+
+// 4a. Detached HEAD + bare push (no branch ref in the command) ⇒ ASK.
+{
+  const root = rootDetached();
+  const v = evaluate({ act: "bash", root, command: "git push" }, config);
+  check("detached-bare-push:asks", v.verdict, "ask");
+  check("detached-bare-push:ruleId", v.ruleId, "merge-topic-unresolvable");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 4b. Detached HEAD + a refspec with no slash (HEAD:main) ⇒ still unresolvable ⇒ ASK.
+{
+  const root = rootDetached();
+  const v = evaluate({ act: "bash", root, command: "git push uni HEAD:main" }, config);
+  check("detached-refspec:asks", v.verdict, "ask");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 4c. Detached HEAD + a slashed branch ref in the command ⇒ RESOLVES via the
+// command fallback ⇒ the ordinary deny path, not ask (unstamped here).
+{
+  const root = rootDetached();
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/foo" }, config);
+  check("detached-cmd-ref:denies", v.verdict, "deny");
+  check("detached-cmd-ref:ruleId", v.ruleId, "merge-while-unstamped");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 4d. A resolvable, STAMPED push stays ALLOW — the ask rule does not over-fire.
+{
+  const root = rootOnBranch("feature/ok");
+  stamp(root, "ok");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/ok" }, config);
+  check("resolved-stamped:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 4e. A non-merge/push git command with no resolvable topic ⇒ ALLOW (scope check).
+{
+  const root = rootDetached();
+  const v = evaluate({ act: "bash", root, command: "git status" }, config);
+  check("non-push-detached:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

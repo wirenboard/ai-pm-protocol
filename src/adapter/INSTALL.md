@@ -21,6 +21,14 @@ The rest of this file is the **underlying detail** — what each wiring step doe
 
 Convention used below: the adapter ships inside the protocol's tooling submodule at `.ai-pm/tooling/src/adapter/`. A project that vendors the adapter elsewhere rewrites the one path in each wiring step — nothing else changes.
 
+## Upgrade
+
+A downstream upgrades by bumping the protocol source and re-running the same one command:
+
+1. Bump the protocol to the new version (the tooling-submodule bump, or re-fetch the release).
+2. Re-run the one command above — its idempotence and never-clobber guarantees are exactly why a re-run is the whole upgrade: the project's `ai-pm.config.json` and real docs survive.
+3. Read the CHANGELOG between the two versions. A **MAJOR** bump is the one that may break the wiring (a renamed agent or command, a changed config key) — its entry names what to rename or re-run. MINOR/PATCH need nothing beyond the re-run.
+
 ## Claude Code
 
 Merge this into the project's `.claude/settings.json` (the fragment lives at `claude/hooks.json`). One `PreToolUse` hook and one `UserPromptSubmit` hook, both piping the harness payload to `node claude/shim.mjs`; the shim self-locates `deny-rules.json` (two dirs up) and prints the verdict JSON.

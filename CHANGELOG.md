@@ -14,6 +14,21 @@
 
 ---
 
+## [4.11.0] — 2026-06-12
+
+### Added
+
+- **Merge-gate: unresolvable topic asks, never passes** — a new ask-class rule `merge-topic-unresolvable`: a `git merge`/`push` whose branch topic cannot be resolved (detached HEAD, no branch ref in the command) previously failed OPEN past the stamp check; now the Operator is asked. Engine predicate + rule data + merge-gate tests (5 new cases) + a parity case through both shims; `PROTOCOL.md` ask-class row; `cross-session-enforcement` contract updated.
+- **Review-time product-fit compensator for light profiles** — the Reviewer's floor checklist gains "Product fit under a light profile": under `lite`/`solo` the plan ceremony is trimmed, so a user-facing change is checked against `docs/product.md` at review-time; a contradiction blocks. `docs/product.md` §7 superseded accordingly (the descope note replaced by the current truth).
+- **`## Upgrade` section in `src/adapter/INSTALL.md`** — the downstream upgrade story: bump, idempotent re-run, CHANGELOG read; MAJOR is the only bump that may break wiring.
+
+### Fixed
+
+- **README parity count retired** — the restated case count went stale twice (55→56→59); README now states the fact without the number (the count's one home is the test output).
+- **Backlog hygiene** — three shipped items removed (ship-beat close — 4.9.0; adapter README re-export wording — 4.10.1; continue-a-subagent — 4.10.0).
+
+---
+
 ## [4.10.3] — 2026-06-12
 
 ### Fixed

@@ -37,7 +37,7 @@ Part of that adapter is a real **enforcement layer** — a deny layer that mecha
 
 ## Install
 
-Status: both **Claude Code** and **OpenCode** are live-verified — on each, the session loads as the orchestrator and the deny layer mechanically blocks a guarded write. Parity 56/56 (`src/adapter/parity.test.mjs`). Per-platform wiring: `src/adapter/INSTALL.md`.
+Status: both **Claude Code** and **OpenCode** are live-verified — on each, the session loads as the orchestrator and the deny layer mechanically blocks a guarded write. Every guard is parity-tested through both shims from the one shared engine (`src/adapter/parity.test.mjs`). Per-platform wiring: `src/adapter/INSTALL.md`.
 
 The protocol is consumed as a git submodule; the active platform's adapter is then wired — the deny hooks, the role agents, and the `PROTOCOL.md` import. The concrete, per-platform wiring lives in **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)** — the single home for where each file lands and how each platform is hooked up. After wiring, start a fresh session so the harness loads the protocol.
 
