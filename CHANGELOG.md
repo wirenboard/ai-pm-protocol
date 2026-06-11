@@ -14,6 +14,18 @@
 
 ---
 
+## [4.8.0] — 2026-06-11
+
+### Changed
+
+- **`kind` axis redesigned: `software | documentation` → `code | docs | mixed`.** `code` = machine-executed artifact; `docs` = human-read; `mixed` = both equally (e.g. this protocol repo: docs are the deliverable, code is the transport). Clean rename — no backwards-compat aliases, no live downstream. Fail-safe unchanged: absent/unknown kind → `code` (strict side). Updated across every home: `PROTOCOL.md`, `src/modules/registry.json` (per-kind defaults for both modules), `src/adapter/modules.mjs` (`strictKind()` code + comment), `src/adapter/engine.mjs` (stamp-heading acceptance: `## Code review:` / `## Doc review:` / legacy `Validation:`), `src/agents/reviewer.md` (heading guidance), `src/adapter/install.mjs` (default), `ai-pm.config.json` (this repo reclassified to `kind: "mixed"`), `CLAUDE.md`, `AGENTS.md`, `README.md`, tests.
+
+### Added
+
+- **Estimation methodology** (`docs/decisions/estimation.md`): estimate by complexity, not file count. Three questions before quoting time (non-trivial logic? tests that could break? unresolved design?); time-bucket table per change type. Referenced from `src/agents/builder.md` plan checklist.
+
+---
+
 ## [4.7.1] — 2026-06-11
 
 ### Fixed

@@ -146,7 +146,7 @@ The single invariant these collapse into — *a deliverable is satisfied only by
 - **profile** — `full | lite | solo` (absent/unrecognised ⇒ `full`): the speed↔quality dial. States only the wish for the cuttable levers (who builds, plan ceremony). The floor — independent review by a separate fresh Reviewer, the honesty gates, the merge stamp, the Operator's explicit merge authorization — holds in every profile, enforced regardless. A profile that cuts the floor is no protocol. Value-home: `ai-pm.config.json` `_profile`.
 - **roles** — each seat binds an **agent** and an optional **model**. Defaults to this repo's `src/agents/`; swap the agent for any one that honours the seat's contract (`## Role contracts`). The config states only the *wish* (`session` / `auto` / a per-platform pin); the model policy — what `auto` resolves to, and each platform's model authority — lives in the platform adapter (`src/adapter/tool-map.json` `models`).
 - **platform** — the active adapter (`claude | opencode`).
-- **kind** — the project kind; seeds the quality-layer defaults and the review route.
+- **kind** — the artifact consumer: `code` (machine-executed), `docs` (human-read), or `mixed` (both). Seeds the capability-module defaults and the reviewer framing. Absent or unrecognised ⇒ `code` (strict-side default).
 
 The Orchestrator resolves a seat through `roles` before spawning, and reads `mode` for decision authority. A swapped-in agent is bound by the role contract, not by being ours — the ship-gate checks the verdict's *form*, not its author.
 

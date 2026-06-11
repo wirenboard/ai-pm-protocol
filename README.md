@@ -40,7 +40,7 @@ The protocol is consumed as a git submodule; the active platform's adapter is th
 
 ## Configure
 
-Once wired, run **`/pm-setup`** to configure the project — platform, mode, roles, and models. It is a plain-language dialog: it discovers the models your environment actually offers and asks you to pick, then writes `ai-pm.config.json`. You need not run it by hand — on a fresh, unconfigured project the orchestrator offers setup on your first work request (an offer you may decline to proceed on safe defaults).
+Once wired, run **`/pm-setup`** to configure the project — platform, mode, roles, models, and **kind** (`code` / `docs` / `mixed`). Kind sets the artifact consumer: machine-executed code, human-read documentation, or both — a protocol or process-doc project is `mixed`; a pure docs project is `docs`. It is a plain-language dialog: it discovers the models your environment actually offers and asks you to pick, then writes `ai-pm.config.json`. You need not run it by hand — on a fresh, unconfigured project the orchestrator offers setup on your first work request (an offer you may decline to proceed on safe defaults).
 
 Re-run it anytime — the `/pm-setup` command, or just ask to reconfigure — when you change models or switch platform. It reads the current config, shows what changes, rewrites it, and re-applies so the new models take effect. The full procedure lives in **[`src/agents/orchestrator.md`](src/agents/orchestrator.md)** `## Setup` (`PROTOCOL.md` `## The loop` frames it; `src/adapter/INSTALL.md` has the per-platform command).
 

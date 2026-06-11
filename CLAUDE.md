@@ -4,7 +4,7 @@
 
 This repo **is** the ai-pm protocol, and it **develops itself under its own protocol** (dogfood): protocol changes go through the same loop a downstream project uses. That is why the repo carries its own `CLAUDE.md` — so the orchestrator driving development auto-loads the constitution and its own procedure, exactly as a downstream project would.
 
-## Project kind: software
+## Project kind: mixed
 
 The deliverable is the protocol's own source — `PROTOCOL.md` (the constitution), the `src/agents/` role definitions, the `src/adapter/` (engine + rules + shims), `docs/architecture.md`, and the `src/templates/` + `src/quality/` scaffolding. Verification is the `src/quality/` checks (the parity + neutral-prose tests) plus editorial review; there is no stack linter (this repo is Node + markdown-prose).
 

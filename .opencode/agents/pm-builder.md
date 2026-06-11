@@ -32,6 +32,7 @@ Before writing anything, capture the plan in the transient plan file `.ai-pm/pla
 - **Security surface** — any auth, secrets, untrusted input, or network boundary touched? Name the threat and the mitigation.
 - **Unfamiliar interface** — when the change touches a tool, format, or API whose idioms you're unsure of, find the canonical source and build against it. Don't guess — you fold the stack-researcher.
 - **Docs** — what docs must change with this code?
+- **Estimate** — complexity, not file count. Three questions before quoting time: is there non-trivial logic? tests that could break? unresolved design decisions? See `docs/decisions/estimation.md` for the time-bucket table.
 
 ## Threat model
 

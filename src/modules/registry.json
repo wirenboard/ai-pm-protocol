@@ -14,8 +14,9 @@
       "for": "Explicit threat enumeration for a security-relevant change — attack surface, data/secret exposure, trust boundaries — deepening the always-on Reviewer security item and adding a plan-time threat pass to the Builder.",
       "toggle": { "depth": "rich | light", "nonSecurity": true },
       "defaults": {
-        "software": { "depth": "rich", "nonSecurity": true },
-        "documentation": { "depth": "light", "nonSecurity": false }
+        "code": { "depth": "rich", "nonSecurity": true },
+        "docs": { "depth": "light", "nonSecurity": false },
+        "mixed": { "depth": "rich", "nonSecurity": true }
       },
       "targets": [
         { "role": "reviewer", "beat": "review" },
@@ -31,8 +32,9 @@
       "for": "Plan-time product discovery for a user-facing change — who it is for, the user pain, whether it is the right bet, the cheapest test, what breaks if it is NOT built — deepening the always-on Builder plan product-question item and the Reviewer's check that the shipped change serves its plan's user claim.",
       "toggle": { "depth": "rich | light" },
       "defaults": {
-        "software": { "depth": "rich" },
-        "documentation": { "depth": "light" }
+        "code": { "depth": "rich" },
+        "docs": { "depth": "light" },
+        "mixed": { "depth": "rich" }
       },
       "targets": [
         { "role": "builder", "beat": "plan" },

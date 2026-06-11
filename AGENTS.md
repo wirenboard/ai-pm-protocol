@@ -4,7 +4,7 @@
 
 This repo **is** the ai-pm protocol and **develops itself under its own protocol** (dogfood): protocol changes go through the same loop a downstream project uses.
 
-## Project kind: software
+## Project kind: mixed
 
 The deliverable is the protocol's own source — `PROTOCOL.md` (the constitution), the `src/agents/` role definitions, the `src/adapter/` (engine + rules + shims), `docs/architecture.md`, and the `src/quality/` scaffolding. Verification is the `src/quality/` checks (the parity + neutral-prose tests) plus editorial review.
 

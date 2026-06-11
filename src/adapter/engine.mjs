@@ -149,7 +149,7 @@ function reviewStampSatisfied(root, topic) {
     if (!content || /^NOT YET RUN$/i.test(content)) return false;
     return true;
   };
-  return stampOK("Code review") || stampOK("Validation");
+  return stampOK("Code review") || stampOK("Doc review") || stampOK("Validation");
 }
 function fileNonEmpty(p) {
   try { return fs.statSync(p).size > 0; } catch { return false; }

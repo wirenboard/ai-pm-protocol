@@ -474,3 +474,19 @@ Acceptance test: a mechanism counts only if it fires WITHOUT the Operator's vigi
 ## install.mjs for the ad-md-editor rollout — 2026-06-11
 
 The Operator asked to roll the protocol into ad-md-editor; this session can't (out-of-root, the deny boundary blocks it, correctly). The manual downstream install is fiddly (the bootstrap gap). The unified install.mjs makes the rollout one command AND dogfoods install on a REAL downstream (the strongest test we lack). ad-md-editor = the first real downstream polygon.
+
+## Documentation as a first-class project kind — deeper rethinking of the `kind` axis — 2026-06-11
+
+**Operator insight:** documentation and code are fundamentally the same thing — both are instructions for consumers, just with different consumers (machine reads code, human reads documentation). There is no essential difference in the craft of writing them well. This protocol is itself proof: the primary deliverables are `.md` files (PROTOCOL.md, agents, architecture); the Node.js code is a transport. Yet the repo is classified as `kind: software`.
+
+**Current state:** `kind: documentation` exists in config + module registry (lighter defaults for product-advocate and threat-model) and the Reviewer uses `## Validation:` instead of `## Code review:` for doc-kind projects. But nowhere is it explicitly stated that documentation development is a first-class use case — the README opens with "A way to build software by describing what you want", PROTOCOL.md barely mentions doc-kind, and `kind: documentation` is undescribed (no definition of what "green" means, how the build/review beats look without code).
+
+**The deeper question:** is `kind` the right axis at all? The real distinction may be **"what kind of consumer does the artifact have"** — machine (code), human (documentation), or both (this protocol). Three directions to explore:
+
+1. **Surface fix** — make `kind: documentation` explicitly described and first-class: README/PROTOCOL.md name both kinds equally, describe what "green" means for a doc project, add quality tools for docs (a structure checker, readability check).
+2. **Reconceptualise the axis** — rename or rethink `kind` as "artifact consumer" (machine / human / both). The protocol then explicitly handles the spectrum, not two discrete buckets. The insight that code-for-machines and docs-for-humans are on the same "instructions" continuum is reflected in the model.
+3. **Unify the model** — possibly `kind` disappears and is replaced by the quality-tool registry alone: the project registers what tools prove "green" (eslint for machine-readable, markdownlint for human-readable, both for mixed), and `kind` becomes derivable from what tools are registered.
+
+**Priority:** medium. Option 3 is the most elegant but also the biggest change. Start with option 1 (surface fix) to unblock downstream doc-kind projects; plan 2 or 3 as a longer design conversation.
+
+Severity: medium.

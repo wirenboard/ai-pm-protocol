@@ -44,7 +44,7 @@ check("on: an object toggle ⇒ enabled",
 check("on: true ⇒ enabled",
   enabledModules(registry, { modules: { "threat-model": true } }).some((m) => m.id === "threat-model"));
 check("on: absent modules key ⇒ enabled (per-kind default)",
-  enabledModules(registry, { kind: "software" }).some((m) => m.id === "threat-model"));
+  enabledModules(registry, { kind: "code" }).some((m) => m.id === "threat-model"));
 check("off: literal false ⇒ disabled",
   !enabledModules(registry, { modules: { "threat-model": false } }).some((m) => m.id === "threat-model"));
 check("off: { enabled: false } ⇒ disabled",
@@ -58,12 +58,12 @@ for (const bad of ["garbage", 42, null]) {
 // ── 2. effectiveToggle — per-kind defaults + strict fallback ──────────────────
 console.log("RESOLVER — per-kind defaults:");
 const tm = registry.modules.find((m) => m.id === "threat-model");
-check("default: software ⇒ rich", effectiveToggle(tm, { kind: "software" }).depth === "rich");
-check("default: documentation ⇒ light", effectiveToggle(tm, { kind: "documentation" }).depth === "light");
-check("default: unknown kind ⇒ strict side (software/rich)", effectiveToggle(tm, { kind: "bogus" }).depth === "rich");
-check("default: absent kind ⇒ strict side (software/rich)", effectiveToggle(tm, {}).depth === "rich");
+check("default: code ⇒ rich", effectiveToggle(tm, { kind: "code" }).depth === "rich");
+check("default: docs ⇒ light", effectiveToggle(tm, { kind: "docs" }).depth === "light");
+check("default: unknown kind ⇒ strict side (code/rich)", effectiveToggle(tm, { kind: "bogus" }).depth === "rich");
+check("default: absent kind ⇒ strict side (code/rich)", effectiveToggle(tm, {}).depth === "rich");
 check("override: config value overrides the kind default",
-  effectiveToggle(tm, { kind: "software", modules: { "threat-model": { depth: "light" } } }).depth === "light");
+  effectiveToggle(tm, { kind: "code", modules: { "threat-model": { depth: "light" } } }).depth === "light");
 
 // ── 3. composeBody — compose / omit / floor-always / no-marker ────────────────
 console.log("COMPOSE — fragment in/out, floor always present:");
@@ -81,7 +81,7 @@ check("omit: disabled ⇒ marker consumed (no leftover comment)", !composedOff.i
 check("omit: disabled ⇒ floor STILL present", composedOff.includes(REVIEWER_FLOOR));
 
 // Floor always present under every config shape, including malformed.
-for (const cfg of [{}, { modules: {} }, { modules: { "threat-model": "garbage" } }, { kind: "documentation" }]) {
+for (const cfg of [{}, { modules: {} }, { modules: { "threat-model": "garbage" } }, { kind: "docs" }]) {
   check(`floor-always: ${JSON.stringify(cfg)} ⇒ floor present`,
     composeBody(ROOT, reviewerFloor, "reviewer", registry, cfg).includes(REVIEWER_FLOOR));
 }
@@ -91,27 +91,27 @@ console.log("DEPTH — rich vs light (light gets genuinely less):");
 function reviewerComposed(modulesCfg) {
   return composeBody(ROOT, reviewerFloor, "reviewer", registry, modulesCfg);
 }
-const richBody = reviewerComposed({ kind: "software", modules: { "threat-model": { depth: "rich" } } });
+const richBody = reviewerComposed({ kind: "code", modules: { "threat-model": { depth: "rich" } } });
 check("rich: light-core item present", richBody.includes(LIGHT_CORE));
 check("rich: rich-only item present", richBody.includes(RICH_ONLY));
 check("rich: banner names rich depth", richBody.includes("Depth: **rich**"));
 check("rich: no authoring tag leaks into composed prose", !/\[(light|rich)\]/.test(richBody));
 
-const lightBody = reviewerComposed({ kind: "software", modules: { "threat-model": { depth: "light" } } });
+const lightBody = reviewerComposed({ kind: "code", modules: { "threat-model": { depth: "light" } } });
 check("light: light-core item present", lightBody.includes(LIGHT_CORE));
 check("light: rich-only item STRIPPED", !lightBody.includes(RICH_ONLY));
 check("light: banner names light depth", lightBody.includes("Depth: **light**"));
 check("light: genuinely shorter than rich", lightBody.length < richBody.length);
 
-// Per-kind default drives depth with no explicit override: documentation ⇒ light.
-const docDefault = reviewerComposed({ kind: "documentation" });
-check("depth-default: documentation kind ⇒ light (rich-only stripped)", !docDefault.includes(RICH_ONLY));
-const swDefault = reviewerComposed({ kind: "software" });
-check("depth-default: software kind ⇒ rich (rich-only kept)", swDefault.includes(RICH_ONLY));
+// Per-kind default drives depth with no explicit override: docs ⇒ light.
+const docDefault = reviewerComposed({ kind: "docs" });
+check("depth-default: docs kind ⇒ light (rich-only stripped)", !docDefault.includes(RICH_ONLY));
+const swDefault = reviewerComposed({ kind: "code" });
+check("depth-default: code kind ⇒ rich (rich-only kept)", swDefault.includes(RICH_ONLY));
 
 // FAIL-SAFE: a malformed/unknown depth ⇒ rich (the stricter side) — never silently thin.
 for (const bad of ["garbage", "LIGHT", "", 42, null]) {
-  const body = reviewerComposed({ kind: "software", modules: { "threat-model": { depth: bad } } });
+  const body = reviewerComposed({ kind: "code", modules: { "threat-model": { depth: bad } } });
   check(`depth fail-safe: depth ${JSON.stringify(bad)} ⇒ rich (rich-only kept)`, body.includes(RICH_ONLY));
 }
 
@@ -158,7 +158,7 @@ console.log("END-TO-END — Claude install composes the module:");
 const baseRoles = { builder: { agent: "pm-builder" }, reviewer: { agent: "pm-reviewer" } };
 function reviewerAgentText(modulesCfg) {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-modtest-"));
-  const written = claudeInstall(outDir, { roles: baseRoles, kind: "software", ...modulesCfg });
+  const written = claudeInstall(outDir, { roles: baseRoles, kind: "code", ...modulesCfg });
   const text = fs.readFileSync(written["pm-reviewer"], "utf8");
   fs.rmSync(outDir, { recursive: true, force: true });
   return text;
@@ -192,7 +192,7 @@ check("pa on: object toggle ⇒ enabled",
 check("pa on: true ⇒ enabled",
   enabledModules(registry, { modules: { "product-advocate": true } }).some((m) => m.id === "product-advocate"));
 check("pa on: absent key ⇒ enabled (per-kind default)",
-  enabledModules(registry, { kind: "software" }).some((m) => m.id === "product-advocate"));
+  enabledModules(registry, { kind: "code" }).some((m) => m.id === "product-advocate"));
 check("pa off: literal false ⇒ disabled",
   !enabledModules(registry, { modules: { "product-advocate": false } }).some((m) => m.id === "product-advocate"));
 check("pa off: { enabled: false } ⇒ disabled",
@@ -201,18 +201,18 @@ for (const bad of ["garbage", 42, null]) {
   check(`pa fail-safe-to-ON: malformed toggle ${JSON.stringify(bad)} ⇒ enabled`,
     enabledModules(registry, { modules: { "product-advocate": bad } }).some((m) => m.id === "product-advocate"));
 }
-check("pa default: software ⇒ rich", effectiveToggle(pa, { kind: "software" }).depth === "rich");
-check("pa default: documentation ⇒ light", effectiveToggle(pa, { kind: "documentation" }).depth === "light");
-check("pa default: unknown kind ⇒ strict side (software/rich)", effectiveToggle(pa, { kind: "bogus" }).depth === "rich");
-check("pa default: absent kind ⇒ strict side (software/rich)", effectiveToggle(pa, {}).depth === "rich");
+check("pa default: code ⇒ rich", effectiveToggle(pa, { kind: "code" }).depth === "rich");
+check("pa default: docs ⇒ light", effectiveToggle(pa, { kind: "docs" }).depth === "light");
+check("pa default: unknown kind ⇒ strict side (code/rich)", effectiveToggle(pa, { kind: "bogus" }).depth === "rich");
+check("pa default: absent kind ⇒ strict side (code/rich)", effectiveToggle(pa, {}).depth === "rich");
 check("pa override: config value overrides the kind default",
-  effectiveToggle(pa, { kind: "software", modules: { "product-advocate": { depth: "light" } } }).depth === "light");
+  effectiveToggle(pa, { kind: "code", modules: { "product-advocate": { depth: "light" } } }).depth === "light");
 
 console.log("PRODUCT-ADVOCATE — compose into builder, floor always present:");
 function builderComposed(cfg) {
   return composeBody(ROOT, builderFloor, "builder", registry, cfg);
 }
-const paOn = builderComposed({ kind: "software", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
+const paOn = builderComposed({ kind: "code", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
 check("pa compose: enabled ⇒ fragment text present", paOn.includes(PA_FRAGMENT_MARK));
 check("pa compose: enabled ⇒ marker consumed", !paOn.includes(MARKER));
 check("pa compose: enabled ⇒ Builder product FLOOR still present", paOn.includes(BUILDER_PRODUCT_FLOOR));
@@ -222,8 +222,8 @@ check("pa omit: disabled ⇒ marker consumed", !paOff.includes(MARKER));
 check("pa omit: disabled ⇒ Builder product FLOOR STILL present", paOff.includes(BUILDER_PRODUCT_FLOOR));
 
 console.log("PRODUCT-ADVOCATE — depth (light gets genuinely less):");
-const paRich = builderComposed({ kind: "software", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
-const paLight = builderComposed({ kind: "software", modules: { "product-advocate": { depth: "light" }, "threat-model": false } });
+const paRich = builderComposed({ kind: "code", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
+const paLight = builderComposed({ kind: "code", modules: { "product-advocate": { depth: "light" }, "threat-model": false } });
 check("pa rich: light-core item present", paRich.includes(PA_LIGHT_CORE));
 check("pa rich: rich-only item present", paRich.includes(PA_RICH_ONLY));
 check("pa rich: banner names rich depth", paRich.includes("Depth: **rich**"));
@@ -233,7 +233,7 @@ check("pa light: rich-only item STRIPPED", !paLight.includes(PA_RICH_ONLY));
 check("pa light: banner names light depth", paLight.includes("Depth: **light**"));
 check("pa light: genuinely shorter than rich", paLight.length < paRich.length);
 for (const bad of ["garbage", "LIGHT", "", 42, null]) {
-  const body = builderComposed({ kind: "software", modules: { "product-advocate": { depth: bad }, "threat-model": false } });
+  const body = builderComposed({ kind: "code", modules: { "product-advocate": { depth: bad }, "threat-model": false } });
   check(`pa depth fail-safe: depth ${JSON.stringify(bad)} ⇒ rich (rich-only kept)`, body.includes(PA_RICH_ONLY));
 }
 
@@ -250,7 +250,7 @@ check("pa honesty: fragment points at the recorded-answer-or-descope floor rule"
 
 console.log("PRODUCT-ADVOCATE — reviewer dimension composes:");
 const paRevOn = composeBody(ROOT, reviewerFloor, "reviewer", registry,
-  { kind: "software", modules: { "product-advocate": true, "threat-model": false } });
+  { kind: "code", modules: { "product-advocate": true, "threat-model": false } });
 check("pa reviewer: enabled ⇒ fragment present", paRevOn.includes(PA_FRAGMENT_MARK));
 check("pa reviewer: enabled ⇒ Reviewer product FLOOR still present", paRevOn.includes("foundational product question"));
 
@@ -259,7 +259,7 @@ check("pa reviewer: enabled ⇒ Reviewer product FLOOR still present", paRevOn.i
 //      is coverage the single-module suite never exercised — the second module
 //      unlocks it, proving registry-order composition with two modules.
 console.log("CO-EXISTENCE — both modules on, registry order:");
-const both = builderComposed({ kind: "software", modules: { "threat-model": { depth: "rich" }, "product-advocate": { depth: "rich" } } });
+const both = builderComposed({ kind: "code", modules: { "threat-model": { depth: "rich" }, "product-advocate": { depth: "rich" } } });
 check("both: threat-model fragment present", both.includes(FRAGMENT_MARK));
 check("both: product-advocate fragment present", both.includes(PA_FRAGMENT_MARK));
 check("both: Builder product FLOOR present", both.includes(BUILDER_PRODUCT_FLOOR));
@@ -272,7 +272,7 @@ check("both: no leftover marker", !both.includes(MARKER));
 console.log("END-TO-END — Claude install composes product-advocate into the builder:");
 function builderAgentText(modulesCfg) {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-pa-e2e-"));
-  const written = claudeInstall(outDir, { roles: baseRoles, kind: "software", ...modulesCfg });
+  const written = claudeInstall(outDir, { roles: baseRoles, kind: "code", ...modulesCfg });
   const text = fs.readFileSync(written["pm-builder"], "utf8");
   fs.rmSync(outDir, { recursive: true, force: true });
   return text;

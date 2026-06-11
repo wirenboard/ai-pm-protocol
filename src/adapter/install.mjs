@@ -130,7 +130,7 @@ function ensureConfig(target, platform) {
     mode: "interactive",
     profile: "full",
     platform,
-    kind: "software",
+    kind: "code",
     roles: {
       orchestrator: { agent: "ai-pm" },
       builder: { agent: "pm-builder" },

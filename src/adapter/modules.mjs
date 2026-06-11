@@ -59,15 +59,15 @@ export function loadRegistry(root) {
 
 // ── enabled-resolution (fail-safe to ON / strict side) ────────────────────────
 // The project's kind (config.kind). Unknown/absent ⇒ the strict side: the kind
-// whose defaults this module declares first, falling to "software" — mirrors the
+// whose defaults this module declares first, falling to "code" — mirrors the
 // engine's projectProfile fail-safe-to-`full`. A module's defaults map names the
 // per-kind default toggle; an unknown kind takes the strictest declared default.
 function strictKind(mod, kind) {
   const defaults = mod.defaults || {};
   if (kind && Object.prototype.hasOwnProperty.call(defaults, kind)) return kind;
-  // Unknown/absent kind ⇒ the strict side. "software" is the attack-surface-heavy
+  // Unknown/absent kind ⇒ the strict side. "code" is the attack-surface-heavy
   // kind; prefer it when declared, else the first declared default.
-  if (Object.prototype.hasOwnProperty.call(defaults, "software")) return "software";
+  if (Object.prototype.hasOwnProperty.call(defaults, "code")) return "code";
   const keys = Object.keys(defaults);
   return keys.length ? keys[0] : null;
 }
