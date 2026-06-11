@@ -4,12 +4,13 @@ This is where a project says **what "green" means** for it — its linters, form
 
 ## Shape
 
-```
+```text
 tools.json        the registry — one row per tool (id, checks, config, run, beat, init)
 <tool configs>    each tool's NATIVE config, dropped in beside tools.json
 ```
 
 A row binds a tool to a **beat** of the loop:
+
 - `build` — the Builder runs it and hands back only when it passes.
 - `review` — the Reviewer runs/reads it as part of the review checklist.
 - `ship` — runs at the ship beat (e.g. a release-gate check).
@@ -19,6 +20,7 @@ A red tool is *not green*: the beat isn't done.
 ## Template vs project
 
 In a **fresh downstream** project `tools.json` ships **only the shape** — two `EXAMPLE-*` rows showing the format. (This repo is its own first project, so its rows are already the real suite — the parity and neutral-prose checks — not examples.) A real project:
+
 1. deletes the `EXAMPLE-*` rows,
 2. adds a row per tool it actually runs,
 3. drops each tool's native config beside `tools.json`.

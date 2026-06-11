@@ -6,19 +6,21 @@
 
 <!-- One block per feature. Copy the shape below; delete this comment and the example. -->
 
-## <feature name>
+## `<feature name>`
 
-**Value** — <one plain sentence: what the user gets and why it exists>.
-**Who** — <the specific user or role, not "the user">.
+**Value** — `<one plain sentence: what the user gets and why it exists>`.
+**Who** — `<the specific user or role, not "the user">`.
 
-**Must work**
-- <a concrete thing the user can do or expect>
+**Must work** — what the feature must do
+
+- `<a concrete thing the user can do or expect>`
 
 **Must not break** — invariants that stay true across future changes
-- <something that must remain true>
-- <a user-facing limit the product promises (max items, perceived speed) — `[?]` if unfixed>
 
-**Verified by** — <test name or command the Reviewer runs on every change touching this feature>.
-**Last reviewed** — <YYYY-MM-DD>, against <commit / "current main">.
+- `<something that must remain true>`
+- ``<a user-facing limit the product promises (max items, perceived speed) — `[?]` if unfixed>``
+
+**Verified by** — `<test name or command the Reviewer runs on every change touching this feature>`.
+**Last reviewed** — `<YYYY-MM-DD>`, against `<commit / "current main">`.
 
 ---

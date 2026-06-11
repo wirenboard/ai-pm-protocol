@@ -28,7 +28,7 @@ That replaces the whole inline shell+jq hook set — every guard now reads the o
 
 `CLAUDE.md` imports the constitution and the orchestrator's procedure — that is all the running session loads as the protocol (plus the project's own kind + language lines):
 
-```
+```text
 @PROTOCOL.md
 @src/agents/orchestrator.md
 ```

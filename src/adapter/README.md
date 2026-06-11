@@ -4,7 +4,7 @@ The protocol is one neutral core (`../../PROTOCOL.md`, `../agents/`) plus one th
 
 ## How it's shaped
 
-```
+```text
 deny-rules.json   the registry — every guard, as data (intent + class + predicate + params)
 tool-map.json     neutral noun → per-platform concrete tool; which return-classes a platform supports
 engine.mjs        the shared check engine — holds the PREDICATES; one copy, every platform
@@ -18,6 +18,7 @@ The split that makes this work: **rules are data, the check is code.** A deny ru
 ## What a platform adapter does
 
 A platform shim is the only platform-specific code. It:
+
 1. **normalises input** — turns the harness's hook/plugin payload into the neutral shape `{act, path, command, content, spawnTarget, actor, prompt}`;
 2. **calls the engine** — `evaluate(input, denyRules)` returns `allow | deny | ask | inject` with a reason;
 3. **maps the verdict** to the harness's own mechanism — a Claude `PreToolUse` hook emits the deny/ask JSON; an OpenCode `tool.execute.before` plugin throws on deny.

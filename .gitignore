@@ -9,3 +9,6 @@
 .claude/worktrees/
 .claude/tmp/
 .ai-pm/tmp/
+
+# Node dependencies (the linters; package-lock.json IS committed)
+node_modules/

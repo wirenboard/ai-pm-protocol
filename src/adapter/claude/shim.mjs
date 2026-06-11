@@ -98,7 +98,7 @@ function resolveRoot(payload) {
   try {
     return execFileSync("git", ["rev-parse", "--show-toplevel"],
       { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-  } catch (_e) {
+  } catch {
     return cwd;
   }
 }
@@ -109,7 +109,7 @@ function main() {
   process.stdin.on("data", (c) => (raw += c));
   process.stdin.on("end", () => {
     let payload;
-    try { payload = JSON.parse(raw); } catch (_e) { process.exit(0); }
+    try { payload = JSON.parse(raw); } catch { process.exit(0); }
     const root = resolveRoot(payload);
     const config = loadConfig(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
     const result = decide(payload, root, config);

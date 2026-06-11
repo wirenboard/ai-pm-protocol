@@ -17,7 +17,7 @@ async function isOrchestrator(client, sessionID) {
     const data = (res && res.data) || {};
     if (data.agent === "ai-pm") return true;
     return data.parentID == null;
-  } catch (_e) { return false; }
+  } catch { return false; }
 }
 
 export const AiPmEnforcement = async (ctx) => {

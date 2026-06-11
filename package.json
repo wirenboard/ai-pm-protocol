@@ -1,0 +1,16 @@
+{
+  "name": "ai-pm-protocol",
+  "version": "4.3.0",
+  "private": true,
+  "type": "module",
+  "description": "The AI-PM Protocol — its own source (this repo develops itself under its own protocol).",
+  "scripts": {
+    "quality": "node src/quality/run.mjs build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.1",
+    "globals": "^17.6.0",
+    "markdownlint-cli2": "^0.22.1"
+  }
+}

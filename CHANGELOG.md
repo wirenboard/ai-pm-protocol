@@ -3,6 +3,7 @@
 Формат — [Keep a Changelog 1.1.0](https://keepachangelog.com/ru/1.1.0/), versioning по [SemVer 2.0](https://semver.org/lang/ru/).
 
 **SemVer для template:**
+
 - **MAJOR** — breaking changes: несовместимые изменения структуры проекта, удалённые агенты/команды
 - **MINOR** — новые агенты, команды, шаблонные документы
 - **PATCH** — fixes, уточнения, нефункциональные изменения
@@ -10,6 +11,16 @@
 ---
 
 ## [Unreleased]
+
+---
+
+## [4.3.0] — 2026-06-11
+
+### Added
+
+- **Automated quality tooling — a protocol promise.** New contract `automated-quality-tooling`: every project gets stack-appropriate automated quality tools (linters, formatters, type-checkers, a SAST scanner) wired and tuned at setup and run every loop — no tool hard-coded, discovered per stack. Realised by a new `setup` step (`orchestrator.md ## Setup` step 5: discover the stack → propose a stack-appropriate toolkit → install/config/register/verify). The AI never loosens a tool's config to make code pass — it fixes the code to the standard; a relaxation is a recorded Operator decision.
+- **Build top-down** is now a stated rule (`PROTOCOL.md ## The loop` + the Builder plan checklist): design the guarantee (the contract) before the mechanism; never tool-first or code-first.
+- **This repo's own toolkit (downstream #1):** eslint (JS), markdownlint (docs), and semgrep (SAST) wired through the runner — installed, configured with standard rulesets, registered in `tools.json`, green. The repo's code and docs were brought to that standard (no config loosened to dodge a fix).
 
 ---
 
@@ -476,7 +487,7 @@ Ships **readme-template-canonical-shape** — bakes the canonical README front-d
 
 ## [2.25.1] — 2026-06-05
 
-Ships **deny-review-orchestrator** — a surgical hardening of the shipped `.claude/settings.json` routing hook so the wb-* skill `wb-development:code-review-orchestrator` no longer auto-intercepts this protocol's own `/code-review` (Pass-2). Its broad auto-trigger would silently hijack the protocol's review loop in every downstream project (the hook ships via the submodule), so the hook now **denies** that one skill by name with a clear "use `/code-review` instead" reason. For the rare case where the skill is genuinely wanted, a narrowly-scoped per-skill env-escape **`WB_ALLOW_REVIEW_ORCHESTRATOR=1`** bypasses only this single deny — every other hook and every other wb-* deny stays active. Tooling/config only; additive, fully back-compatible, **no migration**.
+Ships **deny-review-orchestrator** — a surgical hardening of the shipped `.claude/settings.json` routing hook so the wb-*skill `wb-development:code-review-orchestrator` no longer auto-intercepts this protocol's own `/code-review` (Pass-2). Its broad auto-trigger would silently hijack the protocol's review loop in every downstream project (the hook ships via the submodule), so the hook now **denies** that one skill by name with a clear "use `/code-review` instead" reason. For the rare case where the skill is genuinely wanted, a narrowly-scoped per-skill env-escape **`WB_ALLOW_REVIEW_ORCHESTRATOR=1`** bypasses only this single deny — every other hook and every other wb-* deny stays active. Tooling/config only; additive, fully back-compatible, **no migration**.
 
 ### Changed
 
@@ -511,6 +522,7 @@ Ships **state-model-section** — slice 4 of the cross-document-consistency audi
 - Conditional / proportional and judgment-not-regex: no hook, no hard gate — the check fires on orchestrator judgment of state-bearing features, stays silent otherwise.
 - This feature was **selected autonomously** per `### Decision authority` (shipped in v2.24.0, `automode-procedural-gates`); the plan carries a `Source:` line recording the basis of the selection.
 - Back-compat: additive only — the new `## State model` section and the `/pm-plan` check appear only when warranted. **No migration.**
+
 ## [2.24.1] — 2026-06-04
 
 Ships **readme-rewrite** — a PM-directed rewrite of the protocol's own `README.md` front door, documentation-only (no agent / template / command / code change). The README is reordered to the canonical что→зачем→установка→подробности→лицензия shape: install moves up top, a two-path quickstart (greenfield + legacy onboarding) replaces the single flow, the risk list is strongly cut and lifted up as the "why", and the update / migration sections are consolidated. The inline v1.x→v2.0 migration walkthrough is removed from the README and now lives in `MIGRATIONS.md`. Newcomer-first, no behavior change.
@@ -755,9 +767,11 @@ Adds a full **threat-model lifecycle** as new protocol behaviour, owned by the e
 Adds a new domain-agnostic protocol behaviour: the **Blast-radius preflight** gate. Before any on-hardware "run it for real" or a diagnostic probe that restarts or structurally mutates a live target, the orchestrator now stops and asks one question — *does the effect reach an external stateful peer whose state a local revert will not undo?* — and if the live target is coupled to such a peer, it surfaces the blast radius to the PM before acting. This guards the trap *reversible locally ≠ reversible for a coupled external peer*: a probe's "throwaway / I revert it afterwards" framing is false when the side effect lives outside, in a paired external system's own record of the target. The gate is defined once in `WORKFLOW.md` and single-sourced from Step 5.5 and Step A.5; the originating wb-mqtt-matter live-paired-bridge incident is named only as the worked example, never as protocol vocabulary. Purely additive — it adds a precondition before acting and relaxes none of the Step A read-only default or the Step A.5 probe rules. `tests/hooks.sh` 71/71.
 
 ### Added
+
 - **Blast-radius preflight gate** (`WORKFLOW.md`, new section under "When you say it doesn't work in production"): one named, domain-agnostic concept — before an on-hardware/live action whose effect reaches an external stateful peer that a local revert won't undo, the orchestrator stops and surfaces the blast radius to the PM. It offers safe alternatives first (separate/throwaway target, separate identity), keeps structural mutations off the user's live coupled target by default, and proceeds against a live coupled target or down a re-commission/re-pair recovery path only on explicit PM consent with the recovery planned as a mandatory step. The wb-mqtt-matter case (a structural device test on a live paired bridge corrupted the ecosystem's own device record, which reverting the bridge did not heal) is the worked example only.
 
 ### Changed
+
 - **Step 5.5 and Step A.5 reference the gate** (`WORKFLOW.md`): Step 5.5 ("run it for real") and Step A.5 ("diagnostic probe") now invoke the single-sourced Blast-radius preflight before exercising or probing a live target, instead of restating the rule.
 - **Diagnostic-probe row qualifier** (`WORKFLOW.md`, the "What is mandatory when" table): the "Diagnostic probe / spike" row now notes the Blast-radius preflight still applies — a coupled live target is stop-and-surface even for a skip-all probe.
 - **Architecture decision record** (`doc/architecture.md`): records that the preflight is enforced by soft prose plus orchestrator discipline, not a `PreToolUse` hook — coupling to an external peer is runtime state a regex guard cannot read, consistent with the 2026-06-02 rejection of a hard edit-ownership guard — and that the rule is phrased domain-agnostically with the wb-mqtt-matter incident as worked example only.
@@ -769,13 +783,16 @@ Adds a new domain-agnostic protocol behaviour: the **Blast-radius preflight** ga
 Mechanical whitespace fix for blank-line correctness on PM-facing rendered markdown — no wording change. PRIMARY: a durable one-paragraph markdown-authoring rule is added to `WORKFLOW.md` ("surround lists/tables/headings with blank lines; never two adjacent soft-break lines"), read by every doc-writing agent so authored and generated markdown stays blank-line-correct going forward. SECONDARY: a one-time fix of 7 already-shipped static/generator instances the rule cannot retroactively reach. `tests/hooks.sh` 71/71.
 
 ### Added
+
 - **Markdown-authoring rule** (`WORKFLOW.md`, near the PM-communication guidance): one paragraph instructing every doc-writing agent to surround block elements — lists, tables, headings — with blank lines and never place two adjacent non-blank soft-break lines, so authored/generated markdown renders correctly in non-CommonMark renderers and passes markdownlint MD022/MD032.
 
 ### Fixed
+
 - **Product-map generation output** (`.claude/commands/pm-bootstrap.md`, the `## Product map generation procedure` Output format and Worked example): a blank line now separates each `### [<contract>]` heading from its `- **User value:**` bullets, so every downstream `product-map.md` renders the list correctly on its next regeneration.
 - **Shipped template whitespace** (`doc/_templates/CLAUDE.md.tmpl`, `doc/_templates/threat-model.md.tmpl`, `doc/_templates/ui-guide.md.tmpl`): added the missing blank line before flagged lists and the Tech-stack table.
 
 ### Changed
+
 - **Architecture record** (`doc/architecture.md`): the contract-centric product-map entry now notes that the generated map keeps lists/tables/headings blank-line-separated per the markdown-authoring rule in `WORKFLOW.md`, and adds `doc/features/markdown-blank-line-sweep_plan.md` to its Source list.
 
 ---
@@ -785,6 +802,7 @@ Mechanical whitespace fix for blank-line correctness on PM-facing rendered markd
 Pure structural refactor, no behavior change. The migration catalogue — the `### Pending-migration detection` conditions plus every per-version migration procedure — is extracted out of `.claude/commands/pm-bootstrap.md` into a new protocol-root reference `MIGRATIONS.md` (sibling to `WORKFLOW.md`), referenced by bare filename so it resolves both in this repo and downstream at `.ai-pm/tooling/MIGRATIONS.md`. `pm-bootstrap.md` keeps a short pointer; the `## Product map generation procedure` stays there (migration procedures cross-reference it). The single-source-of-conditions invariant is preserved — `/pm-plan`, `/pm-audit`, `pm-auditor`, and `pm-plan-checker` reference the one home by name. `tests/hooks.sh` 71/71.
 
 ### Changed
+
 - **Migration catalogue extracted to `MIGRATIONS.md`** (new protocol-root reference; out of `.claude/commands/pm-bootstrap.md`): the `### Pending-migration detection` conditions and the per-version migration procedures now live in one file, sibling to `WORKFLOW.md` and referenced by bare filename (resolves in this repo and downstream at `.ai-pm/tooling/MIGRATIONS.md`). `pm-bootstrap.md` retains a short pointer to it; the `## Product map generation procedure` deliberately stays in `pm-bootstrap.md` because the migration procedures call it.
 - **References re-pointed to the single home** (`.claude/commands/pm-plan.md`, `.claude/commands/pm-audit.md`, `.claude/agents/pm-auditor.md`, `.claude/agents/pm-plan-checker.md`): each now names `### Pending-migration detection` in `MIGRATIONS.md` instead of `pm-bootstrap.md`, preserving the single-source-of-conditions invariant across the move.
 - **Architecture record** (`doc/architecture.md`): added the "Migration catalogue is a single protocol-root reference `MIGRATIONS.md`, sibling to `WORKFLOW.md`" decision and a File-layout row for the new file.
@@ -796,9 +814,11 @@ Pure structural refactor, no behavior change. The migration catalogue — the `#
 Adds a protocol convention: the orchestrator surfaces substantive PM decision-forks — scope choices, accept-vs-fix, which-of-N, prioritization — via the AskUserQuestion tool rather than plain-prose "(A)/(B)?" forks, while simple proceed/confirm gates (merge-authorization, "ready?", plain yes/no) stay prose to avoid tool-spam. The convention is recorded in WORKFLOW.md and reinforced by a short clause appended to the UserPromptSubmit route-reminder. Motivation: the orchestrator drifted to plain-prose forks with nothing nudging it back.
 
 ### Added
+
 - **AskUserQuestion convention for PM decision-forks** (`WORKFLOW.md`, near the PM-communication guidance): substantive forks — scope, accept-vs-fix, which-of-N, prioritization — are presented through the AskUserQuestion tool (structured, side-by-side options with previews); simple proceed/confirm gates (merge-auth, "ready?", plain yes/no) stay prose so the structured form does not become tool-spam.
 
 ### Changed
+
 - **Route-reminder clause** (`.claude/settings.json`, `UserPromptSubmit` hook): the `additionalContext` text now carries a short clause pointing at the AskUserQuestion convention. Text-only addition — the matcher, the trigger regex, and the `hookSpecificOutput.additionalContext` output shape are unchanged.
 - **Architecture currency note** (`doc/architecture.md`): added a dated note recording that the route reminder now points at the AskUserQuestion convention, with the convention itself owned by `WORKFLOW.md`.
 
@@ -809,12 +829,14 @@ Adds a protocol convention: the orchestrator surfaces substantive PM decision-fo
 Extends the two-layer docs split into feature contracts (slice 4). A contract's `## User value` / `## Out of scope` are now the token-free PM layer (plain product language), while machine grammars — topic conventions, `<x>_<y>` id/format grammars, status enums, dotted config keys, `retain` / `QoS` flags, raw wire ranges — are single-owned in `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` and referenced from `## Must work` / `## Must not break`, never restated inline. A structural wire-token lint backs the split, and existing token-laden contracts get a move-not-copy migration that preserves every guarantee. Motivation: caught live on wb-mqtt-matter 2026-06-03 — wire-tokens leaked through a contract's `## Out of scope` into the PM-facing product-map.
 
 ### Added
+
 - **Contract two-layer split** (`doc/_templates/contract.md.tmpl`): `## User value` and `## Out of scope` are marked the **token-free PM layer** (plain product language, no wire-tokens); `## Must work` and `## Must not break` now instruct to **reference** `docs/architecture.md` `## Behavioral contract (taxonomies & invariants)` for machine grammars instead of restating them inline.
 - **Structural wire-token lint (non-blocking)** (`.claude/agents/pm-plan-checker.md` on a plan/contract change, `.claude/agents/pm-auditor.md` on the project sweep): flags wire-token *shapes* in a contract's PM-facing sections (`## User value` / `## Out of scope`) and in the generated product-map's `- **User value:**` / `- **Out of scope:**` lines. Wire-tokens are topic paths (leading-slash MQTT-style, e.g. `/devices/.../on`), `<x>_<y>` id/format grammars, dotted config keys (`bridge.*`, `mqtt.socketPath`), protocol flags (`retain` / `QoS`), raw wire ranges (`0..254`). It is a structural pattern match on token shapes — **not prose-policing** — and domain vocabulary (`DimmableLight`, `Matter`, `fabric`) is never flagged. A relative `docs/architecture.md` `## Behavioral contract` reference is the intended token-free form and is never flagged.
 - **Move-not-copy contract migration** (`.claude/commands/pm-bootstrap.md` `### Pending-migration detection`; offered at `.claude/commands/pm-plan.md` and `.claude/commands/pm-audit.md`): for existing token-laden contracts, `pm-architect` relocates grammars into the single-owner `## Behavioral contract` and rephrases the PM sections token-free, preserving every `## Must work` / `## Must not break` guarantee.
 - **Migration guarantee-preservation check (blocking)** (`.claude/agents/pm-plan-checker.md`): on a contract two-layer migration, compares the migrated contract against the original (`git show` the pre-migration version) and **blocks** if any Must-work / Must-not-break guarantee is dropped or weakened.
 
 ### Changed
+
 - **Architecture record** (`doc/architecture.md`): added the "Contracts are two-layer; wire-tokens are single-owned in the Behavioral contract and referenced" decision, recording this as slice 4 of the two-layer-docs sequence (extending slice 3, the Behavioral contract).
 
 ---
@@ -824,14 +846,17 @@ Extends the two-layer docs split into feature contracts (slice 4). A contract's 
 Two coupled protocol-enforcement fixes. The `UserPromptSubmit` route-reminder trigger vocabulary in `.claude/settings.json` is broadened to cover removal/edit verbs, closing a gap where requests like "убери ..." fired no reminder. And `pm-pr-prep` no longer pins `model: haiku` — it now inherits the session model like every other `pm-*` agent, after pinned Haiku produced factual errors in PM-facing CHANGELOG entries.
 
 ### Fixed
+
 - **Route-reminder vocabulary** (`.claude/settings.json` `UserPromptSubmit` hook): the keyword gate now also matches removal/edit verbs — `remove`/`delete`/`drop`/`rename`/`extract`/`update` and `убери`/`убрать`/`удали`/`сними`/`вынеси`/`переименуй`/`обнови` — so change requests phrased with an edit/removal verb fire the protocol reminder. The keyword gate is kept (non-change prompts stay silent).
 - **`pm-pr-prep` model unpinned** (`.claude/agents/pm-pr-prep.md`): removed `model: haiku` from the frontmatter; the agent now inherits the session model like every other `pm-*` agent. Pinned Haiku produced repeated factual errors in PM-facing CHANGELOG entries (CHANGELOG authoring is PM-facing text, not pure mechanics). No agent pins `model:` now.
 
 ### Changed
+
 - **Decision-reversal record** (`doc/protocol-vs-builtins-analysis.md`): documented that the prior "keep `haiku` on `pm-pr-prep`" decision is reversed; the model-tier conclusion and Step 0 of the action plan are annotated accordingly.
 - **Architecture currency note** (`doc/architecture.md`): added a dated note recording that `pm-pr-prep` no longer stays `haiku` and that the route-reminder vocabulary was broadened.
 
 ### Tests
+
 - **6 new `UserPromptSubmit` cases** (`tests/hooks.sh`): 5 removal/edit-verb prompts (RU + EN) assert the reminder fires, plus one question phrasing ("как это обновляется?") asserts it stays silent. Suite now 71/71.
 
 ---
@@ -841,17 +866,20 @@ Two coupled protocol-enforcement fixes. The `UserPromptSubmit` route-reminder tr
 Makes on-disk artifact strings English-canonical: all scaffolded and regenerated files (`product.md`, product-map, templates, agent/command prose) use English headers and labels. Conversation language unchanged — agents relay artifacts to the PM in the PM's language. Existing downstream projects with Russian headers are offered a headers-only migration (preserving authored prose), with automatic detection preventing false-positive "missing header" flags during transition.
 
 ### Added
+
 - **English-canonical artifact strings**: `product.md` funnel headers (`## Why this exists` / `## What it does today` / `## Documents` / `## Features`), product-map labels (`- **User value:**` / `- **Out of scope:**` / `Built by:`, replacing Russian `Что даёт:` / `Границы:` / `Чем построено:`), and `↑ same work` repeat marker — all new scaffolds carry English.
 - **Russian-header product.md migration**: when an existing downstream `product.md` carries Russian funnel headers, a headers-only migration is offered at `/pm-plan` and `/pm-audit` — `pm-architect` (owner of `product.md`) rewrites the four headers to English, preserving the authored prose verbatim (no machine-translation).
 - **Broadened old-format-map detection** (`pm-bootstrap.md` `### Pending-migration detection`): a product-map triggers the format-refresh note if it carries the pre-v2.6 `Guarantees:` label **or** the v2.6 Russian `- **Что даёт:**` label; regeneration yields English labels automatically.
 - **Language-canon record** (`WORKFLOW.md`, `CLAUDE.md.tmpl`): "Conversation language: the user's. On-disk artifacts (files, code, commits, agent-authored docs): English." Recorded once so all agents and downstream projects inherit the rule.
 
 ### Changed
+
 - **Product-map generation** (`.claude/commands/pm-bootstrap.md`): output format, procedure, and worked example now emit English labels for newly scaffolded projects.
 - **Agent references** (`pm-auditor`, `pm-architect`, `pm-bootstrap`, `pm-plan`, `pm-audit`, `CLAUDE.md.tmpl`, `architecture.md.tmpl`, `doc/architecture.md`): all funnel-header and map-label prose align to English strings and correctly route Russian headers/labels to migration procedures.
 - **Architecture record** (`doc/architecture.md`): documented English-canonical decision and the two-axis rule (conversation ↔ PM's language; on-disk artifacts ↔ English). Owner: `pm-architect`.
 
 ### Fixed
+
 - **No false-positive missing-header flag on Russian-header projects**: `pm-auditor` now detects Russian headers as a migration *trigger* (format note), never as a missing-header *finding*, so the grep flip and downstream migration ship together without breaking live projects during transition.
 
 ---
@@ -861,12 +889,14 @@ Makes on-disk artifact strings English-canonical: all scaffolded and regenerated
 Adds a new home for technical taxonomies and invariants (`## Behavioral contract` in `architecture.md`) and rewrites journey-step guidance into human language, eliminating protocol identifiers and format tables from step bodies and journeys' Invariants fields. Journeys now reference the Behavioral contract section move-not-copy, establishing single-source-of-truth for all format/taxonomy invariants.
 
 ### Added
+
 - **Behavioral contract section** (`doc/_templates/architecture.md.tmpl:65`): new top-level `## Behavioral contract (taxonomies & invariants)` section, distinct from `## Integration contract`, serves as the single owner for status enums, topic/ID grammars, QoS levels, reachability rules, and other domain invariants. Includes guidance for `N/A — <reason>` when projects have no taxonomies.
 - **Human-language journey guidance** (`doc/_templates/user-journeys.md.tmpl:13–28`): step guidance rewritten to demand human-language text ("what the user does / expects / can go wrong") with **no** protocol identifiers, field names, QoS, or retain flags in step bodies. The `**Invariants:**` field now routes all format/taxonomy invariants to `## Behavioral contract` by reference (move-not-copy), eliminating duplication and drift.
 - **Agent walk-list sync** (`pm-architect.md:18`, `pm-bootstrap.md:141`): both now include `Behavioral contract (taxonomies & invariants)` in their lists; `pm-architect` A4 cross-check set explicitly kept unchanged (File layout / Release flow / Integration contract only — Behavioral contract is authored content, not auto-checked).
 - **Legacy-reader routing** (`pm-legacy-reader.md:70`): new guidance routes observed identifiers (status enums, topic/ID names, QoS, retain, reachability rules) into the architecture draft's `## Behavioral contract` section, never into journey step bodies.
 
 ### Changed
+
 - **Architecture record** (`doc/architecture.md`): recorded that technical taxonomies and invariants are owned by a single Behavioral contract section; journeys are human-language and reference it move-not-copy. Owner: `pm-architect`.
 
 ---
@@ -876,11 +906,13 @@ Adds a new home for technical taxonomies and invariants (`## Behavioral contract
 README front-gate (two-layer-docs slice 2): the scaffolded README no longer owns a capability list. `## What it does` is removed from the template and replaced with a single pointer to `docs/product.md`, so `docs/product.md` `## Что умеет сегодня` is the single owner of "what it does / for whom / limits" — eliminating the cause of README↔product.md drift. For existing downstream projects (README is authored, not regenerated), a move-not-copy migration is offered.
 
 ### Added
+
 - **README template front-gate** (`doc/_templates/README.md.tmpl`): the `## What it does` capability list is removed and replaced with a one-line pointer to `docs/product.md`; Quick start / Architecture / Development / License unchanged. New scaffolds carry no capability list. No status line.
 - **Old-template README migration** (`pm-bootstrap.md` → `### Pending-migration detection` + the README front-gate migration procedure): an existing `README.md` carrying a `## What it does` list is detected (positive presence of the heading; new-structure READMEs not flagged) and offered a **move-not-copy** migration — `pm-architect` reconciles the README's capabilities into `docs/product.md` `## Что умеет сегодня` first, then removes the README list and inserts the pointer. Install / Quick start preserved (pm-architect A4 cross-check stays valid). Precondition: an authored `docs/product.md` must exist (run the v2.3 migration first if absent).
 - **Detection surfaces** (`pm-auditor.md`, `pm-plan.md`, `pm-audit.md`): a non-blocking structure-only note and migration nudge for the old-template README, each referencing `### Pending-migration detection` by name (the condition is not re-encoded).
 
 ### Changed
+
 - **Architecture record** (`doc/architecture.md`): documented that the README owns no capability statements, `docs/product.md` is the single owner, and existing projects are migrated move-not-copy. Owner: `pm-architect`.
 
 ---
@@ -890,10 +922,12 @@ README front-gate (two-layer-docs slice 2): the scaffolded README no longer owns
 Reorders product contract blocks to lead with user value and boundary statements, demoting the technical build table to a secondary position, addressing real-project feedback on contract readability and facilitating format-refresh detection for maps still using deprecated `Guarantees:` labels.
 
 ### Added
+
 - **Value-first contract layout** (`pm-bootstrap.md` §2): product-map contract blocks now lead each feature/non-infra bucket with `Что даёт:` (from `## User value`) and `Границы:` (from `## Out of scope`), placing the technical build table under a plain `Чем построено:` label below. Worked example updated.
 - **Old-format detection** (`pm-bootstrap.md` §2.1 `### Pending-migration detection`): condition for maps using deprecated `Guarantees:` label added (distinguishes content-stale audit finding from format-upgrade offer). Auditor, `/pm-audit`, `/pm-plan` surfaced as non-blocking reminders.
 
 ### Changed
+
 - **Contract block structure** (`pm-bootstrap.md` step 2): technical table moved under `Чем построено:` heading; `Границы:` now omitted when `## Out of scope` is empty per existing rule.
 - **Architecture record** (`doc/architecture.md` §3): documented the value-first rendering pattern (markup-only projection, no HTML `<details>`) and old-format detection route. Owner `pm-architect`.
 
@@ -904,11 +938,13 @@ Reorders product contract blocks to lead with user value and boundary statements
 Makes detection of an un-migrated template structure reliable and turns the passive "map missing" note into an active offer to run the pending migration (backlog #4).
 
 ### Added
+
 - **Single-sourced detection** (`pm-bootstrap.md` § `Pending-migration detection`): new named subsection consolidates both un-migrated conditions (lingering `docs/features/_index.md`; or generated `docs/product.md` + frozen v2.3 signature with no `docs/product-map.md`) and the frozen signature string in exactly one place. Cited by name from `pm-auditor`, `pm-audit`, `pm-plan` — no re-encoding.
 - **Auditor reliability** (`pm-auditor.md`): inventory sourced from `git log` only (lingering `_index.md` flagged as un-migrated structure, never an inventory source); `product-map.md`-exists check moved to hard early gate (line 110) before re-derivation; greenfield/feature-less exemption made stricter (precondition: no `_index.md` + no contracts + no plans).
 - **Active offer path** (`/pm-audit`): when un-migrated structure is found, auditor flags it read-only; orchestrator offers a remediation branch ("The auditor only flagged it; run `/pm-bootstrap` to migrate"). `/pm-plan` adds a sibling retrospective-check nudge (cloned from 5+-features block), PM-authorized, never auto-runs.
 
 ### Changed
+
 - `pm-bootstrap.md`: migration procedures (v2.2/v2.3 steps) unchanged; detection prose moved to named subsection, procedures now reference by name.
 - `pm-auditor.md`, `pm-audit.md`, `pm-plan.md` — route detection to named subsection; auditor retains read-only, offer/action lives in orchestrator commands.
 
@@ -919,11 +955,13 @@ Makes detection of an un-migrated template structure reliable and turns the pass
 Aligns `architecture.md` template and agents with drifted coherence, addressing backlog findings #2, #3, #5: template enriched with coarse module-map section, integration-contract clarification, and release-flow guidance; agent/auditor prose aligned to match; one self-contradiction in the protocol's own `doc/architecture.md` fixed.
 
 ### Added
+
 - **Template enrichment** (`doc/_templates/architecture.md.tmpl`): new sections `File layout (module map)` (coarse directory/module → responsibility map, not per-function; distinct from PM-facing `docs/product.md` "## Документы"), `Integration contract`, and `Release flow`. Renamed `Key decisions → Architectural decisions` and `Constraints → Architectural constraints` for clarity.
 - **Agent prose alignment**: `pm-architect.md` A4 cross-check section lists, `pm-bootstrap.md` section enumeration now literally match enriched template (no phantom sections, no skips).
 - **Auditor anchor refinement** (`pm-auditor.md` §5 Docs currency): check keys on named `File layout (module map)` section, stopping phantom "components must be listed" soft-requirement the template couldn't satisfy.
 
 ### Fixed
+
 - **`doc/architecture.md:115`**: self-contradiction — absolute claim "hooks are `PreToolUse`-only" replaced with "`PreToolUse` guards plus one `UserPromptSubmit` route reminder", consistent with line 100 and `.claude/settings.json` configuration (which ships both routes).
 
 ---
@@ -933,12 +971,14 @@ Aligns `architecture.md` template and agents with drifted coherence, addressing 
 Splits the product documentation into two layers, addressing real-project feedback from wb-mqtt-matter: an authored PM front door (funnel) and a generated contract-to-features map.
 
 ### Added
+
 - **`docs/product.md` as authored PM front door** (owned by `pm-architect`) — a funnel scaffolding why the product exists / what it does today / key documents / functions. Never regenerated by the auditor. Includes the "что пока НЕ умеет" boundary example. Validated one-pass by PM from bootstrap product Q&A.
 - **`docs/product-map.md` as generated contract→features map** (rebuilt by `pm-auditor` / Product map generation) — clickable contract links, user-value guarantees from the contract's `## User value` section, status legend, and collapsing for multi-contract features (`↑ та же работа`).
 - **Invariants for each writer** (`pm-architect` / `pm-auditor` / product map procedure): "writes only X, never Y" — enforced in procedures and arch notes to prevent concurrent regeneration of the same layer.
 - **Migration (v2.3, idempotent, Variant A):** `/pm-bootstrap` detects pre-split state (signature line present in `product.md` AND `product-map.md` absent), `git mv`s to the generated file, and scaffolds fresh authored `product.md` from template. Signature coupling (frozen detection string) preserved to ensure two-guard idempotency.
 
 ### Changed
+
 - `pm-bootstrap.md`, `pm-auditor.md`, `pm-architect.md`, `pm-plan.md` — retargeted to split ownership (map generation / front-door authoring).
 - `doc/_templates/product.md.tmpl` — new authored template, includes "что пока НЕ умеет" boundary example, marked as not-generated.
 - `doc/_templates/CLAUDE.md.tmpl` — added `docs/product-map.md` row; noted `product.md` as authored funnel.
@@ -947,6 +987,7 @@ Splits the product documentation into two layers, addressing real-project feedba
 - `tests/hooks.sh` — unchanged; 65/65 pass.
 
 ### Migration (downstream projects)
+
 After `git submodule update --remote`, run the v2.3 migration: tell the agent **«мигрируй на v2.3»** (or re-run `/pm-bootstrap`, which detects it) — if the old merged-document structure is present (signature line found), the agent splits `docs/product.md` into authored funnel + `docs/product-map.md`, scaffolds the new front door, and removes the signature line. One run, idempotent, safe on greenfield projects. See README § "Миграция на v2.3.0".
 
 ---
@@ -954,9 +995,11 @@ After `git submodule update --remote`, run the v2.3 migration: tell the agent **
 ## [2.2.3] — 2026-06-02
 
 ### Fixed
+
 - `pm-pr-prep`: in release commit step 4, now stages feature review artifacts from `.ai-pm/reviews/` and `.ai-pm/arch/` alongside CHANGELOG + metadata. Root-cause fix: PR #158's review file (`fixup-orchestrator-no-external-state_review.md`) was committed in the feature branch but not re-staged into the release commit, leaving it orphaned on merge. Recovers the artifact.
 
 ### Changed / Docs
+
 - `.ai-pm/backlog.md`: recorded four protocol findings from downstream wb-mqtt-matter feature review (PR #158): edit-ownership enforcement gap, `architecture.md` module-map section, template/tooling desync, product-map migration trigger + auditor detection bug. Deferred to `/pm-plan` cycle.
 
 ---
@@ -964,6 +1007,7 @@ After `git submodule update --remote`, run the v2.3 migration: tell the agent **
 ## [2.2.2] — 2026-06-02
 
 ### Changed
+
 - `.claude/settings.json`: added top-level `"autoMemoryEnabled": false` to disable orchestrator auto-memory (private state store outside project root). All protocol state lives in project artifacts (`.ai-pm/`, `doc/`, plans, reviews).
 - `.gitignore`: added `.claude/tmp/` as sanctioned project-local scratch directory (git-ignored, passes path-boundary hooks).
 - `WORKFLOW.md`: documented `.claude/tmp/` as throwaway/diagnostic scratch dir inside project root (not `/tmp`).
@@ -974,6 +1018,7 @@ After `git submodule update --remote`, run the v2.3 migration: tell the agent **
 ## [2.2.1] — 2026-06-02
 
 ### Changed
+
 - Docs: updating the template can be requested in plain language ("обнови шаблон" / "bump ai-pm-protocol to vX.Y") — documented in README and WORKFLOW.md as orchestrator chore work (submodule bump on a branch + any pending migration), no `/pm-plan` needed.
 
 ---
@@ -983,6 +1028,7 @@ After `git submodule update --remote`, run the v2.3 migration: tell the agent **
 Realignment of the protocol around best-in-class built-in skills/tools, a contract-centric product map, and a PM-authorized diagnostic-probe mode.
 
 ### Added
+
 - **Agent/skill routing guard** (`PreToolUse`): denies `wb-*` role duplicators (`coder`, `code-reviewer`, `design-review`, `plan-feature`, `pr-prep`, `wb-git:workflow`, `wb-git:pr-author`) with a pointer to the `pm-*` equivalent. Named deny-list — `code-review`, `deep-research`, and `wb-*` knowledge skills stay available.
 - **UserPromptSubmit route reminder**: reasserts the protocol route on change-intent prompts (RU + EN), silent on chit-chat; exempts PM-authorized diagnostic probes.
 - **Explicit `tools:` frontmatter** on all seven `pm-*` agents (read-only reviewers can no longer edit code; Web confined to `pm-stack-researcher`; `Skill` kept for `pm-coder`/`pm-stack-researcher`).
@@ -995,6 +1041,7 @@ Realignment of the protocol around best-in-class built-in skills/tools, a contra
 - Design/plan docs: `doc/protocol-vs-builtins-analysis.md` and feature plans for the realignment, product map, and probe mode.
 
 ### Changed
+
 - `pm-*` judgment agents drop pinned `model:` to inherit the orchestrator model; `pm-pr-prep` stays `haiku`.
 - `/pm-research` and `pm-stack-researcher` delegate search + adversarial verification to the built-in `deep-research` engine, keeping only their frame.
 - `pm-coder` may load `wb-*` knowledge skills (codestyle, packaging, platform); WebSearch is tool-locked out.
@@ -1003,9 +1050,11 @@ Realignment of the protocol around best-in-class built-in skills/tools, a contra
 - `README.md` synced to v2.2.0 (product map, diagnostic-probe mode, mechanical route discipline, built-in delegation).
 
 ### Removed
+
 - `docs/features/_index.md` (feature index) — replaced by the contract-centric `docs/product.md`.
 
 ### Migration (downstream projects)
+
 - After `git submodule update --remote`, run the v2.2 migration: tell the agent **«мигрируй на v2.2»** (or re-run `/pm-bootstrap`, which detects it) — it generates `docs/product.md` from your existing contracts / plans / reviews and removes the orphaned `docs/features/_index.md`. One command, nothing else changes. See README § "Миграция на v2.2.0".
 - The agent/skill guard now denies `wb-*` role agents — switch to the `pm-*` equivalents. `wb-*` knowledge skills are unaffected and encouraged.
 
@@ -1265,7 +1314,7 @@ Realignment of the protocol around best-in-class built-in skills/tools, a contra
 
 ### Added
 
-- `doc/stack-notes.md` for 6 self-* components (architect, planner, coder, reviewer, pr-prep, auditor): documents the protocol's own stack — markdown spec, agent persona conventions, hook scripts, install layout. Closes finding #2 of `doc/features/audit-2026-05-30.md`. First of 7 self-* audit-fixup plans in meta-audit priority order. (4f71ab0)
+- `doc/stack-notes.md` for 6 self-*components (architect, planner, coder, reviewer, pr-prep, auditor): documents the protocol's own stack — markdown spec, agent persona conventions, hook scripts, install layout. Closes finding #2 of `doc/features/audit-2026-05-30.md`. First of 7 self-* audit-fixup plans in meta-audit priority order. (4f71ab0)
 
 ---
 
@@ -1346,7 +1395,7 @@ changes are part of the v1.7.0 baseline; recorded here for traceability.
 ### Added
 
 - Structured reviewer dimensions: distilled 8 review dimensions (security, stability, test coverage, regressions, conventions, simplification, docs drift, infrastructure) with severity levels and explicit "what NOT to flag" rules (5645844)
-- Audit command: new optional /audit command for full-project health check using same review dimensions, generates PM-facing report in docs/audit-<date>.md (5645844)
+- Audit command: new optional /audit command for full-project health check using same review dimensions, generates PM-facing report in `docs/audit-<date>.md` (5645844)
 
 ---
 
@@ -1406,20 +1455,17 @@ changes are part of the v1.7.0 baseline; recorded here for traceability.
 - orchestration flow: show PM what was built at each step (234cfe2)
 - reviewer: checks hardcoded config values and missing infrastructure (acdee68)
 
-
 ## [1.0.5] — 2026-05-28
 
 ### Fixed
 
 - coder: must not create directories outside project root — no /tmp/probe dirs. Library API research via WebSearch or project node_modules/ (88449ea)
 
-
 ## [1.0.4] — 2026-05-28
 
 ### Fixed
 
 - research command: output path — feature research beside plan in `docs/features/<topic>_research.md`, project-level research in `docs/research.md` (2558671)
-
 
 ## [1.0.3] — 2026-05-28
 
@@ -1432,7 +1478,6 @@ changes are part of the v1.7.0 baseline; recorded here for traceability.
 ### Fixed
 
 - architect: reverted WebSearch (wrong place); scope strictly current repo only (1403b92)
-
 
 ## [1.0.2] — 2026-05-28
 

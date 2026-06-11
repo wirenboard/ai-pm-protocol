@@ -130,7 +130,7 @@ function resolveMergeTopic(command, root) {
       const topic = stripPrefix(hm[1].trim());
       if (topic) return topic;
     }
-  } catch (_e) { /* fall through to the command match */ }
+  } catch { /* fall through to the command match */ }
   // Fallback: a <prefix>/<topic> ref named in the command. A remote name has no
   // slash, so only a slashed token is a branch ref; take the segment after its
   // first slash, with the same safe character class as the ref body.
@@ -141,7 +141,7 @@ function resolveMergeTopic(command, root) {
 function reviewStampSatisfied(root, topic) {
   const file = path.join(path.resolve(root), ".ai-pm", "reviews", topic + "_review.md");
   let text;
-  try { text = fs.readFileSync(file, "utf8"); } catch (_e) { return false; }
+  try { text = fs.readFileSync(file, "utf8"); } catch { return false; }
   const stampOK = (label) => {
     const m = text.match(new RegExp("^##[ \\t]+" + label + ":[ \\t]*(.*)$", "m"));
     if (!m) return false;
@@ -152,7 +152,7 @@ function reviewStampSatisfied(root, topic) {
   return stampOK("Code review") || stampOK("Validation");
 }
 function fileNonEmpty(p) {
-  try { return fs.statSync(p).size > 0; } catch (_e) { return false; }
+  try { return fs.statSync(p).size > 0; } catch { return false; }
 }
 // Is the project configured? True iff ai-pm.config.json exists at the project
 // root. Root-relative, fs-checked — the lazy-setup predicate reads only this
@@ -169,7 +169,7 @@ function projectProfile(root) {
   try {
     const cfg = JSON.parse(fs.readFileSync(path.join(path.resolve(root), "ai-pm.config.json"), "utf8"));
     return cfg.profile === "lite" || cfg.profile === "solo" ? cfg.profile : "full";
-  } catch (_e) { return "full"; }
+  } catch { return "full"; }
 }
 
 // ── predicates: (input, config) => boolean ───────────────────────────────────

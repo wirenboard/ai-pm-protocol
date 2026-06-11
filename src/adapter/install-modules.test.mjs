@@ -128,19 +128,19 @@ console.log("SECURITY — missing fragment, root escape:");
   const badRegistry = { modules: [{ id: "ghost", fragments: { reviewer: "src/modules/ghost/reviewer.md" } }] };
   let threw = false;
   try { composeBody(ROOT, reviewerFloor, "reviewer", badRegistry, { modules: { ghost: true } }); }
-  catch (_e) { threw = true; }
+  catch { threw = true; }
   check("missing-fragment: enabled module with absent fragment ⇒ throws", threw);
 }
 
 // ── 5. SECURITY: a root-escaping fragment pointer is REJECTED ─────────────────
 check("root-escape: absolute pointer ⇒ throws", (() => {
-  try { resolveFragmentPath(ROOT, "/etc/passwd"); return false; } catch (_e) { return true; }
+  try { resolveFragmentPath(ROOT, "/etc/passwd"); return false; } catch { return true; }
 })());
 check("root-escape: `..`-bearing pointer ⇒ throws", (() => {
-  try { resolveFragmentPath(ROOT, "../outside.md"); return false; } catch (_e) { return true; }
+  try { resolveFragmentPath(ROOT, "../outside.md"); return false; } catch { return true; }
 })());
 check("root-escape: empty pointer ⇒ throws", (() => {
-  try { resolveFragmentPath(ROOT, ""); return false; } catch (_e) { return true; }
+  try { resolveFragmentPath(ROOT, ""); return false; } catch { return true; }
 })());
 check("in-root pointer resolves", resolveFragmentPath(ROOT, "src/modules/threat-model/reviewer.md").startsWith(ROOT));
 // A root-escaping pointer carried by an ENABLED module also fails at compose time.
@@ -148,7 +148,7 @@ check("in-root pointer resolves", resolveFragmentPath(ROOT, "src/modules/threat-
   const escRegistry = { modules: [{ id: "esc", fragments: { reviewer: "../escape.md" } }] };
   let threw = false;
   try { composeBody(ROOT, reviewerFloor, "reviewer", escRegistry, { modules: { esc: true } }); }
-  catch (_e) { threw = true; }
+  catch { threw = true; }
   check("root-escape: enabled module with escaping pointer ⇒ throws at compose", threw);
 }
 

@@ -14,10 +14,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { AiPmEnforcement } from "../../.opencode/plugins/ai-pm.mjs";
-
-const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 let pass = 0, fail = 0;
 function check(name, cond) {

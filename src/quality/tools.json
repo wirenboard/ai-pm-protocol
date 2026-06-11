@@ -72,6 +72,30 @@
       "run": "node src/quality/neutral-prose.test.mjs",
       "beat": "review",
       "init": "Node >= 18, no install"
+    },
+    {
+      "id": "eslint",
+      "checks": "JS lint (the engine, shims, install scripts, the runner, the tests) — unused bindings, accidental globals, loose equality, var. Standard recommended ruleset, made STRICTER not looser; code is brought to the standard, never the standard to the code.",
+      "config": "eslint.config.mjs",
+      "run": "npx eslint .",
+      "beat": "build",
+      "init": "npm install"
+    },
+    {
+      "id": "markdownlint",
+      "checks": "Markdown format for the docs — list/heading spacing, table column style, fenced-code language, emphasis-as-heading. Standard ruleset; the only relaxations (MD013 line-length, MD024 siblings-only, MD041 partials) are recorded Operator decisions in the config.",
+      "config": ".markdownlint-cli2.jsonc",
+      "run": "npx markdownlint-cli2",
+      "beat": "build",
+      "init": "npm install"
+    },
+    {
+      "id": "semgrep",
+      "checks": "security static analysis (SAST) over the JS — command injection, path traversal, unsafe patterns. Standard published rulesets (p/javascript + p/security-audit), no custom loosening.",
+      "config": null,
+      "run": "semgrep --config p/javascript --config p/security-audit --error --metrics off --exclude node_modules src/",
+      "beat": "review",
+      "init": "pip install semgrep (Python); the rulesets fetch from the public Semgrep registry on first run"
     }
   ]
 }

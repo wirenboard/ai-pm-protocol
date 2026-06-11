@@ -72,7 +72,7 @@ export function run(beat, root, registryPath) {
     try {
       execSync(row.run, { cwd: root, stdio: "inherit" });
       console.log(`PASS  ${row.id}`);
-    } catch (_e) {
+    } catch {
       console.log(`FAIL  ${row.id}`);
       failed++;
     }

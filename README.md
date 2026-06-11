@@ -11,7 +11,7 @@ The whole protocol is one short constitution you can read in one sitting: **[`PR
 **Three roles.** A Builder makes the change, a Reviewer independently checks it, an Orchestrator runs the loop — the reviewer is never the builder, so a maker can't catch its own blind spots.
 
 | Role | Does |
-|---|---|
+| --- | --- |
 | **Orchestrator** | The running session. Talks to you, drives the loop, owns git and state. Routes every other task to a role; builds and reviews nothing itself. |
 | **Builder** | Plans the change, then writes the code, docs, and tests. |
 | **Reviewer** | Independently checks the built change against the plan and a tight quality / security / honesty checklist. A separate context from the Builder. |
@@ -40,7 +40,7 @@ Re-run it anytime — the `/pm-setup` command, or just ask to reconfigure — wh
 
 ## Layout
 
-```
+```text
 PROTOCOL.md        the constitution — the loop, the roles, the invariants, the honest enforcement map
 docs/              human-readable documentation:
   architecture.md    the engineer's mental model — how the pieces fit

@@ -7,6 +7,7 @@
 One neutral core plus one thin adapter per platform.
 
 The **core** is prose and data an engineer reads without knowing the harness:
+
 - the constitution (`PROTOCOL.md`);
 - three role agents (`src/agents/`);
 - this file;
@@ -31,7 +32,7 @@ The actor signal is resolved per platform and fed to the engine. Where a platfor
 
 Every guarded action — a tool call (read / write / bash / spawn) or a submitted prompt — passes through the platform's deny layer before it runs. The layer is one shared engine plus a per-platform shim:
 
-```
+```text
  a role acts (tool call, or a submitted prompt)
         │
         ▼
@@ -70,7 +71,7 @@ Two wrinkles are the only non-obvious part, and both are **platform-capability**
 
 ## Integration — core / adapter
 
-```
+```text
  core (neutral, every platform)             adapter (the only platform code)
  ──────────────────────────────             ────────────────────────────────
  PROTOCOL.md       the constitution         engine.mjs       shared predicates
@@ -83,6 +84,7 @@ src/quality/          the project's checks                      + map verdict) +
 Adding a platform = write **only** its shim (input-normaliser + verdict-mapper + install glue) and add its column to `tool-map.json`; **zero edits** to the engine, the rules, or the core. If a new platform forces an edit to any of those, the boundary leaked (`PROTOCOL.md` `## Core and adapter`).
 
 Two integrity guards hold the boundary, both in `src/adapter/parity.test.mjs`:
+
 - **parity** — both shims reach the identical verdict on a shared fixture, bar a recorded capability divergence;
 - **single-engine** — no rule logic leaked into a shim.
 
@@ -94,7 +96,7 @@ The protocol's decomposition runs on one more axis than platform / role / qualit
 
 The pieces and their single homes:
 
-```
+```text
  src/modules/registry.json   the registry — the catalog (toggle shape · per-kind
                          defaults · targets · fragment pointers). NO floor prose.
  src/modules/<id>/<role>.md  a FRAGMENT — the deepening one module adds to one role
@@ -109,6 +111,7 @@ The pieces and their single homes:
 **Assembly.** Each install-agents shim builds a role file as `frontmatter + composeBody(floor)`. `composeBody` replaces the role's single marker with the enabled modules' fragments for that role, in **registry order** (stable, declared — not config order). A floor body with no marker takes no modules and is returned unchanged.
 
 **Enabled-resolution** mirrors the engine's `projectProfile` fail-safe:
+
 - a module is OFF only on a literal `false` (or `{ enabled: false }`);
 - **everything else — `true`, an object, a malformed value, an absent key — resolves it ON**, with the per-`kind` default merged under any config override;
 - an unknown/absent project `kind` takes the **strict-side** defaults.
@@ -116,6 +119,7 @@ The pieces and their single homes:
 So a bad config can only ever turn MORE rigor on, never silently disable it.
 
 **Two security guards** (the assembler's own threat model):
+
 - a fragment pointer that is absolute or `..`-bearing is **rejected** (`resolveFragmentPath`, mirroring the engine's `isInsideRoot` — invariant 2);
 - a fragment NAMED by an enabled module but MISSING on disk is a **hard error** at assembly, never a silent drop of a security section.
 

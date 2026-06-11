@@ -23,7 +23,7 @@ This repo develops itself under this protocol: the same loop, roles, invariants,
 Three roles. Keep the one split that carries reliability: **the reviewer is never the builder**. Each role's folded specialist concerns survive as a checklist in its agent (the **Folds** column), not as separate roles.
 
 | Role | Does | Folds |
-|---|---|---|
+| --- | --- | --- |
 | **Orchestrator** | Drives the loop, talks to the Operator, owns git and the resume state. Routes every other act to a role; does no building or reviewing itself. | (the session itself) |
 | **Builder** | Plans the change, writes the code/docs/tests, keeps the project's checks green. | coder · architect · stack-researcher · codebase-reader |
 | **Reviewer** | Independently checks the work against the plan and a tight quality / security / honesty / product checklist. A different context than the Builder. | plan-checker · code-review · auditor · product-advocate |
@@ -35,9 +35,11 @@ Three roles. Keep the one split that carries reliability: **the reviewer is neve
 
 ## The loop
 
+**Build top-down — the guarantee before the mechanism.** Name the promise a change makes (its contract) before building to it; never tool-first or code-first. A linter, a check, a feature exists to honour a stated promise — wiring a mechanism with no promise it serves is built backwards. The beats run in this order for the same reason: the promise (understand, plan) precedes the mechanism (build).
+
 Five beats, in order.
 
-```
+```text
 understand → plan → build → review → ship
             (Operator ok)   (independent)  (Operator merges)
 ```
@@ -94,6 +96,8 @@ The checklists that realise these contracts live in the agent files — the one 
 
 A project's checks (linters, formatters, type-checkers, test runners, a security scanner) are **not** hard-coded here. They live in a **quality layer**: a `src/quality/` directory holding each tool's native config plus a `tools.json` registry — per tool: *what it checks*, *the command to run it*, *which beat it runs in* (`build` / `review` / `ship`), *a one-line init*. The **Builder** runs the `build`-beat tools and hands back only when they pass; the **Reviewer** confirms the `review`-beat tools ran and reads their output. A red tool is *not green*.
 
+- The toolkit is **wired and tuned at setup**: the orchestrator discovers the stack and registers stack-appropriate tools (incl. a security/SAST scanner), per the `automated-quality-tooling` contract (`docs/contracts/`, realised in the orchestrator's `## Setup`). No tool is hard-coded here.
+- The AI **never loosens a tool's config to make code pass** — it fixes the code to the standard; a relaxation is a deliberate, recorded Operator decision.
 - The template ships only the **shape** — the registry format and one or two example rows; a project brings its own configs.
 - Add a tool = drop its config in `src/quality/` and add a registry row; **no core edit**. This is the one home for "what does *green* mean here".
 
@@ -155,7 +159,7 @@ The protocol is **one neutral core + one thin adapter per platform**.
 **Each adapter** realises this fixed contract for one platform, and nothing more:
 
 | Contract point (neutral) | What the adapter supplies |
-|---|---|
+| --- | --- |
 | abstract tool → concrete tool | the platform's name for read / write / edit / spawn-sub-agent / ask-structured-question |
 | enforce a deny | the platform's deny mechanism, loading the **shared deny-rules data** |
 | spawn a sub-agent | how this platform starts a child role |
@@ -184,7 +188,7 @@ The Operator makes product decisions and does not read code:
 
 Never commit to `main`. One branch per PR (it may carry several features).
 
-```
+```text
 git checkout main && git pull          # start from current main
 git checkout -b feature/<topic>        # fresh branch — one per PR
 ... build, review, commit ...          # Orchestrator commits the reviewed change (atomic, one purpose)

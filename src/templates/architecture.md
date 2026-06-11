@@ -1,6 +1,6 @@
 # Architecture
 
-> The engineer's mental model of <project> — how the pieces fit and where to change them. Current state only; the *why* of a past decision lives in git. Readable in one sitting.
+> The engineer's mental model of `<project>` — how the pieces fit and where to change them. Current state only; the *why* of a past decision lives in git. Readable in one sitting.
 
 ## What it is
 

@@ -196,7 +196,7 @@ function runShim(payload) {
 // deny: a read outside root. cwd is a non-git tmp dir → root falls back to it.
 const denyOut = runShim({ tool_name: "Read", tool_input: { file_path: "/etc/passwd" }, cwd: ROOT });
 let denyOK = false;
-try { denyOK = JSON.parse(denyOut).hookSpecificOutput.permissionDecision === "deny"; } catch (_e) {}
+try { denyOK = JSON.parse(denyOut).hookSpecificOutput.permissionDecision === "deny"; } catch { /* non-JSON output ⇒ denyOK stays false */ }
 check("spike:deny-json", denyOK, true);
 // allow: a read inside root prints nothing.
 const allowOut = runShim({ tool_name: "Read", tool_input: { file_path: path.join(ROOT, "README.md") }, cwd: ROOT });

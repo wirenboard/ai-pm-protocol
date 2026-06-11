@@ -9,6 +9,7 @@ A tech-PM reads the whole protocol in one sitting and holds its shape. `PROTOCOL
 ## The rule of the cut (non-negotiable)
 
 The complexity that was removed was **not noise** — most of it prevented a real failure (corner-cutting, boundary breach, slop, lost context). So we do not "delete to shrink." Every cut either:
+
 - (a) keeps the failure out by a **cheaper mechanism** — a mechanical deny instead of a paragraph, one sharp invariant instead of five overlapping ones, killing a duplicate; or
 - (b) **consciously accepts the risk**, written down.
 
