@@ -14,6 +14,14 @@
 
 ---
 
+## [4.11.1] — 2026-06-12
+
+### Fixed
+
+- **Backlog triaged against the minimal core** — 515 → ~150 lines: entries resolved by shipped versions removed (each removal spot-checked by the Reviewer against the repo); entries referencing the retired template structure re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals). State pointer updated; one invariant-5 fix (a Russian phrase in the English state artifact).
+
+---
+
 ## [4.11.0] — 2026-06-12
 
 ### Added
