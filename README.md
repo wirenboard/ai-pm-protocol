@@ -1,6 +1,6 @@
 # ai-pm-protocol
 
-A way to build software by describing what you want. You are the operator: you say *what* to build and *why*, approve the plan, and decide what ships — and you never read code. A small set of AI roles plans the change, builds it, reviews it independently, and ships it.
+A protocol for building software and documentation with AI. You are the operator: you say *what* to build and *why*, approve the plan, and decide what ships — from a non-technical PM who never opens a file, to a technical lead who reviews the diff. A small set of AI roles plans the change, builds it, reviews it independently, and ships it.
 
 It runs inside an AI coding harness — Claude Code and OpenCode, both live-verified — and **develops itself under its own protocol** — this repository is its own first project.
 
@@ -22,9 +22,14 @@ The whole protocol is one short constitution you can read in one sitting: **[`PR
 
 **You decide product, not code.** The orchestrator leads with user impact, frames decisions as trade-offs, asks one question at a time, and never shows you code.
 
-**Speed↔quality dial.** Two modes, both first-class: **prototype mode** cuts ceremony and accepts conscious tech debt (tracked in backlog, not hidden) so you verify the hypothesis fast; **quality mode** commits to no rewrites — full research before code, independent deep review. You pick the position; the floor — working code, independent review — holds in both. This is the differentiator from "ceremony or chaos": a protocol that is also a dial, not a fixed cost.
+**Speed↔quality dial, across the whole spectrum.**
 
-**Who it is for.** From a non-technical product person (PM, founder, domain expert) to a technical lead — the protocol serves the whole spectrum as one product. Scenarios adjust the output detail (show or hide the diff), question depth, and how much the AI auto-decides, without separate modes or config toggles.
+| | Prototype mode | Quality mode |
+| --- | --- | --- |
+| **PM / founder** | Fastest loop, lighter ceremony, AI decides within canon | Full rigor, deep review, every structural choice surfaced |
+| **Tech-lead** | Same fast loop, you see the diff | Full rigor, you review the diff alongside the AI |
+
+The floor — working code or docs, independent review — holds in both modes. You pick the position per feature, not per project.
 
 ## Platform-neutral by design
 

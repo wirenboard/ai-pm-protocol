@@ -475,6 +475,28 @@ Acceptance test: a mechanism counts only if it fires WITHOUT the Operator's vigi
 
 The Operator asked to roll the protocol into ad-md-editor; this session can't (out-of-root, the deny boundary blocks it, correctly). The manual downstream install is fiddly (the bootstrap gap). The unified install.mjs makes the rollout one command AND dogfoods install on a REAL downstream (the strongest test we lack). ad-md-editor = the first real downstream polygon.
 
+## Builder plan must name visual form for new concepts in user-facing docs — 2026-06-11 (8D D7, README matrix)
+
+**Root cause recorded:** when a user-facing doc change introduces a new concept (axis, matrix, dial, table), the plan described "add topic X" but not the visual form. Result: Builder added the topic as prose paragraphs; the Operator expected a table. The mismatch survived Reviewer because the plan didn't specify the form.
+
+**Systemic measure:** add a line to the Builder's plan checklist — for user-facing documentation changes that introduce a new concept or relationship, the plan must describe the intended visual form (table / list / diagram / prose) before build. Without it, form is left to the Builder's discretion and may not match Operator intent.
+
+Path: `fixup` — one line in `src/agents/builder.md` plan checklist.
+
+## Review stamp format mismatch: verdict must be inline, not on a separate line — 2026-06-11
+
+**Found (Orchestrator, ship of PR #27):** the merge-gate's `stampOK()` regex (`^##[ \t]+<label>:[ \t]*(.*)$`) captures only what appears AFTER the colon ON THE SAME LINE. The Reviewer wrote the verdict on the next line → `m[1]` = `""` → gate returns false → push blocked.
+
+The test in `src/adapter/merge-gate.test.mjs` shows the expected format: `## Code review: APPROVED`. The `src/agents/reviewer.md:31` instruction is ambiguous about inline vs next-line.
+
+**Workaround (PR #27):** Orchestrator added the inline verdict manually before the full-body block. Not fabricated — cosmetic format fix.
+
+**Fix needed (one of):**
+- A: Clarify `reviewer.md` to be explicit: verdict inline on heading line.
+- B: Widen `stampOK()` to also accept `**Verdict: approve**` on the next line after the heading.
+
+Path: `fixup`. B is safer (resilient to future format variation). Severity: low.
+
 ## Documentation as a first-class project kind — deeper rethinking of the `kind` axis — 2026-06-11
 
 **Operator insight:** documentation and code are fundamentally the same thing — both are instructions for consumers, just with different consumers (machine reads code, human reads documentation). There is no essential difference in the craft of writing them well. This protocol is itself proof: the primary deliverables are `.md` files (PROTOCOL.md, agents, architecture); the Node.js code is a transport. Yet the repo is classified as `kind: software`.

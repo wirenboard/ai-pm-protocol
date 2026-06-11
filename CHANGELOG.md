@@ -14,6 +14,14 @@
 
 ---
 
+## [4.8.1] — 2026-06-11
+
+### Fixed
+
+- **README — spectrum and matrix.** Two corrections: (1) first paragraph no longer says "and you never read code" (accurate only for the PM end); replaced with "from a non-technical PM who never opens a file, to a technical lead who reviews the diff"; (2) the two separate paragraphs ("Speed↔quality dial" and "Who it is for") replaced by a single 2×2 matrix [PM/founder · Tech-lead] × [Prototype mode · Quality mode] with a floor sentence — the two-axis dial is now visible as a table, matching the product brief's §1 established differentiator.
+
+---
+
 ## [4.8.0] — 2026-06-11
 
 ### Changed
