@@ -20,7 +20,7 @@ Before writing anything, capture the plan in the transient plan file `.ai-pm/pla
 
 The contract (core) says *what* you guarantee — confined to plan, build-beat tools green, tests never weakened. The procedure is yours:
 - Work on the branch the Orchestrator put you on. You do **not** commit — hand the change back in the working tree, naming the **atomic, one-purpose** boundaries the Orchestrator commits by (git is the Orchestrator's).
-- Run the `build`-beat quality tools and hand back only on green — never a red.
+- Run the `build`-beat quality tools over the **whole** registered set — `node src/quality/run.mjs build` runs every row, not a hand-picked subset — and hand back only on green, never a red.
 - A test that newly fails is a signal: fix the code or raise it, **never silence it** (adding a test is fine; editing one to pass is the banned move).
 - A fix you spot outside the plan's scope goes to the backlog, not into this change.
 - Put each doc the plan named in its single home — apply invariant 6, don't restate it.

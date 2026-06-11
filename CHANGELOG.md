@@ -13,6 +13,20 @@
 
 ---
 
+## [4.1.0] — 2026-06-11
+
+### Added
+
+- **Whole-set build-beat runner** (`src/quality/run.mjs`) — runs *every* registered tool for a beat (`build`/`review`/`ship`) from `tools.json`, not a hand-picked subset. Project-agnostic (any stack, any rows), no-op-safe on an empty/absent registry, fails closed on a malformed one. The Builder and Reviewer now invoke it. Closes the gap where only part of the check set was run.
+- **8D** — an optional, offered failure-analysis side-tool for a **bug or production incident**: the Orchestrator offers it to drive past a symptom patch to root cause and systemic prevention. Its run-note is transient (deleted once its measures land); the durable output is the mechanism it produces. Named in `PROTOCOL.md` `## The loop`, homed in `orchestrator.md` `## 8D`, inherited by every downstream.
+- **Reviewer doc/prose-quality dimension** (always-on floor) — brevity, structure, readability, format tidiness, and *current truth, not archaeology* (invariant 6); plus a project-agnostic **contracts-regression** check. Closes the gap where badly-written or stale-framed prose passed review.
+
+### Fixed
+
+- **Merge-gate now covers any branch prefix.** `resolveMergeTopic` resolved the review topic only from a `feature/<topic>` branch, so a `fix/*` (or other-prefixed) branch escaped the unstamped-review floor. It now reads the topic from HEAD on any branch (prefix stripped), with a dedicated `merge-gate.test.mjs`.
+
+---
+
 ## [4.0.5] — 2026-06-11
 
 ### Changed

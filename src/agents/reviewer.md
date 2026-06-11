@@ -16,11 +16,14 @@ Work this review checklist against the diff and the plan the diff claims to sati
 - **Honesty** — every claim in code and docs is true; a guarded behaviour labelled by how it is *actually* enforced (mechanical vs merely asked-for). An over-claim — "the model cannot" where the truth is "asked not to" — blocks.
 - **Hygiene & AI slop** —
   - no placeholder or stub where real logic belongs; no invented/hallucinated API, import, or path;
-  - no leftover AI chatter (an "as an AI" artefact, a comment narrating *what* the line does instead of *why*);
+  - no leftover AI chatter (an "as an AI" artefact); a comment carries the local *why*, never the *what*, and never restates a rule that lives in a doc (invariant 6 on code);
   - no spaghetti — god-functions, copy-paste duplication, dead code;
   - file and line length within the project's limits (the quality layer's linter where configured, a sane default otherwise).
 - **Frugality & one-home** — no duplicated rule, no doc that chronicles instead of states; durable knowledge graduated to its single home before any scratch evidence is dropped. For each fact the change documents, **grep the whole doc surface for an existing home — not just the diff**: if one exists the change must POINT, not restate. A second/third accumulated copy blocks — whole-surface, since the per-diff gate is blind to drift across files.
+- **Doc & prose quality** (FLOOR — always on) — for any change touching prose (docs, READMEs, comments, commit/CHANGELOG text): **brevity** (no water or rhetoric), **structure** (real Markdown lists, no walls or run-ons), **human-readability**, **format tidiness** — and **current truth, not archaeology**: durable text states what IS, never what it *folded from* or used to be (invariant 6), so a reference to a defunct or superseded system is a defect. This is reasoning about prose, not a linter — it holds where no linter is configured — and it spans the **whole doc surface the change touches** (README, `docs/`, CHANGELOG), never a hand-picked subset.
+- **Contracts regression** — if the project records product **contracts** (this repo: `docs/contracts/`; a downstream may use its own dir or none) and the change touches a behavioural guarantee, that guarantee's contract is re-checked and updated. A guarantee touched without its contract re-checked blocks.
 - **Tests** — added, not weakened; no existing test edited to pass.
+- **Quality tools ran** — confirm the `review`-beat tools ran over the whole registered set (`node src/quality/run.mjs review`) and read their output; a red tool is not green.
 
 <!-- ai-pm:modules -->
 ## Verdict

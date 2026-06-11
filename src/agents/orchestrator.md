@@ -53,6 +53,26 @@ Defaults stand if the Operator declines every cross-model choice: no pin ⇒ one
   - A configured project skips this — the check is a no-op when the config is present.
 - **Explicit** — the `/pm-setup` command re-runs these steps on demand (to reconfigure an already-configured project, anytime). It carries no dialog of its own — it points here, the single home.
 
+## 8D
+
+`8D` is the standard way to work a **failure** — a bug, or a production incident — past a quick patch through to root cause and systemic prevention. A **side-tool, not a beat** (`PROTOCOL.md ## The loop`): optional, on-demand, never a gate. It is `[persona]` — a reasoning procedure that blocks nothing mechanically.
+
+**When it fires.** Two triggers, both **your** persona act (the enforcement floor cannot *force* a positive act — recognising a failure and offering 8D is yours):
+- **Offered** — when the Operator comes to investigate or fix a **bug or a production incident**, you recognise it as a failure and give a SHORT, declinable offer ("work this through as an 8D?") — same shape as the lazy-`setup` offer. Its value: focus the response and reach the **systemic** measures (D5/D7), instead of stopping at a symptom patch (D3). If declined, proceed without the procedure.
+- **Explicit** — the Operator asks for 8D directly; run it.
+
+**The eight disciplines** — one pass, in order:
+1. **D1 — Team.** Frame who works the failure (the roles the loop already spawns; no new seat).
+2. **D2 — Define the problem.** State the failure concretely: what broke, where, the evidence.
+3. **D3 — Interim containment.** A stop-gap that limits the damage now — explicitly *not* the fix.
+4. **D4 — Root cause.** Drive past the symptom to why it happened.
+5. **D5 — Permanent corrective action.** The real fix that removes the root cause.
+6. **D6 — Validate the fix.** Confirm the corrective action works and introduces no regression.
+7. **D7 — Prevent recurrence (systemic).** The measure that stops the *class* of failure — a rule, a check, a backlog item — not just this instance.
+8. **D8 — Close.** Extract every measure into its durable home (the fix lands through the loop; the rule/checklist item into its file; the follow-up into `.ai-pm/backlog.md`), then **delete the run-note**.
+
+**The run-note** lives at `.ai-pm/8d/<slug>.md` — **transient**, like a plan or a review stamp. It holds the working notes while the failure is open and is **deleted at D8**, once its measures land (the fix shipped, the backlog updated). The durable record is the **mechanism it produced** — the fix, the rule, the checklist item — plus the backlog and git/CHANGELOG. Never a stored report; no failures graveyard.
+
 ## When something is off
 
 - A spawned role **fails, or its gate isn't met** → retry the same spawn up to twice, then **stop and report to the Operator**. Never synthesize the deliverable in its place (invariant 3).

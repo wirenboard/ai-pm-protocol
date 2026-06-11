@@ -111,15 +111,31 @@ function writesIntoNever(root, resolved, ow) {
   const rel = path.relative(path.resolve(root), resolved);
   return (ow?.never || []).some((e) => relMatches(rel, e));
 }
+// Resolve the merge-gate topic from ANY branch, prefix stripped: the topic is the
+// branch name with its leading work-prefix dropped (feature/foo→foo, fix/bar→bar,
+// hotfix/x→x, a bare `topic`→topic). The reliable signal is HEAD (the actual
+// checked-out branch); the command match is a fallback for a push naming a
+// <prefix>/<topic> ref. A non-feature prefix (fix/…) must resolve too, or its
+// unstamped push escapes the floor. Pure regex reads — no interpolation, no shell.
+function stripPrefix(branch) {
+  const slash = branch.indexOf("/");
+  return slash === -1 ? branch : branch.slice(slash + 1);
+}
 function resolveMergeTopic(command, root) {
   if (typeof command !== "string" || !command) return null;
-  const m = command.match(/feature\/([^\s;&|"':~^@]+)/);
-  if (m) return m[1];
   try {
     const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
-    const hm = head.match(/^ref:\s*refs\/heads\/feature\/(.+)$/);
-    if (hm) return hm[1].trim();
-  } catch (_e) { return null; }
+    const hm = head.match(/^ref:\s*refs\/heads\/(.+)$/);
+    if (hm) {
+      const topic = stripPrefix(hm[1].trim());
+      if (topic) return topic;
+    }
+  } catch (_e) { /* fall through to the command match */ }
+  // Fallback: a <prefix>/<topic> ref named in the command. A remote name has no
+  // slash, so only a slashed token is a branch ref; take the segment after its
+  // first slash, with the same safe character class as the ref body.
+  const m = command.match(/[^\s;&|"':~^@/]+\/([^\s;&|"':~^@]+)/);
+  if (m) return m[1];
   return null;
 }
 function reviewStampSatisfied(root, topic) {

@@ -50,6 +50,22 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "merge-gate",
+      "checks": "the unstamped-review merge-gate holds on ANY branch prefix — resolveMergeTopic strips feature/, fix/, hotfix/, bare; an unstamped fix/ push is denied, a stamped one allowed",
+      "config": null,
+      "run": "node src/adapter/merge-gate.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "run-quality",
+      "checks": "the whole-set quality runner itself — filters by beat, fails closed on a malformed registry, no-op-safe when empty/absent",
+      "config": null,
+      "run": "node src/quality/run.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "neutral-prose",
       "checks": "the core (PROTOCOL.md, agents, docs/architecture.md) names no bare platform primitive",
       "config": null,
