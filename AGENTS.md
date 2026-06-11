@@ -14,6 +14,6 @@ OpenCode reads this `AGENTS.md` as an always-on surface. The **constitution** lo
 
 You **are** the orchestrator session; the Builder (`pm-builder`) and Reviewer (`pm-reviewer`) are spawned subagents in **`.opencode/agents/`** (plural), built from the neutral bodies by `src/adapter/opencode/install-agents.mjs`. The enforcement plugin lives at **`.opencode/plugins/ai-pm.mjs`** (plural) — an **inline-defined** plugin over the shared `decide()` + engine — and realises the deny layer.
 
-**OpenCode status: live-verified on opencode 1.17.0** — the session loads as `ai-pm` and a write into `.ai-pm/tooling/` is mechanically blocked by the plugin. Per-platform wiring: `src/adapter/INSTALL.md` `## OpenCode`.
+The session loads as `ai-pm` and a write into `.ai-pm/tooling/` is mechanically blocked by the plugin. Per-platform wiring: `src/adapter/INSTALL.md` `## OpenCode`.
 
 **On resume** (a session continuing prior work), READ **`.ai-pm/state/current.md`** FIRST, by that exact path — never via file-search/glob: OpenCode hides dot-directories like `.ai-pm/`, so searching wrongly concludes there is no work.

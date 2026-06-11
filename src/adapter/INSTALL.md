@@ -39,7 +39,7 @@ Merge this into the project's `.claude/settings.json` (the fragment lives at `cl
 }
 ```
 
-That replaces the whole inline shell+jq hook set — every guard now reads the one shared engine.
+Every guard reads the one shared engine.
 
 ### Load instructions (the orchestrator session)
 
@@ -76,13 +76,13 @@ The orchestrator spawns each by that id, on the model `ai-pm.config.json` resolv
 
 ## OpenCode
 
-**OpenCode loads plugins from `.opencode/plugins/` and agents from `.opencode/agents/` — PLURAL** (verified on opencode 1.17.x). The singular forms (`.opencode/plugin/`, `.opencode/agent/`) are **not** loaded, so nothing in them takes effect.
+**OpenCode loads plugins from `.opencode/plugins/` and agents from `.opencode/agents/` — PLURAL.** The singular forms (`.opencode/plugin/`, `.opencode/agent/`) are **not** loaded.
 
 ### Enforce deny + inject (the plugin)
 
 **`node src/adapter/opencode/install-plugin.mjs`** generates the deployed plugin — `.opencode/plugins/ai-pm.mjs` — FROM the source entry `src/adapter/opencode/plugin-entry.mjs`. It retargets only the adapter location to where the target vendors it (downstream: `.ai-pm/tooling/src/adapter`, no rewrite; dev/this repo: `src/adapter`).
 
-- It must **DEFINE** the plugin function inline, NOT import-and-re-expose it: opencode 1.17 does not register a hook off an imported/re-exported binding (an own-export entry's deny fails open; an inline-defined one blocks).
+- It must **define** each hook function inline — a hook imported from another module and re-exported under the entry's own name is NOT registered by the loader (it loads but its hook never fires).
 - So the thin wrappers are **inline in the entry**; only the rule logic (`decide`/`decidePrompt` + the engine) is imported from the adapter tree, which sits outside the scanned plugin dir. The rules stay single-sourced.
 - The deployed file is **generated, not hand-copied** — so it cannot drift from the source (`src/adapter/install-plugin.test.mjs` guards byte-identity).
 - Re-run it whenever the entry changes. No registration in `opencode.json` is needed.
@@ -92,7 +92,7 @@ The entry registers **two** hooks — the two enforcement classes OpenCode reali
 - **`tool.execute.before`** (deny) — resolve root, resolve the actor, call `decide`, **throw** on a deny verdict (the throw is OpenCode's block).
 - **`chat.message`** (inject) — OpenCode's analog of Claude's `UserPromptSubmit`: it fires once per user message before the LLM call, and `output.parts` is mutable. The entry joins the text parts into `userText`, calls `decidePrompt`, and on an inject verdict **pushes** `{ type: "text", text: reason }` onto `output.parts` — one-shot context for that turn. This is how the lazy-setup nudge (`no-config-run-setup`) and the `change-route-reminder` reach the model on OpenCode.
 
-Live-verified on opencode 1.17.x (the dogfood run narrative — env discovery, the pin bake, reconfigure — is in `CHANGELOG.md`): the `chat.message` inject reaches the model on an unconfigured project, and the full `/pm-setup` flow runs end-to-end through the apply/re-assemble step.
+The `chat.message` inject reaches the model on an unconfigured project, and the full `/pm-setup` flow runs end-to-end through the apply/re-assemble step.
 
 `ask` has no plugin-hook realisation on OpenCode, so an `ask`-class rule falls back to persona (recorded per-rule in `deny-rules.json` `fallback`). The plugin supplies only the mechanism — the verb list and predicates stay in `deny-rules.json` + the engine.
 
@@ -120,11 +120,11 @@ The generic `build`/`plan` primaries are disabled so none can fill the orchestra
 - Concatenation, not a generator — the neutral body stays the single source, shared with the Claude adapter.
 - Re-run it whenever a role body, its frontmatter, or the config binding changes.
 
-Live-verified on opencode 1.17.x: the session runs as `ai-pm` (the personality loads) and a write into `.ai-pm/tooling/` is mechanically blocked by the plugin (the engine's self-patch deny).
+The session runs as `ai-pm` (the personality loads) and a write into `.ai-pm/tooling/` is mechanically blocked by the plugin (the engine's self-patch deny).
 
 ### Command (the explicit setup trigger)
 
-**`node src/adapter/opencode/install-commands.mjs`** assembles the `/pm-setup` command into **`.opencode/commands/pm-setup.md`** (**PLURAL** — same dir convention as `.opencode/agents/` and `.opencode/plugins/`; verified against opencode 1.17.1 and the current docs, which both name the plural `commands/` dir — the older singular `.opencode/command/` is NOT loaded).
+**`node src/adapter/opencode/install-commands.mjs`** assembles the `/pm-setup` command into **`.opencode/commands/pm-setup.md`** (the plural `commands/` dir, matching `.opencode/agents/` and `.opencode/plugins/`; the singular `.opencode/command/` is NOT loaded).
 
 - The command body (`src/adapter/commands/pm-setup.body.md`, shared with Claude) is the prompt template.
 - The frontmatter (`src/adapter/opencode/commands/pm-setup.fm`) carries `description` + **`agent: ai-pm`** so the command targets the orchestrator primary, which runs its own `## Setup`.

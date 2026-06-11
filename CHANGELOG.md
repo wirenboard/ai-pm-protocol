@@ -14,6 +14,17 @@
 
 ---
 
+## [4.10.1] — 2026-06-12
+
+### Fixed
+
+- **Archaeology sweep** — removed version-specific "live-verified on opencode X.Y.z" and "replaces the inline shell+jq hook set" notes from `INSTALL.md`, `adapter/README.md`, `AGENTS.md`, `claude/hooks.json`. Replaced with present-tense facts.
+- **OpenCode inline-definition terminology** — `INSTALL.md` parenthetical "(an own-export entry's deny fails open; an inline-defined one blocks)" contradicted `README.md`; rewritten as "a hook imported and re-exported is NOT registered by the loader" (consistent across all homes).
+- **`docs/architecture.md` — removed "Open assumptions" section** — held verified-behavior notes, not open assumptions. Key inline-definition fact moved into the Integration section.
+- **Dead citation** — `neutral-prose.test.mjs` comment cited removed `architecture.md "Open assumptions"` section; updated to cite `PROTOCOL.md ## Core and adapter`.
+
+---
+
 ## [4.10.0] — 2026-06-12
 
 ### Added

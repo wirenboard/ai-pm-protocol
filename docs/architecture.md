@@ -83,6 +83,8 @@ src/quality/          the project's checks                      + map verdict) +
 
 Adding a platform = write **only** its shim (input-normaliser + verdict-mapper + install glue) and add its column to `tool-map.json`; **zero edits** to the engine, the rules, or the core. If a new platform forces an edit to any of those, the boundary leaked (`PROTOCOL.md` `## Core and adapter`).
 
+**OpenCode shim note:** the plugin entry defines its hook functions inline — a hook imported from another module and re-exported is not registered by the loader. Only the rule logic is imported; the engine stays outside the scanned plugin directory. Detail: `src/adapter/INSTALL.md`.
+
 Two integrity guards hold the boundary, both in `src/adapter/parity.test.mjs`:
 
 - **parity** — both shims reach the identical verdict on a shared fixture, bar a recorded capability divergence;
@@ -140,7 +142,3 @@ Two modules ship. **threat-model** deepens the Reviewer's always-on security ite
 - **Apply config / re-assemble agents.** The neutral act setup runs after writing `ai-pm.config.json` to make the choices take effect — re-assemble the role agents (and commands) from the just-written config (the orchestrator's `## Setup` step 4). Each adapter realises it as its install command, recorded in `tool-map.json` `apply-config`; no platform mechanism in this prose.
 - **Detect missing config / invoke setup.** Two neutral acts that fire the setup procedure. *Detect* — a work request to a project with no `ai-pm.config.json` runs setup first (the orchestrator's `## Setup` "when it fires", a `[persona]` act), reinforced by the `no-config-run-setup` inject row in `deny-rules.json` (it nudges, never blocks). *Invoke* — an explicit per-platform setup command runs it on demand; its assembly + deploy is the install step (`src/adapter/INSTALL.md`). Both point at the one home — the procedure is never restated.
 - **Detect missing product brief / offer discovery.** The same shape as missing-config, one stage later in the onboarding ladder: a change request to a project that *is* configured but has no `docs/product.md` offers product discovery first (the orchestrator's `## Product discovery`, a `[persona]` act), reinforced by the `no-product-brief-discover` inject row in `deny-rules.json` (predicate `promptNeedsProductBrief`; it nudges, never blocks). The three injects are registry-ordered — no-config → no-brief → route-reminder — so the nudge advances as the project fills in (`src/adapter/parity.test.mjs` block 1b). The brief is the single home of who/why; features ground in it (`docs/contracts/product-foundation.md`).
-
-## Open assumptions
-
-- **OpenCode plugin load.** The OpenCode shim ships as an **own-export** entry (a bare re-export loads but its hook never fires — dogfood finding, `src/adapter/INSTALL.md`), so the engine stays out of the scanned plugin dir. The two shims are proven to decide identically by the parity guard, and the plugin's **live deny is verified on opencode 1.17.x** (a write into `.ai-pm/tooling/` is mechanically blocked — `src/adapter/INSTALL.md`, the OpenCode "Spawn a sub-agent" note). The Claude side — a hook running `node shim.mjs` — is proven by the node-spike in `src/adapter/parity.test.mjs`.

@@ -13,8 +13,8 @@
 //   • a few primitives unambiguous even unbackticked — a hook event name
 //     (`PreToolUse`), a config filename, a dot-dir path (`.claude/`).
 // NOT a leak: the proper nouns "Claude" / "OpenCode" — the core names the two
-// adapters and points at them on purpose (architecture.md "Open assumptions",
-// PROTOCOL.md `## Core and adapter`). They are allowed.
+// adapters and points at them on purpose (PROTOCOL.md `## Core and adapter`).
+// They are allowed.
 //
 // Run: node src/quality/neutral-prose.test.mjs
 
