@@ -14,6 +14,16 @@
 
 ---
 
+## [4.10.2] — 2026-06-12
+
+### Fixed
+
+- **Product brief truth-fix** — `docs/product.md` corrected against three blocking Reviewer findings: removed the unimplemented `[who]` axis (only the `profile` dial exists); softened the "floor" language to "protocol-held discipline with mechanical backstops" (honest per §7); updated the 2026 competitor field (BMAD v6 Scale-Adaptive Planning, Kiro vibe↔spec toggle, GSD model profiles) and restated the residual gap as the honest compound (cross-platform core + hook-enforced floor + product discovery + honesty map).
+- **Product brief scope additions** — §6 now includes success criteria and a token-cost estimate; §7 gains four new case-against entries (dial is table stakes, platform absorption risk, light-profile guarantee mismatch, N=1 dogfood evidence). Non-technical PM re-framed as hypothesis, not served segment.
+- **Dual-home cleanup** — removed untracked template stubs `docs/contracts.md` and `docs/README.md`; real contracts live in `docs/contracts/`.
+
+---
+
 ## [4.10.1] — 2026-06-12
 
 ### Fixed
