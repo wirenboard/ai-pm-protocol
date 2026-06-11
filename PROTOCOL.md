@@ -107,10 +107,11 @@ A platform's deny layer can **block a tool call** (and, on some platforms, **ask
 
 - Read, search (`find`), or write a path that resolves **outside the project root**.
 - A truncating write — empty/whitespace content over an existing non-empty file.
-- The **Orchestrator** writing a source or canonical-doc path (sub-agents author content; the Orchestrator routes). **Mechanical only on a platform that resolves the actor (OpenCode); `[persona]` on Claude**, whose hook payload carries no session-role signal — there it fails open and the discipline is prose-held. Allowed exceptions: its own state and a feature plan; the tooling submodule is never writable. Relaxed for source/doc writes when the project's `profile` permits the Orchestrator to build (`## Project config`) — a no-op where the deny already fails open (Claude); the merge-gate, self-patch, and project-boundary denies are never relaxed.
+- The **Orchestrator** writing a source or canonical-doc path (sub-agents author content; the Orchestrator routes). **Mechanical only on a platform that resolves the actor (OpenCode); `[persona]` on Claude**, whose hook payload carries no session-role signal — there it fails open and the discipline is prose-held. Allowed exceptions: its own state and a feature plan; the tooling submodule is never writable. Relaxed for source/doc writes when the project's `profile` permits the Orchestrator to build (`## Project config`) — a no-op where the deny already fails open (Claude); the merge-gate, self-patch, stamp-write, and project-boundary denies are never relaxed.
+- The **Orchestrator** writing into the review-stamp directory (`.ai-pm/reviews/`) — the stamp is the Reviewer's deliverable and the merge-gate reads its presence, so an Orchestrator-authored stamp is a fabricated gate. Same actor caveat as the row above (mechanical on OpenCode, `[persona]` on Claude) — but **never relaxed by profile**: the Reviewer seat never collapses into the Orchestrator. Deleting the stamp at ship is not a write and stays allowed.
 - **Self-patching the enforcer** — the tooling submodule changes only by a version bump, never by an in-place edit.
 - An **in-place content edit on a remote system** (`ssh` + an editor or redirect) — a repo-owned file changes through git, never a remote edit (invariant 4).
-- **Merging while the review is unstamped** — the ship-time floor under invariant 3. Checks the stamp's *presence*, not its *authorship*.
+- **Merging while the review is unstamped** — the ship-time floor under invariant 3. Checks the stamp's *presence*; *authorship* is guarded by the stamp-write deny above, with the same per-platform honesty.
 - A **role-duplicator or generic built-in** spawned into a protocol seat (invariant 1).
 
 **Ask-class** (the platform asks the Operator before proceeding, where it supports an "ask" return — otherwise persona):
@@ -130,7 +131,7 @@ A platform's deny layer can **block a tool call** (and, on some platforms, **ask
 
 - Pipeline ordering and every positive act — *always* spawn the reviewer, *never* collapse the loop, *a plan precedes code*. The merge-gate is the downstream floor.
 - Never self-substitute a crashed role's deliverable; retry the same spawn up to twice, then **stop and report to the Operator** — never synthesize the verdict, stamp, or merge.
-- Never fabricate a review stamp (the gate checks presence, not authorship).
+- Never fabricate a review stamp — the gate checks presence; the stamp-write deny adds authorship only where the platform resolves the actor (Claude stays persona).
 - Never present a stale on-disk artifact as this turn's fresh gate result.
 
 The single invariant these collapse into — *a deliverable is satisfied only by a fresh spawn this turn; failed / missing / already-existing / skipped all count as "not run"* — is **persona**, enforced where it mechanically can be by the floors above. Over-claiming any of this as mechanical is itself a review-blocking honesty failure (`## Role contracts`).

@@ -190,9 +190,9 @@ function projectProfile(root) {
 // ── predicates: (input, config) => boolean ───────────────────────────────────
 // A predicate inspects only the neutral input + the rule data in config. The
 // `actor` signal (isOrchestrator) is supplied by the shim where the platform
-// can resolve it; where it cannot, the orchestrator-content rule falls back to
-// persona (isOrchestrator undefined ⇒ predicate is false ⇒ allow, never a false
-// deny — matches the previous plugin's fail-open-on-actor).
+// can resolve it; where it cannot, the actor-dependent rules (orchestrator-content,
+// stamp-write) fall back to persona (isOrchestrator undefined ⇒ predicate is
+// false ⇒ allow, never a false deny).
 function writeTargetsOf(input) {
   if (input.act === "write" && input.path) return [input.path];
   if (input.command) return bashWriteTargets(input.command);
@@ -223,14 +223,30 @@ const PREDICATES = {
     if (input.act === "bash" && isPureGitCommand(input.command)) return false;
     // Configurable rigor: a lite/solo profile lets the orchestrator build directly,
     // so it MAY author source/doc paths — relax THIS predicate only. The tooling
-    // (self-patch), boundary, truncation, and merge-gate denies are SEPARATE
-    // predicates and untouched, so the floor never relaxes (`## Project config`).
+    // (self-patch), boundary, truncation, merge-gate, and stamp-write denies are
+    // SEPARATE predicates and untouched, so the floor never relaxes (`## Project config`).
     const profile = projectProfile(input.root);
     if (profile === "lite" || profile === "solo") return false;
     const ow = config.orchestrator_writable;
     return writeTargetsOf(input).some((t) => {
       const r = resolveTarget(input.root, t);
       return !!r && isInsideRoot(input.root, r) && !isOrchestratorAuthorable(input.root, r, ow);
+    });
+  },
+  // The stamp-fabrication guard: a review stamp is the Reviewer's deliverable —
+  // the orchestrator never authors one, in ANY profile (the Reviewer seat never
+  // collapses into the orchestrator, so this floor ignores the rigor relaxation).
+  // Actor-resolved platforms deny; an undefined actor (Claude) fails open and
+  // the guard is persona there. Pure git stays allowed (restore, not authorship).
+  orchestratorWritesReviewStamp(input, config) {
+    if (!input.isOrchestrator) return false;
+    if (input.act === "bash" && isPureGitCommand(input.command)) return false;
+    const prefix = config.review_stamps?.prefix;
+    if (!prefix) return false;
+    return writeTargetsOf(input).some((t) => {
+      const r = resolveTarget(input.root, t);
+      if (!r || !isInsideRoot(input.root, r)) return false;
+      return relMatches(path.relative(path.resolve(input.root), r), prefix);
     });
   },
   writesIntoTooling(input, config) {

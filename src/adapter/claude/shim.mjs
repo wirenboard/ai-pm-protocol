@@ -17,9 +17,9 @@ import { fileURLToPath } from "node:url";
 // Returns the neutral `{ act, root, ... }` shape the engine consumes, or null
 // when this payload carries nothing the engine watches (the shim then allows).
 // `isOrchestrator` is intentionally left undefined: a Claude hook payload carries
-// no session-role signal, so the actor-dependent rule (orchestrator-authors-
-// content) falls back to persona by the engine's fail-open-on-actor contract.
-// This is the documented Claude capability gap, not an omission.
+// no session-role signal, so the actor-dependent rules (orchestrator-authors-
+// content, stamp-write) fall back to persona by the engine's fail-open-on-actor
+// contract. This is the documented Claude capability gap, not an omission.
 export function normalise(payload, root) {
   if (!payload || typeof payload !== "object") return null;
 

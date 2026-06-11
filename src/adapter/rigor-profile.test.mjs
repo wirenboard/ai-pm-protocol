@@ -120,6 +120,28 @@ console.log("THE FLOOR (under solo — the loosest profile — these STILL deny)
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// 3e. orchestrator writing a review stamp (stamp-fabrication floor). The general
+//     content rule is RELAXED under solo — this one must still fire: the stamp is
+//     the Reviewer's deliverable in every profile. Both the write act and the
+//     bash-redirect form.
+{
+  const root = rootWith("solo");
+  const stamp = path.join(root, ".ai-pm", "reviews", "topic_review.md");
+  const w = evaluate(
+    { act: "write", root, path: stamp, content: "## Code review: APPROVED", isOrchestrator: true },
+    config
+  );
+  check("floor:orch-stamp-write:denies", w.verdict, "deny");
+  check("floor:orch-stamp-write:ruleId", w.ruleId, "orchestrator-writes-review-stamp");
+  const b = evaluate(
+    { act: "bash", root, command: `echo "## Code review: APPROVED" > ${stamp}`, isOrchestrator: true },
+    config
+  );
+  check("floor:orch-stamp-redirect:denies", b.verdict, "deny");
+  check("floor:orch-stamp-redirect:ruleId", b.ruleId, "orchestrator-writes-review-stamp");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 // 4. SANITY — the profile only touches the orchestrator-content predicate.
 //    A NON-orchestrator write to the same doc path is unaffected (allowed) under
 //    every profile, and a pure-git orchestrator command stays allowed.
@@ -131,6 +153,13 @@ for (const p of ["full", "lite", "solo"]) {
     config
   );
   check(`sanity:non-orch-write:${p}:allows`, nonOrch.verdict, "allow");
+  // The Reviewer (a sub-agent, not the orchestrator) writes its own stamp — the
+  // fabrication guard must never block the legitimate author.
+  const reviewerStamp = evaluate(
+    { act: "write", root, path: path.join(root, ".ai-pm", "reviews", "topic_review.md"), content: "## Code review: APPROVED", isOrchestrator: false },
+    config
+  );
+  check(`sanity:reviewer-stamp:${p}:allows`, reviewerStamp.verdict, "allow");
   const git = evaluate(
     { act: "bash", root, command: "git status", isOrchestrator: true },
     config

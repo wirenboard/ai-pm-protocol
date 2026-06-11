@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.14.0] — 2026-06-12
+
+### Added
+
+- **Stamp-authorship floor** — a new deny rule `orchestrator-writes-review-stamp`: the orchestrator session is denied writing into `.ai-pm/reviews/` (write/edit tools and the bash write forms), so where the platform resolves the actor (OpenCode) a stamp on disk implies a spawned role authored it — stamp fabrication stops being persona-only there. Claude carries no actor signal → fails open → persona, labelled honestly. **Never relaxed by profile**: the Reviewer seat never collapses into the orchestrator, even on `solo`. Deleting the stamp at ship (`rm`) is not a write and stays allowed. Engine predicate + registry rule/data + rigor floor tests (31) + parity divergence case (61); `PROTOCOL.md` map, `architecture.md`, `cross-session-enforcement` contract updated. Closes the product analysis finding 2b.
+
+---
+
 ## [4.13.0] — 2026-06-12
 
 ### Added

@@ -8,10 +8,6 @@ Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 a
 
 **If/when the non-technical-PM bet is taken** (it is a recorded hypothesis in `docs/product.md` §1, not a served segment), the axis is its own coherent epic, not scattered fixes: a `scenario` (or `operator`) key in `ai-pm.config.json` with 2–3 presets (e.g. `pm` / `tech-lead`) parameterizing diff visibility, question depth, and the auto-decide ceiling; amending "Never show code" into a scenario-conditioned rule; and a friendlier on-ramp. (The lighter-profile compensator — the Reviewer's review-time product-fit check — is a floor checklist item since 4.11.0; the epic may deepen it.)
 
-## Stamp-authorship signal on OpenCode — 2026-06-12 (from product analysis, finding 2b; second half)
-
-The platform resolves the actor, so the reviewer could write a marker the orchestrator's write path can't produce — narrows the merge-gate's "stamp presence, not authorship". Claude stays presence-only (no actor signal in the hook payload); label honestly. (The first half — merge-gate ask-on-unresolvable-topic — is in since 4.11.0.)
-
 ## Vendor-watch standing item — platform absorption — 2026-06-12 (from product analysis, finding 4)
 
 Claude Code natively ships agent teams, review subagents, deny hooks; vendors absorb orchestration primitives over time (precedent: Agent-OS retired its phases). At each release-audit, check what the platforms absorbed and re-aim: the durable parts are cross-platform parity, the honesty map, and product discovery — never re-wrap a primitive the vendor ships. Related research idea: whether the loop itself could ride Claude Code's dynamic-Workflow primitive (deterministic fan-out) without losing the PM-in-the-loop forks — `research` first, it may be the absorption case in point.

@@ -67,7 +67,7 @@ To see every rule, read `deny-rules.json`; to see how one decides, read its pred
 Two wrinkles are the only non-obvious part, and both are **platform-capability** divergences — recorded per rule, never silent:
 
 - **ask-class rules** need a platform that can confirm-before-proceeding. A platform with no ask-return falls back to persona for those (each such rule names it in its `fallback`).
-- **actor-dependent rules** (the Orchestrator-authors-content guard) need the platform to resolve whether the session is the Orchestrator. A platform that cannot **fails open on the actor** — the rule allows rather than risk a false denial — and the guarantee falls back to persona there.
+- **actor-dependent rules** (the Orchestrator-authors-content and stamp-write guards) need the platform to resolve whether the session is the Orchestrator. A platform that cannot **fails open on the actor** — the rule allows rather than risk a false denial — and the guarantee falls back to persona there.
 
 ## Integration — core / adapter
 

@@ -9,6 +9,7 @@ Prose rules only hold while a session remembers to read them. A fresh session, a
 - A role-duplicator or generic built-in agent occupying a protocol seat is denied (invariant 1).
 - An empty/whitespace-only whole-file write over an existing non-empty file is denied (the truncation guard).
 - A write/read/search resolving outside the project root is denied; the enforcer's own source is off-limits to read and write.
+- On a platform that resolves the actor, the orchestrator session is denied the direct write forms into the review-stamp directory (write/edit tools, redirects, tee, sed -i, cp/mv, dd) — best-effort like the sibling write guards, with persona as the fail-safe. Never relaxed by profile; persona where the actor cannot be resolved (Claude), labelled honestly.
 - A force-push, a no-verify commit, a mutating remote action, or a merge/push whose branch topic the merge-gate cannot resolve (the stamp is uncheckable) is surfaced for confirmation where the platform supports an "ask" outcome.
 - The guards hold without the session having re-read the rules, and are themselves tested so a regression fails CI. The merge-gate stamp test covers both the canonical inline form and the split-line fallback (verdict on the next line), the empty, `NOT YET RUN`, blank-separator, and next-heading edge cases, and the unresolvable-topic ask path (detached HEAD, no branch ref in the command).
 

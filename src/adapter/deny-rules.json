@@ -23,9 +23,13 @@
     "pattern": "implement|refactor|feature|deploy|release|\\bfix\\b|\\badd\\b|\\bchange\\b|\\bbuild\\b|\\bcommit\\b|\\bmerge\\b|\\bbug\\b|\\bremove\\b|\\bdelete\\b|\\bdrop\\b|\\brename\\b|\\bextract\\b|\\bupdate\\b|сдела|делай|поправ|добав|исправ|реализ|почини|зарелиз|закоммит|смерж|внедри|перепиш|рефактор|фич|убери|убрать|удали|сними|вынеси|переименуй|обнови"
   },
   "orchestrator_writable": {
-    "_doc": "Paths the orchestrator session MAY author (everything else source/canonical is sub-agent-only). Covers its state, backlog, the transient plan files (.ai-pm/plans/), and the project config. The tooling submodule is never writable (self-patch guard).",
+    "_doc": "Paths the orchestrator session MAY author (everything else source/canonical is sub-agent-only). Covers its state, backlog, the transient plan files (.ai-pm/plans/), and the project config. The tooling submodule is never writable (self-patch guard); the review-stamp dir is carved out by its own floor rule (review_stamps).",
     "allow_prefixes": [".ai-pm/", "ai-pm.config.json"],
     "never": [".ai-pm/tooling/"]
+  },
+  "review_stamps": {
+    "_doc": "The merge-gate's stamp directory. A stamp is the Reviewer's deliverable: the orchestrator never authors one (fabrication guard) — denied where the platform resolves the actor, persona where it cannot (Claude). NOT relaxed by profile: the Reviewer seat never collapses into the orchestrator. Deletion at ship (rm) is not a write and stays allowed.",
+    "prefix": ".ai-pm/reviews/"
   },
   "rules": [
     {
@@ -62,6 +66,13 @@
       "class": "deny",
       "act": "write",
       "predicate": "orchestratorWritingContent"
+    },
+    {
+      "id": "orchestrator-writes-review-stamp",
+      "intent": "Block the orchestrator session writing into the review-stamp directory (.ai-pm/reviews/) — the stamp is the Reviewer's deliverable and the merge-gate reads its presence, so an orchestrator-authored stamp is a fabricated gate. Mechanical where the platform resolves the actor (OpenCode); persona on Claude (no actor signal — fails open). Never relaxed by profile.",
+      "class": "deny",
+      "act": "write|bash",
+      "predicate": "orchestratorWritesReviewStamp"
     },
     {
       "id": "self-patch-enforcer",

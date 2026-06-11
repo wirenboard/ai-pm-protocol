@@ -38,6 +38,7 @@ fs.writeFileSync(path.join(ROOT, "existing.txt"), "real content"); // for trunca
 fs.writeFileSync(path.join(ROOT, "README.md"), "readme");          // for allow-read
 const ARCH = path.join(ROOT, "docs", "architecture.md");           // canonical doc (not orch-writable)
 const TOOLING = path.join(ROOT, ".ai-pm", "tooling", "engine.mjs"); // never-writable
+const STAMP = path.join(ROOT, ".ai-pm", "reviews", "x_review.md");  // the Reviewer's deliverable
 
 // Each case carries BOTH platforms' native payloads + the expected ENGINE verdict
 // (pre platform-mapping). `claudeExpect` / `opencodeExpect` override `expect` only
@@ -70,6 +71,13 @@ const FIXTURE = [
   { name: "self-patch-enforcer", expect: "deny",
     claude: { tool_name: "Write", tool_input: { file_path: TOOLING, content: "x" } },
     opencode: { tool: "write", args: { filePath: TOOLING, content: "x" } } },
+
+  // The stamp-fabrication guard shares the actor divergence: the orchestrator
+  // writing a review stamp is denied where the actor resolves (OpenCode), persona
+  // on Claude (no session-role signal in the hook payload).
+  { name: "orchestrator-writes-review-stamp", claudeExpect: "allow", opencodeExpect: "deny", divergence: true,
+    claude: { tool_name: "Write", tool_input: { file_path: STAMP, content: "## Code review: APPROVED" } },
+    opencode: { tool: "write", args: { filePath: STAMP, content: "## Code review: APPROVED" }, isOrchestrator: true } },
 
   { name: "merge-while-unstamped", expect: "deny",
     claude: { tool_name: "Bash", tool_input: { command: "git push origin feature/foo" } },
