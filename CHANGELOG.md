@@ -14,6 +14,21 @@
 
 ---
 
+## [4.9.0] — 2026-06-12
+
+### Added
+
+- **Builder checklist — Visual form item.** New item in `src/agents/builder.md`: for user-facing doc changes, name the intended visual form (table / list / diagram / prose) in the plan. Without it, form is left to the Builder's discretion and may not match Operator intent.
+- **Ship beat close — state update.** `src/agents/orchestrator.md` ship section now explicitly lists updating `.ai-pm/state/current.md` as the final step of ship, after push and PR succeed.
+
+### Changed
+
+- **Stamp-gate resilience — split-line verdict accepted.** `src/adapter/engine.mjs` `stampOK()` now also satisfies the merge-gate when the verdict appears on the immediately-next non-blank, non-heading line after `## Code review:` (in addition to the canonical inline form). Edge cases still block: empty, `NOT YET RUN`, verdict after a blank separator, or a heading as the next line. Contracts `docs/contracts/disciplined-pipeline.md` and `docs/contracts/cross-session-enforcement.md` annotated. 8 new tests (`src/adapter/merge-gate.test.mjs`, now 17 total).
+- **Readability sweep — `PROTOCOL.md` and `orchestrator.md`.** Prose walls replaced with Markdown instruction lists throughout `src/agents/orchestrator.md`. `PROTOCOL.md` de-watered: removed the "Build top-down — the guarantee before the mechanism" rhetoric paragraph from `## The loop`; trimmed `audit`/`setup`/`8D` side-tool descriptions to one-liners; removed two quality-toolkit bullets already homed in `orchestrator.md`.
+- **Reviewer stamp format — explicit instruction.** `src/agents/reviewer.md` now states the verdict must appear inline on the same heading line (`## Code review: APPROVED`).
+
+---
+
 ## [4.8.1] — 2026-06-11
 
 ### Fixed

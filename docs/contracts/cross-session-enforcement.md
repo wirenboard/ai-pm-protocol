@@ -10,7 +10,7 @@ Prose rules only hold while a session remembers to read them. A fresh session, a
 - An empty/whitespace-only whole-file write over an existing non-empty file is denied (the truncation guard).
 - A write/read/search resolving outside the project root is denied; the enforcer's own source is off-limits to read and write.
 - A force-push, a no-verify commit, or a mutating remote action is surfaced for confirmation where the platform supports an "ask" outcome.
-- The guards hold without the session having re-read the rules, and are themselves tested so a regression fails CI.
+- The guards hold without the session having re-read the rules, and are themselves tested so a regression fails CI. The merge-gate stamp test covers both the canonical inline form and the split-line fallback (verdict on the next line), as well as empty, `NOT YET RUN`, blank-separator, and next-heading edge cases.
 
 ## Must not break
 

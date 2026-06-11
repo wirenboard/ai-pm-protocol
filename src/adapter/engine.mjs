@@ -145,7 +145,14 @@ function reviewStampSatisfied(root, topic) {
   const stampOK = (label) => {
     const m = text.match(new RegExp("^##[ \\t]+" + label + ":[ \\t]*(.*)$", "m"));
     if (!m) return false;
-    const content = m[1].trim();
+    let content = m[1].trim();
+    // Also accept the verdict on the very next non-blank line after the heading
+    // (resilient to reviewers that split "## Code review:" and "APPROVED").
+    if (!content) {
+      const after = text.slice(text.indexOf(m[0]) + m[0].length);
+      const next = after.match(/^\r?\n([^\r\n#][^\r\n]*)/);
+      if (next) content = next[1].trim();
+    }
     if (!content || /^NOT YET RUN$/i.test(content)) return false;
     return true;
   };

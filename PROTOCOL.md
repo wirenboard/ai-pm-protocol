@@ -35,8 +35,6 @@ Three roles. Keep the one split that carries reliability: **the reviewer is neve
 
 ## The loop
 
-**Build top-down — the guarantee before the mechanism.** Name the promise a change makes (its contract) before building to it; never tool-first or code-first. A linter, a check, a feature exists to honour a stated promise — wiring a mechanism with no promise it serves is built backwards. The beats run in this order for the same reason: the promise (understand, plan) precedes the mechanism (build).
-
 Five beats, in order.
 
 ```text
@@ -54,9 +52,9 @@ Side-tools and shortcuts (not pipeline beats):
 
 - **`fixup`** — the loop with plan and review collapsed into one lightweight pass, for a genuinely trivial change (a typo, a one-line fix). The Reviewer pass is **shortened, never skipped**.
 - **`research`** — a side-tool the Orchestrator reaches for when a plan needs grounding.
-- **`audit`** `[persona]` — a proactive, on-demand whole-project health-check: the quality suite plus an independent auditor sweep over the whole tree (invariants, contracts, doc-quality, drift). Offered before a release/rollout or as the **"audit on top"** of a `solo`/`lite` batch. Its run-note is **transient**; the durable output is the fixes and backlog items it produces, never a stored report. Its single home is the orchestrator's `## Audit`.
-- **`setup`** — writes `ai-pm.config.json` through a plain-language dialog (the structured-question tool): roles, models, mode, profile, platform, kind. Discover which models the environment offers first (the adapter's *list-available-models* contract point). It is a **neutral procedure, not a platform-specific settings UI** — the same flow runs on every platform. It fires lazily: on the first work request to an unconfigured project (a declinable offer to proceed on safe defaults, never a hard block), or on the explicit `/pm-setup` command. Its single home is the orchestrator's `## Setup`.
-- **`8D`** `[persona]` — an optional failure-analysis procedure for a **bug or a production incident**: the Orchestrator **offers** it on such a request (declinable, never a gate), and it drives past a symptom patch to **root cause and systemic prevention**. Its run-note is **transient** (deleted once its measures land); the durable output is the mechanism it produces — a fix, rule, or checklist item — never a stored report. Its single home is the orchestrator's `## 8D`.
+- **`audit`** `[persona]` — whole-project health-check: the quality suite plus a fresh auditor sweep over the whole tree. Offered before a release/rollout or as an "audit on top" of a `solo`/`lite` batch. Single home: orchestrator's `## Audit`.
+- **`setup`** — writes `ai-pm.config.json` through a plain-language dialog: roles, models, mode, profile, platform, kind. Platform-neutral — the same flow on every harness. Fires lazily on an unconfigured project (declinable offer, never a block) or on `/pm-setup`. Single home: orchestrator's `## Setup`.
+- **`8D`** `[persona]` — failure-analysis for a bug or production incident: drives past the symptom patch to root cause and systemic prevention. Offered (declinable, never a gate). Single home: orchestrator's `## 8D`.
 
 ---
 
@@ -96,8 +94,6 @@ The checklists that realise these contracts live in the agent files — the one 
 
 A project's checks (linters, formatters, type-checkers, test runners, a security scanner) are **not** hard-coded here. They live in a **quality layer**: a `src/quality/` directory holding each tool's native config plus a `tools.json` registry — per tool: *what it checks*, *the command to run it*, *which beat it runs in* (`build` / `review` / `ship`), *a one-line init*. The **Builder** runs the `build`-beat tools and hands back only when they pass; the **Reviewer** confirms the `review`-beat tools ran and reads their output. A red tool is *not green*.
 
-- The toolkit is **wired and tuned at setup**: the orchestrator discovers the stack and registers stack-appropriate tools (incl. a security/SAST scanner), per the `automated-quality-tooling` contract (`docs/contracts/`, realised in the orchestrator's `## Setup`). No tool is hard-coded here.
-- The AI **never loosens a tool's config to make code pass** — it fixes the code to the standard; a relaxation is a deliberate, recorded Operator decision.
 - The template ships only the **shape** — the registry format and one or two example rows; a project brings its own configs.
 - Add a tool = drop its config in `src/quality/` and add a registry row; **no core edit**. This is the one home for "what does *green* mean here".
 

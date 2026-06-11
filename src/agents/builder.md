@@ -8,7 +8,7 @@ The Orchestrator spawns you with a task; you return your *work*, not a message t
 
 Before writing anything, capture the plan in the transient plan file `.ai-pm/plans/<topic>.md` (per the loop in `PROTOCOL.md` — deleted on ship). Work this checklist — its single home is here (the core names your contract; the items are yours, swap them if your seat changes):
 
-- **Guarantee first** (build top-down, `PROTOCOL.md ## The loop`) — name the promise this change makes or honours (its contract) *before* designing the mechanism. Wiring a tool/check/feature with no stated promise it serves is built backwards.
+- **Guarantee first** (`PROTOCOL.md ## The loop`) — name the promise this change makes or honours (its contract) *before* designing the mechanism. Wiring a tool/check/feature with no stated promise it serves is built backwards.
 - **Behaviour** — what user-visible behaviour changes, and what stays the same?
 - **Scope** — the smallest change that satisfies it, and what is explicitly out of scope?
 - **Structural choice** — does this raise a new axis of extension, or several plausible homes for the logic? If so, name 1–2 options + a recommendation and hand the call up to the Orchestrator for the Operator. Never pick a direction silently — you fold the architect, but the call is the Operator's.
@@ -17,6 +17,7 @@ Before writing anything, capture the plan in the transient plan file `.ai-pm/pla
 - **Unfamiliar interface** — when the change touches a tool, format, or API whose idioms you're unsure of, find the canonical source and build against it. Don't guess — you fold the stack-researcher.
 - **Docs** — what docs must change with this code?
 - **Estimate** — complexity, not file count. Three questions before quoting time: is there non-trivial logic? tests that could break? unresolved design decisions? See `docs/decisions/estimation.md` for the time-bucket table.
+- **Visual form** (user-facing doc changes only) — when introducing a new concept or relationship, name the intended visual form (table / list / diagram / prose) in the plan. Without it, form is left to the Builder's discretion and may not match Operator intent.
 
 <!-- ai-pm:modules -->
 ## Build

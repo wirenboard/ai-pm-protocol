@@ -105,5 +105,65 @@ console.log("SECURITY CASE (the fix/ hole is closed):");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// ── 3. SPLIT-LINE STAMP — verdict on the next line is also accepted ───────────
+// Guards the stampOK() fallback: a reviewer that writes "## Code review:\nAPPROVED"
+// instead of the canonical inline form must still satisfy the gate.
+console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
+
+// 3a. Verdict on the next line ⇒ ALLOW (the new fallback).
+{
+  const root = rootOnBranch("feature/split");
+  const dir = path.join(root, ".ai-pm", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "split_review.md"), "## Code review:\nAPPROVED\n\nFull review body follows.\n");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/split" }, config);
+  check("split-line-stamp:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 3b. Empty heading + no next-line content ⇒ DENY (truly empty stamp still blocks).
+{
+  const root = rootOnBranch("feature/empty");
+  const dir = path.join(root, ".ai-pm", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "empty_review.md"), "## Code review:\n\n\n");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/empty" }, config);
+  check("empty-stamp:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 3c. "NOT YET RUN" on the next line ⇒ DENY (the NOT-YET-RUN guard applies to fallback content).
+{
+  const root = rootOnBranch("feature/nyr");
+  const dir = path.join(root, ".ai-pm", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "nyr_review.md"), "## Code review:\nNOT YET RUN\n\nMore text.\n");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/nyr" }, config);
+  check("next-line-nyr:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 3d. Verdict after a blank separator line ⇒ DENY (the fallback matches only the immediately-next line).
+{
+  const root = rootOnBranch("feature/blanksep");
+  const dir = path.join(root, ".ai-pm", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "blanksep_review.md"), "## Code review:\n\nAPPROVED\n");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/blanksep" }, config);
+  check("blank-separator:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 3e. A heading as the next line ⇒ DENY (the [^\r\n#] guard excludes it).
+{
+  const root = rootOnBranch("feature/nextheading");
+  const dir = path.join(root, ".ai-pm", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "nextheading_review.md"), "## Code review:\n## Another section\nAPPROVED\n");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/nextheading" }, config);
+  check("next-heading:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

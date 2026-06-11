@@ -7,7 +7,7 @@ Whoever drives a change — an AI agent or the PM behind it — gets one predict
 ## Must work
 
 - Every change runs the ordered loop: check git state, read context, plan (PM approves), build on a feature branch, independent review, ship via a PR the PM merges.
-- Review is a fresh spawn this turn, separate from the Builder; its result is a positive, greppable stamp written only after review actually clears.
+- Review is a fresh spawn this turn, separate from the Builder; its result is a positive, greppable stamp written only after review actually clears. The stamp is satisfied by a verdict on the heading line (`## Code review: APPROVED`) **or** on the immediately-next non-blank, non-heading line — both forms are accepted; anything else (absent, empty, `NOT YET RUN`) blocks.
 - A trivial change has a proportionate fast path (`fixup`) that still runs a real, shortened review.
 
 ## Must not break

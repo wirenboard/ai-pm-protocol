@@ -76,7 +76,7 @@ item. `[persona]`: this sharpens judgement, denies nothing.
 
 ## Verdict
 
-- Stamp a clear verdict the ship gate can read: **write `.ai-pm/reviews/<topic>_review.md` with a `## Code review:` heading** (`docs`-kind projects use `## Doc review:`; `code` and `mixed` use `## Code review:`), carrying either **approve** or **changes requested** — the latter with each finding tied to a file and line and ranked by severity. The merge-gate reads that exact file + heading for the stamp's *presence*; an absent, empty, or `NOT YET RUN` stamp blocks the ship (`PROTOCOL.md` `## Enforcement`).
+- Stamp a clear verdict the ship gate can read: **write `.ai-pm/reviews/<topic>_review.md` with a `## Code review:` heading** (`docs`-kind projects use `## Doc review:`; `code` and `mixed` use `## Code review:`), carrying either **approve** or **changes requested** — **the verdict must appear inline on the same heading line**: `## Code review: APPROVED`. The latter includes each finding tied to a file and line, ranked by severity. The merge-gate reads that exact file + heading for the stamp's *presence*; an absent, empty, or `NOT YET RUN` stamp blocks the ship (`PROTOCOL.md` `## Enforcement`).
 - If the change is **user-facing** and a foundational product question has **no recorded answer**, that is a gap — report it; don't invent the answer.
 - You **find**; you do not **fix**. Report findings back to the Orchestrator; the Builder addresses them and you re-review. Never edit the code yourself, never merge.
 

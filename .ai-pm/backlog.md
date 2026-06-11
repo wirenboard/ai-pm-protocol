@@ -2,6 +2,14 @@
 
 Observations and follow-ups recorded during reviews/audits.
 
+## Ship beat missing: state update is not the last step — 2026-06-11 (8D)
+
+**Root cause:** `orchestrator.md` describes the ship beat as a narrative (version + CHANGELOG + push + PR + delete artifacts) with no explicit final step to update `.ai-pm/state/current.md`. State gets updated at the START of work (pointing to what's active) but never at CLOSE — so after merge, state is stale until the Operator notices.
+
+**Systemic measure:** add a ship-beat checklist to `orchestrator.md` with an explicit final step: update `state/current.md` (version shipped, what's next) and commit on main. It is Orchestrator-authored (its lane), requires no review, and is the natural close of every feature loop.
+
+Path: `fixup` — a short ordered list added to the ship section of `orchestrator.md`.
+
 ## fixup: `adapter/README.md` still calls the OpenCode plugin entry a "re-export" — 2026-06-10 (final ship review, non-blocking N1)
 
 The final-review Reviewer (approve) flagged that `adapter/README.md:46` still describes the plugin entry as a "re-export"/"re-exported plugin". The actual, dogfood-confirmed form is an **own-export** (`import { X as impl }; export const X = impl`) — a bare re-export loads but its `before` hook never fires. The correct form is already documented in three other homes (`architecture.md`, `adapter/INSTALL.md`, the plugin files). Factually stale, no safety over-claim → ruled non-blocking and post-ship. Fix the one sentence via a `fixup` pass (Builder authors; it is a canonical doc).
