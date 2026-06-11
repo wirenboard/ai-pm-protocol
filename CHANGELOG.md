@@ -13,6 +13,14 @@
 
 ---
 
+## [4.0.5] — 2026-06-11
+
+### Changed
+
+- **Dropped the defunct "eight personas collapse into three" framing in `README.md` + `PROTOCOL.md`.** It described the old pre-collapse persona system, which no longer exists (and stated a miscounted mapping besides). The docs now state the three current roles directly — the one split that carries reliability is that the reviewer is never the builder; PROTOCOL.md's `Folds` column still shows which concerns each role absorbs. Also in `README.md`: a garbled idiom ("wave through" → "catch" its own blind spots) and a stale parity figure (50/50 → 55/55). (Operator-caught.)
+
+---
+
 ## [4.0.4] — 2026-06-11
 
 ### Changed

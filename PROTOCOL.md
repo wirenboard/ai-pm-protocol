@@ -20,7 +20,7 @@ This repo develops itself under this protocol: the same loop, roles, invariants,
 
 ## The three roles
 
-Eight personas collapse into three. Keep the one split that carries reliability: **the reviewer is never the builder**. The folded roles survive as a checklist in each role's agent, not as separate roles.
+Three roles. Keep the one split that carries reliability: **the reviewer is never the builder**. Each role's folded specialist concerns survive as a checklist in its agent (the **Folds** column), not as separate roles.
 
 | Role | Does | Folds |
 |---|---|---|
