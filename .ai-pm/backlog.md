@@ -2,6 +2,29 @@
 
 Observations and follow-ups recorded during reviews/audits.
 
+## [who] axis / operator-scenario presets — retracted from README, parked as a hypothesis epic — 2026-06-12 (Operator decision)
+
+**Decision (Operator, 2026-06-12):** the `[who] × [speed↔quality]` matrix was retracted from `README.md` (4.10.3) — the `[who]` axis had zero implementation and its tech-lead cell ("you see the diff") contradicted `PROTOCOL.md` "Never show code". The honest surface today is the one-axis `profile` dial.
+
+**If/when the non-technical-PM bet is taken** (it is a recorded hypothesis in `docs/product.md` §1, not a served segment), the axis is its own coherent epic, not scattered fixes: a `scenario` (or `operator`) key in `ai-pm.config.json` with 2–3 presets (e.g. `pm` / `tech-lead`) parameterizing diff visibility, question depth, and the auto-decide ceiling; amending "Never show code" into a scenario-conditioned rule; plus the lighter-profile compensator (review-time product-fit check) and a friendlier on-ramp. Sequence together — see the two items below.
+
+## Mechanical floor hardening — two small features — 2026-06-12 (from product analysis, finding 2b)
+
+- **Merge-gate fail-closed on unresolved topic:** today the gate fails OPEN when the topic can't be resolved from the branch — a miss should mean "ask", not "pass". One engine change + tests.
+- **Stamp-authorship signal on OpenCode:** the platform resolves the actor, so the reviewer could write a marker the orchestrator's write path can't produce — narrows "stamp presence, not authorship". Claude stays presence-only (no actor signal); label honestly.
+
+## Review-time product-fit compensator for light profiles — 2026-06-12 (from product analysis, finding 7)
+
+In `lite`/`solo` the plan ceremony is lighter, so a wrong product call is less likely to be caught at plan time. Compensator: the Reviewer checklist gains a mandatory product-fit question (does the change match `docs/product.md`?) when the profile is light — rigor moves from plan-time to review-time instead of disappearing. Cheap: `[persona]` checklist text, one module or agent edit. Until built, `docs/product.md` §7 records the descope.
+
+## Downstream upgrade note — before user #2 — 2026-06-12 (from product analysis, finding 5)
+
+A minimal note: what a protocol version bump requires of a downstream (re-run install, re-read CHANGELOG), and what a MAJOR breaks. Free while N=0 downstreams; required before the first real one. One doc, small.
+
+## Vendor-watch standing item — platform absorption — 2026-06-12 (from product analysis, finding 4)
+
+Claude Code natively ships agent teams, review subagents, deny hooks; vendors absorb orchestration primitives over time (precedent: Agent-OS retired its phases). At each release-audit, check what the platforms absorbed and re-aim: the durable parts are cross-platform parity, the honesty map, and product discovery — never re-wrap a primitive the vendor ships.
+
 ## Ship beat missing: state update is not the last step — 2026-06-11 (8D)
 
 **Root cause:** `orchestrator.md` describes the ship beat as a narrative (version + CHANGELOG + push + PR + delete artifacts) with no explicit final step to update `.ai-pm/state/current.md`. State gets updated at the START of work (pointing to what's active) but never at CLOSE — so after merge, state is stale until the Operator notices.

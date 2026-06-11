@@ -14,6 +14,15 @@
 
 ---
 
+## [4.10.3] — 2026-06-12
+
+### Fixed
+
+- **README `[who]` axis retracted** (Operator decision) — the 2×2 `[who] × [speed↔quality]` matrix claimed an unimplemented axis, and its tech-lead cell ("you see the diff") contradicted `PROTOCOL.md` "Never show code". Replaced with the honest one-axis `profile` dial block matching `docs/product.md` §1; intro spectrum claim replaced with "in plain product language, no code reading required". The axis is parked in the backlog as a hypothesis epic.
+- **Parity count** — README said 55/55; the suite reports 56 (stale since 4.0.5).
+
+---
+
 ## [4.10.2] — 2026-06-12
 
 ### Fixed

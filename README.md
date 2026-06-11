@@ -1,6 +1,6 @@
 # ai-pm-protocol
 
-A protocol for building software and documentation with AI. You are the operator: you say *what* to build and *why*, approve the plan, and decide what ships — from a non-technical PM who never opens a file, to a technical lead who reviews the diff. A small set of AI roles plans the change, builds it, reviews it independently, and ships it.
+A protocol for building software and documentation with AI. You are the operator: you say *what* to build and *why*, approve the plan, and decide what ships — in plain product language, no code reading required. A small set of AI roles plans the change, builds it, reviews it independently, and ships it.
 
 It runs inside an AI coding harness — Claude Code and OpenCode, both live-verified — and **develops itself under its own protocol** — this repository is its own first project.
 
@@ -22,14 +22,12 @@ The whole protocol is one short constitution you can read in one sitting: **[`PR
 
 **You decide product, not code.** The orchestrator leads with user impact, frames decisions as trade-offs, asks one question at a time, and never shows you code.
 
-**Speed↔quality dial, across the whole spectrum.**
+**Speed↔quality dial.** One axis, set per project (`profile` in `ai-pm.config.json`):
 
-| | Prototype mode | Quality mode |
-| --- | --- | --- |
-| **PM / founder** | Fastest loop, lighter ceremony, AI decides within canon | Full rigor, deep review, every structural choice surfaced |
-| **Tech-lead** | Same fast loop, you see the diff | Full rigor, you review the diff alongside the AI |
+- **Prototype mode** (`lite` / `solo`) — verify the hypothesis fast: lighter plan ceremony, the orchestrator may build directly.
+- **Quality mode** (`full`) — trade speed for no-rewrites: an explicit plan you approve, every structural choice surfaced, a separately spawned Builder.
 
-The floor — working code or docs, independent review — holds in both modes. You pick the position per feature, not per project.
+The floor — working code or docs, an independent review by a fresh Reviewer, your explicit go on every merge — holds at every dial position. The dial is a ceiling on ceremony, never on rigor: the orchestrator may always choose more.
 
 ## Platform-neutral by design
 
@@ -39,7 +37,7 @@ Part of that adapter is a real **enforcement layer** — a deny layer that mecha
 
 ## Install
 
-Status: both **Claude Code** and **OpenCode** are live-verified — on each, the session loads as the orchestrator and the deny layer mechanically blocks a guarded write. Parity 55/55 (`src/adapter/parity.test.mjs`). Per-platform wiring: `src/adapter/INSTALL.md`.
+Status: both **Claude Code** and **OpenCode** are live-verified — on each, the session loads as the orchestrator and the deny layer mechanically blocks a guarded write. Parity 56/56 (`src/adapter/parity.test.mjs`). Per-platform wiring: `src/adapter/INSTALL.md`.
 
 The protocol is consumed as a git submodule; the active platform's adapter is then wired — the deny hooks, the role agents, and the `PROTOCOL.md` import. The concrete, per-platform wiring lives in **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)** — the single home for where each file lands and how each platform is hooked up. After wiring, start a fresh session so the harness loads the protocol.
 
