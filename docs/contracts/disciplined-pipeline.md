@@ -14,4 +14,4 @@ Whoever drives a change — an AI agent or the PM behind it — gets one predict
 
 - No change reaches a release with an unstamped review — the ship gate refuses an unstamped feature (the merge-gate floor, fail-closed on stamp presence).
 - The order holds even when a session has no memory of it — the route is reasserted on change-intent and enforced at the gate, not by recollection.
-- Merge and ship stay manual in both authority modes (see `decision-authority`).
+- Merge and ship need the PM's explicit authorization in both authority modes — the loop may execute a merge only once it is given, never on its own (see `decision-authority`).

@@ -1,6 +1,6 @@
 {
   "name": "ai-pm-protocol",
-  "version": "4.3.0",
+  "version": "4.4.0",
   "private": true,
   "type": "module",
   "description": "The AI-PM Protocol — its own source (this repo develops itself under its own protocol).",

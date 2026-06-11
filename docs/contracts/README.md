@@ -13,7 +13,7 @@ These are the *promises*, not the mechanism. Where a rule is enforced lives in i
 | `project-boundary` | agents stay inside the project root; repo-owned files change only through git |
 | `regression-protection` | a recorded promise cannot be silently broken or weakened — a violation blocks the PR |
 | `product-readiness-gate` | a user-facing feature cannot reach code while a foundational product question is unanswered |
-| `decision-authority` | product forks resolve at the right human-involvement level; merge and ship always stay manual |
+| `decision-authority` | product forks resolve at the right human-involvement level; merge and ship always need the Operator's explicit authorization |
 | `documentation-discipline` | every project carries a maintained doc set with one owner per doc; the protocol dogfoods it |
 | `dual-harness-from-one-source` | the protocol runs on Claude Code and OpenCode from one neutral core; both adapters faithful |
 | `automated-quality-tooling` | every project gets stack-appropriate automated quality tools (linters, type-checkers, SAST) wired and tuned at setup, run every loop |

@@ -41,14 +41,14 @@ Five beats, in order.
 
 ```text
 understand → plan → build → review → ship
-            (Operator ok)   (independent)  (Operator merges)
+            (Operator ok)   (independent)  (Operator authorizes merge)
 ```
 
 1. **Understand.** A session resuming prior work FIRST reads the resume pointer **`.ai-pm/state/current.md`** — by that exact path, never via file-search (it hides dot-directories on some harnesses). Then the Orchestrator checks git is clean and on a fresh branch off `main`, and reads the project context it needs (`docs/architecture.md`, the user journeys, the touched feature docs).
 2. **Plan.** Builder drafts the change against its plan checklist into a **transient plan file** (`.ai-pm/plans/<topic>.md`) — the plan plus a progress note carried through the loop; **`.ai-pm/state/current.md`** points at the active one. Orchestrator shows it to the Operator **in plain language** and waits for approval. The approved plan is the contract the review checks against. For a user-facing change, each product question in the checklist must have a recorded answer or be consciously descoped before build.
 3. **Build.** Builder implements on the feature branch in **atomic, one-purpose steps**: the `build`-beat quality tools green at the end (`## Quality tools`), **never editing an existing test to make it pass**, touching only what the plan named. It **hands the change back without committing** — git is the Orchestrator's (`## Git flow`).
 4. **Review.** A **freshly spawned Reviewer** — never the Builder, never a stale artifact — checks the work against the plan and its review checklist, and stamps a verdict. A failed, missing, or skipped review counts as *not reviewed* (`## Invariants`, gate integrity).
-5. **Ship.** On the Operator's explicit go, the Orchestrator bumps the version, writes the CHANGELOG entry, pushes, and opens the PR, then **deletes every transient working artifact of this feature** — the plan, the review stamp, and any audit run for it. Delete the stamp **last**, *after* the push and PR succeed (the merge-gate reads it at push time). The durable record is the commits, the CHANGELOG, and (for a user-facing change) `contracts.md`. **The Operator merges.** Shipping is always manual, in every autonomy mode.
+5. **Ship.** On the Operator's explicit go, the Orchestrator bumps the version, writes the CHANGELOG entry, pushes, and opens the PR, then **deletes every transient working artifact of this feature** — the plan, the review stamp, and any audit run for it. Delete the stamp **last**, *after* the push and PR succeed (the merge-gate reads it at push time). The durable record is the commits, the CHANGELOG, and (for a user-facing change) `contracts.md`. **Merge happens only on the Operator's explicit authorization** (per merge, never inferred) — the Operator merges, or authorizes the Orchestrator to execute it. In every autonomy mode the *decision* is the Operator's; only the *execution* is delegable.
 
 Side-tools and shortcuts (not pipeline beats):
 
@@ -76,7 +76,7 @@ These hold on **every** action, whatever beat you are in. `[mechanical]` rows ar
 
 6. **Durable text is reader-first and has one home.** Authored durable text (docs, comments, commits) leads with the fact the reader came for, states only the current truth, and lives in exactly **one** place: supersede a changed decision (don't accumulate), point to where a fact lives (don't restate it), comment the local *why* (not *what*, never a doc-homed rule). *Prevents: drift between two copies of a rule, and docs that read as a changelog.*
 
-7. **Decision authority — `autonomous | interactive`; absent or unrecognised ⇒ `interactive`** (value-home: `ai-pm.config.json` `mode`). On a product fork: if the answer is **derivable** from cited project canon (the docs, the contracts, a prior recorded resolution), resolve it and **announce before acting**; otherwise **ask the Operator**. Escalate regardless — autonomy is a ceiling, never a duty — when the fork is *not* derivable, touches a security-relevant surface, or the Operator flagged it irreversible. **Merge and ship stay manual in both modes.** *Prevents: an agent overreaching on a call that was the Operator's to make.*
+7. **Decision authority — `autonomous | interactive`; absent or unrecognised ⇒ `interactive`** (value-home: `ai-pm.config.json` `mode`). On a product fork: if the answer is **derivable** from cited project canon (the docs, the contracts, a prior recorded resolution), resolve it and **announce before acting**; otherwise **ask the Operator**. Escalate regardless — autonomy is a ceiling, never a duty — when the fork is *not* derivable, touches a security-relevant surface, or the Operator flagged it irreversible. **Merge and ship need the Operator's explicit authorization in both modes** — given per merge, never inferred; with it the Orchestrator may *execute* the merge, but the *decision* is always the Operator's. *Prevents: an agent overreaching on a call that was the Operator's to make.*
 
 ---
 
@@ -143,7 +143,7 @@ The single invariant these collapse into — *a deliverable is satisfied only by
 `ai-pm.config.json` (project root) binds a project's choices, so the core depends on **no specific agent**:
 
 - **mode** — `autonomous | interactive`; the value-home for invariant 7 (absent or unrecognised ⇒ `interactive`).
-- **profile** — `full | lite | solo` (absent/unrecognised ⇒ `full`): the speed↔trust tradeoff. States only the wish for the cuttable levers (who builds, plan ceremony). The floor — independent review by a separate fresh Reviewer, the honesty gates, the merge stamp, the Operator merges — holds in every profile, enforced regardless. A profile that cuts the floor is no protocol. Value-home: `ai-pm.config.json` `_profile`.
+- **profile** — `full | lite | solo` (absent/unrecognised ⇒ `full`): the speed↔trust tradeoff. States only the wish for the cuttable levers (who builds, plan ceremony). The floor — independent review by a separate fresh Reviewer, the honesty gates, the merge stamp, the Operator's explicit merge authorization — holds in every profile, enforced regardless. A profile that cuts the floor is no protocol. Value-home: `ai-pm.config.json` `_profile`.
 - **roles** — each seat binds an **agent** and an optional **model**. Defaults to this repo's `src/agents/`; swap the agent for any one that honours the seat's contract (`## Role contracts`). The config states only the *wish* (`session` / `auto` / a per-platform pin); the model policy — what `auto` resolves to, and each platform's model authority — lives in the platform adapter (`src/adapter/tool-map.json` `models`).
 - **platform** — the active adapter (`claude | opencode`).
 - **kind** — the project kind; seeds the quality-layer defaults and the review route.
@@ -193,7 +193,7 @@ git checkout main && git pull          # start from current main
 git checkout -b feature/<topic>        # fresh branch — one per PR
 ... build, review, commit ...          # Orchestrator commits the reviewed change (atomic, one purpose)
 ship                                   # version + CHANGELOG + push + open PR
-                                       # Operator merges on the platform (squash)
+                                       # merge on the Operator's explicit authorization — they merge, or the Orchestrator executes it (squash)
 git checkout main && git pull          # back to main for the next branch
 ```
 

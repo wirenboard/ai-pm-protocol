@@ -14,6 +14,14 @@
 
 ---
 
+## [4.4.0] — 2026-06-11
+
+### Changed
+
+- **Merge rule softened — explicit Operator authorization, the Orchestrator may execute.** Before, the Operator pressed the merge button (always manual). Now merge needs the Operator's **explicit, per-merge authorization** (never inferred); with it the Orchestrator MAY execute the merge — the human *decision* stays the floor, only the *execution* is delegable. Updated consistently across every home of the rule (`PROTOCOL.md` invariant 7 / beat 5 / loop / project-config / git-flow, `orchestrator.md`, `ai-pm.config.json`, the `decision-authority` + `disciplined-pipeline` contracts + index, `README.md`, `direction.md`). The merge-gate stamp floor (a merge still needs a passing review) is untouched.
+
+---
+
 ## [4.3.0] — 2026-06-11
 
 ### Added

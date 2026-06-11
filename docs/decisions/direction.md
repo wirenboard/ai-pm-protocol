@@ -21,7 +21,7 @@ Pillars 1, 2, 4 grow as **side-tools, config, and capability modules — never a
 
 ## The floor (configurable rigor must not cut the value)
 
-Some rigor is **not** cuttable: **independent review by a separate context** (builder ≠ reviewer), the **honesty gates**, and **the Operator merges**. A `lite`/`solo` profile trims ceremony, never the floor. A profile that cuts the floor is no protocol.
+Some rigor is **not** cuttable: **independent review by a separate context** (builder ≠ reviewer), the **honesty gates**, and **the Operator's explicit merge authorization** (the orchestrator may execute the merge, never decide it). A `lite`/`solo` profile trims ceremony, never the floor. A profile that cuts the floor is no protocol.
 
 ## Sequence
 
