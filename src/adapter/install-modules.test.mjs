@@ -171,5 +171,119 @@ const e2eOff = reviewerAgentText({ modules: { "threat-model": false } });
 check("e2e: OFF ⇒ assembled agent omits the fragment", !e2eOff.includes(FRAGMENT_MARK));
 check("e2e: OFF ⇒ assembled agent keeps the floor", e2eOff.includes(REVIEWER_FLOOR));
 
+// ── 7. SECOND MODULE: product-advocate — same binary behaviour, no threat-model
+//      assertion weakened (added, never edited). Targets builder (plan) + reviewer
+//      (review), declared AFTER threat-model so registry order = assembly order.
+const builderFloor = fs.readFileSync(path.join(ROOT, "src", "agents", "builder.md"), "utf8");
+// The product-advocate builder fragment's distinguishing line, and a `[rich]`-only item.
+const PA_FRAGMENT_MARK = "The **product-advocate** module is on";
+const PA_RICH_ONLY = "The cheapest test that would tell us";
+const PA_LIGHT_CORE = "Who is this for";
+// The Builder plan-time product FLOOR line the module deepens — present under EVERY config.
+const BUILDER_PRODUCT_FLOOR = "Product questions";
+
+console.log("PRODUCT-ADVOCATE — resolver + per-kind defaults:");
+const pa = registry.modules.find((m) => m.id === "product-advocate");
+check("pa exists in registry after threat-model",
+  registry.modules.findIndex((m) => m.id === "product-advocate") >
+  registry.modules.findIndex((m) => m.id === "threat-model"));
+check("pa on: object toggle ⇒ enabled",
+  enabledModules(registry, { modules: { "product-advocate": { depth: "rich" } } }).some((m) => m.id === "product-advocate"));
+check("pa on: true ⇒ enabled",
+  enabledModules(registry, { modules: { "product-advocate": true } }).some((m) => m.id === "product-advocate"));
+check("pa on: absent key ⇒ enabled (per-kind default)",
+  enabledModules(registry, { kind: "software" }).some((m) => m.id === "product-advocate"));
+check("pa off: literal false ⇒ disabled",
+  !enabledModules(registry, { modules: { "product-advocate": false } }).some((m) => m.id === "product-advocate"));
+check("pa off: { enabled: false } ⇒ disabled",
+  !enabledModules(registry, { modules: { "product-advocate": { enabled: false } } }).some((m) => m.id === "product-advocate"));
+for (const bad of ["garbage", 42, null]) {
+  check(`pa fail-safe-to-ON: malformed toggle ${JSON.stringify(bad)} ⇒ enabled`,
+    enabledModules(registry, { modules: { "product-advocate": bad } }).some((m) => m.id === "product-advocate"));
+}
+check("pa default: software ⇒ rich", effectiveToggle(pa, { kind: "software" }).depth === "rich");
+check("pa default: documentation ⇒ light", effectiveToggle(pa, { kind: "documentation" }).depth === "light");
+check("pa default: unknown kind ⇒ strict side (software/rich)", effectiveToggle(pa, { kind: "bogus" }).depth === "rich");
+check("pa default: absent kind ⇒ strict side (software/rich)", effectiveToggle(pa, {}).depth === "rich");
+check("pa override: config value overrides the kind default",
+  effectiveToggle(pa, { kind: "software", modules: { "product-advocate": { depth: "light" } } }).depth === "light");
+
+console.log("PRODUCT-ADVOCATE — compose into builder, floor always present:");
+function builderComposed(cfg) {
+  return composeBody(ROOT, builderFloor, "builder", registry, cfg);
+}
+const paOn = builderComposed({ kind: "software", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
+check("pa compose: enabled ⇒ fragment text present", paOn.includes(PA_FRAGMENT_MARK));
+check("pa compose: enabled ⇒ marker consumed", !paOn.includes(MARKER));
+check("pa compose: enabled ⇒ Builder product FLOOR still present", paOn.includes(BUILDER_PRODUCT_FLOOR));
+const paOff = builderComposed({ modules: { "product-advocate": false, "threat-model": false } });
+check("pa omit: disabled ⇒ fragment absent", !paOff.includes(PA_FRAGMENT_MARK));
+check("pa omit: disabled ⇒ marker consumed", !paOff.includes(MARKER));
+check("pa omit: disabled ⇒ Builder product FLOOR STILL present", paOff.includes(BUILDER_PRODUCT_FLOOR));
+
+console.log("PRODUCT-ADVOCATE — depth (light gets genuinely less):");
+const paRich = builderComposed({ kind: "software", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
+const paLight = builderComposed({ kind: "software", modules: { "product-advocate": { depth: "light" }, "threat-model": false } });
+check("pa rich: light-core item present", paRich.includes(PA_LIGHT_CORE));
+check("pa rich: rich-only item present", paRich.includes(PA_RICH_ONLY));
+check("pa rich: banner names rich depth", paRich.includes("Depth: **rich**"));
+check("pa rich: no authoring tag leaks", !/\[(light|rich)\]/.test(paRich));
+check("pa light: light-core item present", paLight.includes(PA_LIGHT_CORE));
+check("pa light: rich-only item STRIPPED", !paLight.includes(PA_RICH_ONLY));
+check("pa light: banner names light depth", paLight.includes("Depth: **light**"));
+check("pa light: genuinely shorter than rich", paLight.length < paRich.length);
+for (const bad of ["garbage", "LIGHT", "", 42, null]) {
+  const body = builderComposed({ kind: "software", modules: { "product-advocate": { depth: bad }, "threat-model": false } });
+  check(`pa depth fail-safe: depth ${JSON.stringify(bad)} ⇒ rich (rich-only kept)`, body.includes(PA_RICH_ONLY));
+}
+
+// HONESTY (Slice-1 caveat): the builder fragment must NOT claim it is an INDEPENDENT
+// challenge — in this slice the questions are self-applied. The fragment explicitly
+// disclaims that; assert it never asserts a fresh/independent voice.
+// The Slice-1 caveat: the questions are SELF-applied, so the fragment must disclaim
+// independence (a sharper self-check, not a separate disinterested voice) and must
+// NOT present itself as that voice. Assert the disclaimer is present.
+check("pa honesty: fragment disclaims independence (self-check, not a separate voice)",
+  /self-check|self-apply/i.test(paRich) && /never as a verdict from a separate/i.test(paRich));
+check("pa honesty: fragment points at the recorded-answer-or-descope floor rule",
+  /descoped|recorded answer/i.test(paRich));
+
+console.log("PRODUCT-ADVOCATE — reviewer dimension composes:");
+const paRevOn = composeBody(ROOT, reviewerFloor, "reviewer", registry,
+  { kind: "software", modules: { "product-advocate": true, "threat-model": false } });
+check("pa reviewer: enabled ⇒ fragment present", paRevOn.includes(PA_FRAGMENT_MARK));
+check("pa reviewer: enabled ⇒ Reviewer product FLOOR still present", paRevOn.includes("foundational product question"));
+
+// ── 8. CO-EXISTENCE: BOTH modules ON ⇒ both fragments compose, in REGISTRY ORDER
+//      (threat-model first, product-advocate second) and both floors survive. This
+//      is coverage the single-module suite never exercised — the second module
+//      unlocks it, proving registry-order composition with two modules.
+console.log("CO-EXISTENCE — both modules on, registry order:");
+const both = builderComposed({ kind: "software", modules: { "threat-model": { depth: "rich" }, "product-advocate": { depth: "rich" } } });
+check("both: threat-model fragment present", both.includes(FRAGMENT_MARK));
+check("both: product-advocate fragment present", both.includes(PA_FRAGMENT_MARK));
+check("both: Builder product FLOOR present", both.includes(BUILDER_PRODUCT_FLOOR));
+check("both: registry order — threat-model precedes product-advocate",
+  both.indexOf(FRAGMENT_MARK) < both.indexOf(PA_FRAGMENT_MARK));
+check("both: no leftover marker", !both.includes(MARKER));
+
+// ── 9. END-TO-END through the Claude shim — the deployed BUILDER agent gains/loses
+//      the product-advocate fragment, floor intact.
+console.log("END-TO-END — Claude install composes product-advocate into the builder:");
+function builderAgentText(modulesCfg) {
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-pa-e2e-"));
+  const written = claudeInstall(outDir, { roles: baseRoles, kind: "software", ...modulesCfg });
+  const text = fs.readFileSync(written["pm-builder"], "utf8");
+  fs.rmSync(outDir, { recursive: true, force: true });
+  return text;
+}
+const paE2eOn = builderAgentText({ modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
+check("pa e2e: ON ⇒ assembled builder carries the fragment", paE2eOn.includes(PA_FRAGMENT_MARK));
+check("pa e2e: ON ⇒ assembled builder carries the product floor", paE2eOn.includes(BUILDER_PRODUCT_FLOOR));
+check("pa e2e: ON ⇒ no leftover marker", !paE2eOn.includes(MARKER));
+const paE2eOff = builderAgentText({ modules: { "product-advocate": false, "threat-model": false } });
+check("pa e2e: OFF ⇒ assembled builder omits the fragment", !paE2eOff.includes(PA_FRAGMENT_MARK));
+check("pa e2e: OFF ⇒ assembled builder keeps the product floor", paE2eOff.includes(BUILDER_PRODUCT_FLOOR));
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

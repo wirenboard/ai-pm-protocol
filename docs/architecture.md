@@ -127,7 +127,7 @@ So a bad config can only ever turn MORE rigor on, never silently disable it.
 
 The registry, the config doc, and the fragments all label it so; over-claiming a module as mechanical enforcement is a Reviewer honesty-gate find.
 
-The shipped module is **threat-model**: it deepens the Reviewer's always-on security item and the Builder's plan-time Security-surface question into explicit threat enumeration. Its FLOOR (a security-relevant change must have its threats named and considered) stays in the role floor bodies; the module fragment is purely the deepening.
+Two modules ship. **threat-model** deepens the Reviewer's always-on security item and the Builder's plan-time Security-surface question into explicit threat enumeration. **product-advocate** deepens the Builder's plan-time product-question item into a discovery pass (who it is for, the user pain, the right bet, the cheapest test, what breaks if it is NOT built) and the Reviewer into one product dimension (does the shipped change serve its plan's user claim). Each module's FLOOR (threat-model: a security-relevant change has its threats named; product-advocate: a user-facing change has its product questions recorded, the `product-readiness-gate` contract) stays in the role floor bodies; the fragment is purely the deepening.
 
 ## Extension points
 

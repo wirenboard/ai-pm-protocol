@@ -25,6 +25,23 @@
         "reviewer": "src/modules/threat-model/reviewer.md",
         "builder": "src/modules/threat-model/builder.md"
       }
+    },
+    {
+      "id": "product-advocate",
+      "for": "Plan-time product discovery for a user-facing change — who it is for, the user pain, whether it is the right bet, the cheapest test, what breaks if it is NOT built — deepening the always-on Builder plan product-question item and the Reviewer's check that the shipped change serves its plan's user claim.",
+      "toggle": { "depth": "rich | light" },
+      "defaults": {
+        "software": { "depth": "rich" },
+        "documentation": { "depth": "light" }
+      },
+      "targets": [
+        { "role": "builder", "beat": "plan" },
+        { "role": "reviewer", "beat": "review" }
+      ],
+      "fragments": {
+        "builder": "src/modules/product-advocate/builder.md",
+        "reviewer": "src/modules/product-advocate/reviewer.md"
+      }
     }
   ]
 }

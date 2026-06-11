@@ -14,6 +14,14 @@
 
 ---
 
+## [4.6.0] — 2026-06-11
+
+### Added
+
+- **`product-advocate` capability module** — a toggleable `[persona]` module (built on the existing module constructor, mirroring `threat-model`). When ON it deepens the Builder's plan beat with the uncomfortable product-discovery questions — *who is this for · what user pain · is this the right bet · the cheapest test that would tell us · what breaks if we DON'T build it* — each carrying a recorded answer or a conscious "descoped: why"; and deepens the Reviewer with one product dimension (does the shipped change serve the user claim its plan made). The always-on product floor (the plan-checklist product questions, the Reviewer's unanswered-question gap) is unchanged — the module deepens it. Honest: `rich` is a sharper self-check, not an independent voice; the independent plan-time challenge pass is a deferred slice. Per-kind defaults: `software → rich`, `documentation → light`.
+
+---
+
 ## [4.5.0] — 2026-06-11
 
 ### Added
