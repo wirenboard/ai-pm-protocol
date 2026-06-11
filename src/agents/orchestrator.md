@@ -105,6 +105,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 **When it fires:**
 
+- **Proactive cadence** — after roughly **five shipped features** since the last audit (the state pointer records the last run), offer it in one line: *"N features since the last audit — time for a whole-project sweep?"* Declinable. On the go it runs while the Operator steps away; the findings come back already dispatched. This is the cover for a light profile: `solo`/`lite` passes are fast, the periodic sweep catches what speed misses.
 - **Offered** — before a release or downstream rollout; when the project's health is in doubt; or as the "audit on top" of a `solo`/`lite` batch.
 - **Explicit** — the Operator asks.
 

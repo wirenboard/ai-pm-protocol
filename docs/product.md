@@ -62,7 +62,7 @@ Prerequisite: Claude Code or OpenCode installed and authenticated; no other depe
 **Residual gap — the compound matters, not any one part:**
 
 - **Cross-platform from one neutral core** — a vendor will never ship cross-platform policy; the core/adapter split is structurally un-absorbable.
-- **Hook-enforced floor, not prose-only discipline** — a real deny layer (tool-call intercepts, merge-gate stamp check) at both Claude Code and OpenCode parity-tested from one engine. BMAD and Spec Kit are prose-held.
+- **Hook-enforced floor, not prose-only discipline** — a real deny layer (tool-call intercepts, merge-gate stamp check) at both Claude Code and OpenCode parity-tested from one engine. BMAD-class frameworks are prose-held.
 - **Product discovery as a first-class beat** — `docs/product.md` before any feature; vendors do code, not product-management loop.
 - **Honest enforcement map** — every constraint labelled `[mechanical]` vs `[persona]`; over-claiming is a Reviewer blocking-find. Rare.
 
@@ -72,7 +72,7 @@ The protocol does not guarantee a "floor" — it is **protocol-held discipline w
 
 **Operated by:** the user, inside their own project's git repository. No central service, no account.
 
-**Funded by:** the user's own model tokens; no other cost. The loop multiplies token usage vs a raw session — rough estimate: a reviewed feature (orchestrator + builder + reviewer) costs ≈2–3× the tokens of a single-pass session; the reviewer is the main addition.
+**Funded by:** the user's own model tokens; no other cost. The loop multiplies token usage vs a raw session. Measured on this repo (June 2026, five reviews): an independent review pass costs ≈50–130k tokens per feature, median ≈76k; the overall multiplier vs a single-pass session is roughly 2–3×, the reviewer being the main addition.
 
 **License:** MIT — free forever including commercial use.
 
@@ -83,8 +83,8 @@ The protocol does not guarantee a "floor" — it is **protocol-held discipline w
 **Success criteria (provisional):**
 
 - One non-author project onboarded and shipping within 6 months of v5.0.
-- A rework metric defined and tracked in the dogfood repo (reverted/re-opened features per shipped feature).
-- Rough cost-per-feature measured and published for the dogfood repo.
+- Rework metric — reverted or re-opened shipped features per shipped feature, read from git history (revert commits, reopened topics) — tracked in the dogfood repo from 4.12.0; none observed in the 4.x line so far.
+- Cost-per-feature measured and published for the dogfood repo (first measurement: the review-pass numbers above).
 
 ## 7. The case against
 
@@ -93,7 +93,7 @@ The protocol does not guarantee a "floor" — it is **protocol-held discipline w
 - **The reviewer is usually the same model.** `auto` resolves to a different model only where the environment offers one. Most installations have a single model — structurally independent context (separate spawn, no shared memory) but not model-independent. Stated honestly, not papered over.
 - **Persona-only floor is thin.** The mechanical enforcement covers a narrow deny list (boundary writes, role substitution, merge-gate stamp presence). Spawning the Reviewer is a positive act the deny layer cannot force; the orchestrator-authors-content guard is `[persona]` on Claude, which is the platform this repo runs on. A session that pages out PROTOCOL.md can violate prose rules silently.
 - **Light profile leans on the Reviewer.** In `solo` or `lite`, plan ceremony is off by default, so the brief-fit question moves to review-time (the Reviewer's product-fit check — `[persona]` prose, not a mechanical gate). A light profile therefore rests more weight on one prose-held checklist item than `full` does.
-- **N=1 dogfood evidence.** Git history is single-author, at the extreme technical-operator end. Validates buildability; says nothing about demand, the PM segment, or the non-dogfood experience.
+- **N=1 dogfood evidence.** Git history is single-author, at the extreme technical-operator end — and the dogfood runs on `profile: solo`, the lightest dial position: it exercises the floor (independent review, merge gates) daily, not the full-ceremony loop. Validates buildability; says nothing about demand, the PM segment, or the non-dogfood experience.
 - **No distribution engine.** Discovery is essentially "find it on GitHub" — a great product nobody finds. No hosted onboarding, no marketplace listing yet.
 - **Pure-OSS, bus-factor 1.** No funding; hard to sustain against funded rivals (BMAD, Kiro).
 - **"Product brief quality is the Operator's responsibility."** If `docs/product.md` is based on wrong assumptions, the review and plan machinery faithfully executes on those wrong assumptions. The protocol enforces the loop, not the quality of the Operator's product thinking.

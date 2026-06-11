@@ -74,11 +74,11 @@ Two wrinkles are the only non-obvious part, and both are **platform-capability**
 ```text
  core (neutral, every platform)             adapter (the only platform code)
  ──────────────────────────────             ────────────────────────────────
- PROTOCOL.md       the constitution         engine.mjs       shared predicates
- src/agents/*.md   role procedures          deny-rules.json  shared rules (data)
+ PROTOCOL.md          the constitution      engine.mjs       shared predicates
+ src/agents/*.md      role procedures       deny-rules.json  shared rules (data)
  docs/architecture.md this file             tool-map.json    neutral noun → tool
- ai-pm.config.json roles · mode · platform  <platform>/      the shim (normalise
-src/quality/          the project's checks                      + map verdict) + glue
+ ai-pm.config.json    roles·mode·platform   <platform>/      the shim (normalise
+ src/quality/         the project's checks                   + map verdict) + glue
 ```
 
 Adding a platform = write **only** its shim (input-normaliser + verdict-mapper + install glue) and add its column to `tool-map.json`; **zero edits** to the engine, the rules, or the core. If a new platform forces an edit to any of those, the boundary leaked (`PROTOCOL.md` `## Core and adapter`).

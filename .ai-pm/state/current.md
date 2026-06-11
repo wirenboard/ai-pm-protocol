@@ -18,5 +18,7 @@ Design-grade items (detail in `.ai-pm/backlog.md`):
 - ad-md-editor rollout — first real downstream (run install.mjs from ITS session; boundary blocks it from here)
 - HMI/adverse-state amendments; plan-adversary; verification ladder (salvaged residuals)
 
+**Last audit:** 2026-06-12 — whole-tree doc-quality sweep at 4.11.1 (16 findings; fix-now half shipped 4.12.0, rest in backlog "Doc de-water pass"). Cadence: offer the next after ~5 shipped features.
+
 ## Conventions
 Russian chat; English artifacts. `interactive` mode. `kind: mixed`, `profile: solo`, `threat-model: rich`. **Remotes:** `uni` (`aadegtyarev/ai-pm-protocol-uni`) — live fork; `origin` OLD. After squash-merge: `git fetch uni && git reset --hard uni/main`. State rides the next feature branch (merge-gate denies stampless main pushes).

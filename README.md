@@ -16,7 +16,7 @@ The whole protocol is one short constitution you can read in one sitting: **[`PR
 | **Builder** | Plans the change, then writes the code, docs, and tests. |
 | **Reviewer** | Independently checks the built change against the plan and a tight quality / security / honesty checklist. A separate context from the Builder. |
 
-**Product-first.** Onboarding goes **install → setup → product discovery → loop**: before any feature, a genuine discovery dialog — gather the product's real story prejudice-free, then conclude, able to end on "we built the wrong thing" — records a short brief (`docs/product.md`): the idea, the customer, the problem in their words, the concrete **zero-to-working story** (how a user discovers it, onboards from nothing, carries across devices and recovers lost access), the competition, who runs and funds it, and — at the end — the case against. Grounded in the established discovery frameworks (Working Backwards, Lean Canvas, Cagan, Torres). Every feature then grounds in that brief, so you are building a product, not churning code.
+**Product-first.** Onboarding goes **install → setup → product discovery → loop**. Before any feature, a genuine discovery dialog records a short brief (`docs/product.md`): the idea, the customer, the problem in their words, the zero-to-working story, the competition, who runs and funds it — and, at the end, the honest case against. It gathers prejudice-free and concludes willing to say "we are building the wrong thing". Every feature then grounds in that brief, so you are building a product, not churning code.
 
 **Five beats.** Every feature flows: **understand → plan → build → review → ship**. You approve the plan in plain language before any code; the review is a fresh, independent pass; **you authorize every merge** — nothing lands without your explicit go.
 
@@ -37,9 +37,7 @@ Part of that adapter is a real **enforcement layer** — a deny layer that mecha
 
 ## Install
 
-Status: both **Claude Code** and **OpenCode** are live-verified — on each, the session loads as the orchestrator and the deny layer mechanically blocks a guarded write. Every guard is parity-tested through both shims from the one shared engine (`src/adapter/parity.test.mjs`). Per-platform wiring: `src/adapter/INSTALL.md`.
-
-The protocol is consumed as a git submodule; the active platform's adapter is then wired — the deny hooks, the role agents, and the `PROTOCOL.md` import. The concrete, per-platform wiring lives in **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)** — the single home for where each file lands and how each platform is hooked up. After wiring, start a fresh session so the harness loads the protocol.
+The protocol is consumed as a git submodule; the active platform's adapter is then wired — the deny hooks, the role agents, and the `PROTOCOL.md` import. One command does it all, and the per-platform detail lives in **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)**. After wiring, start a fresh session so the harness loads the protocol.
 
 ## Configure
 

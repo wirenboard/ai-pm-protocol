@@ -52,7 +52,7 @@ Side-tools and shortcuts (not pipeline beats):
 
 - **`fixup`** — the loop with plan and review collapsed into one lightweight pass, for a genuinely trivial change (a typo, a one-line fix). The Reviewer pass is **shortened, never skipped**.
 - **`research`** — a side-tool the Orchestrator reaches for when a plan needs grounding.
-- **`audit`** `[persona]` — whole-project health-check: the quality suite plus a fresh auditor sweep over the whole tree. Offered before a release/rollout or as an "audit on top" of a `solo`/`lite` batch. Single home: orchestrator's `## Audit`.
+- **`audit`** `[persona]` — whole-project health-check: the quality suite plus a fresh auditor sweep over the whole tree. Offered on a shipped-feature cadence, before a release/rollout, or as an "audit on top" of a `solo`/`lite` batch. Single home: orchestrator's `## Audit`.
 - **`setup`** — writes `ai-pm.config.json` through a plain-language dialog: roles, models, mode, profile, platform, kind. Platform-neutral — the same flow on every harness. Fires lazily on an unconfigured project (declinable offer, never a block) or on `/pm-setup`. Single home: orchestrator's `## Setup`.
 - **`8D`** `[persona]` — failure-analysis for a bug or production incident: drives past the symptom patch to root cause and systemic prevention. Offered (declinable, never a gate). Single home: orchestrator's `## 8D`.
 
@@ -109,6 +109,7 @@ A platform's deny layer can **block a tool call** (and, on some platforms, **ask
 - A truncating write — empty/whitespace content over an existing non-empty file.
 - The **Orchestrator** writing a source or canonical-doc path (sub-agents author content; the Orchestrator routes). **Mechanical only on a platform that resolves the actor (OpenCode); `[persona]` on Claude**, whose hook payload carries no session-role signal — there it fails open and the discipline is prose-held. Allowed exceptions: its own state and a feature plan; the tooling submodule is never writable. Relaxed for source/doc writes when the project's `profile` permits the Orchestrator to build (`## Project config`) — a no-op where the deny already fails open (Claude); the merge-gate, self-patch, and project-boundary denies are never relaxed.
 - **Self-patching the enforcer** — the tooling submodule changes only by a version bump, never by an in-place edit.
+- An **in-place content edit on a remote system** (`ssh` + an editor or redirect) — a repo-owned file changes through git, never a remote edit (invariant 4).
 - **Merging while the review is unstamped** — the ship-time floor under invariant 3. Checks the stamp's *presence*, not its *authorship*.
 - A **role-duplicator or generic built-in** spawned into a protocol seat (invariant 1).
 
@@ -116,13 +117,14 @@ A platform's deny layer can **block a tool call** (and, on some platforms, **ask
 
 - A force-push.
 - A commit that skips verification.
-- An in-place edit or a mutating action on a remote system.
+- A mutating action on a remote system (deploy, maintenance, runtime state).
 - A merge or push whose branch topic the merge-gate cannot resolve — the stamp is uncheckable, so the gate asks instead of passing.
 
 **Inject-class** (the platform adds a context note to the turn — it nudges, never blocks; only *reinforces* a `[persona]` act, the act itself stays the Orchestrator's; realised mechanically where a platform has a prompt hook, always-on instruction text where it does not):
 
 - On a repo-change request: a reminder to route the work to the owning role and follow the loop.
 - On a work request to an **unconfigured** project: a reminder to run `setup` first.
+- On a feature request to a configured project with **no product brief**: a short, declinable offer to run product discovery first.
 
 **Persona-only** (no deny is possible — these are reasoning acts):
 

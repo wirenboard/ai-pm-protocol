@@ -1,16 +1,35 @@
 # Changelog
 
-Формат — [Keep a Changelog 1.1.0](https://keepachangelog.com/ru/1.1.0/), versioning по [SemVer 2.0](https://semver.org/lang/ru/).
+Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer 2.0](https://semver.org/).
 
-**SemVer для template:**
-
-- **MAJOR** — breaking changes: несовместимые изменения структуры проекта, удалённые агенты/команды
-- **MINOR** — новые агенты, команды, шаблонные документы
-- **PATCH** — fixes, уточнения, нефункциональные изменения
+- **MAJOR** — breaking: incompatible project-structure changes, removed agents or commands
+- **MINOR** — new agents, commands, capability modules, template docs
+- **PATCH** — fixes, clarifications, non-functional changes
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [4.12.0] — 2026-06-12
+
+### Added
+
+- **Proactive audit cadence** (Operator-designed) — the orchestrator now offers a whole-project audit after roughly five shipped features since the last run (the state pointer records it): a one-line declinable offer; on the go it runs while the Operator steps away and the findings come back dispatched. The cover for light profiles: `solo`/`lite` passes are fast, the periodic sweep catches what speed misses. `orchestrator.md ## Audit` + the `PROTOCOL.md` summary line.
+
+### Fixed
+
+Doc-quality audit (2026-06-12, whole tree, 16 findings) — the fix-now half:
+
+- **CHANGELOG header** — was Russian on a durable English artifact (invariant 5) with a retired "для template" self-description; now English, present-tense.
+- **`src/adapter/README.md` archaeology** — "two of yesterday's surfaces" line-counts, the retired-generator ghost-argument, and the `## Status` wall removed; the two integrity guards folded into the No-regex-drift section.
+- **`PROTOCOL.md` enforcement map** — the remote in-place edit was misfiled under ask-class (the registry denies it); the `no-product-brief-discover` inject row was missing. The map now matches `deny-rules.json` row-by-row.
+- **README shop window** — the 110-word "Product-first" wall broken up (the frameworks name-drop's one home is the product-foundation contract); `## Install` no longer leads with a duplicated status line.
+- **Product brief** — §6 carries a measured review-pass cost (≈50–130k tokens per feature, median ≈76k, five reviews) instead of a bare estimate, and the rework-metric formula; §7 records that the dogfood runs on `profile: solo`. Spec Kit dropped from a §5 row it was never introduced in.
+- **`docs/architecture.md`** — integration diagram column alignment.
+
+Backlog-disposition findings (summary-restate creep, contract internals inventories, walls, the dash-density style rule) live in `.ai-pm/backlog.md` "Doc de-water pass".
 
 ---
 

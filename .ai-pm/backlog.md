@@ -16,11 +16,19 @@ The platform resolves the actor, so the reviewer could write a marker the orches
 
 Claude Code natively ships agent teams, review subagents, deny hooks; vendors absorb orchestration primitives over time (precedent: Agent-OS retired its phases). At each release-audit, check what the platforms absorbed and re-aim: the durable parts are cross-platform parity, the honesty map, and product discovery — never re-wrap a primitive the vendor ships. Related research idea: whether the loop itself could ride Claude Code's dynamic-Workflow primitive (deterministic fan-out) without losing the PM-in-the-loop forks — `research` first, it may be the absorption case in point.
 
-## `audit` realized — proactive trigger + dimension candidates — 2026-06-11 (post-restructure queue)
+## Doc de-water pass — audit 2026-06-12 leftovers (M3–M6, L1–L3, L5, L7, L8) — 2026-06-12
 
-`audit` exists as an on-demand side-tool (orchestrator `## Audit`); the gap is the **proactive trigger** — the protocol should run the health-check itself (pre-ship of a release-grade version, or after N features), so accumulation and drift are caught without the Operator noticing. Acceptance test: the mechanism fires WITHOUT the Operator's vigilance.
+The fix-now half of the doc-quality audit shipped 4.12.0 (CHANGELOG header, adapter-README archaeology, enforcement-map slips, README shop window, two trivia). Remaining findings, one structural pass:
 
-Dimension candidates for the auditor sweep (salvaged from prior epics):
+- **Summary-restate creep (M3–M5):** the discovery-frameworks sentence still has two homes (the contract is the keeper; drop the `src/templates/product.md` copy — the README copy went in 4.12.0); the dial block and roles table are mirrored README↔brief↔PROTOCOL (shop-window docs compress and point, never mirror); `docs/contracts/product-foundation.md` restates the orchestrator's discovery procedure clause-for-clause and is already drifting — cut to guarantee-only.
+- **Contracts inventory mechanism internals (M6):** `cross-session-enforcement.md` enumerates merge-gate test cases; `disciplined-pipeline.md` restates stamp line-forms — point at the test, don't inventory it (the parity-count disease).
+- **Walls (L1, L2):** `src/templates/product.md` header blockquote ~170 words (a downstream Operator's first read); reviewer.md and architecture.md 100+-word bullets.
+- **Small (L3, L5, L7, L8):** "four old roles" archaeology in builder/reviewer intros (drop "old", point at the Folds column); registry fail-safe stated twice in-file; `PROTOCOL.md` ship-beat names `contracts.md` where this repo's home is `docs/contracts/`; INSTALL.md leftover verification-status sentence.
+- **Style rule (systemic):** ≈ one dash-clause per sentence in human-facing docs — add to the Reviewer's doc-quality floor item when rewriting it (L2), then it polices itself; apply per file on next touch, not as a big-bang rewrite.
+
+## `audit` — extra dimension candidates — 2026-06-11 (post-restructure queue; trigger shipped 4.12.0)
+
+The proactive trigger is in (orchestrator `## Audit`: offer after ~5 shipped features, state records the last run — 4.12.0). What remains of this item: dimension candidates to fold into auditor sweeps as the need shows (salvaged from prior epics):
 
 - **Single-source drift** — an enum/taxonomy/rule restated outside its one home and drifted (the per-diff Reviewer is blind to cross-file copies that pre-date the diff).
 - **Temporal-status conflation** — "planned / interim / temporary" in one doc vs "done / current" in another.
