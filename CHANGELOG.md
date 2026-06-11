@@ -13,6 +13,18 @@
 
 ---
 
+## [4.2.0] — 2026-06-11
+
+### Added
+
+- **`audit` side-tool realized.** `audit` was named in `PROTOCOL.md ## The loop` but had no home; it is now homed in `src/agents/orchestrator.md ## Audit` — a proactive, offered, on-demand whole-project health-check: run the whole quality suite (`node src/quality/run.mjs build`/`review`) plus a fresh independent auditor sweep over the whole tree (invariants, product `contracts/`, doc-quality across the whole surface, honesty labels, drift), then dispatch every finding to a fix or the backlog. It is the **"audit on top"** of a `solo`/`lite` batch. `[persona]`; its run-note is transient (no stored report). Inherited by every downstream.
+
+### Changed
+
+- This repo's own `profile` flipped to `solo` (faster iteration — the Orchestrator builds directly, lighter plans). The floor is unchanged: a separate fresh Reviewer/audit before ship, the honesty gates, the merge stamp, and the Operator merges all hold in every profile.
+
+---
+
 ## [4.1.0] — 2026-06-11
 
 ### Added

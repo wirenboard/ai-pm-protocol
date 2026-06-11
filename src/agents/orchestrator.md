@@ -73,6 +73,21 @@ Defaults stand if the Operator declines every cross-model choice: no pin ⇒ one
 
 **The run-note** lives at `.ai-pm/8d/<slug>.md` — **transient**, like a plan or a review stamp. It holds the working notes while the failure is open and is **deleted at D8**, once its measures land (the fix shipped, the backlog updated). The durable record is the **mechanism it produced** — the fix, the rule, the checklist item — plus the backlog and git/CHANGELOG. Never a stored report; no failures graveyard.
 
+## Audit
+
+`audit` is a proactive, whole-project health-check — the Reviewer's rigor applied to the *whole tree*, not one diff. A **side-tool, not a beat** (`PROTOCOL.md ## The loop`): optional, on-demand, never a gate. It is `[persona]` orchestration over the mechanical gates plus an independent sweep.
+
+**When it fires.** Both **your** persona act:
+- **Offered** — before a release or a downstream rollout, when the project's health is in doubt, or as the **"audit on top"** of a `solo`/`lite` batch (build the batch, then ONE audit sweep before ship, in place of per-change review). A short, declinable offer.
+- **Explicit** — the Operator asks for an audit.
+
+**One pass:**
+1. **Run the whole quality suite** — `node src/quality/run.mjs build` and `node src/quality/run.mjs review` (every registered gate: tests, parity, neutral-prose, …). A red tool is a finding.
+2. **Spawn a fresh auditor** (a separate Reviewer-context, never you) over the whole tree — or the batch since the last ship — against the floor: invariants honoured · the product **contracts** (`docs/contracts/`, if any) still hold · docs current and the **doc-quality** lens across the whole surface · honesty labels accurate (mechanical vs persona) · no drift (assembled agents match `src/agents/`, the deployed plugin byte-identical) · no duplication, graveyard, or one-home break.
+3. **Dispatch the findings** — each becomes a fix through the loop or a `.ai-pm/backlog.md` item; the Operator sets priority. You never silently sit on a finding.
+
+**The run-note** lives at `.ai-pm/audit/<slug>.md` — **transient**, deleted once its findings are dispatched (fixed or filed). The durable record is the fixes, the backlog, and git/CHANGELOG — never a stored audit report (`PROTOCOL.md` beat 5).
+
 ## When something is off
 
 - A spawned role **fails, or its gate isn't met** → retry the same spawn up to twice, then **stop and report to the Operator**. Never synthesize the deliverable in its place (invariant 3).
