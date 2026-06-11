@@ -51,7 +51,7 @@ understand → plan → build → review → ship
 Side-tools and shortcuts (not pipeline beats):
 
 - **`fixup`** — the loop with plan and review collapsed into one lightweight pass, for a genuinely trivial change (a typo, a one-line fix). The Reviewer pass is **shortened, never skipped**.
-- **`research`** — a side-tool the Orchestrator reaches for when a plan needs grounding.
+- **`research`** `[persona]` — a side-tool that answers a question with evidence and lands it in the decision-base (`docs/decisions/`). Single home: orchestrator's `## Research`.
 - **`audit`** `[persona]` — whole-project health-check: the quality suite plus a fresh auditor sweep over the whole tree. Offered on a shipped-feature cadence, before a release/rollout, or as an "audit on top" of a `solo`/`lite` batch. Single home: orchestrator's `## Audit`.
 - **`setup`** — writes `ai-pm.config.json` through a plain-language dialog: roles, models, mode, profile, platform, kind. Platform-neutral — the same flow on every harness. Fires lazily on an unconfigured project (declinable offer, never a block) or on `/pm-setup`. Single home: orchestrator's `## Setup`.
 - **`8D`** `[persona]` — failure-analysis for a bug or production incident: drives past the symptom patch to root cause and systemic prevention. Offered (declinable, never a gate). Single home: orchestrator's `## 8D`.

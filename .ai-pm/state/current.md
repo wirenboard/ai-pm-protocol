@@ -2,17 +2,16 @@
 
 > Resume pointer — READ FIRST, by this exact path. Deferred detail: `.ai-pm/backlog.md`. History: commits + CHANGELOG.
 
-**Status (2026-06-12).** `main` = `uni/main` = `2759412` (**4.11.0**). PRs #25–#34 merged. Branch clean.
+**Status (2026-06-12).** `main` = `uni/main` = `9e85b36` (**4.12.0**). PRs #25–#36 merged. Branch clean.
 
 ## What was just shipped
-- 4.10.2 (#32) — product brief truth-fix ([who] axis retracted from brief; honest floor; 2026 competition; success criteria)
-- 4.10.3 (#33) — README [who] matrix retracted (Operator decision); one-axis profile dial
-- 4.11.0 (#34) — merge-gate ask-on-unresolvable-topic (no silent pass); light-profile product-fit compensator in the Reviewer floor; INSTALL.md `## Upgrade`; README parity count retired
-- Backlog triaged 2026-06-12: done/stale-by-architecture entries removed, the rest re-stated as minimal-core touchpoints (this branch)
+- 4.11.0 (#34) — merge-gate ask-on-unresolvable-topic; light-profile product-fit compensator; INSTALL.md `## Upgrade`
+- 4.11.1 (#35) — backlog triaged to the minimal core (515 → ~150 lines)
+- 4.12.0 (#36) — proactive audit cadence (offer after ~5 features); doc-quality audit dispatched (fix-now half shipped, rest in backlog "Doc de-water pass"); product analysis fully covered (measured costs, rework formula, solo note)
 
 ## Up next
-Design-grade items (detail in `.ai-pm/backlog.md`):
-- `audit` realized — proactive trigger + dimension candidates (single-source drift, temporal conflation, whole-tree quality, instruction-file overreach)
+Detail in `.ai-pm/backlog.md`:
+- **Doc de-water pass** — the audit's backlog half (summary-restate creep, contract internals, walls, dash-density style rule) — nearest concrete work
 - `research` as a doing side-tool — artifacts in `docs/decisions/`, authorship fork to resolve
 - Stamp-authorship signal on OpenCode (merge-gate second half)
 - ad-md-editor rollout — first real downstream (run install.mjs from ITS session; boundary blocks it from here)

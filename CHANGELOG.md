@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.13.0] — 2026-06-12
+
+### Added
+
+- **`research` realized as a doing side-tool** — it was only named; now it has a procedure (orchestrator `## Research`): frame the question → route like building per the profile (`full` spawns the Builder's stack-researcher fold; `lite`/`solo` may research directly) → land a compact decision-base entry at `docs/decisions/<topic>.md` (the question, the answer, sourced evidence, the decision it grounds — never the search log) → relay in plain language. Retention: one file per topic, supersede-never-accumulate; standalone research is fixup-grade (shortened review, never skipped). Distinct from capability modules: research *does* work, a module shapes thinking.
+
+---
+
 ## [4.12.0] — 2026-06-12
 
 ### Added
