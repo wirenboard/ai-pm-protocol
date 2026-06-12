@@ -321,11 +321,11 @@ function reviewStampSatisfied(root, topic) {
 function fileNonEmpty(p) {
   try { return fs.statSync(p).size > 0; } catch { return false; }
 }
-// Is the project configured? True iff ai-dev.config.json exists at the project
-// root. Root-relative, fs-checked — the lazy-setup predicate reads only this
-// presence (it adds context, never executes), within invariant 2.
+// Is the project configured? True iff .ai-dev/config.json exists. Root-relative,
+// fs-checked — the lazy-setup predicate reads only this presence (it adds context,
+// never executes), within invariant 2.
 function projectConfigured(root) {
-  return fs.existsSync(path.join(path.resolve(root), "ai-dev.config.json"));
+  return fs.existsSync(path.join(path.resolve(root), ".ai-dev", "config.json"));
 }
 // Does the project have a FILLED product brief? False when docs/product.md is
 // absent OR still the install-landed template — the installer copies the
@@ -348,7 +348,7 @@ function productBriefFilled(root) {
   catch { return false; } // absent or unreadable ⇒ no brief
   return !BRIEF_TEMPLATE_MARKERS.some((m) => text.includes(m));
 }
-// The project's rigor profile (ai-dev.config.json `profile`). Defaults to "solo"
+// The project's rigor profile (.ai-dev/config.json `profile`). Defaults to "solo"
 // on absent / unreadable / malformed / unknown value — proportionality by default
 // (PROTOCOL.md `## Project config`), a deliberate Operator decision, not fail-strict.
 // Predicates that read the profile:
@@ -360,7 +360,7 @@ function productBriefFilled(root) {
 // Same presence/value read within invariant 2 as projectConfigured — never a write.
 function projectProfile(root) {
   try {
-    const cfg = JSON.parse(fs.readFileSync(path.join(path.resolve(root), "ai-dev.config.json"), "utf8"));
+    const cfg = JSON.parse(fs.readFileSync(path.join(path.resolve(root), ".ai-dev", "config.json"), "utf8"));
     if (cfg.profile === "full" || cfg.profile === "lite") return cfg.profile;
     if (cfg.profile === "yolo") return "yolo"; // only an explicit value enters the escape hatch
     return "solo"; // absent / unrecognised / malformed ⇒ solo (never yolo by default)
@@ -480,7 +480,7 @@ const PREDICATES = {
     return !!pat && new RegExp(pat, "i").test(input.prompt || "");
   },
   // Lazy-setup nudge: a work-request prompt (same change_verbs list — no second
-  // verb list) to a project with NO ai-dev.config.json. Reinforces the persona
+  // verb list) to a project with NO .ai-dev/config.json. Reinforces the persona
   // act, never forces it. False once the config is present (a configured project
   // gets the change-route-reminder instead).
   promptNeedsSetup(input, config) {

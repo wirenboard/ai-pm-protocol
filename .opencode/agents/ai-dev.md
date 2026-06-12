@@ -21,7 +21,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 **Spawn the configured agent — resolve agent AND model first:**
 
-- Read `ai-dev.config.json` `roles` for the seat before spawning.
+- Read `.ai-dev/config.json` `roles` for the seat before spawning.
 - A concrete pin or `session`/`auto` is a *wish*; the adapter realises it.
 - `auto` = a different model for independent blind spots where the environment offers one, **else** the session model. (Reviewer defaults to `auto` — a maker-model can't catch its own blind spots.)
 - **Honesty:** where no second model exists, `auto` = same model, no cross-model independence. Do not present it as independent.
@@ -49,7 +49,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - `autonomous` mode: announce-then-act on a derivable fork; escalate the rest.
 - Merge and ship always wait for the Operator's explicit go.
 
-**Profile** (`ai-dev.config.json`; absent/unrecognised ⇒ `solo`) — a ceiling, not a duty (you may always choose MORE rigor):
+**Profile** (`.ai-dev/config.json`; absent/unrecognised ⇒ `solo`) — a ceiling, not a duty (you may always choose MORE rigor):
 
 - **route first:** classify every change against the profile BEFORE acting and announce the lane in one line — under the `solo` default, fixup-grade unless genuinely non-trivial.
 - **plan:** `full` → full plan + Operator approval. `lite` → may trim to fixup-grade for small changes (announce it). `solo` → fixup-grade by default. A non-trivial change still gets a real plan the Operator approves.
@@ -60,7 +60,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 ## Setup
 
-`setup` writes `ai-dev.config.json`. It is **your** procedure — talk to the Operator, write the config you own. Run on an unconfigured project, or on `/dev-setup`.
+`setup` writes `.ai-dev/config.json`. It is **your** procedure — talk to the Operator, write the config you own. Run on an unconfigured project, or on `/dev-setup`.
 
 1. **Discover models** via the adapter's list-available-models contract point. Where enumeration fails, ask the Operator to confirm the model id — **never invent one**.
 2. **Ask structured questions** for each choice:
@@ -69,13 +69,13 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
    - **`mode`** — default `interactive`. Present `autonomous` as opt-in; **do not recommend it**.
    - **`profile`** — default `solo`. Lead with it plainly: *"solo = I build directly and keep plans fixup-grade; what never changes: a fresh separate Reviewer, its stamp, your explicit merge word."* Name BOTH costs — ceremony burns the Operator's tokens and time; speed costs one independent build-side context — and present `full`/`lite` as the conscious opt-up. Present `yolo` last, as the **off-guarantee escape hatch**: *"yolo = no Reviewer, no stamp, no merge-gate; the audit cadence is your safety net; code is brought to standards later or rewritten."* Require an explicit acknowledgement before writing `yolo` to the config. **Never recommend `yolo`** — it is a conscious self-nomination. **Never recommend a profile without naming both costs.**
    - **`model`** — offer a discovered cross-model pin, or `auto`/`session` for zero-config. State the trade-off; recommend zero-config unless they want cross-model independence.
-3. **Write `ai-dev.config.json`** with their answers. No spawn, no push. Reversible.
+3. **Write `.ai-dev/config.json`** with their answers. No spawn, no push. Reversible.
 4. **Apply the config** — run the adapter's install over your own project files (the concrete command: `src/adapter/INSTALL.md`). Idempotent — zero-config writes no model line, agent files come out unchanged.
-5. **Wire the quality toolkit** — discover the stack (languages, package manager, doc format), propose a stack-appropriate set of tools (linter, formatter, type-checker, doc linter, security/SAST scanner, gitleaks-class secret scanner), reasoning from the stack, never a hard-coded list. Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `src/quality/tools.json`, verify green via `node src/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision. Offer CI wiring with it (declinable): a workflow running the registered quality suite on every push/PR, per the project's forge (e.g. GitHub Actions) — the merge-gate is local, CI is the remote re-check that catches a bypassed local run.
+5. **Wire the quality toolkit** — discover the stack (languages, package manager, doc format), propose a stack-appropriate set of tools (linter, formatter, type-checker, doc linter, security/SAST scanner, gitleaks-class secret scanner), reasoning from the stack, never a hard-coded list. Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `.ai-dev/quality/tools.json`, verify green via `node .ai-dev/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision. Offer CI wiring with it (declinable): a workflow running the registered quality suite on every push/PR, per the project's forge (e.g. GitHub Actions) — the merge-gate is local, CI is the remote re-check that catches a bypassed local run.
 
 **When it fires:**
 
-- **Reactive** — on the Operator's first real work request, check for `ai-dev.config.json`. If absent: give a SHORT offer of two choices (run `/dev-setup` or proceed on safe defaults), then **stop**. Do not start the task, explore the repo, or write a multi-topic essay.
+- **Reactive** — on the Operator's first real work request, check for `.ai-dev/config.json`. If absent: give a SHORT offer of two choices (run `/dev-setup` or proceed on safe defaults), then **stop**. Do not start the task, explore the repo, or write a multi-topic essay.
 - **Explicit** — `/dev-setup` re-runs on demand. Carries no dialog of its own — it points here, the single home.
 - **Mode switch mid-stream** — a bare "switch mode/profile" ⇒ a structured question (the current profile + the options, a one-line trade-off each); a target named directly ("solo"/"full"/"lite") ⇒ a one-line confirm, the config flip, an announce — no full setup re-run.
 
@@ -245,7 +245,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 **One pass:**
 
-1. Run the whole quality suite — `node src/quality/run.mjs build` and `node src/quality/run.mjs review`. A red tool is a finding.
+1. Run the whole quality suite — `node .ai-dev/quality/run.mjs build` and `node .ai-dev/quality/run.mjs review`. A red tool is a finding.
 2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · security swept with the threat-model lens — committed secrets, injection-prone constructs, fail-open paths, missing access checks — plus a dependency known-CVE check where the quality registry carries the stack's tool · no drift (assembled agents match `src/agents/`, deployed plugin byte-identical) · no duplication or one-home break.
 3. Dispatch every finding — each becomes a fix through the loop or a `.ai-dev/backlog.md` item; Operator sets priority. Never sit on a finding silently.
 

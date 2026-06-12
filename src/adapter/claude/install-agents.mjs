@@ -5,7 +5,7 @@
 // frontmatter (src/adapter/claude/agents/<role>.fm) into a spawnable Claude agent file
 // (.claude/agents/<agentId>.md). Concatenation + module-compose, NOT a generator:
 // the neutral floor body is the single source, the modules add their deepening, the
-// .fm adds only Claude's frontmatter, and the agent id comes from ai-dev.config.json
+// .fm adds only Claude's frontmatter, and the agent id comes from .ai-dev/config.json
 // `roles` (its single home — name is injected, never duplicated in the .fm). The
 // module-compose logic is the ONE home shared with the OpenCode shim — never copied
 // here (mirrors how engine.mjs is shared by both deny shims). The orchestrator is
@@ -33,7 +33,7 @@ export function install(outDir, config) {
   const written = {};
   for (const role of SPAWNABLE) {
     const agentId = config.roles?.[role]?.agent;
-    if (!agentId) throw new Error(`ai-dev.config.json roles.${role}.agent is missing`);
+    if (!agentId) throw new Error(`.ai-dev/config.json roles.${role}.agent is missing`);
     const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "claude", "agents", `${role}.fm`), "utf8").trim();
     const floor = fs.readFileSync(path.join(ROOT, "src", "agents", `${role}.md`), "utf8").trimStart();
     const body = composeBody(ROOT, floor, role, registry, config);
@@ -46,13 +46,13 @@ export function install(outDir, config) {
   return written;
 }
 
-// Run only when invoked directly (not when imported by a test). Config path: the
-// project's own ai-dev.config.json by default; AI_DEV_CONFIG lets a test drive a
-// fixture without mutating the repo's real one.
+// Run only when invoked directly (not when imported by a test). Config path:
+// .ai-dev/config.json by default; AI_DEV_CONFIG lets a test drive a fixture
+// without mutating the repo's real one.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const configPath = process.env.AI_DEV_CONFIG
     ? path.resolve(process.env.AI_DEV_CONFIG)
-    : path.join(ROOT, "ai-dev.config.json");
+    : path.join(ROOT, ".ai-dev", "config.json");
   const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
   const outDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, ".claude", "agents");
   install(outDir, config);

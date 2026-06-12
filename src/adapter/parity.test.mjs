@@ -44,11 +44,13 @@ const STAMP = path.join(ROOT, ".ai-dev", "reviews", "x_review.md");  // the Revi
 // unconfigured ROOT that deny relaxes — only an explicit `full` keeps it. The
 // default-resolution itself is pinned in rigor-profile.test.mjs.
 const FULL = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-parity-full-"));
-fs.writeFileSync(path.join(FULL, "ai-dev.config.json"), '{ "profile": "full" }');
+fs.mkdirSync(path.join(FULL, ".ai-dev"), { recursive: true });
+fs.writeFileSync(path.join(FULL, ".ai-dev", "config.json"), '{ "profile": "full" }');
 
 // A third root with an EXPLICIT `yolo` profile — turns the merge-gate OFF.
 const YOLO = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-parity-yolo-"));
-fs.writeFileSync(path.join(YOLO, "ai-dev.config.json"), '{ "profile": "yolo" }');
+fs.mkdirSync(path.join(YOLO, ".ai-dev"), { recursive: true });
+fs.writeFileSync(path.join(YOLO, ".ai-dev", "config.json"), '{ "profile": "yolo" }');
 const ARCH = path.join(FULL, "docs", "architecture.md");           // canonical doc (not orch-writable)
 
 // Each case carries BOTH platforms' native payloads + the expected ENGINE verdict
@@ -215,7 +217,7 @@ if (divergences.length) {
 console.log("CONFIG-SENSITIVE INJECT (no config ⇒ setup; configured no-brief ⇒ discovery; configured+brief ⇒ route):");
 const changePrompt = { hook_event_name: "UserPromptSubmit", prompt: "please implement the new export feature" };
 
-// Stage 1 — unconfigured root: a fresh tmp dir with NO ai-dev.config.json.
+// Stage 1 — unconfigured root: a fresh tmp dir with NO .ai-dev/config.json.
 const NOCFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-nocfg-"));
 check("no-config-run-setup:fires", claudeDecide(changePrompt, NOCFG, config).ruleId, "no-config-run-setup");
 fs.rmSync(NOCFG, { recursive: true, force: true });
@@ -223,7 +225,8 @@ fs.rmSync(NOCFG, { recursive: true, force: true });
 // Stage 2 — configured but NO docs/product.md ⇒ promptNeedsSetup is false but
 // promptNeedsProductBrief is true ⇒ the discovery nudge fires.
 const CFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-cfg-"));
-fs.writeFileSync(path.join(CFG, "ai-dev.config.json"), "{}");
+fs.mkdirSync(path.join(CFG, ".ai-dev"), { recursive: true });
+fs.writeFileSync(path.join(CFG, ".ai-dev", "config.json"), "{}");
 check("no-product-brief-discover:fires-when-configured-no-brief", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
 
 // Stage 2b — configured AND docs/product.md present but STILL THE TEMPLATE ⇒ the

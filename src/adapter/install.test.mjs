@@ -57,20 +57,17 @@ function testPlatform(platform, assertWiring) {
     check(`[${platform}] node_modules NOT vendored`, !fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "node_modules")));
 
     // 2. core laid down
-    check(`[${platform}] PROTOCOL.md laid down`, fs.existsSync(path.join(target, "PROTOCOL.md")));
-    check(`[${platform}] role agents laid down`, fs.existsSync(path.join(target, "src", "agents", "orchestrator.md")));
-    check(`[${platform}] quality runner laid down`, fs.existsSync(path.join(target, "src", "quality", "run.mjs")));
+    check(`[${platform}] PROTOCOL.md laid down at .ai-dev/PROTOCOL.md`, fs.existsSync(path.join(target, ".ai-dev", "PROTOCOL.md")));
+    check(`[${platform}] PROTOCOL.md NOT at project root`, !fs.existsSync(path.join(target, "PROTOCOL.md")));
+    check(`[${platform}] quality runner laid down at .ai-dev/quality/`, fs.existsSync(path.join(target, ".ai-dev", "quality", "run.mjs")));
+    check(`[${platform}] src/agents/ NOT at project root`, !fs.existsSync(path.join(target, "src", "agents")));
+    check(`[${platform}] docs/ NOT created by installer`, !fs.existsSync(path.join(target, "docs")));
     // the quality SHAPE, not this repo's own tool rows
-    const tools = JSON.parse(fs.readFileSync(path.join(target, "src", "quality", "tools.json"), "utf8"));
+    const tools = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "quality", "tools.json"), "utf8"));
     check(`[${platform}] quality registry is the template shape, not this repo's rows`, tools.tools.length === 1 && tools.tools[0].id === "example-lint");
 
-    // doc templates landed
-    check(`[${platform}] contracts template landed`, fs.existsSync(path.join(target, "docs", "contracts.md")));
-    check(`[${platform}] architecture template landed`, fs.existsSync(path.join(target, "docs", "architecture.md")));
-    check(`[${platform}] product brief template landed`, fs.existsSync(path.join(target, "docs", "product.md")));
-
-    // 3. config present
-    check(`[${platform}] config written with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, "ai-dev.config.json"), "utf8")).platform === platform);
+    // 3. config present inside .ai-dev/
+    check(`[${platform}] config written at .ai-dev/config.json with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8")).platform === platform);
 
     // 3b. .gitignore excludes the local-only transients (state + raw feedback reports)
     const gi = fs.existsSync(path.join(target, ".gitignore")) ? fs.readFileSync(path.join(target, ".gitignore"), "utf8") : "";
@@ -103,9 +100,9 @@ testPlatform("claude", (target) => {
   // idempotence of the hook merge: exactly one PreToolUse + one UserPromptSubmit group
   check("[claude] hook merge did not duplicate (one PreToolUse group)", settings.hooks.PreToolUse.length === 1);
   const claudeMd = fs.readFileSync(path.join(target, "CLAUDE.md"), "utf8");
-  check("[claude] CLAUDE.md imports the constitution", claudeMd.includes("@PROTOCOL.md") && claudeMd.includes("@src/agents/orchestrator.md"));
+  check("[claude] CLAUDE.md imports the constitution", claudeMd.includes("@.ai-dev/PROTOCOL.md") && claudeMd.includes("@.ai-dev/tooling/src/agents/orchestrator.md"));
   // import appears exactly once (idempotent line append)
-  check("[claude] constitution import appears once", claudeMd.split("@PROTOCOL.md").length - 1 === 1);
+  check("[claude] constitution import appears once", claudeMd.split("@.ai-dev/PROTOCOL.md").length - 1 === 1);
 });
 
 testPlatform("opencode", (target) => {
@@ -116,10 +113,10 @@ testPlatform("opencode", (target) => {
   // downstream layout: the plugin keeps the tooling-submodule import path (adapter vendored there)
   check("[opencode] plugin uses the downstream (tooling-submodule) adapter path", fs.readFileSync(plugin, "utf8").includes(".ai-dev/tooling/src/adapter"));
   const oc = JSON.parse(fs.readFileSync(path.join(target, ".opencode", "opencode.json"), "utf8"));
-  check("[opencode] opencode.json wires the orchestrator primary + constitution", oc.default_agent === "ai-dev" && oc.instructions.includes("PROTOCOL.md"));
+  check("[opencode] opencode.json wires the orchestrator primary + constitution", oc.default_agent === "ai-dev" && oc.instructions.includes(".ai-dev/PROTOCOL.md"));
   check("[opencode] generic build/plan primaries disabled", oc.agent.build.disable === true && oc.agent.plan.disable === true);
   const agentsMd = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
-  check("[opencode] AGENTS.md imports the constitution once", agentsMd.split("@PROTOCOL.md").length - 1 === 1);
+  check("[opencode] AGENTS.md imports the constitution once", agentsMd.split("@.ai-dev/PROTOCOL.md").length - 1 === 1);
 });
 
 // ── platform resolution: a clear error when unresolvable, validation of the flag ─
@@ -148,7 +145,7 @@ testPlatform("opencode", (target) => {
     fs.writeFileSync(path.join(target, ".ai-pm", "state", "current.md"), "# old state\n");
     fs.writeFileSync(path.join(target, "WORKFLOW.md"), "# old workflow\n");
     install(target, "claude");
-    check("[f4] installer succeeds over old-protocol artifacts", fs.existsSync(path.join(target, "PROTOCOL.md")));
+    check("[f4] installer succeeds over old-protocol artifacts", fs.existsSync(path.join(target, ".ai-dev", "PROTOCOL.md")));
     check("[f4] old artifacts not deleted by installer", fs.existsSync(path.join(target, "WORKFLOW.md")) && fs.existsSync(path.join(target, ".ai-pm", "state", "current.md")));
     check("[f4] new structure laid down alongside old", fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "engine.mjs")));
     check("[f4] .gitignore excludes .ai-dev/state/ after migration install", fs.readFileSync(path.join(target, ".gitignore"), "utf8").includes(".ai-dev/state/"));
@@ -173,4 +170,4 @@ testPlatform("opencode", (target) => {
 
 console.log(`\nINSTALL: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
-console.log("PASS — installer vendors the adapter, wires the platform, lands the templates, and is idempotent");
+console.log("PASS — installer vendors the adapter, wires the platform, and is idempotent");

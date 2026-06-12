@@ -12,6 +12,30 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.8.0] — 2026-06-12
+
+Stealth layout — protocol artifacts moved into `.ai-dev/`; downstream project root is now clean.
+
+### Changed
+
+- Installer no longer places `PROTOCOL.md`, `src/agents/`, `src/modules/`, `src/quality/`, or `docs/` templates in the downstream project root — all protocol internals live under `.ai-dev/`.
+- Config moved from `ai-dev.config.json` (project root) to `.ai-dev/config.json`.
+- Quality runner lands at `.ai-dev/quality/run.mjs` in downstream projects.
+- Doc templates (`product.md`, `architecture.md`, etc.) are no longer laid down at install time; they are created on demand by product discovery and doc bootstrap from `.ai-dev/tooling/src/templates/`.
+- `CLAUDE.md` imports updated: `@.ai-dev/PROTOCOL.md` and `@.ai-dev/tooling/src/agents/orchestrator.md`.
+- OpenCode wiring: `instructions: [".ai-dev/PROTOCOL.md"]`; `AGENTS.md`: `@.ai-dev/PROTOCOL.md`.
+- `deny-rules.json` allow-list and inject intent text updated to new config path.
+- `INSTALL.md` gains a `### MINOR 5.8.0` migration section for existing downstreams.
+
+### Migration (existing downstreams on 5.0–5.7)
+
+```sh
+mv ai-dev.config.json .ai-dev/config.json
+npx github:aadegtyarev/ai-dev-protocol . --platform <platform>
+```
+
+---
+
 ## [5.7.1] — 2026-06-12
 
 Pre-downstream audit dispatch (Opus auditor, WARN) + the missed-audit-offer 8D prevention.

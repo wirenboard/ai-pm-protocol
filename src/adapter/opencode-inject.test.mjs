@@ -69,7 +69,8 @@ check("no-config + non-change ⇒ no part pushed", partsNoCfgPlain.length === 1)
 // no docs/product.md at all, the discovery nudge) — still an inject, so a part is
 // still pushed. WHICH nudge is pinned by cases 5b/5c below via the part text.
 const tmpConfigured = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-oc-cfg-"));
-fs.writeFileSync(path.join(tmpConfigured, "ai-dev.config.json"), "{}");
+fs.mkdirSync(path.join(tmpConfigured, ".ai-dev"), { recursive: true });
+fs.writeFileSync(path.join(tmpConfigured, ".ai-dev", "config.json"), "{}");
 const hooksCfg = await hooksFor(tmpConfigured);
 const partsCfgChange = await runChat(hooksCfg, CHANGE_MSG);
 check("configured + change-verb ⇒ a part is pushed", partsCfgChange.length === 2);
@@ -84,7 +85,8 @@ check("configured + non-change ⇒ no part pushed", partsCfgPlain.length === 1);
 // nudge — before the fix, presence alone silenced it on every real install. The
 // REAL template file drives the case; the part text pins WHICH nudge was applied.
 const tmpTemplate = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-oc-tmpl-"));
-fs.writeFileSync(path.join(tmpTemplate, "ai-dev.config.json"), "{}");
+fs.mkdirSync(path.join(tmpTemplate, ".ai-dev"), { recursive: true });
+fs.writeFileSync(path.join(tmpTemplate, ".ai-dev", "config.json"), "{}");
 fs.mkdirSync(path.join(tmpTemplate, "docs"));
 fs.writeFileSync(path.join(tmpTemplate, "docs", "product.md"), fs.readFileSync(new URL("../templates/product.md", import.meta.url)));
 const hooksTmpl = await hooksFor(tmpTemplate);
@@ -95,7 +97,8 @@ check("the template-brief part is the discovery nudge", tmplPart !== null && tmp
 
 // ── 5c. configured + FILLED brief ⇒ the route-reminder part is pushed ──────────
 const tmpFilled = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-oc-filled-"));
-fs.writeFileSync(path.join(tmpFilled, "ai-dev.config.json"), "{}");
+fs.mkdirSync(path.join(tmpFilled, ".ai-dev"), { recursive: true });
+fs.writeFileSync(path.join(tmpFilled, ".ai-dev", "config.json"), "{}");
 fs.mkdirSync(path.join(tmpFilled, "docs"));
 fs.writeFileSync(path.join(tmpFilled, "docs", "product.md"), "# Product brief\n\nA real, filled brief.\n");
 const hooksFilled = await hooksFor(tmpFilled);

@@ -11,7 +11,7 @@ The **core** is prose and data an engineer reads without knowing the harness:
 - the constitution (`PROTOCOL.md`);
 - three role agents (`src/agents/`);
 - this file;
-- the project config (`ai-dev.config.json`);
+- the project config (`.ai-dev/config.json`);
 - the quality layer (`src/quality/`);
 - the shared enforcement data (`src/adapter/deny-rules.json`, `src/adapter/tool-map.json`).
 
@@ -77,7 +77,7 @@ Two wrinkles are the only non-obvious part, and both are **platform-capability**
  PROTOCOL.md          the constitution      engine.mjs       shared predicates
  src/agents/*.md      role procedures       deny-rules.json  shared rules (data)
  docs/architecture.md this file             tool-map.json    neutral noun → tool
- ai-dev.config.json    roles·mode·platform   <platform>/      the shim (normalise
+ .ai-dev/config.json   roles·mode·platform   <platform>/      the shim (normalise
  src/quality/         the project's checks                   + map verdict) + glue
 ```
 
@@ -107,7 +107,7 @@ The pieces and their single homes:
                          `<!-- ai-dev:modules -->` where modules compose in.
  src/adapter/modules.mjs     the SHARED assembler — read by BOTH install-agents shims
                          (one home, like engine.mjs for the deny shims).
- ai-dev.config.json       `modules` — the project's per-module toggle values.
+ .ai-dev/config.json      `modules` — the project's per-module toggle values.
 ```
 
 **Assembly.** Each install-agents shim builds a role file as `frontmatter + composeBody(floor)`. `composeBody` replaces the role's single marker with the enabled modules' fragments for that role, in **registry order** (stable, declared — not config order). A floor body with no marker takes no modules and is returned unchanged.
@@ -136,10 +136,10 @@ The catalog of shipped modules — each module's purpose, toggle shape, per-kind
 - **Add a platform.** `src/adapter/<platform>/` — the input-normaliser, the verdict-mapper, the install glue — plus a `tool-map.json` column and a parity-fixture pair. Nothing else.
 - **Add a capability module.** A row in `src/modules/registry.json` (toggle · per-kind defaults · targets · fragment pointers) + its `src/modules/<id>/<role>.md` fragments + a `<!-- ai-dev:modules -->` marker in each targeted role's floor body. Both install-agents shims compose it for free — they share the one assembler (`src/adapter/modules.mjs`). No core edit.
 - **Add a deny rule.** A row in `deny-rules.json` (intent · class · act · predicate); if the check is new, a predicate in `engine.mjs`; a case in `parity.test.mjs`. Both shims pick it up for free — they read the one list.
-- **Swap a role.** Bind a different agent in `ai-dev.config.json` `roles` — any agent that honours the seat's contract (`PROTOCOL.md` `## Role contracts`), zero core edit.
+- **Swap a role.** Bind a different agent in `.ai-dev/config.json` `roles` — any agent that honours the seat's contract (`PROTOCOL.md` `## Role contracts`), zero core edit.
 - **Add a quality tool.** Drop its config in `src/quality/` and a row in `src/quality/tools.json` (what it checks · the command · the beat). No core edit (`PROTOCOL.md` `## Quality tools`).
 - **List available models.** A neutral contract point setup uses to put real model choices before the Operator (the orchestrator's `## Setup`). Each adapter realises it: Claude returns its known model pair, OpenCode discovers the environment's models — realisation noted in `tool-map.json` `models`, no environment-specific id in the core.
-- **Apply config / re-assemble agents.** The neutral act setup runs after writing `ai-dev.config.json` to make the choices take effect — re-assemble the role agents (and commands) from the just-written config (the orchestrator's `## Setup` step 4). Each adapter realises it as its install command, recorded in `tool-map.json` `apply-config`; no platform mechanism in this prose.
-- **Detect missing config / invoke setup.** Two neutral acts that fire the setup procedure. *Detect* — a work request to a project with no `ai-dev.config.json` runs setup first (the orchestrator's `## Setup` "when it fires", a `[persona]` act), reinforced by the `no-config-run-setup` inject row in `deny-rules.json` (it nudges, never blocks). *Invoke* — an explicit per-platform setup command runs it on demand; its assembly + deploy is the install step (`src/adapter/INSTALL.md`). Both point at the one home — the procedure is never restated.
+- **Apply config / re-assemble agents.** The neutral act setup runs after writing `.ai-dev/config.json` to make the choices take effect — re-assemble the role agents (and commands) from the just-written config (the orchestrator's `## Setup` step 4). Each adapter realises it as its install command, recorded in `tool-map.json` `apply-config`; no platform mechanism in this prose.
+- **Detect missing config / invoke setup.** Two neutral acts that fire the setup procedure. *Detect* — a work request to a project with no `.ai-dev/config.json` runs setup first (the orchestrator's `## Setup` "when it fires", a `[persona]` act), reinforced by the `no-config-run-setup` inject row in `deny-rules.json` (it nudges, never blocks). *Invoke* — an explicit per-platform setup command runs it on demand; its assembly + deploy is the install step (`src/adapter/INSTALL.md`). Both point at the one home — the procedure is never restated.
 - **Detect missing product brief / offer discovery.** Missing-config's sibling, one stage later in the onboarding ladder: a change request to a configured project whose `docs/product.md` is absent or still the unfilled install template (the install lands the template, so presence alone proves nothing) offers product discovery first (the orchestrator's `## Product discovery`, a `[persona]` act), reinforced by the `no-product-brief-discover` inject row in `deny-rules.json` (it nudges, never blocks). The three injects are registry-ordered — no-config → no-brief → route-reminder — so the nudge advances as the project fills in (`src/adapter/parity.test.mjs` block 1b). The brief is the single home of who/why (`docs/contracts/product-foundation.md`).
 - **Explore a codebase (read-only sub-agent).** The neutral act `explore-a-codebase` in `tool-map.json` resolves per platform: Claude Code's native `Explore` subagent type (harness-enforced read-only, fast); on OpenCode a `task` with explicit read-only framing — there is no built-in Explore primitive, so the model infers the constraint from the instruction ("find and read, do not write"). The harness-level guarantee is weaker on OpenCode: `[persona]` on that platform.

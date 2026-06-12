@@ -1,4 +1,4 @@
-// Configurable rigor — the engine respects ai-dev.config.json `profile`.
+// Configurable rigor — the engine respects .ai-dev/config.json `profile`.
 //
 // The ONE mechanical change the profile makes: it relaxes the
 // orchestrator-content deny (the orchestrator may author source/doc paths), and
@@ -12,8 +12,8 @@
 //   3. the FLOOR never relaxes — under `solo`, the tooling-submodule, out-of-root,
 //      truncating-write, and merge-gate denies ALL still fire.
 //
-// The profile is read at evaluate-time from input.root, so each case writes an
-// ai-dev.config.json into a temp root and asserts the engine verdict directly.
+// The profile is read at evaluate-time from input.root, so each case writes a
+// .ai-dev/config.json into a temp root and asserts the engine verdict directly.
 //
 // Run: node src/adapter/rigor-profile.test.mjs
 
@@ -32,7 +32,7 @@ function check(name, got, want) {
   else { fail++; console.log(`  ✗ ${name}: got ${got}, want ${want}`); }
 }
 
-// A fresh temp root whose ai-dev.config.json carries `profileLine` verbatim
+// A fresh temp root whose .ai-dev/config.json carries `profileLine` verbatim
 // (a JSON fragment, or "" for the absent case, or garbage for the malformed case).
 function rootWith(profileLine) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-rigor-"));
@@ -41,7 +41,8 @@ function rootWith(profileLine) {
   if (profileLine === "MALFORMED") body = "{ this is not json";
   else if (profileLine === null) body = "{}"; // configured, profile key ABSENT
   else body = JSON.stringify({ profile: profileLine });
-  fs.writeFileSync(path.join(root, "ai-dev.config.json"), body);
+  fs.mkdirSync(path.join(root, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".ai-dev", "config.json"), body);
   return root;
 }
 

@@ -3,14 +3,14 @@
 // project" contract point (PROTOCOL.md `## Core and adapter`,
 // docs/contracts/one-command-install.md). It automates exactly the manual
 // procedure src/adapter/INSTALL.md documents: vendor the shared adapter, lay down
-// the core + doc templates, and wire the active platform — idempotently.
+// the core, and wire the active platform — idempotently.
 //
 // This is ADAPTER-LAYER code: platform-specific by nature, so concrete platform
 // names (claude / opencode, .claude/, .opencode/) are allowed here. The neutral
 // core (PROTOCOL.md, the role bodies, docs/architecture.md prose) names none of them.
 //
 // Usage:  node src/adapter/install.mjs <target-dir> [--platform claude|opencode]
-//   platform: the --platform flag, else the target's ai-dev.config.json `platform`,
+//   platform: the --platform flag, else the target's .ai-dev/config.json `platform`,
 //   else a clear error (never a silent guess).
 //
 // Security (threat-model): the two untrusted inputs are the target path and the
@@ -98,34 +98,30 @@ function vendorTooling(target) {
   copyTree(path.join(SOURCE, "src", "modules"), path.join(tooling, "modules"));
 }
 
-// 2. Lay down the core the downstream loads + the quality-layer shape + the doc
-// templates (templates only where absent — never clobber a real doc).
+// 2. Lay down the core the downstream loads + the quality-layer shape.
+// agents and modules are already vendored under .ai-dev/tooling/ (step 1);
+// the downstream does NOT get a bare src/agents/ or src/modules/ at its root.
+// Doc templates are NOT copied to the project root — they are accessible via
+// .ai-dev/tooling/src/templates/ when product discovery / doc bootstrap run.
 function layDownCore(target) {
-  copyFile(path.join(SOURCE, "PROTOCOL.md"), path.join(target, "PROTOCOL.md"));
-  copyTree(path.join(SOURCE, "src", "agents"), path.join(target, "src", "agents"));
-  copyTree(path.join(SOURCE, "src", "modules"), path.join(target, "src", "modules"));
+  // The constitution lives inside .ai-dev/ — not at the project root.
+  copyFile(path.join(SOURCE, "PROTOCOL.md"), path.join(target, ".ai-dev", "PROTOCOL.md"));
 
-  // The quality layer: ship the SHAPE (the registry format + the runner + its
-  // README), NOT this repo's own tool rows. tools.json is laid down only where
-  // absent so a project's own registry is never clobbered; the runner is the
-  // shared mechanism and is overwritten.
-  copyFile(path.join(SOURCE, "src", "quality", "run.mjs"), path.join(target, "src", "quality", "run.mjs"));
-  copyFile(path.join(SOURCE, "src", "quality", "README.md"), path.join(target, "src", "quality", "README.md"));
-  copyIfAbsent(path.join(SOURCE, "src", "templates", "tools.json"), path.join(target, "src", "quality", "tools.json"));
-
-  // Doc templates → the target's docs/, only where the project has no such doc.
-  copyIfAbsent(path.join(SOURCE, "src", "templates", "product.md"), path.join(target, "docs", "product.md"));
-  copyIfAbsent(path.join(SOURCE, "src", "templates", "contracts.md"), path.join(target, "docs", "contracts.md"));
-  copyIfAbsent(path.join(SOURCE, "src", "templates", "architecture.md"), path.join(target, "docs", "architecture.md"));
-  copyIfAbsent(path.join(SOURCE, "src", "templates", "README.md"), path.join(target, "docs", "README.md"));
+  // The quality layer: ship the SHAPE (the registry format + the runner),
+  // NOT this repo's own tool rows. tools.json is laid down only where absent
+  // so a project's own registry is never clobbered; the runner is the shared
+  // mechanism and is overwritten.
+  copyFile(path.join(SOURCE, "src", "quality", "run.mjs"), path.join(target, ".ai-dev", "quality", "run.mjs"));
+  copyIfAbsent(path.join(SOURCE, "src", "templates", "tools.json"), path.join(target, ".ai-dev", "quality", "tools.json"));
 }
 
 // 3. Ensure a config exists so the agent assembly has its `roles` bindings. A real
 // project configures via /dev-setup; pre-setup we write a minimal default carrying
 // the resolved platform + the standard seat ids. Written ONLY where absent — a
-// re-run never overwrites the Operator's configured file.
+// re-run never overwrites the Operator's configured file. Config lives inside
+// .ai-dev/ — not at the project root.
 function ensureConfig(target, platform) {
-  const dest = path.join(target, "ai-dev.config.json");
+  const dest = path.join(target, ".ai-dev", "config.json");
   if (fs.existsSync(dest)) return;
   const config = {
     mode: "interactive",
@@ -154,7 +150,7 @@ function ensureTransientsGitignore(target) {
 // merge the deny hooks into .claude/settings.json (keyed so a re-run never
 // duplicates), and import the constitution + the orchestrator procedure via CLAUDE.md.
 function wireClaude(target) {
-  const cfg = { AI_DEV_CONFIG: path.join(target, "ai-dev.config.json") };
+  const cfg = { AI_DEV_CONFIG: path.join(target, ".ai-dev", "config.json") };
   runScript(path.join("src", "adapter", "claude", "install-agents.mjs"), [path.join(target, ".claude", "agents")], target, cfg);
   runScript(path.join("src", "adapter", "claude", "install-commands.mjs"), [path.join(target, ".claude", "commands")], target, cfg);
 
@@ -173,8 +169,8 @@ function wireClaude(target) {
   // Load instructions: the orchestrator session loads the constitution + its
   // procedure via CLAUDE.md imports — appended only if not already present.
   const claudeMd = path.join(target, "CLAUDE.md");
-  ensureLine(claudeMd, "@PROTOCOL.md");
-  ensureLine(claudeMd, "@src/agents/orchestrator.md");
+  ensureLine(claudeMd, "@.ai-dev/PROTOCOL.md");
+  ensureLine(claudeMd, "@.ai-dev/tooling/src/agents/orchestrator.md");
 }
 
 // Merge a hooks fragment into an existing hooks object without duplicating an
@@ -203,7 +199,7 @@ function mergeHooks(existing, fragment) {
 // plugin (downstream layout, since the adapter is now vendored under .ai-dev/tooling/),
 // merge opencode.json keys, and import the constitution via AGENTS.md.
 function wireOpenCode(target) {
-  const cfg = { AI_DEV_CONFIG: path.join(target, "ai-dev.config.json") };
+  const cfg = { AI_DEV_CONFIG: path.join(target, ".ai-dev", "config.json") };
   runScript(path.join("src", "adapter", "opencode", "install-agents.mjs"), [path.join(target, ".opencode", "agents")], target, cfg);
   runScript(path.join("src", "adapter", "opencode", "install-commands.mjs"), [path.join(target, ".opencode", "commands")], target, cfg);
   // The plugin generator resolves the adapter layout from the TARGET root (passed via
@@ -221,7 +217,7 @@ function wireOpenCode(target) {
   const ocPath = path.join(target, ".opencode", "opencode.json");
   const oc = fs.existsSync(ocPath) ? JSON.parse(fs.readFileSync(ocPath, "utf8")) : {};
   oc.default_agent = "ai-dev";
-  oc.instructions = Array.from(new Set([...(oc.instructions || []), "PROTOCOL.md"]));
+  oc.instructions = Array.from(new Set([...(oc.instructions || []), ".ai-dev/PROTOCOL.md"]));
   // The protocol plugin is the SOLE project-boundary guard; OpenCode's native
   // permission dial is set to full-speed inside the project. Division of labor:
   // plugin = the mechanical boundary (deny outside-root reads/writes/finds);
@@ -236,7 +232,7 @@ function wireOpenCode(target) {
   fs.writeFileSync(ocPath, JSON.stringify(oc, null, 2) + "\n");
 
   // AGENTS.md is OpenCode's always-on surface — import the constitution idempotently.
-  ensureLine(path.join(target, "AGENTS.md"), "@PROTOCOL.md");
+  ensureLine(path.join(target, "AGENTS.md"), "@.ai-dev/PROTOCOL.md");
 }
 
 // ── orchestration ────────────────────────────────────────────────────────────
@@ -250,14 +246,14 @@ function resolvePlatform(target, flag) {
     }
     return flag;
   }
-  const cfgPath = path.join(target, "ai-dev.config.json");
+  const cfgPath = path.join(target, ".ai-dev", "config.json");
   if (fs.existsSync(cfgPath)) {
     const platform = JSON.parse(fs.readFileSync(cfgPath, "utf8")).platform;
     if (PLATFORMS.includes(platform)) return platform;
   }
   throw new Error(
     `cannot resolve the platform — pass --platform ${PLATFORMS.join("|")} ` +
-      `or set "platform" in ${path.join(target, "ai-dev.config.json")}`,
+      `or set "platform" in ${path.join(target, ".ai-dev", "config.json")}`,
   );
 }
 
@@ -296,7 +292,8 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
     const rel = path.relative(process.cwd(), path.resolve(targetDir)) || ".";
     console.log(`\nInstalled the ai-dev protocol into ${rel} (platform: ${platform}).`);
     console.log("  • vendored the shared adapter into .ai-dev/tooling/");
-    console.log("  • laid down PROTOCOL.md, the role agents, the quality shape, the modules, the doc templates");
+    console.log("  • laid down .ai-dev/PROTOCOL.md and .ai-dev/quality/ (the quality-runner shape)");
+    console.log("  • wrote .ai-dev/config.json (minimal default — run /dev-setup to configure)");
     console.log(`  • wired ${platform} (deny hooks, agents, the /dev-setup command${platform === "opencode" ? ", the plugin" : ""})`);
     console.log("\nNext: run /dev-setup to configure roles, models, mode, and the module kit.");
   } catch (e) {

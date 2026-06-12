@@ -11,11 +11,11 @@ node src/adapter/install.mjs <target-dir> [--platform claude|opencode]
 `install.mjs` does the **whole** procedure below in one idempotent pass — vendor the adapter, lay down the core + doc templates, wire the active platform — so a downstream is adopted by one command, not a hand-followed checklist. It:
 
 - **vendors** the shared adapter and the neutral bodies the assembler reads (`src/agents/`, `src/modules/`) into `<target>/.ai-dev/tooling/src/` (the convention below);
-- **lays down** the core (`PROTOCOL.md`, the role agents, the `src/modules/` fragments, the quality-registry SHAPE — the template rows, not this repo's own) and the doc templates (`product.md`, `contracts.md`, `architecture.md`, `README.md`) into the target's `docs/`, **only where the target has no such doc** (never clobbers a real one);
+- **lays down** the core (`.ai-dev/PROTOCOL.md`, the quality-runner shape at `.ai-dev/quality/`) into the target's `.ai-dev/` directory. Doc templates are NOT copied to the target root — they live in `.ai-dev/tooling/src/templates/` and are laid down on demand when product discovery / doc bootstrap run;
 - **wires** the active platform by running its assembly scripts (the `## Claude Code` / `## OpenCode` sections) against the target and merging its load-instruction surface (the `CLAUDE.md` import + `.claude/settings.json` hooks for Claude; `opencode.json` + `AGENTS.md` + the generated plugin for OpenCode), de-duped so a re-run never duplicates a hook or an import;
-- writes a minimal default `ai-dev.config.json` where absent (a real project then runs `/dev-setup`), and prints a summary + the next step.
+- writes a minimal default `.ai-dev/config.json` where absent (a real project then runs `/dev-setup`), and prints a summary + the next step.
 
-Platform resolution: the `--platform` flag, else the target's `ai-dev.config.json` `platform`, else a clear error — never a silent guess. The guarantee it realises is `docs/contracts/one-command-install.md`; the test is `src/adapter/install.test.mjs`.
+Platform resolution: the `--platform` flag, else the target's `.ai-dev/config.json` `platform`, else a clear error — never a silent guess. The guarantee it realises is `docs/contracts/one-command-install.md`; the test is `src/adapter/install.test.mjs`.
 
 The rest of this file is the **underlying detail** — what each wiring step does, the single home for each. The installer automates exactly these; reach for a manual step only to understand or to wire one platform by hand.
 
@@ -26,7 +26,7 @@ Convention used below: the adapter ships inside the protocol's tooling submodule
 A downstream upgrades by bumping the protocol source and re-running the same one command:
 
 1. Bump the protocol to the new version (the tooling-submodule bump, or re-fetch the release).
-2. Re-run the one command above — its idempotence and never-clobber guarantees are exactly why a re-run is the whole upgrade: the project's `ai-dev.config.json` and real docs survive.
+2. Re-run the one command above — its idempotence and never-clobber guarantees are exactly why a re-run is the whole upgrade: the project's `.ai-dev/config.json` and real docs survive.
 3. Read the CHANGELOG between the two versions. A **MAJOR** bump is the one that may break the wiring (a renamed agent or command, a changed config key) — its entry names what to rename or re-run. MINOR/PATCH need nothing beyond the re-run.
 
 ### MAJOR 5.0.0 — ai-pm → ai-dev rename
@@ -42,6 +42,10 @@ After the re-run, rename these in your project by hand (the installer cannot ren
 7. **CLAUDE.md / AGENTS.md**: no changes needed (they import by protocol file names, not agent IDs).
 8. **Re-run** `node .ai-dev/tooling/src/adapter/install.mjs . --platform <your-platform>` one more time to regenerate assembled agents with the new IDs.
 9. **Search your codebase** for any remaining `/pm-setup`, `.ai-pm`, `ai-pm.config`, `pm-builder`, `pm-reviewer` references and update them.
+
+### MINOR 5.8.0 — config moved into .ai-dev/
+
+From 5.8.0 onward the installer writes the project config at `.ai-dev/config.json` (inside the `.ai-dev/` directory). The old location `ai-dev.config.json` at the project root is no longer read. After the re-run, move the file by hand: `mv ai-dev.config.json .ai-dev/config.json`. A re-run of the installer will create a minimal default at the new location if the file is absent, but the old file at the project root is NOT read automatically and must be moved (or removed) manually to avoid confusion.
 
 ### Old-protocol migration
 
@@ -80,8 +84,8 @@ Every guard reads the one shared engine.
 `CLAUDE.md` imports the constitution and the orchestrator's procedure — that is all the running session loads as the protocol (plus the project's own kind + language lines):
 
 ```text
-@PROTOCOL.md
-@src/agents/orchestrator.md
+@.ai-dev/PROTOCOL.md
+@.ai-dev/tooling/src/agents/orchestrator.md
 ```
 
 The orchestrator **is** the session; the Builder and Reviewer are spawned (below).
@@ -91,11 +95,11 @@ The orchestrator **is** the session; the Builder and Reviewer are spawned (below
 **`node src/adapter/claude/install-agents.mjs`** assembles the two spawnable roles into Claude agent files:
 
 - It reads each neutral role body (`src/agents/<role>.md`) + the Claude frontmatter (`src/adapter/claude/agents/<role>.fm`) and writes `.claude/agents/<agentId>.md`.
-- The **agent id comes from `ai-dev.config.json` `roles`** (so `builder` → `dev-builder`, `reviewer` → `dev-reviewer`).
+- The **agent id comes from `.ai-dev/config.json` `roles`** (so `builder` → `dev-builder`, `reviewer` → `dev-reviewer`).
 - It is concatenation, not a generator — the neutral body stays the single source.
 - Re-run it whenever a role body, its frontmatter, or the config binding changes.
 
-The orchestrator spawns each by that id, on the model `ai-dev.config.json` resolves.
+The orchestrator spawns each by that id, on the model `.ai-dev/config.json` resolves.
 
 ### Command (the explicit setup trigger)
 
@@ -135,7 +139,7 @@ UNLIKE Claude (where the orchestrator IS the session, held by `CLAUDE.md`), an O
 ```json
 {
   "default_agent": "ai-dev",
-  "instructions": ["PROTOCOL.md"],
+  "instructions": [".ai-dev/PROTOCOL.md"],
   "permission": { "edit": "allow", "bash": "allow", "webfetch": "allow", "question": "allow" },
   "agent": { "build": { "disable": true }, "plan": { "disable": true } }
 }
@@ -149,7 +153,7 @@ The generic `build`/`plan` primaries are disabled so none can fill the orchestra
 
 `node src/adapter/opencode/install-agents.mjs` assembles the three role agents into `.opencode/agents/`: each neutral role body (`src/agents/<role>.md`) + its OpenCode frontmatter (`src/adapter/opencode/agents/<role>.fm`) → `.opencode/agents/<agentId>.md`.
 
-- The agent id comes from `ai-dev.config.json` `roles`: orchestrator → `ai-dev` with `mode: primary`; builder → `dev-builder`, reviewer → `dev-reviewer` with `mode: subagent`.
+- The agent id comes from `.ai-dev/config.json` `roles`: orchestrator → `ai-dev` with `mode: primary`; builder → `dev-builder`, reviewer → `dev-reviewer` with `mode: subagent`.
 - On OpenCode the filename *is* the agent id, so the frontmatter carries no `name` key.
 - Concatenation, not a generator — the neutral body stays the single source, shared with the Claude adapter.
 - Re-run it whenever a role body, its frontmatter, or the config binding changes.

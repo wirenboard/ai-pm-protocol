@@ -16,7 +16,7 @@ The whole protocol is one short constitution you can read in one sitting: **[`PR
 
 **You decide product, not code.** The orchestrator leads with user impact, frames decisions as trade-offs, asks one question at a time, and never shows you code.
 
-**Speed↔quality dial.** One axis, set per project (`profile` in `ai-dev.config.json`): `lite`/`solo` verify a hypothesis fast — lighter plan ceremony, the orchestrator may build directly; `full` trades speed for no-rewrites. The floor — working code or docs, an independent review by a fresh Reviewer, your explicit go on every merge — holds at every dial position on the guarantee profiles (`full`/`lite`/`solo`); the dial caps ceremony, never rigor. A fourth value, `yolo`, is an explicit off-guarantee escape hatch: no Reviewer, no merge-gate, maximum speed — your explicit merge word is the one floor that remains.
+**Speed↔quality dial.** One axis, set per project (`profile` in `.ai-dev/config.json`): `lite`/`solo` verify a hypothesis fast — lighter plan ceremony, the orchestrator may build directly; `full` trades speed for no-rewrites. The floor — working code or docs, an independent review by a fresh Reviewer, your explicit go on every merge — holds at every dial position on the guarantee profiles (`full`/`lite`/`solo`); the dial caps ceremony, never rigor. A fourth value, `yolo`, is an explicit off-guarantee escape hatch: no Reviewer, no merge-gate, maximum speed — your explicit merge word is the one floor that remains.
 
 ## Platform-neutral by design
 
@@ -38,7 +38,7 @@ It vendors the adapter, lays down the core and doc templates (only where the tar
 
 ## Configure
 
-Once wired, run **`/dev-setup`** to configure the project — platform, mode, roles, models, and **kind** (`code` / `docs` / `mixed`). Kind sets the artifact consumer: machine-executed code, human-read documentation, or both — a protocol or process-doc project is `mixed`; a pure docs project is `docs`. It is a plain-language dialog: it discovers the models your environment actually offers and asks you to pick, then writes `ai-dev.config.json`. You need not run it by hand — on a fresh, unconfigured project the orchestrator offers setup on your first work request (an offer you may decline to proceed on safe defaults).
+Once wired, run **`/dev-setup`** to configure the project — platform, mode, roles, models, and **kind** (`code` / `docs` / `mixed`). Kind sets the artifact consumer: machine-executed code, human-read documentation, or both — a protocol or process-doc project is `mixed`; a pure docs project is `docs`. It is a plain-language dialog: it discovers the models your environment actually offers and asks you to pick, then writes `.ai-dev/config.json`. You need not run it by hand — on a fresh, unconfigured project the orchestrator offers setup on your first work request (an offer you may decline to proceed on safe defaults).
 
 Re-run it anytime — the `/dev-setup` command, or just ask to reconfigure — when you change models or switch platform. It reads the current config, shows what changes, rewrites it, and re-applies so the new models take effect. The full procedure lives in **[`src/agents/orchestrator.md`](src/agents/orchestrator.md)** `## Setup` (`PROTOCOL.md` `## The loop` frames it; `src/adapter/INSTALL.md` has the per-platform command).
 
@@ -66,7 +66,7 @@ src/               the machinery:
   modules/           the optional capability modules (e.g. threat-model)
   quality/           what "green" means here (the parity + neutral-prose checks)
   templates/         the lean scaffold a downstream project starts from
-ai-dev.config.json  the project's choices — roles, mode, platform, kind
+.ai-dev/config.json  the project's choices — roles, mode, platform, kind
 ```
 
 ## Contributing
@@ -84,7 +84,3 @@ Ideas this protocol gratefully borrowed and reshaped:
 ## License
 
 MIT — free use, including commercial. Modifications may stay closed; there is no copyleft.
-
-## History
-
-Previously published at [wirenboard/ai-pm-protocol](https://github.com/wirenboard/ai-pm-protocol). Same author, no other contributors — moved to a personal account and renamed to reflect what the protocol actually is.
