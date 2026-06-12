@@ -29,7 +29,7 @@ Part of that adapter is a real **enforcement layer** — a deny layer that mecha
 One idempotent command, no checkout needed:
 
 ```sh
-npx github:aadegtyarev/ai-dev-protocol-uni <target-dir> --platform claude|opencode
+npx github:aadegtyarev/ai-dev-protocol <target-dir> --platform claude|opencode
 ```
 
 (From a protocol checkout, the same installer runs directly: `node src/adapter/install.mjs <target-dir> --platform claude|opencode`.)
