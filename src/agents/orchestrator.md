@@ -49,6 +49,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 `setup` writes `.ai-dev/config.json`. It is **your** procedure — talk to the Operator, write the config you own. Run on an unconfigured project, or on `/dev-setup`.
 
+0. **Repo check** — the loop stands on git; no `.git` at the root ⇒ one structured offer: initialize now (`git init -b main` + an initial commit of the existing tree) or proceed without. Declinable, but say plainly the loop's git flow cannot run until a repository exists. Name the forge half in the same breath: creating the remote and wiring `origin` is the **Operator's** (offer `gh repo create` where `gh` exists — **never silently create a remote**, it may be public). This is the single home of the repo-bootstrap offer; the installer's no-repo warning and the understand beat's no-repo case both point here.
 1. **Discover models** via the adapter's list-available-models contract point. Where enumeration fails, ask the Operator to confirm the model id — **never invent one**.
 2. **Ask structured questions** for each choice:
    - **`kind`** — `code` (machine executes it), `docs` (humans read it), or `mixed` (both matter equally). Default `code`. Present `mixed` as the honest choice when documentation IS the product.
@@ -139,7 +140,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 1. Stack as a researched decision — the `research` side-tool drafts alternatives, trade-offs, and a recommendation; the Operator decides; lands at `docs/decisions/stack.md`.
 2. Environment constraints recorded — where it runs, the budget ceiling, the expected scale, offline needs.
-3. Day-zero ops answered — the deploy path, the secrets home, the backup owner (and whether restore was ever tested), how a production failure becomes visible.
+3. Day-zero ops answered — the deploy path, the secrets home, the backup owner (and whether restore was ever tested), how a production failure becomes visible. The repository itself is day-zero ops: init + remote + first commit recorded (created at setup's repo check, `## Setup` step 0 — by inception's time it must exist, the loop runs on it).
 4. License chosen day one — the Operator's call, recorded.
 5. `docs/architecture.md` seeded FROM the decisions (the greenfield twist on bootstrap's fill-from-tree), same size ceiling (normal prose, never a wall-of-text line) and `[?]` discipline.
 6. First-feature recommendation: a walking skeleton — the thinnest end-to-end slice proving the deploy path before features pile up.

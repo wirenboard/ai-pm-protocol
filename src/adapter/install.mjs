@@ -276,6 +276,15 @@ export function install(targetDir, platformFlag) {
   return platform;
 }
 
+// Does the target carry a git repository? The protocol's loop stands on git
+// (branches, commits, the merge-gate reads pushes) — the CLI warns when none
+// exists. A check, never an init: a one-shot script must not mutate the
+// target's VCS state; the interactive offer lives in setup's repo check
+// (src/agents/orchestrator.md `## Setup` step 0). Exported for the test.
+export function hasGitRepo(targetDir) {
+  return fs.existsSync(path.join(path.resolve(targetDir), ".git"));
+}
+
 // CLI entry — only when invoked directly, not when imported by the test. argv[1] is
 // realpath'd because an npm bin shim invokes this file through a symlink, while the
 // loaded module URL is the real path — without it the npx run would silently no-op.
@@ -298,6 +307,11 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
     console.log("  • laid down .ai-dev/PROTOCOL.md and .ai-dev/quality/ (the quality-runner shape)");
     console.log("  • wrote .ai-dev/config.json (minimal default — run /dev-setup to configure)");
     console.log(`  • wired ${platform} (deny hooks, agents, the /dev-setup command${platform === "opencode" ? ", the plugin" : ""})`);
+    if (!hasGitRepo(targetDir)) {
+      console.log("\n⚠ No git repository found — the protocol's loop (branches, reviews, merges) requires one.");
+      console.log("  Initialize before the first feature:  git init -b main && git add . && git commit -m 'init'");
+      console.log("  (setup will also offer this; the remote — gh repo create / git remote add — is yours.)");
+    }
     console.log("\nNext: run /dev-setup to configure roles, models, mode, and the module kit.");
   } catch (e) {
     console.error(`install failed: ${e.message}`);

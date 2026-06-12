@@ -14,6 +14,7 @@ node src/adapter/install.mjs <target-dir> [--platform claude|opencode]
 - **lays down** the core (`.ai-dev/PROTOCOL.md`, the quality-runner shape at `.ai-dev/quality/`) into the target's `.ai-dev/` directory. Doc templates are NOT copied to the target root — they live in `.ai-dev/tooling/src/templates/` and are laid down on demand when product discovery / doc bootstrap run;
 - **wires** the active platform by running its assembly scripts (the `## Claude Code` / `## OpenCode` sections) against the target and merging its load-instruction surface (the `CLAUDE.md` import + `.claude/settings.json` hooks for Claude; `opencode.json` + `AGENTS.md` + the generated plugin for OpenCode), de-duped so a re-run never duplicates a hook or an import;
 - writes a minimal default `.ai-dev/config.json` where absent (a real project then runs `/dev-setup`), and prints a summary + the next step.
+- **warns when the target has no git repository** (the loop — branches, reviews, the merge-gate — runs on git). A warning, never a block or an auto-`git init`: the interactive init offer is setup's repo check (`src/agents/orchestrator.md` `## Setup` step 0, the single home).
 
 Platform resolution: the `--platform` flag, else the target's `.ai-dev/config.json` `platform`, else a clear error — never a silent guess. The guarantee it realises is `docs/contracts/one-command-install.md`; the test is `src/adapter/install.test.mjs`.
 

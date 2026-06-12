@@ -12,6 +12,25 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.9.1] — 2026-06-13
+
+Git-init gap — the protocol's missing foundation step.
+
+### Added
+
+- `install.mjs` exports `hasGitRepo(targetDir)`; the CLI prints a prominent warning (never a block) when the target has no `.git` repository — names the suggested init command and points to setup's interactive offer.
+- `install.test.mjs` — two new tests for `hasGitRepo` (repo-less and `.git`-present fixtures).
+- `orchestrator.md ## Setup` gains **step 0** (the repo check): no `.git` ⇒ one structured offer to init or proceed; forge half named; this is the single home of the repo-bootstrap offer.
+- `INSTALL.md` documents the new warning and its non-blocking intent.
+
+### Changed
+
+- `PROTOCOL.md` understand beat: one clause — no repository at all ⇒ offer the repo bootstrap first (setup's step 0).
+- `orchestrator.md ## Project inception` day-zero ops: the repository itself is day-zero ops; by inception's time it must exist (cross-reference to step 0).
+- `.opencode/agents/ai-dev.md` reassembled to match.
+
+---
+
 ## [5.9.0] — 2026-06-13
 
 Parallel feature work — worktree-per-feature design + minimal enablement.

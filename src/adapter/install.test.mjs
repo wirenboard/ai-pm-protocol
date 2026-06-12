@@ -7,7 +7,7 @@
 //
 // Run: node src/adapter/install.test.mjs
 
-import { install } from "./install.mjs";
+import { install, hasGitRepo } from "./install.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -164,6 +164,19 @@ testPlatform("opencode", (target) => {
     fs.writeFileSync(realDoc, "# the project's REAL architecture — keep me\n");
     install(target, "claude");
     check("[clobber] an existing real doc is never overwritten", fs.readFileSync(realDoc, "utf8").includes("keep me"));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+
+// ── hasGitRepo — the CLI's no-repo warning predicate ─────────────────────────
+{
+  const target = freshTarget("gitcheck");
+  try {
+    check("[git] repo-less target detected", hasGitRepo(target) === false);
+    fs.mkdirSync(path.join(target, ".git"), { recursive: true });
+    check("[git] .git presence detected", hasGitRepo(target) === true);
   } finally {
     fs.rmSync(target, { recursive: true, force: true });
   }
