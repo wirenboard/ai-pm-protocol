@@ -249,10 +249,18 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 **One pass:**
 
 1. Run the whole quality suite — `node .ai-dev/quality/run.mjs build` and `node .ai-dev/quality/run.mjs review`. A red tool is a finding.
-2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · security swept with the threat-model lens — committed secrets, injection-prone constructs, fail-open paths, missing access checks — plus a dependency known-CVE check where the quality registry carries the stack's tool · no drift — the byte-level half is mechanical (step 1 runs the registry's drift rows; the class rule: `docs/architecture.md`), so the auditor's residual is **completeness**: every committed generated artifact has a drift-guard row, and the CI workflow still invokes the quality runner wholesale (a re-listed hand-picked tool subset is a finding) · **verification coverage** — the registered quality suite checked against the actual stack: a GUI stack with no UI-automation row, or a runnable artifact with no test row, is a finding naming the concrete tools to wire · no duplication or one-home break.
+2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · security swept with the threat-model lens — committed secrets, injection-prone constructs, fail-open paths, missing access checks — plus a dependency known-CVE check where the quality registry carries the stack's tool · no drift — the byte-level half is mechanical (step 1 runs the registry's drift rows; the class rule: `docs/architecture.md`), so the auditor's residual is **completeness**: every committed generated artifact has a drift-guard row, and the CI workflow still invokes the quality runner wholesale (a re-listed hand-picked tool subset is a finding) · **verification coverage** — the registered quality suite checked against the actual stack: a GUI stack with no UI-automation row, or a runnable artifact with no test row, is a finding naming the concrete tools to wire · **version skew** — the installed stamp (`.ai-dev/VERSION`) vs the tooling's own (`.ai-dev/tooling/VERSION`; compare via a script or child-process read — the tooling dir is agent-read-denied): a mismatch is a tooling bump without an installer re-run ⇒ point at `## Upgrade` · no duplication or one-home break.
 3. Dispatch every finding — each becomes a fix through the loop or a `.ai-dev/backlog.md` item; Operator sets priority. Never sit on a finding silently.
 
 **Run-note** at `.ai-dev/audit/<slug>.md` — transient, deleted once findings are dispatched.
+
+## Upgrade
+
+`upgrade` executes the protocol's per-version migration notes after a tooling bump. The mechanical half is the installer's: it stamps `.ai-dev/VERSION` on every run and, on a version change, writes the transient marker `.ai-dev/UPGRADING.md` and lays the notes at `.ai-dev/upgrades.md`. Noticing, offering, executing, and deleting are `[persona]`. Side-tool, not a beat.
+
+**When it fires:** on the understand beat when `.ai-dev/UPGRADING.md` exists ⇒ a short declinable offer ("protocol upgraded X → Y — run the migration check?"); declined ⇒ the marker stays and the offer re-fires next session. Explicit on the Operator's ask.
+
+**One pass:** read the marker + the `(old, new]` sections of `.ai-dev/upgrades.md`; execute the applicable notes through the normal loop — a migration is a feature (fixup-grade for a mechanical rename, the full loop where docs need redrafting); nothing applicable ⇒ say so. Delete the marker **LAST**, after the migration ships; record the upgrade in the state pointer.
 
 ## Downstream feedback
 

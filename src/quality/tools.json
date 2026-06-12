@@ -67,7 +67,7 @@
     },
     {
       "id": "install",
-      "checks": "the unified installer — installs into a temp target inside the root, vendors the adapter, wires both platforms (hooks/agents/commands/plugin), lands the doc templates and the quality SHAPE (not this repo's rows), resolves the platform (flag/config/error), never clobbers a real doc, and a second run is byte-identical (idempotent)",
+      "checks": "the unified installer — installs into a temp target inside the root, vendors the adapter self-sufficiently (the vendored installer can re-run), wires both platforms (hooks/agents/commands/plugin), stamps .ai-dev/VERSION + writes the UPGRADING marker on a version change, lays the migration notes + the inactive-platform breadcrumb, replaces stale ai-dev hook groups, resolves the platform (flag/config/error), never clobbers a real doc or file, and a second run is byte-identical (idempotent)",
       "config": null,
       "run": "node src/adapter/install.test.mjs",
       "beat": "build",

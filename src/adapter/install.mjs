@@ -39,8 +39,11 @@ const PLATFORMS = ["claude", "opencode"];
 // Recursively copy a directory tree, OVERWRITING files (so a re-run converges to
 // the same bytes — idempotent). node:fs cpSync does this in one call; the explicit
 // recursive form keeps the behaviour obvious and lets us skip node_modules / dot-git
-// noise that must never be vendored.
+// noise that must never be vendored. Identity guard: when the vendored installer
+// re-runs from .ai-dev/tooling/ (the upgrade path), SOURCE and the vendor target
+// coincide — copying a tree onto itself must be a no-op, never a truncation.
 function copyTree(src, dest) {
+  if (path.resolve(src) === path.resolve(dest)) return;
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     if (entry.name === "node_modules" || entry.name === ".git") continue;
@@ -51,8 +54,10 @@ function copyTree(src, dest) {
   }
 }
 
-// Copy a single file, overwriting (idempotent — same bytes on a re-run).
+// Copy a single file, overwriting (idempotent — same bytes on a re-run). Same
+// identity guard as copyTree (the vendored self-re-run case).
 function copyFile(src, dest) {
+  if (path.resolve(src) === path.resolve(dest)) return;
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
 }
@@ -85,17 +90,79 @@ function runScript(scriptRelPath, args, target, env) {
   });
 }
 
+// ── version stamp + upgrade detection (docs/decisions/upgrade-migration.md) ──
+
+// The installing protocol's own version: this repo's package.json when running from
+// the repo / the npx package; the vendored stamp (.ai-dev/tooling/VERSION, written by
+// vendorTooling) when the vendored installer re-runs from a downstream's tooling dir.
+function resolveSourceVersion() {
+  const pkg = path.join(SOURCE, "package.json");
+  if (fs.existsSync(pkg)) return JSON.parse(fs.readFileSync(pkg, "utf8")).version;
+  const vendored = path.join(SOURCE, "VERSION");
+  if (fs.existsSync(vendored)) return fs.readFileSync(vendored, "utf8").trim();
+  throw new Error("cannot resolve the protocol version — neither package.json nor VERSION sits beside the installer's source root");
+}
+
+// The target's previously installed version, read BEFORE any write: the stamp where
+// one exists; "pre-5.10" for an existing .ai-dev/ tree that predates the stamp
+// (every version before the stamp shipped); null for a fresh install (no upgrade).
+function readPriorVersion(target) {
+  const stamp = path.join(target, ".ai-dev", "VERSION");
+  if (fs.existsSync(stamp)) return fs.readFileSync(stamp, "utf8").trim();
+  if (fs.existsSync(path.join(target, ".ai-dev"))) return "pre-5.10";
+  return null;
+}
+
+// Stamp .ai-dev/VERSION on every run (outside the agent-read-denied tooling dir, so
+// the session can read it). On a detected version CHANGE additionally write the
+// transient handoff marker .ai-dev/UPGRADING.md and print the restart notice — an
+// installer cannot restart a session; the print is the whole ask. The marker is the
+// session's to consume and delete (orchestrator `## Upgrade`); a same-version re-run
+// never touches it, so idempotence holds.
+function stampVersion(target, version, prior) {
+  fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(target, ".ai-dev", "VERSION"), version + "\n");
+  // An unconsumed marker from an earlier bump keeps its ORIGIN: the migration range
+  // must start at the last version whose notes actually RAN, not at the last
+  // stamped (installed-but-unmigrated) one — chained re-runs must not eat notes.
+  const markerPath = path.join(target, ".ai-dev", "UPGRADING.md");
+  if (prior && fs.existsSync(markerPath)) {
+    const origin = fs.readFileSync(markerPath, "utf8").match(/Upgraded (\S+) → /);
+    if (origin) prior = origin[1];
+  }
+  if (!prior || prior === version) return false;
+  const date = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(
+    markerPath,
+    `# Protocol upgrade pending\n\nUpgraded ${prior} → ${version} on ${date}.\n` +
+      `Next session: read the \`(${prior}, ${version}]\` sections of \`.ai-dev/upgrades.md\` and run the upgrade check ` +
+      "(the orchestrator's `## Upgrade`); the check deletes this marker last.\n",
+  );
+  console.log(`\n⚠ Protocol upgraded ${prior} → ${version} — RESTART YOUR SESSION.`);
+  console.log("  The next session will offer the migration check (.ai-dev/UPGRADING.md → .ai-dev/upgrades.md).");
+  return true;
+}
+
 // ── steps ──────────────────────────────────────────────────────────────────
 
 // 1. Vendor the shared adapter AND the neutral bodies the assembler reads, into the
 // target's tooling location. The vendored install-*.mjs self-locate their ROOT as
 // .ai-dev/tooling/ (three dirs up from the script), and read src/agents, src/modules,
 // src/adapter from there — so all three must sit under .ai-dev/tooling/src/.
-function vendorTooling(target) {
-  const tooling = path.join(target, ".ai-dev", "tooling", "src");
+// Also vendored: everything the vendored installer ITSELF reads on the upgrade
+// re-run (PROTOCOL.md, src/quality/, src/templates/ — layDownCore's sources) plus
+// its own VERSION (resolveSourceVersion's vendored branch + the audit's skew check)
+// — without these the documented upgrade command ENOENTs.
+function vendorTooling(target, version) {
+  const toolingRoot = path.join(target, ".ai-dev", "tooling");
+  const tooling = path.join(toolingRoot, "src");
   copyTree(path.join(SOURCE, "src", "adapter"), path.join(tooling, "adapter"));
   copyTree(path.join(SOURCE, "src", "agents"), path.join(tooling, "agents"));
   copyTree(path.join(SOURCE, "src", "modules"), path.join(tooling, "modules"));
+  copyTree(path.join(SOURCE, "src", "quality"), path.join(tooling, "quality"));
+  copyTree(path.join(SOURCE, "src", "templates"), path.join(tooling, "templates"));
+  copyFile(path.join(SOURCE, "PROTOCOL.md"), path.join(toolingRoot, "PROTOCOL.md"));
+  fs.writeFileSync(path.join(toolingRoot, "VERSION"), version + "\n");
 }
 
 // 2. Lay down the core the downstream loads + the quality-layer shape.
@@ -113,6 +180,10 @@ function layDownCore(target) {
   // mechanism and is overwritten.
   copyFile(path.join(SOURCE, "src", "quality", "run.mjs"), path.join(target, ".ai-dev", "quality", "run.mjs"));
   copyIfAbsent(path.join(SOURCE, "src", "templates", "tools.json"), path.join(target, ".ai-dev", "quality", "tools.json"));
+
+  // The per-version migration notes, readable by the session (the tooling dir is
+  // agent-read-denied). Overwritten every run — it is always the NEW version's copy.
+  copyFile(path.join(SOURCE, "src", "adapter", "upgrades.md"), path.join(target, ".ai-dev", "upgrades.md"));
 }
 
 // 3. Ensure a config exists so the agent assembly has its `roles` bindings. A real
@@ -170,32 +241,87 @@ function wireClaude(target) {
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
 
   // Load instructions: the orchestrator session loads the constitution + its
-  // procedure via CLAUDE.md imports — appended only if not already present.
+  // procedure via CLAUDE.md imports — appended only if not already present. A
+  // breadcrumb left from when this platform was inactive is replaced by this
+  // full wiring.
   const claudeMd = path.join(target, "CLAUDE.md");
+  stripBreadcrumbFile(claudeMd);
   ensureLine(claudeMd, "@.ai-dev/PROTOCOL.md");
   ensureLine(claudeMd, "@.ai-dev/tooling/src/agents/orchestrator.md");
 }
 
-// Merge a hooks fragment into an existing hooks object without duplicating an
-// already-present command — the idempotence guarantee for the deny wiring. Each
-// event (PreToolUse / UserPromptSubmit) is an array of matcher-groups; we add a
-// fragment group only when no existing group already carries the same command.
+// A hook group is OURS when any of its commands targets the protocol shim. The
+// marker is the shim's stable path tail — it survives a vendor-location change
+// (.ai-pm/tooling/ → .ai-dev/tooling/) where an exact-command compare would not.
+const HOOK_MARKER = "adapter/claude/shim.mjs";
+
+// Merge a hooks fragment into an existing hooks object: foreign groups are kept
+// untouched; every group recognised as ours (HOOK_MARKER) is REPLACED by the
+// fragment's current group. Replace-not-append is both the idempotence guarantee
+// (a re-run converges to the same bytes) and the prune: a stale ai-dev group whose
+// command changed no longer accumulates beside the new one.
 function mergeHooks(existing, fragment) {
   const merged = { ...existing };
   for (const [event, groups] of Object.entries(fragment)) {
-    const current = Array.isArray(merged[event]) ? [...merged[event]] : [];
-    const seenCommands = new Set(
-      current.flatMap((g) => (g.hooks || []).map((h) => h.command)),
+    const foreign = (Array.isArray(merged[event]) ? merged[event] : []).filter(
+      (g) => !(g.hooks || []).some((h) => typeof h.command === "string" && h.command.includes(HOOK_MARKER)),
     );
-    for (const group of groups) {
-      const cmds = (group.hooks || []).map((h) => h.command);
-      if (cmds.some((c) => seenCommands.has(c))) continue; // already wired
-      current.push(group);
-      for (const c of cmds) seenCommands.add(c);
-    }
-    merged[event] = current;
+    merged[event] = [...foreign, ...groups];
   }
   return merged;
+}
+
+// ── cross-platform breadcrumb (backlog: downstream field report 2026-06-13) ──
+// The INACTIVE platform always gets a minimal load-surface: a session opened on the
+// unwired platform otherwise starts with zero protocol surface and cannot even know
+// what it is missing (the platform-switch offer is prose that never loads there).
+// The block is marker-delimited so a re-run REPLACES it (never duplicates, never
+// clobbers the file's real content) and the active wiring can strip it.
+
+const BREADCRUMB_OPEN = "<!-- ai-dev:breadcrumb -->";
+const BREADCRUMB_CLOSE = "<!-- /ai-dev:breadcrumb -->";
+
+// Remove a previously written breadcrumb block from a text, leaving the real
+// content (normalised to one trailing newline) — the strip half of replace.
+function stripBreadcrumb(text) {
+  const start = text.indexOf(BREADCRUMB_OPEN);
+  if (start < 0) return text;
+  const close = text.indexOf(BREADCRUMB_CLOSE);
+  const end = close < 0 ? text.length : close + BREADCRUMB_CLOSE.length;
+  const kept = text.slice(0, start) + text.slice(end).replace(/^\n+/, "");
+  return kept.replace(/\n+$/, "\n").replace(/^\n$/, "");
+}
+
+// Strip the breadcrumb from a file in place — called by the active platform's
+// wiring: when a platform becomes active, its full wiring REPLACES the breadcrumb.
+function stripBreadcrumbFile(file) {
+  if (!fs.existsSync(file)) return;
+  const existing = fs.readFileSync(file, "utf8");
+  const kept = stripBreadcrumb(existing);
+  if (kept !== existing) fs.writeFileSync(file, kept);
+}
+
+// Write (replace) the breadcrumb on the inactive platform's load surface. Skipped
+// when that surface already carries the real protocol import (a prior platform
+// switch left both wirings live) — a "not wired" claim there would be false.
+function writeInactiveBreadcrumb(target, activePlatform) {
+  const inactive = activePlatform === "claude" ? "opencode" : "claude";
+  const file = path.join(target, inactive === "claude" ? "CLAUDE.md" : "AGENTS.md");
+  const existing = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
+  const kept = stripBreadcrumb(existing);
+  if (kept.split("\n").some((l) => l.trim() === "@.ai-dev/PROTOCOL.md")) {
+    if (kept !== existing) fs.writeFileSync(file, kept);
+    return;
+  }
+  const harness = inactive === "claude" ? "Claude Code" : "OpenCode";
+  const block = [
+    BREADCRUMB_OPEN,
+    `This project runs the **ai-dev protocol**; its active platform is **${activePlatform}** — this ${harness} session has no protocol wiring yet.`,
+    `Run \`node .ai-dev/tooling/src/adapter/install.mjs . --platform ${inactive}\` to wire ${harness}, then offer the Operator the platform switch (\`.ai-dev/tooling/src/agents/orchestrator.md\` \`## Setup\`, "Platform switch").`,
+    BREADCRUMB_CLOSE,
+  ].join("\n");
+  const sep = kept ? (kept.endsWith("\n") ? "\n" : "\n\n") : "";
+  fs.writeFileSync(file, kept + sep + block + "\n");
 }
 
 // 5b. Wire OpenCode: assemble the three agents + the setup command + generate the
@@ -234,8 +360,11 @@ function wireOpenCode(target) {
   fs.mkdirSync(path.dirname(ocPath), { recursive: true });
   fs.writeFileSync(ocPath, JSON.stringify(oc, null, 2) + "\n");
 
-  // AGENTS.md is OpenCode's always-on surface — import the constitution idempotently.
-  ensureLine(path.join(target, "AGENTS.md"), "@.ai-dev/PROTOCOL.md");
+  // AGENTS.md is OpenCode's always-on surface — import the constitution idempotently
+  // (replacing any breadcrumb left from when this platform was inactive).
+  const agentsMd = path.join(target, "AGENTS.md");
+  stripBreadcrumbFile(agentsMd);
+  ensureLine(agentsMd, "@.ai-dev/PROTOCOL.md");
 }
 
 // ── orchestration ────────────────────────────────────────────────────────────
@@ -265,13 +394,17 @@ function resolvePlatform(target, flag) {
 export function install(targetDir, platformFlag) {
   const target = path.resolve(targetDir);
   const platform = resolvePlatform(target, platformFlag);
+  const version = resolveSourceVersion();
+  const prior = readPriorVersion(target); // BEFORE any write creates .ai-dev/
 
-  vendorTooling(target);
+  vendorTooling(target, version);
   layDownCore(target);
   ensureConfig(target, platform);
   ensureTransientsGitignore(target);
   if (platform === "claude") wireClaude(target);
   else wireOpenCode(target);
+  writeInactiveBreadcrumb(target, platform);
+  stampVersion(target, version, prior);
 
   return platform;
 }
@@ -303,10 +436,11 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
     const platform = install(targetDir, platformFlag);
     const rel = path.relative(process.cwd(), path.resolve(targetDir)) || ".";
     console.log(`\nInstalled the ai-dev protocol into ${rel} (platform: ${platform}).`);
-    console.log("  • vendored the shared adapter into .ai-dev/tooling/");
-    console.log("  • laid down .ai-dev/PROTOCOL.md and .ai-dev/quality/ (the quality-runner shape)");
+    console.log("  • vendored the shared adapter into .ai-dev/tooling/ (self-sufficient for the upgrade re-run)");
+    console.log("  • laid down .ai-dev/PROTOCOL.md, .ai-dev/quality/ (the quality-runner shape), and .ai-dev/upgrades.md");
     console.log("  • wrote .ai-dev/config.json (minimal default — run /dev-setup to configure)");
     console.log(`  • wired ${platform} (deny hooks, agents, the /dev-setup command${platform === "opencode" ? ", the plugin" : ""})`);
+    console.log("  • stamped .ai-dev/VERSION and left a breadcrumb load-surface for the inactive platform");
     if (!hasGitRepo(targetDir)) {
       console.log("\n⚠ No git repository found — the protocol's loop (branches, reviews, merges) requires one.");
       console.log("  Initialize before the first feature:  git init -b main && git add . && git commit -m 'init'");

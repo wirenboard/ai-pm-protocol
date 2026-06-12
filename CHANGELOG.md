@@ -12,6 +12,27 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.10.0] — 2026-06-13
+
+Downstream upgrade + migration channel (decision base: `docs/decisions/upgrade-migration.md`). PR 4 of the research batch.
+
+### Added
+
+- **Version stamp + upgrade marker** — the installer writes `.ai-dev/VERSION` every run; on a version change it writes the transient `.ai-dev/UPGRADING.md` marker (old → new, chained bumps preserve the origin) and prints a prominent "restart your session" notice.
+- **Migration notes** — `.ai-dev/upgrades.md` laid down every run from the new single home `src/adapter/upgrades.md` (per-version migration notes the session can read; previously trapped under the read-denied tooling dir).
+- **`## Upgrade` procedure** (`src/agents/orchestrator.md`) — the understand beat finds the marker and offers the migration (declinable); applicable `(old, new]` notes run through the loop; marker deleted last. Installer half `[mechanical]`, session half `[persona]`.
+- **Cross-platform breadcrumb** — the installer writes a minimal marker-delimited pointer to the INACTIVE platform's load surface (`CLAUDE.md` / `AGENTS.md`): a session on a platform the project wasn't wired for now sees the protocol exists and can offer the switch (fixes the OpenCode-installed-opened-in-Claude blind start). Never clobbers a real file; stripped when that platform is wired.
+- `## Audit` — version-skew dimension (`.ai-dev/VERSION` vs the tooling's recorded version).
+- PROTOCOL.md understand beat — one clause pointing a present upgrade marker at the `## Upgrade` procedure.
+
+### Fixed
+
+- **Vendored installer self-rerun** — `node .ai-dev/tooling/src/adapter/install.mjs <target>` failed with ENOENT (the three paths `layDownCore` reads were never vendored); the documented in-place upgrade command now works. RED-first regression pin added.
+- **Hook prune** — the Claude hook merge replaces a stale ai-dev hook group (recognised by a stable path marker) instead of accumulating duplicates across versions.
+- `package.json` `files` gains `CHANGELOG.md` (the npx package told upgraders to read a CHANGELOG it didn't ship).
+
+---
+
 ## [5.9.6] — 2026-06-13
 
 Ratchet + verification scenario promoted to the role floor (decision base: `docs/decisions/ratchet-and-verification.md`; Operator fork decision: floor, not module).

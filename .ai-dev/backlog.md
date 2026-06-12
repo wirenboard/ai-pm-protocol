@@ -3,14 +3,6 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
-## Downstream field report: cross-platform breadcrumb missing — ad-md-editor, 2026-06-13
-
-The project was created under OpenCode; the Operator later opened it in Claude Code. The Claude session started with ZERO protocol surface — the install wires only the active platform (`opencode.json` + `AGENTS.md` + plugin), so no `CLAUDE.md` import, no hooks, no agents exist for Claude. The session worked the repo as a bare project: no roles, no loop, no review.
-
-The platform-switch offer (orchestrator `## Setup`, "Platform switch") could not fire — it is prose homed in the orchestrator, and the orchestrator only loads through the installed platform's surface. A rule cannot fire on a harness that never loads it. Unfelt deficit (the session doesn't know what it's missing) ⇒ needs a mechanical breadcrumb, not more prose.
-
-**Fix candidate:** the installer always writes a minimal load-surface for BOTH platforms — the active platform gets the full wiring (as today); the inactive platform gets a 3-line pointer file (for Claude: a minimal `CLAUDE.md`; for OpenCode: a minimal `AGENTS.md`): "this project runs the ai-dev protocol, active platform is X — run the installer for this platform and offer the Operator the platform switch." De-duped on re-run like the existing load-instruction merge. Test rows: cross-platform breadcrumb present after install; breadcrumb does not clobber an existing real file (merge, don't overwrite); breadcrumb replaced by full wiring when its platform becomes active.
-
 ## regression-protection contract row for the ratchet — 2026-06-13 (builder/reviewer note, 5.9.6)
 
 `docs/contracts/regression-protection.md` rows cover feature-contract promises only; the new floor ratchet ("a defect fix carries the test that pins it", 5.9.6) could gain a must-work row there. Fixup-grade.

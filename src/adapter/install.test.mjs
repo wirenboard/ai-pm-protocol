@@ -2,8 +2,10 @@
 // (docs/contracts/one-command-install.md). It installs the protocol into a temp
 // target dir created INSIDE the repo root (the out-of-root deny blocks an external
 // sibling, which is exactly why the target sits inside the root), then asserts the
-// adapter is vendored, the platform is wired, the doc templates landed, and a
-// SECOND run is idempotent (identical tree, no duplication).
+// adapter is vendored (self-sufficiently — the vendored installer can re-run), the
+// platform is wired, the version is stamped (with the UPGRADING handoff marker on a
+// version change), the inactive platform gets its breadcrumb, and a SECOND run is
+// idempotent (identical tree, no duplication, stale ai-dev hook groups replaced).
 //
 // Run: node src/adapter/install.test.mjs
 
@@ -11,9 +13,11 @@ import { install, hasGitRepo } from "./install.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..", "..");
+const PKG_VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version;
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -66,6 +70,18 @@ function testPlatform(platform, assertWiring) {
     const tools = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "quality", "tools.json"), "utf8"));
     check(`[${platform}] quality registry is the template shape, not this repo's rows`, tools.tools.length === 1 && tools.tools[0].id === "example-lint");
 
+    // 2b. version stamp + migration notes (the upgrade channel's mechanical half)
+    check(`[${platform}] .ai-dev/VERSION stamped with the source version`, fs.readFileSync(path.join(target, ".ai-dev", "VERSION"), "utf8").trim() === PKG_VERSION);
+    check(`[${platform}] tooling carries its own VERSION`, fs.readFileSync(path.join(target, ".ai-dev", "tooling", "VERSION"), "utf8").trim() === PKG_VERSION);
+    check(`[${platform}] migration notes laid down at .ai-dev/upgrades.md`, fs.existsSync(path.join(target, ".ai-dev", "upgrades.md")));
+    check(`[${platform}] no UPGRADING marker on a fresh install`, !fs.existsSync(path.join(target, ".ai-dev", "UPGRADING.md")));
+
+    // 2c. cross-platform breadcrumb: the INACTIVE platform's load surface exists
+    const inactiveFile = platform === "claude" ? "AGENTS.md" : "CLAUDE.md";
+    const inactivePlatform = platform === "claude" ? "opencode" : "claude";
+    const bc = fs.readFileSync(path.join(target, inactiveFile), "utf8");
+    check(`[${platform}] inactive-platform breadcrumb written to ${inactiveFile}`, bc.includes("ai-dev:breadcrumb") && bc.includes(`--platform ${inactivePlatform}`));
+
     // 3. config present inside .ai-dev/
     check(`[${platform}] config written at .ai-dev/config.json with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8")).platform === platform);
 
@@ -87,6 +103,7 @@ function testPlatform(platform, assertWiring) {
     check(`[${platform}] second run adds/removes no files`, JSON.stringify(beforeKeys) === JSON.stringify(afterKeys));
     const allIdentical = beforeKeys.every((k) => before[k] === after[k]);
     check(`[${platform}] second run leaves every file byte-identical`, allIdentical);
+    check(`[${platform}] same-version re-run writes no UPGRADING marker`, !fs.existsSync(path.join(target, ".ai-dev", "UPGRADING.md")));
   } finally {
     fs.rmSync(target, { recursive: true, force: true });
   }
@@ -150,6 +167,116 @@ testPlatform("opencode", (target) => {
     check("[f4] old artifacts not deleted by installer", fs.existsSync(path.join(target, "WORKFLOW.md")) && fs.existsSync(path.join(target, ".ai-pm", "state", "current.md")));
     check("[f4] new structure laid down alongside old", fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "engine.mjs")));
     check("[f4] .gitignore excludes .ai-dev/state/ after migration install", fs.readFileSync(path.join(target, ".gitignore"), "utf8").includes(".ai-dev/state/"));
+    check("[f4] version stamped on a migration install", fs.readFileSync(path.join(target, ".ai-dev", "VERSION"), "utf8").trim() === PKG_VERSION);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// ── version-change detection: the UPGRADING handoff marker ───────────────────
+{
+  const target = freshTarget("upgrade");
+  try {
+    install(target, "claude");
+    fs.writeFileSync(path.join(target, ".ai-dev", "VERSION"), "1.0.0\n"); // simulate an older install
+    install(target, "claude");
+    const markerPath = path.join(target, ".ai-dev", "UPGRADING.md");
+    check("[upgrade] marker written on a version-change re-run", fs.existsSync(markerPath));
+    const marker = fs.existsSync(markerPath) ? fs.readFileSync(markerPath, "utf8") : "";
+    check("[upgrade] marker names old → new", marker.includes("1.0.0") && marker.includes(PKG_VERSION));
+    check("[upgrade] marker points at the notes + the upgrade check", marker.includes(".ai-dev/upgrades.md") && marker.includes("## Upgrade"));
+    check("[upgrade] stamp updated to the new version", fs.readFileSync(path.join(target, ".ai-dev", "VERSION"), "utf8").trim() === PKG_VERSION);
+
+    // a chained bump with the marker still unconsumed keeps the ORIGIN version —
+    // the (old, new] notes range must not shrink to the last unmigrated install
+    fs.writeFileSync(path.join(target, ".ai-dev", "VERSION"), "1.5.0\n");
+    install(target, "claude");
+    check("[upgrade] unconsumed marker keeps its origin across a chained bump", fs.readFileSync(markerPath, "utf8").includes("Upgraded 1.0.0 →"));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// ── pre-stamp detection: an existing .ai-dev/ tree without a VERSION ─────────
+{
+  const target = freshTarget("prestamp");
+  try {
+    fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
+    fs.writeFileSync(path.join(target, ".ai-dev", "backlog.md"), "# existing pre-stamp install\n");
+    install(target, "claude");
+    const marker = path.join(target, ".ai-dev", "UPGRADING.md");
+    check("[prestamp] existing stampless .ai-dev/ tree detected as pre-5.10 upgrade", fs.existsSync(marker) && fs.readFileSync(marker, "utf8").includes("pre-5.10"));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// ── hook prune: a stale ai-dev hook group is replaced, foreign groups kept ───
+{
+  const target = freshTarget("hookprune");
+  try {
+    const settingsPath = path.join(target, ".claude", "settings.json");
+    fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+    fs.writeFileSync(settingsPath, JSON.stringify({
+      hooks: {
+        PreToolUse: [
+          // a stale ai-dev group — the old vendor location (its command CHANGED)
+          { matcher: "Read|Write", hooks: [{ type: "command", command: "node \"$CLAUDE_PROJECT_DIR/.ai-pm/tooling/src/adapter/claude/shim.mjs\"" }] },
+          // a foreign group the merge must never touch
+          { matcher: "Bash", hooks: [{ type: "command", command: "my-own-linter --check" }] },
+        ],
+      },
+    }, null, 2));
+    install(target, "claude");
+    const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    const cmds = settings.hooks.PreToolUse.flatMap((g) => g.hooks.map((h) => h.command));
+    check("[prune] stale ai-dev hook group (changed command) pruned", !cmds.some((c) => c.includes(".ai-pm/")));
+    check("[prune] exactly one ai-dev shim group remains", cmds.filter((c) => c.includes("adapter/claude/shim.mjs")).length === 1);
+    check("[prune] foreign hook group preserved", cmds.includes("my-own-linter --check"));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// ── breadcrumb: never clobbers a real file; replaced by full wiring ──────────
+{
+  const target = freshTarget("breadcrumb");
+  try {
+    fs.writeFileSync(path.join(target, "CLAUDE.md"), "# My real project notes — keep me\n");
+    install(target, "opencode");
+    const withBc = fs.readFileSync(path.join(target, "CLAUDE.md"), "utf8");
+    check("[breadcrumb] real CLAUDE.md content preserved", withBc.includes("keep me"));
+    check("[breadcrumb] breadcrumb merged into the existing file", withBc.includes("ai-dev:breadcrumb") && withBc.includes("--platform claude"));
+
+    // the platform becomes active ⇒ its breadcrumb is replaced by the full wiring
+    install(target, "claude");
+    const wired = fs.readFileSync(path.join(target, "CLAUDE.md"), "utf8");
+    check("[breadcrumb] replaced by full wiring when the platform becomes active", !wired.includes("ai-dev:breadcrumb") && wired.includes("@.ai-dev/PROTOCOL.md") && wired.includes("keep me"));
+    // the other surface is REALLY wired (a prior install) ⇒ no false breadcrumb on it
+    const agentsMd = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
+    check("[breadcrumb] no false breadcrumb on an already-wired surface", !agentsMd.includes("ai-dev:breadcrumb") && agentsMd.includes("@.ai-dev/PROTOCOL.md"));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// ── vendored installer self-re-run — the documented upgrade command ──────────
+// INSTALL.md's upgrade path is `node .ai-dev/tooling/src/adapter/install.mjs <target>`;
+// it used to ENOENT because layDownCore's sources (PROTOCOL.md, src/quality/,
+// src/templates/) were never vendored (docs/decisions/upgrade-migration.md). This
+// pins the regression: the vendored tree must be self-sufficient.
+{
+  const target = freshTarget("vendored");
+  try {
+    install(target, "claude");
+    const vendoredInstaller = path.join(target, ".ai-dev", "tooling", "src", "adapter", "install.mjs");
+    const r = spawnSync("node", [vendoredInstaller, target, "--platform", "claude"], { encoding: "utf8" });
+    check("[vendored] self-re-run exits 0 (no ENOENT)", r.status === 0);
+    const protocolSrc = fs.readFileSync(path.join(ROOT, "PROTOCOL.md"), "utf8");
+    check("[vendored] PROTOCOL.md intact after self-re-run", fs.existsSync(path.join(target, ".ai-dev", "PROTOCOL.md")) && fs.readFileSync(path.join(target, ".ai-dev", "PROTOCOL.md"), "utf8") === protocolSrc);
+    const engineSrc = fs.readFileSync(path.join(ROOT, "src", "adapter", "engine.mjs"), "utf8");
+    check("[vendored] tooling not corrupted by the self-copy", fs.readFileSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "engine.mjs"), "utf8") === engineSrc);
+    check("[vendored] same-version self-re-run leaves no upgrade marker", !fs.existsSync(path.join(target, ".ai-dev", "UPGRADING.md")));
   } finally {
     fs.rmSync(target, { recursive: true, force: true });
   }

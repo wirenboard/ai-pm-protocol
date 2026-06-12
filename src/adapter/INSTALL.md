@@ -10,9 +10,11 @@ node src/adapter/install.mjs <target-dir> [--platform claude|opencode]
 
 `install.mjs` does the **whole** procedure below in one idempotent pass — vendor the adapter, lay down the core + doc templates, wire the active platform — so a downstream is adopted by one command, not a hand-followed checklist. It:
 
-- **vendors** the shared adapter and the neutral bodies the assembler reads (`src/agents/`, `src/modules/`) into `<target>/.ai-dev/tooling/src/` (the convention below);
-- **lays down** the core (`.ai-dev/PROTOCOL.md`, the quality-runner shape at `.ai-dev/quality/`) into the target's `.ai-dev/` directory. Doc templates are NOT copied to the target root — they live in `.ai-dev/tooling/src/templates/` and are laid down on demand when product discovery / doc bootstrap run;
-- **wires** the active platform by running its assembly scripts (the `## Claude Code` / `## OpenCode` sections) against the target and merging its load-instruction surface (the `CLAUDE.md` import + `.claude/settings.json` hooks for Claude; `opencode.json` + `AGENTS.md` + the generated plugin for OpenCode), de-duped so a re-run never duplicates a hook or an import;
+- **vendors** the shared adapter, the neutral bodies the assembler reads (`src/agents/`, `src/modules/`), and everything the vendored installer itself reads on an upgrade re-run (`PROTOCOL.md`, `src/quality/`, `src/templates/`, its own `VERSION`) into `<target>/.ai-dev/tooling/` (the convention below) — so the vendored installer is self-sufficient;
+- **lays down** the core (`.ai-dev/PROTOCOL.md`, the quality-runner shape at `.ai-dev/quality/`, the per-version migration notes at `.ai-dev/upgrades.md`) into the target's `.ai-dev/` directory. Doc templates are NOT copied to the target root — they live in `.ai-dev/tooling/src/templates/` and are laid down on demand when product discovery / doc bootstrap run;
+- **wires** the active platform by running its assembly scripts (the `## Claude Code` / `## OpenCode` sections) against the target and merging its load-instruction surface (the `CLAUDE.md` import + `.claude/settings.json` hooks for Claude; `opencode.json` + `AGENTS.md` + the generated plugin for OpenCode), de-duped so a re-run never duplicates a hook or an import — a stale ai-dev hook group whose command changed is *replaced* (recognised by the shim's path tail), never accumulated;
+- writes a minimal **breadcrumb load-surface for the INACTIVE platform** (a marker-delimited block in its `CLAUDE.md` / `AGENTS.md`) — a session opened on the unwired platform learns the protocol exists and what to run; merged in without clobbering a real file, replaced by the full wiring when that platform becomes active;
+- **stamps `.ai-dev/VERSION`** on every run and, on a detected version change, writes the transient `.ai-dev/UPGRADING.md` marker + prints a restart notice (the upgrade channel's mechanical half — `docs/decisions/upgrade-migration.md`; the session half is `src/agents/orchestrator.md` `## Upgrade`);
 - writes a minimal default `.ai-dev/config.json` where absent (a real project then runs `/dev-setup`), and prints a summary + the next step.
 - **warns when the target has no git repository** (the loop — branches, reviews, the merge-gate — runs on git). A warning, never a block or an auto-`git init`: the interactive init offer is setup's repo check (`src/agents/orchestrator.md` `## Setup` step 0, the single home).
 
@@ -26,39 +28,9 @@ Convention used below: the adapter ships inside the protocol's tooling submodule
 
 A downstream upgrades by bumping the protocol source and re-running the same one command:
 
-1. Bump the protocol to the new version (the tooling-submodule bump, or re-fetch the release).
-2. Re-run the one command above — its idempotence and never-clobber guarantees are exactly why a re-run is the whole upgrade: the project's `.ai-dev/config.json` and real docs survive.
-3. Read the CHANGELOG between the two versions. A **MAJOR** bump is the one that may break the wiring (a renamed agent or command, a changed config key) — its entry names what to rename or re-run. MINOR/PATCH need nothing beyond the re-run.
-
-### MAJOR 5.0.0 — ai-pm → ai-dev rename
-
-After the re-run, rename these in your project by hand (the installer cannot rename files it did not create):
-
-1. **Config:** rename `ai-pm.config.json` → `ai-dev.config.json`. Update its `"platform"` and `"roles"` agent IDs: `"ai-pm"` → `"ai-dev"`, `"pm-builder"` → `"dev-builder"`, `"pm-reviewer"` → `"dev-reviewer"`.
-2. **State directory:** rename `.ai-pm/` → `.ai-dev/` (all subdirs: `state/`, `plans/`, `reviews/`, `audit/`, `8d/`, `backlog.md`; the `tooling/` submodule is re-vendored by the re-run, so delete the old `.ai-pm/tooling/` after renaming).
-3. **Commands:** rename `.claude/commands/pm-setup.md` → `dev-setup.md`; `.opencode/commands/pm-setup.md` → `dev-setup.md`.
-4. **Agents:** rename `.claude/agents/pm-builder.md` → `dev-builder.md`, `pm-reviewer.md` → `dev-reviewer.md`; `.opencode/agents/ai-pm.md` → `ai-dev.md`, `pm-builder.md` → `dev-builder.md`, `pm-reviewer.md` → `dev-reviewer.md`.
-5. **Plugin:** rename `.opencode/plugins/ai-pm.mjs` → `ai-dev.mjs`.
-6. **Hook paths** in `.claude/settings.json`: replace any `/.ai-pm/tooling/` path references with `/.ai-dev/tooling/` (the hook re-runs the shim — if you wired it manually, update the command path).
-7. **CLAUDE.md / AGENTS.md**: no changes needed (they import by protocol file names, not agent IDs).
-8. **Re-run** `node .ai-dev/tooling/src/adapter/install.mjs . --platform <your-platform>` one more time to regenerate assembled agents with the new IDs.
-9. **Search your codebase** for any remaining `/pm-setup`, `.ai-pm`, `ai-pm.config`, `pm-builder`, `pm-reviewer` references and update them.
-
-### MINOR 5.8.0 — config moved into .ai-dev/
-
-From 5.8.0 onward the installer writes the project config at `.ai-dev/config.json` (inside the `.ai-dev/` directory). The old location `ai-dev.config.json` at the project root is no longer read. After the re-run, move the file by hand: `mv ai-dev.config.json .ai-dev/config.json`. A re-run of the installer will create a minimal default at the new location if the file is absent, but the old file at the project root is NOT read automatically and must be moved (or removed) manually to avoid confusion.
-
-### Old-protocol migration
-
-A downstream running a **prior protocol version** (pre-5.0, when the docs were `WORKFLOW.md`, agent roster `pm-*`, state dir `.ai-pm/`) migrates mechanically then runs doc bootstrap in old-protocol source mode (`src/agents/orchestrator.md` `## Doc bootstrap`).
-
-**Mechanical steps:**
-
-1. **Bump and re-run** — bump the tooling to the new version and re-run `node .ai-dev/tooling/src/adapter/install.mjs . --platform <platform>`. The installer vendors the new adapter and lays down the new template docs (only where absent — it never clobbers existing content).
-2. **Rename the old surface** — follow MAJOR 5.0.0 steps above for any `ai-pm.config.json`, `.ai-pm/` dirs, `pm-*` agent files, and command files not already renamed.
-3. **Run doc bootstrap (old-protocol source mode)** — the Builder reads the old docs (`WORKFLOW.md`, prior role files, the legacy agent roster) as primary source and compresses their truth into the new templates (`docs/architecture.md`, `docs/contracts.md`). Any old-doc claim contradicting the code surfaces as a finding for the Operator. After drafting, a comment de-water pass removes wall comments that duplicate the new docs.
-4. **Delete old docs** — once their content moved, delete `WORKFLOW.md` and any pm-* role files (supersede, one home — invariant 6).
-5. **Accept the closing audit** — the orchestrator offers a whole-project sweep after close; take it to catch any drift the per-diff bootstrap missed.
+1. Bump the protocol to the new version — re-fetch the release (`npx github:aadegtyarev/ai-dev-protocol <target>`), or bump the tooling submodule and re-run the **vendored** installer (`node .ai-dev/tooling/src/adapter/install.mjs . --platform <platform>` — the vendored tree is self-sufficient for this).
+2. The re-run IS the upgrade — its idempotence and never-clobber guarantees mean the project's `.ai-dev/config.json` and real docs survive. It stamps `.ai-dev/VERSION`, refreshes `.ai-dev/upgrades.md`, and on a detected version change writes the `.ai-dev/UPGRADING.md` marker and asks for a session restart; the next session offers the migration check (`src/agents/orchestrator.md` `## Upgrade`).
+3. Read the CHANGELOG between the two versions (shipped in the package). The per-version migration steps — what a MAJOR bump renames, what survives, why downgrades are unsupported — live in **`upgrades.md`** (this directory; laid down at `.ai-dev/upgrades.md`), the single home. MINOR/PATCH versions without a section there need nothing beyond the re-run.
 
 ## Claude Code
 
