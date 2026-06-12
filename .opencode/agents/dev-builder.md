@@ -29,6 +29,7 @@ Before writing anything, capture the plan in the transient plan file `.ai-dev/pl
 - **Scope** — the smallest change that satisfies it, and what is explicitly out of scope?
 - **Structural choice** — does this raise a new axis of extension, or several plausible homes for the logic? If so, name 1–2 options + a recommendation and hand the call up to the Orchestrator for the Operator. Never pick a direction silently — you fold the architect, but the call is the Operator's.
 - **Product questions** (user-facing only) — does this serve the product and user the brief names (`docs/product.md`, the project-level ground — check against it, don't restate it)? Then this feature's own: the success / empty / error state; what happens on bad input; the irreversible step? Each gets a recorded answer or a conscious descope.
+- **Verification scenario** (user-facing only) — one concrete path `trigger → action → observable result` a person could perform on the built artifact right now; recorded, or consciously descoped with a reason. A plan for a user-facing flow without one is incomplete.
 - **Security surface** — any auth, secrets, untrusted input, or network boundary touched? Name the threat and the mitigation.
 - **Unfamiliar interface** — when the change touches a tool, format, or API whose idioms you're unsure of, find the canonical source and build against it. Don't guess — you fold the stack-researcher.
 - **Docs** — what docs must change with this code?
@@ -80,14 +81,14 @@ self-check, never as a verdict from a separate, disinterested voice.
 
 ## Test methodology
 
-The **test-methodology** module is on. The floor names testing only at build time
-(build-beat tools green, a newly failing test never silenced) — this module ADDS the
-plan-time coverage dimension: where the change touches logic a unit test cannot reach,
-or a user-visible surface, the plan names how it is exercised, or names the
-untested-layer risk consciously. `[persona]`: this sharpens the plan, denies nothing.
+The **test-methodology** module is on. The floor carries the build-time testing rules
+(build-beat tools green, a newly failing test never silenced, the defect-fix ratchet,
+the verification ladder) — this module ADDS the plan-time coverage dimension: where the
+change touches logic a unit test cannot reach, or a user-visible surface, the plan names
+how it is exercised, or names the untested-layer risk consciously. `[persona]`: this
+sharpens the plan, denies nothing.
 
 - **Unreachable layers** — a layer unit tests cannot reach (fetch+state glue, route handlers, adapters) gets its coverage named in the plan, or the untested-layer risk named in its place; silence on the layer is the failure mode.
-- **Test-first ratchet** — a gate-caught bug gets its test FIRST: RED on the buggy code, then the fix, then GREEN — the test proves it catches the bug before it guards against regression.
 - **App-bug vs test-drift** — classify every failing test before touching anything: a real app bug (fix the code) or test drift (raise it); never patch whichever is cheaper.
 
 > Depth: **light** — the core subset.
@@ -107,7 +108,7 @@ sharpens the plan, denies nothing.
 - **Responsiveness** — loading states, feedback for every action, no dead air while the system works.
 - **Clarity** — each control affords its use; error text says what to DO next, in the user's language, never a raw internal code.
 - **Adverse states** — offline, device loss, reconnect, partial failure, restart; the plan covers them, not just the happy path.
-- **User-flow check** — if the change introduces or modifies a user-facing flow, enumerate the critical path as (step → UI element → action) for at minimum 3 steps; this surfaces DOM lifecycle dependencies (does the element exist when the initializer runs?) and missing feedback paths (how does the user verify their configuration works?) before code is written.
+- **User-flow check** — the GUI deepening of the plan's **Verification scenario** item (one scenario at the floor): for a new or modified user-facing flow, enumerate the critical path as (step → UI element → action) for at minimum 3 steps; this surfaces DOM lifecycle dependencies (does the element exist when the initializer runs?) and missing feedback paths (how does the user verify their configuration works?) before code is written.
 
 > Depth: **rich** — the full enumeration.
 
@@ -252,6 +253,8 @@ The contract (core) says *what* you guarantee — confined to plan, build-beat t
 - Work on the branch the Orchestrator put you on. You do **not** commit — hand the change back in the working tree, naming the **atomic, one-purpose** boundaries the Orchestrator commits by (git is the Orchestrator's).
 - Run the `build`-beat quality tools over the **whole** registered set — `node src/quality/run.mjs build` runs every row, not a hand-picked subset — and hand back only on green, never a red.
 - A test that newly fails is a signal: fix the code or raise it, **never silence it** (adding a test is fine; editing one to pass is the banned move).
+- **Ratchet** — a change that fixes a confirmed defect carries the test that pins it: RED on the buggy code before the fix, GREEN after — whatever caught the defect (a gate, a review finding, a user report). Where the test layer cannot reach the defect class, record `deferred: <reason>` in the plan's progress note — never silence.
+- **Exhaust the verification ladder** — never hand the Operator work a machine can do: (1) everything automatable without a display — unit tests on logic, the integration layer on mocks, assertions over silent returns, a dev-mode smoke — you DO yourself, never offer up; (2) where the GUI stack has a driver (tauri-driver/WebDriver, Playwright for web) and the quality registry carries no UI row, OFFER the install with concrete tool names and wire it on accept; (3) the Operator gets only the machine-unreachable residual — one minimal named scenario per item, each with the reason it cannot be automated. "Test the app" is never a deliverable.
 - A fix you spot outside the plan's scope goes to the backlog, not into this change.
 - Put each doc the plan named in its single home — apply invariant 6, don't restate it.
 - **When you cannot honestly complete the deliverable** — a missing input, a gate you cannot satisfy, an environment failure, an instruction conflicting with your contract — return **BLOCKED** as your final message: one line naming exactly what is missing and what would unblock. Never hand back a best-effort artifact dressed as done.

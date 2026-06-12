@@ -12,6 +12,24 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.9.6] — 2026-06-13
+
+Ratchet + verification scenario promoted to the role floor (decision base: `docs/decisions/ratchet-and-verification.md`; Operator fork decision: floor, not module).
+
+### Added
+
+- `src/agents/builder.md` floor — **Verification scenario** plan item (user-facing change: one `trigger → action → observable result` path, human-performable now); **Ratchet** (any confirmed defect fix carries a RED-first pinning test or a recorded deferral); **Exhaust the verification ladder** (automatable-first; offer the UI driver where the stack has one; the Operator gets only the machine-unreachable residual with reasons — "Test the app" is never a deliverable).
+- `src/agents/reviewer.md` floor — Tests item picks up the ratchet; **Verification not offloaded** item; scenario-walk clause in the Runtime verification ladder.
+- `src/agents/orchestrator.md` — Setup step 5: UI/E2E automation joins the proposed tool classes for a GUI stack; Audit step 2: **verification coverage** dimension (registered suite vs actual stack).
+
+### Changed
+
+- `src/modules/test-methodology/` — superseded gate-caught ratchet rows deleted (one home: the floor); remaining rows are genuine depth.
+- `src/modules/ui-ux/builder.md` — User-flow check re-anchored as the GUI deepening of the floor's verification scenario.
+- Backlog: six entries resolved by 5.9.2/5.9.5/5.9.6 removed.
+
+---
+
 ## [5.9.5] — 2026-06-13
 
 Mechanics: CI-suite parity + assembled-artifact drift guard (decision base: `docs/decisions/ci-suite-parity.md`, `assembled-drift-guard.md`).
