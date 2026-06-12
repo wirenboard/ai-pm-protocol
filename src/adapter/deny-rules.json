@@ -145,7 +145,7 @@
     },
     {
       "id": "no-product-brief-discover",
-      "intent": "This project is configured but has no product brief (no docs/product.md). On a change request, offer the Operator a short, declinable product-discovery pass — about five questions on who this is for and why — before building, so the feature grounds in the product. Keep the offer short; it is an offer, not a block. The Operator may decline and proceed.",
+      "intent": "This project is configured but has no product brief (docs/product.md is absent or still the unfilled install template). On a change request, offer the Operator a short, declinable product-discovery pass — about five questions on who this is for and why — before building, so the feature grounds in the product. Keep the offer short; it is an offer, not a block. The Operator may decline and proceed.",
       "class": "inject",
       "act": "prompt",
       "predicate": "promptNeedsProductBrief",

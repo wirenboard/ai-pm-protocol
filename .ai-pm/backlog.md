@@ -25,10 +25,6 @@ The proactive trigger is in (orchestrator `## Audit`: offer after ~5 shipped fea
 
 Modules shape *thinking* (checklists); `research` should *do* work: investigate (market / competitor / user / stack), synthesize a COMPACT decision-base artifact in `docs/decisions/` (the home already exists), with retention discipline — compact, human-readable, superseded-not-accumulated. Pairs with the product-advocate module: the advocate ASKS "who's the user?", research ANSWERS with evidence. Design fork to resolve: who authors the artifact (a spawned role, per invariant — the orchestrator routes, never authors canon).
 
-## `no-product-brief-discover` inject is blind post-install — found planning doc-bootstrap 2026-06-12
-
-`install.mjs` (~:116) lands the `docs/product.md` TEMPLATE while the nudge's predicate `promptNeedsProductBrief` (`engine.mjs:175`) is presence-only — so on any installed project the empty brief form counts as a brief and the nudge can never fire; its whole audience is exactly the installed-but-unfilled project. (The config sibling `no-config-run-setup` is blind by design — the installed default config IS valid safe defaults.) Fix: one shared "absent-or-unfilled-template" detection (template sentinel / `<placeholder>` content check, non-backtrackable, fixed root-relative path), used by the brief row and by the doc-bootstrap inject row if that trigger ever goes mechanical (the doc-bootstrap plan's recorded follow-up). Costed ≈1–1.5 h: predicate + rule row + sentinel + `parity.test.mjs` block-1b stage + `opencode-inject.test.mjs` case.
-
 ## Parallel feature work — Operator request 2026-06-12
 
 Today the loop is strictly serial: one session drives one feature, one branch per PR, the state pointer names ONE active plan. Features with disjoint surfaces could run in parallel — the platform offers concurrent sub-agents and git worktrees. Design questions: per-feature state (the pointer is singular); branch isolation (PROTOCOL `## Git flow`: conflicts ⇒ stale branch, cut fresh — parallel branches invite exactly that); the stamp/merge-gate is already per-topic (holds as-is); Operator bandwidth (plans and merges still serialize through one human — the honest bottleneck). Cheap 80% already allowed: several features batched on one branch serially. The real epic: worktree-per-feature with interleaved Builder spawns. Scope honestly before building.
@@ -44,13 +40,6 @@ The Operator asked to roll the protocol into ad-md-editor; this repo's session c
 ## Old-template downstream (nula) → minimal core — one-time migration — 2026-06-10
 
 A deployed downstream on the OLD template (nula: `.ai-pm/tooling` submodule + symlinks to the old `.claude/agents/pm-*` + `WORKFLOW.md`) needs a one-time, file-level move to the minimal core (`install.mjs` now does the wiring; the migration is the cleanup of the old surface). Design when the nula WAIT lifts. Harness note kept from those sessions: a long OpenCode session can hit a SQLite session-insert failure that kills every subagent spawn — restart OpenCode; an environment crash is a failed gate, never a license to self-substitute the verdict (invariant 3). Audit 2026-06-12 (F4): when this migration (or the first MAJOR) lands, add a migration test — installer re-run over a PRIOR version's artifacts; the idempotency test covers only two fresh installs, and the "MAJOR names what to rename" path has never been exercised.
-
-## Fix-loop and review-loop ceilings — 2026-06-09 (downstream: nula; trimmed 2026-06-12)
-
-The ratchet and app-bug-vs-test-drift halves shipped in the `test-methodology` module (4.16.0). What remains — the escalation ceilings:
-
-- **Fix-loop ceiling:** cap repeated fix attempts on one finding (2–3) → stop, write state, escalate to the Operator — never grind.
-- **Review-loop ceiling (sibling):** two Builder↔Reviewer rounds on one finding → escalate to the Operator as a judgment call.
 
 ## Downstream→upstream protocol-feedback loop — 2026-06-07
 

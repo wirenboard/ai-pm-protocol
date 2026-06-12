@@ -2,13 +2,13 @@
 
 > Resume pointer — READ FIRST, by this exact path. Deferred detail: `.ai-pm/backlog.md`. History: commits + CHANGELOG.
 
-**Status (2026-06-12).** `main` = `uni/main` = **4.16.0** (PRs #25–#40, #40 merged on Operator's word); `feature/threat-discovery-npx` = **4.17.0**, PR #41 — awaiting Operator merge (they are away; merges queue, never inferred).
-**Conveyor (Operator: "дальше без меня автоматом, от веточек отпочкуй"):** branch 3 next, STACKED on branch 2 — `no-product-brief-discover` inject blindness fix (template sentinel + content predicate); fix/review-loop ceilings; platform-switch detection (running harness ≠ config.platform ⇒ declinable re-wire offer + config flip + model revalidation with cross-model intent preserved + apply-config re-bake). Then branch 4: verification ladder (mandatory `Runtime verification:` verdict field) + blocked-role return contract. Epics with non-derivable forks (parallel-work, [who]-axis) wait for the Operator.
+**Status (2026-06-12).** `main` = `uni/main` = **4.16.0** (PRs #25–#40). Merge queue for the Operator (away; merges never inferred): **PR #41** = branch 2 (`threat-discovery-npx`, 4.17.0) → **PR #42** = branch 3 (`inject-ceilings-platform-switch`, 4.18.0, stacked on 2). Merge in order; after each squash-merge the next branch gets rebased onto fresh main.
+**Conveyor (Operator: "дальше без меня автоматом, от веточек отпочкуй"):** branch 4 next, STACKED on branch 3 — verification ladder (mandatory `Runtime verification: <rung / NOT RUN — reason>` verdict field) + blocked-role return contract (a recognized "blocked" outcome for spawned roles + session-reset checkpoint discipline). Epics with non-derivable forks (parallel-work, [who]-axis) wait for the Operator.
 
 ## What was just shipped
-- 4.15.0 (#39) — doc bootstrap: brownfield onboarding procedure; `[persona]`
 - 4.16.0 (#40) — de-water pass complete; capability axis 2→10 + assembler per-kind default-OFF; `## Project inception` + CI offer + audit security dimension; brownfield truth reconciliation; reviewer floor sharpened (over-engineering, naming, secret-value floor)
 - 4.17.0 (PR #41 pending) — threat discovery (standing model: template + procedure + module linkage); npx distribution (zero-registry `npx github:` works; registry publish external); autonomy-decision journal (progress-note record + PR-body digest)
+- 4.18.0 (PR #42 pending) — inject blindness fixed (brief nudge fires on installed-but-unfilled projects; two-layer literal markers); loop ceilings (fix 2–3 / review 2 rounds ⇒ escalate); platform switch (declinable re-wire offer + config flip + model revalidation with cross-model intent + re-bake)
 
 ## Up next
 Detail in `.ai-pm/backlog.md`:

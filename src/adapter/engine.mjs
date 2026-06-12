@@ -167,13 +167,26 @@ function fileNonEmpty(p) {
 function projectConfigured(root) {
   return fs.existsSync(path.join(path.resolve(root), "ai-pm.config.json"));
 }
-// Does the project have a product brief? True iff docs/product.md exists at the
-// project root. Same presence-only, root-relative, fs-checked read as
-// projectConfigured (a fixed literal path under the resolved root — no prompt
-// data reaches it), within invariant 2. The lazy-discovery predicate adds
-// context, never executes.
-function productBriefPresent(root) {
-  return fs.existsSync(path.join(path.resolve(root), "docs", "product.md"));
+// Does the project have a FILLED product brief? False when docs/product.md is
+// absent OR still the install-landed template — the installer copies the
+// template verbatim, so presence alone proved nothing and the discovery nudge
+// could never fire on a real install (the 4.18.0 fix). Template detection is
+// TWO literal-substring layers (includes() on fixed text, never a regex — no
+// prompt data reaches this read, no backtracking surface):
+//   1. the sentinel `<!-- ai-pm:template -->` the template carries as line 1
+//      (forward-looking; discovery deletes it on fill),
+//   2. the §0 placeholder line, byte-identical in every template version ever
+//      shipped (legacy; catches installs that copied a pre-sentinel template).
+// Same fixed root-relative read as projectConfigured, within invariant 2.
+const BRIEF_TEMPLATE_MARKERS = [
+  "<!-- ai-pm:template -->",
+  "<one plain sentence: what this product is and what it does",
+];
+function productBriefFilled(root) {
+  let text;
+  try { text = fs.readFileSync(path.join(path.resolve(root), "docs", "product.md"), "utf8"); }
+  catch { return false; } // absent or unreadable ⇒ no brief
+  return !BRIEF_TEMPLATE_MARKERS.some((m) => text.includes(m));
 }
 // The project's rigor profile (ai-pm.config.json `profile`). Fails SAFE to the
 // strict default "full" on absent / unreadable / malformed / unknown value — so a
@@ -306,14 +319,15 @@ const PREDICATES = {
     return !projectConfigured(input.root);
   },
   // Lazy product-discovery nudge: a work-request prompt (same change_verbs list)
-  // to a CONFIGURED project that has NO docs/product.md. Ordered after
-  // promptNeedsSetup (an UNconfigured project gets the setup nudge first) and
-  // before change-route-reminder (a configured project WITH a brief gets the
+  // to a CONFIGURED project whose docs/product.md is absent OR still the unfilled
+  // install template (productBriefFilled). Ordered after promptNeedsSetup (an
+  // UNconfigured project gets the setup nudge first) and before
+  // change-route-reminder (a configured project WITH a filled brief gets the
   // route reminder). Reinforces the persona act, never forces it.
   promptNeedsProductBrief(input, config) {
     const pat = config.change_verbs?.pattern;
     if (!pat || !new RegExp(pat, "i").test(input.prompt || "")) return false;
-    return projectConfigured(input.root) && !productBriefPresent(input.root);
+    return projectConfigured(input.root) && !productBriefFilled(input.root);
   },
 };
 

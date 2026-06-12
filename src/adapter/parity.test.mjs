@@ -188,9 +188,23 @@ const CFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-cfg-"));
 fs.writeFileSync(path.join(CFG, "ai-pm.config.json"), "{}");
 check("no-product-brief-discover:fires-when-configured-no-brief", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
 
-// Stage 3 — configured AND docs/product.md present ⇒ both setup and brief
-// predicates are false ⇒ change-route-reminder fires.
+// Stage 2b — configured AND docs/product.md present but STILL THE TEMPLATE ⇒ the
+// discovery nudge still fires (the 4.18.0 fix: install.mjs lands the template
+// verbatim, so presence alone proved nothing — on every real install the nudge
+// was dead code). Three sub-cases, one per detection layer:
+//   the real template file (the exact install-landed content, end to end),
+//   the sentinel alone (the forward-looking layer),
+//   the legacy §0 placeholder alone (a pre-sentinel template, no first line).
 fs.mkdirSync(path.join(CFG, "docs"));
+fs.writeFileSync(path.join(CFG, "docs", "product.md"), fs.readFileSync(path.join(HERE, "..", "templates", "product.md")));
+check("no-product-brief-discover:fires-on-installed-template", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
+fs.writeFileSync(path.join(CFG, "docs", "product.md"), "<!-- ai-pm:template -->\n# Product brief\n");
+check("no-product-brief-discover:fires-on-sentinel-marker", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
+fs.writeFileSync(path.join(CFG, "docs", "product.md"), "# Product brief\n\n`<one plain sentence: what this product is and what it does. …>`\n");
+check("no-product-brief-discover:fires-on-legacy-placeholder", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
+
+// Stage 3 — configured AND docs/product.md present and FILLED (no template
+// marker) ⇒ both setup and brief predicates are false ⇒ change-route-reminder fires.
 fs.writeFileSync(path.join(CFG, "docs", "product.md"), "brief");
 check("change-route-reminder:fires-when-configured-with-brief", claudeDecide(changePrompt, CFG, config).ruleId, "change-route-reminder");
 // A non-change prompt on a configured root ⇒ no inject fires (allow).

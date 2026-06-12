@@ -1,6 +1,7 @@
+<!-- ai-pm:template -->
 # Product brief
 
-> The one home for **what this project is and why** — filled at onboarding (the orchestrator's `## Product discovery`), kept current; every feature grounds in it.
+> The one home for **what this project is and why** — filled at onboarding (the orchestrator's `## Product discovery`), kept current; every feature grounds in it. Discovery deletes the first line's template marker when it fills this file — the marker is how the protocol tells an installed skeleton from a real brief.
 >
 > Filled gather-first, conclude-last: record what the Operator gives, mark the rest `[?]` — never invent an answer, never grade one. The case against (§7) comes at the end. Plain product language.
 

@@ -69,6 +69,13 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - **Reactive** — on the Operator's first real work request, check for `ai-pm.config.json`. If absent: give a SHORT offer of two choices (run `/pm-setup` or proceed on safe defaults), then **stop**. Do not start the task, explore the repo, or write a multi-topic essay.
 - **Explicit** — `/pm-setup` re-runs on demand. Carries no dialog of its own — it points here, the single home.
 
+**Platform switch** — you can tell your own harness from the tool surface you hold; when that platform differs from the config's `platform`, offer the switch on the understand beat: *"this session runs on a platform the config doesn't name — wire it and switch?"* Short, declinable, never a block; declined ⇒ proceed silently. On accept:
+
+1. **Install for the current platform** (the concrete command: `src/adapter/INSTALL.md`) — idempotent; both wirings coexist, each harness loads only its own surface.
+2. **Flip `platform` in the config** — the field stays the recorded ACTIVE adapter.
+3. **Revalidate the models.** `auto`/`session` carry as-is — they re-resolve per platform by design. A concrete pin is checked against the new platform's discovered catalog (the list-available-models contract point); **never invent an id**. A dead pin that differed from the session model recorded a CROSS-MODEL wish: re-ask leading with the new catalog's cross-model candidates and recommend one, `auto` offered as the explicit zero-config fallback; where the new platform offers no second model, say so plainly (the honesty rule in `## Your seat`).
+4. **Apply the config** — re-run the platform's install-agents (step 4 above, on the new platform): a platform that bakes the reviewer model into the assembled agent (OpenCode does) keeps a dead pin until the re-bake, however correct the config now is.
+
 ## Product discovery
 
 `product discovery` records **what product, and for whom** into `docs/product.md` before features are built. Your procedure — talk to the Operator, write the brief you own. `[persona]` — blocks nothing mechanically.
@@ -225,4 +232,6 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 ## When something is off
 
 - A spawned role **fails, or its gate isn't met** → retry the same spawn up to twice, then **stop and report to the Operator**. Never synthesize the deliverable in its place (invariant 3).
+- A fix **keeps failing on one finding** → 2–3 attempts is the ceiling: stop, record where it stands (the plan's progress note + the state pointer), and **escalate to the Operator**. Never grind a fourth attempt at the same wall.
+- One finding **survives two Builder↔Reviewer rounds** → escalate it to the Operator as a **judgment call** — frame the trade-off, recommend one option. Never spin up a third round.
 - A deny **blocks legitimate work**, or the protocol itself has a **gap** → write the Operator a short protocol-gap note and stop. Never route around the enforcer, and never edit it in place.

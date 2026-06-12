@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.18.0] — 2026-06-12
+
+### Added
+
+- **Platform switch** — the expected migration UX exists: a session whose own tool surface says it runs on a platform the config doesn't name offers (declinable, never a block) to wire this platform — the idempotent install (both wirings coexist; each harness loads only its own surface), the config `platform` flip, **model revalidation** (`auto`/`session` re-resolve per platform by design; a dead concrete pin that differed from the session model recorded a *cross-model* wish — the re-ask leads with the new catalog's cross-model candidates; no second model ⇒ said plainly, no fake independence), and the install-agents re-bake (OpenCode bakes the reviewer model — without it a dead pin survives the config fix). `orchestrator.md ## Setup`, `[persona]`.
+- **Loop ceilings** — grinding has a hard stop: 2–3 fix attempts on one finding ⇒ stop, record state, escalate; two Builder↔Reviewer rounds on one finding ⇒ the Operator's judgment call, not a third round. Siblings of the crash-retry line in `## When something is off`. `[persona]`.
+
+### Fixed
+
+- **`no-product-brief-discover` fired for nobody** — the predicate was presence-only while install lands the brief TEMPLATE, so the installed-but-undiscovered project (the nudge's whole audience) never saw it. `productBriefFilled` now treats "present but still the template" as no-brief via two literal substring markers (no regex, fixed path, read-only, unreadable ⇒ nudge): a forward-looking `<!-- ai-pm:template -->` sentinel in the template (discovery deletes it on fill) plus the §0 placeholder as the legacy layer — byte-identical across every shipped template version, so existing installs detect too. +3 parity ordering stages, +4 opencode-inject side-effect cases; zero existing assertions changed.
+
+---
+
 ## [4.17.0] — 2026-06-12
 
 ### Added
