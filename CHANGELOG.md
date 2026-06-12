@@ -12,6 +12,23 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.9.5] — 2026-06-13
+
+Mechanics: CI-suite parity + assembled-artifact drift guard (decision base: `docs/decisions/ci-suite-parity.md`, `assembled-drift-guard.md`).
+
+### Added
+
+- `src/adapter/install-drift.test.mjs` + `tools.json` row `install-drift` — re-assembles all seven generated markdown artifacts under the tracked config, byte-compares against committed, orphan-checks every generated dir (verified RED-first).
+- `docs/architecture.md` — class rule: every committed generated artifact carries a mechanical drift guard.
+
+### Changed
+
+- `.github/workflows/checks.yml` — CI invokes the quality runner wholesale (`build` + `review` beats, semgrep via pipx) instead of a hand-picked 2-of-12 subset; future registry rows are picked up with zero CI edits.
+- `src/agents/orchestrator.md` — Setup step 5: CI offer is "via the runner, never a re-listed subset"; Your seat: confirm CI green via `gh pr checks` before executing an authorized merge; Audit step 2: no-drift dimension defers to the mechanical rows, auditor's residual is inventory completeness + CI parity.
+- Removed the stray `.opencode/plugins/ai-dev.mjs.gen` orphan.
+
+---
+
 ## [5.9.4] — 2026-06-13
 
 Template blockquote cleanup — 8D D5/D7 fix.

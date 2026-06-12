@@ -1,8 +1,9 @@
 name: Checks
 
-# Runs the minimal core's quality checks (the single home is src/quality/tools.json) on
-# every PR and on pushes to main: the adapter integrity suite and the neutral-prose
-# guard. Both are zero-dependency Node, no install step.
+# Remote re-check of the registered quality suite — BOTH beats, via the runner.
+# The single home of "what green means" is src/quality/tools.json; this workflow
+# never lists an individual tool, so a new registry row is picked up with no
+# CI edit (docs/decisions/ci-suite-parity.md).
 
 on:
   push:
@@ -17,7 +18,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Adapter integrity (parity, single-engine, node-spike)
-        run: node src/adapter/parity.test.mjs
-      - name: Neutral-prose guard (the core names no platform primitive)
-        run: node src/quality/neutral-prose.test.mjs
+          cache: npm
+      - run: npm ci
+      - name: Install semgrep (review-beat row; pipx avoids PEP 668 on Ubuntu 24)
+        run: pipx install semgrep
+      - name: Quality suite — build beat
+        run: node src/quality/run.mjs build
+      - name: Quality suite — review beat
+        run: node src/quality/run.mjs review

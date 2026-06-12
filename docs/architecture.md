@@ -50,7 +50,7 @@ Every guarded action — a tool call (read / write / bash / spawn) or a submitte
    deny → block · ask → confirm with the Operator · inject → add context · allow → run
 ```
 
-The shim is the only platform-specific code; the engine and the rules are shared, read at runtime by **both** shims. That is why the two platforms cannot drift — there is exactly one rule list and one predicate, not a translated copy per platform (the full argument: `src/adapter/README.md` "No regex drift").
+The shim is the only platform-specific code; the engine and the rules are shared, read at runtime by **both** shims. That is why the two platforms cannot drift — there is exactly one rule list and one predicate, not a translated copy per platform (the full argument: `src/adapter/README.md` "No regex drift"). The same promise covers what must be committed in generated form: **every committed generated artifact carries a mechanical drift guard** — a quality-registry row that re-generates it and byte-compares against the committed file (the `install-drift` and `install-plugin` rows are its instances).
 
 ## Enforcement — the honest floor
 

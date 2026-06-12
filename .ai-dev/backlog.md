@@ -147,6 +147,8 @@ No quality check compares the COMMITTED assembled orchestrator (`.opencode/agent
 
 The config supports per-seat models; the open part is a recommended DEFAULT matrix (spend thinking where errors propagate furthest). Operator caveat from a failed prior attempt: revisit deliberately; no weak models on generative seats.
 
+**Multimodality note (downstream OpenCode case, 2026-06-13):** GUI projects need vision named in the matrix — a non-multimodal model cannot read screenshots, so the Operator must describe UI bugs in words and the vision-dependent rungs of the UI-verification ladder are unavailable. Setup's model step should name vision as a recommended capability for the Builder/Reviewer seats on a GUI project.
+
 ## Platform built-ins survey — safe orchestrator offload — 2026-06-08/09
 
 Survey both platforms' built-in tools/agents and map which are safe for the orchestrator's AD-HOC use (offload instead of inline work): read-only and no role-overlap ⇒ allow (e.g. a read-only explorer for parallel analysis); write-capable generic or role-overlap ⇒ stays denied (`general`/`build`/`plan` — the role-substitution deny). Open question: does a write-capable ad-hoc generic ever have a legitimate seat, and can the deny distinguish intent? Outcome: a documented routing note (which built-ins the orchestrator may use for what) + possibly widened safe offload.
