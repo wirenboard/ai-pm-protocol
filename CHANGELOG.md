@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.4.0] — 2026-06-12
+
+### Added
+
+- **Version-bump confirmation** (`orchestrator.md` `## Your seat`) — before committing a MINOR or MAJOR version bump, the Orchestrator confirms the semver level with the Operator: names the contract change and the new version. `[persona]`
+- **Release rollback procedure** (`orchestrator.md` `## Your seat`) — named procedure: revert the squash-merge commit on main, re-tag the prior version, push. `[persona]`
+
+### Fixed
+
+- **merge-gate: tag pushes no longer blocked** — `git push origin v5.3.1`, `git push origin refs/tags/…`, and `git push --tags origin` previously triggered the unstamped-review deny (engine fell back to HEAD branch when the push named an explicit non-slashed ref). Fix: new `isTagPush` helper in `engine.mjs` short-circuits both `mergeWithUnstampedReview` and `mergeTopicUnresolvable` for tag pushes; new `pushHasUnparsedExplicitRef` guard prevents the HEAD fallback when an explicit unresolvable ref is present. Three new parity test cases added.
+
+---
+
 ## [5.3.1] — 2026-06-12
 
 ### Removed

@@ -46,13 +46,18 @@ const GENERATED_HEADER =
 // target, or null when the source path is already correct (downstream layout).
 //
 // `layout` lets a caller (a test) force a layout without touching the filesystem.
+//
+// Dev detection uses plugin-entry.mjs as the sentinel (it is only present in the
+// protocol's own src/adapter/opencode/, not in a downstream's src/ tree), so a
+// downstream project that happens to have its own src/adapter/ is not misdetected
+// as dev even when both dirs exist (e.g. after a self-install on the source repo).
 function resolveRewrite(root, layout) {
   const resolved =
     layout ||
-    (fs.existsSync(path.join(root, ".ai-dev", "tooling", "src", "adapter"))
-      ? "downstream"
-      : fs.existsSync(path.join(root, "src", "adapter"))
-        ? "dev"
+    (fs.existsSync(path.join(root, "src", "adapter", "opencode", "plugin-entry.mjs"))
+      ? "dev"
+      : fs.existsSync(path.join(root, ".ai-dev", "tooling", "src", "adapter"))
+        ? "downstream"
         : null);
   if (resolved === "downstream") return null; // source path already correct
   if (resolved === "dev") {

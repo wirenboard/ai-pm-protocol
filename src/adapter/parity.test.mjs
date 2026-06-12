@@ -155,6 +155,19 @@ const FIXTURE = [
   { name: "yolo-merge-gate-off", expect: "allow", root: YOLO,
     claude: { tool_name: "Bash", tool_input: { command: "git push origin feature/foo" } },
     opencode: { tool: "bash", args: { command: "git push origin feature/foo" } } },
+
+  // Tag pushes never need a review stamp — vN.N.N token, refs/tags/ prefix, --tags flag.
+  { name: "tag-push-version-allow", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "git push origin v5.3.1" } },
+    opencode: { tool: "bash", args: { command: "git push origin v5.3.1" } } },
+
+  { name: "tag-push-refs-tags-allow", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "git push origin refs/tags/v5.4.0" } },
+    opencode: { tool: "bash", args: { command: "git push origin refs/tags/v5.4.0" } } },
+
+  { name: "tag-push-flag-allow", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "git push --tags origin" } },
+    opencode: { tool: "bash", args: { command: "git push --tags origin" } } },
 ];
 
 // ── 1. PARITY ────────────────────────────────────────────────────────────────

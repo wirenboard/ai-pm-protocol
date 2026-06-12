@@ -213,6 +213,45 @@ function refTopicFromCommand(command) {
   }
   return null;
 }
+// Tag pushes (--tags flag, refs/tags/ prefix, or vN.N.N-style token) never
+// need a review stamp. Evaluated per git-push invocation so a compound
+// command mixing a feature push and a tag push (`push feature/foo && push
+// v1.0`) is NOT treated as a tag push — only when ALL push invocations in
+// the command are tag pushes does this return true.
+function isTagPush(command) {
+  const masked = maskQuotedSpans(command || "");
+  const inv = /\bgit\s+push\b([^;&|\n]*)/g;
+  let hasPush = false;
+  let m;
+  while ((m = inv.exec(masked)) !== null) {
+    hasPush = true;
+    const span = m[1];
+    if (!/\s--tags\b/.test(span) && !/\srefs\/tags\//.test(span) && !/\sv\d+\.\d+/.test(span)) {
+      return false; // this invocation is not a tag push → compound is not all-tag
+    }
+  }
+  return hasPush; // at least one push, and every one is a tag push
+}
+// True when a `git push` command carries an EXPLICIT non-flag, non-remote ref
+// token that `topicFromRefToken` could not parse as a slashed branch (e.g. a
+// tag name or a trunk branch name). In that case the HEAD fallback would
+// resolve the wrong topic — the explicit ref IS the target, we just can't read
+// a topic from it. A bare `git push origin` has no such token (only the remote)
+// and correctly falls through to HEAD.
+function pushHasUnparsedExplicitRef(command) {
+  if (!/\bgit\s+push\b/.test(command)) return false;
+  const masked = maskQuotedSpans(command);
+  const inv = /\bgit\s+push\b([^;&|\n]*)/g;
+  let m;
+  while ((m = inv.exec(masked)) !== null) {
+    const args = m[1].split(/\s+/).filter((t) => t && !t.startsWith("-"));
+    // args[0] = remote (skip); args[1+] = explicit refs
+    for (const token of args.slice(1)) {
+      if (!topicFromRefToken(token)) return true; // explicit but unresolvable
+    }
+  }
+  return false;
+}
 // Resolution stays SYNTACTIC — it returns the extracted topic as-is, even an
 // unclean one. Traversal validation lives downstream at the stamp boundary
 // (isCleanTopic in reviewStampSatisfied), NOT here: nulling an unclean
@@ -223,6 +262,11 @@ function resolveMergeTopic(command, root) {
   if (typeof command !== "string" || !command) return null;
   const fromCommand = refTopicFromCommand(command);
   if (fromCommand) return fromCommand;
+  // Skip HEAD fallback when the push names an explicit unresolvable ref
+  // (a tag or a trunk branch): falling back to HEAD here would resolve the
+  // WRONG topic. A bare `git push origin` has no such token and correctly
+  // falls through to HEAD (pushing the current branch implicitly).
+  if (pushHasUnparsedExplicitRef(command)) return null;
   try {
     const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
     const hm = head.match(/^ref:\s*refs\/heads\/(.+)$/);
@@ -395,6 +439,7 @@ const PREDICATES = {
   mergeWithUnstampedReview(input) {
     if (!/git\s+(merge|push)\b/.test(input.command || "")) return false;
     if (projectProfile(input.root) === "yolo") return false; // gate explicitly off — Operator's merge word is the only remaining check
+    if (isTagPush(input.command)) return false; // tags never need a review stamp
     const topic = resolveMergeTopic(input.command, input.root);
     if (!topic) return false; // unresolved topic ⇒ the sibling ask rule (mergeTopicUnresolvable), never a silent pass
     return !reviewStampSatisfied(input.root, topic);
@@ -404,6 +449,7 @@ const PREDICATES = {
   // uncheckable — escalate to the Operator instead of passing.
   mergeTopicUnresolvable(input) {
     if (!/git\s+(merge|push)\b/.test(input.command || "")) return false;
+    if (isTagPush(input.command)) return false; // tags are fine — no topic, no ask
     return resolveMergeTopic(input.command, input.root) === null;
   },
   spawnTargetInDenySet(input, config) {
