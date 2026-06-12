@@ -55,19 +55,26 @@ function orchWriteVerdict(root) {
 
 console.log("RIGOR PROFILE — orchestrator-content relaxation:");
 
-// 1. lite / solo — and every default-resolving case (absent / unknown / malformed /
-//    unconfigured) — ALLOW the orchestrator source write: `solo` is the default.
-for (const [label, line] of [["lite", "lite"], ["solo", "solo"], ["absent", null], ["unknown", "bogus"], ["malformed", "MALFORMED"], ["unconfigured", "NONE"]]) {
+// 1. lite / solo / yolo — and every default-resolving case (absent / unknown /
+//    malformed / unconfigured) — ALLOW the orchestrator source write.
+for (const [label, line] of [["lite", "lite"], ["solo", "solo"], ["yolo", "yolo"], ["absent", null], ["unknown", "bogus"], ["malformed", "MALFORMED"], ["unconfigured", "NONE"]]) {
   const root = rootWith(line);
   check(`orch-write:${label}:allows`, orchWriteVerdict(root).verdict, "allow");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
 // 1b. the default itself, pinned directly: absent / unknown / malformed /
-//     unconfigured all resolve to `solo` (proportionality by default), never `full`.
+//     unconfigured all resolve to `solo` (proportionality by default), never `full` or `yolo`.
 for (const [label, line] of [["absent", null], ["unknown", "bogus"], ["malformed", "MALFORMED"], ["unconfigured", "NONE"]]) {
   const root = rootWith(line);
   check(`profile-default:${label}:solo`, _internals.projectProfile(root), "solo");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 1c. `yolo` resolves ONLY on an explicit value — absent/unknown still → solo.
+{
+  const root = rootWith("yolo");
+  check("profile-yolo:explicit:resolves", _internals.projectProfile(root), "yolo");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
@@ -80,8 +87,43 @@ for (const [label, line] of [["absent", null], ["unknown", "bogus"], ["malformed
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// 2. YOLO — the merge-gate is OFF (the one mechanical change yolo makes beyond solo).
+//    The floor items (tooling / boundary / truncation / stamp-write) still apply.
+console.log("YOLO (gate off, all other floors hold):");
+{
+  const root = rootWith("yolo");
+  // 2a. An unstamped push on yolo → ALLOW (gate off).
+  const v = evaluate(
+    { act: "bash", root, command: "git push origin feature/foo", isOrchestrator: true },
+    config
+  );
+  check("yolo:merge-gate:off", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // 2b. tooling-submodule write still DENIES on yolo.
+  const root = rootWith("yolo");
+  const v = evaluate(
+    { act: "write", root, path: path.join(root, ".ai-dev", "tooling", "engine.mjs"), content: "x", isOrchestrator: true },
+    config
+  );
+  check("yolo:floor:tooling-write:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // 2c. stamp-write guard still DENIES on yolo — fabricating a stamp is wrong regardless.
+  const root = rootWith("yolo");
+  const stamp = path.join(root, ".ai-dev", "reviews", "topic_review.md");
+  const v = evaluate(
+    { act: "write", root, path: stamp, content: "## Code review: APPROVED", isOrchestrator: true },
+    config
+  );
+  check("yolo:floor:stamp-write:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 // 3. THE FLOOR never relaxes — every case below runs under `solo` (the loosest
-//    profile) and MUST still deny.
+//    guarantee profile) and MUST still deny.
 console.log("THE FLOOR (under solo — the loosest profile — these STILL deny):");
 
 // 3a. tooling-submodule write (self-patch floor). Even the orchestrator, even solo.

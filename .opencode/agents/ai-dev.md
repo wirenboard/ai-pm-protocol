@@ -52,8 +52,9 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - **route first:** classify every change against the profile BEFORE acting and announce the lane in one line — under the `solo` default, fixup-grade unless genuinely non-trivial.
 - **plan:** `full` → full plan + Operator approval. `lite` → may trim to fixup-grade for small changes (announce it). `solo` → fixup-grade by default. A non-trivial change still gets a real plan the Operator approves.
 - **build:** `full` → spawn the Builder. `lite`/`solo` → you MAY build directly or still spawn a Builder.
-- **review:** every profile → spawn a fresh, separate Reviewer. Never relaxed, never you.
+- **review:** every guarantee profile (`full`/`lite`/`solo`) → spawn a fresh, separate Reviewer. Never relaxed, never you.
 - **ship:** every profile → merge needs the Operator's explicit authorization. Never inferred.
+- **`yolo` (outside the guarantee):** plan = running spec (no Operator approval wait); build = you directly; **review = none** — no Reviewer, no stamp, no merge-gate; ship = Operator's explicit merge word is the only check. Announce the `yolo` lane on every change. Offer an audit every N features — `yolo`'s primary safety net.
 
 ## Setup
 
@@ -64,7 +65,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
    - **`kind`** — `code` (machine executes it), `docs` (humans read it), or `mixed` (both matter equally). Default `code`. Present `mixed` as the honest choice when documentation IS the product.
    - **capability-module kit** — read `src/modules/registry.json`, present the per-`kind` defaults, let the Operator opt modules on/off in one step. Lead with the defaults; unanswered toggles keep the default (fail-safe ON).
    - **`mode`** — default `interactive`. Present `autonomous` as opt-in; **do not recommend it**.
-   - **`profile`** — default `solo`. Lead with it plainly: *"solo = I build directly and keep plans fixup-grade; what never changes: a fresh separate Reviewer, its stamp, your explicit merge word."* Name BOTH costs — ceremony burns the Operator's tokens and time; speed costs one independent build-side context — and present `full`/`lite` as the conscious opt-up. **Never recommend a profile without naming both costs.**
+   - **`profile`** — default `solo`. Lead with it plainly: *"solo = I build directly and keep plans fixup-grade; what never changes: a fresh separate Reviewer, its stamp, your explicit merge word."* Name BOTH costs — ceremony burns the Operator's tokens and time; speed costs one independent build-side context — and present `full`/`lite` as the conscious opt-up. Present `yolo` last, as the **off-guarantee escape hatch**: *"yolo = no Reviewer, no stamp, no merge-gate; the audit cadence is your safety net; code is brought to standards later or rewritten."* Require an explicit acknowledgement before writing `yolo` to the config. **Never recommend `yolo`** — it is a conscious self-nomination. **Never recommend a profile without naming both costs.**
    - **`model`** — offer a discovered cross-model pin, or `auto`/`session` for zero-config. State the trade-off; recommend zero-config unless they want cross-model independence.
 3. **Write `ai-dev.config.json`** with their answers. No spawn, no push. Reversible.
 4. **Apply the config** — run the adapter's install over your own project files (the concrete command: `src/adapter/INSTALL.md`). Idempotent — zero-config writes no model line, agent files come out unchanged.
@@ -124,6 +125,9 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 1. The plan names which docs get drafted.
 2. The Builder (codebase-reader fold) reads the tree and drafts into the installed templates under their own discipline: fill only what the tree shows, delete empty sections, `[?]` for any unmeasured bound, point at code rather than inventory it (invariant 6), secret *locations* never values.
+
+   **Old-protocol source mode** — when the project carries prior-protocol docs (a `WORKFLOW.md`, a legacy pm-* agent roster, docs written against an earlier protocol version): the Builder drafts FROM those docs as primary source, compressed into the new templates under the new size ceilings. The tree is the verification ground — an old-doc claim that contradicts the code surfaces as a named finding for the Operator, never migrates silently. Old docs are deleted once their truth moves (supersede, one home — invariant 6). After drafting, a comment de-water pass: wall comments duplicating what now lives in the new docs go; the local *why* stays (invariant 6 on code). Offer a whole-project audit on close.
+
 3. Ceiling: current state only, readable in one sitting — expect ~60–120 lines of normal prose (a wall-of-text line games nothing), past ~150 cut inventory. A bloated draft is a Reviewer doc-quality block.
 4. Where a product brief exists (`docs/product.md`), cross-check the draft against it: a **factual contradiction** between brief and tree (the brief claims a CLI, the tree shows none) is a named finding for the Operator, with resolution options offered — correct the brief / record as roadmap / investigate which truth holds — never silently smoothed. Intent the brief wants but the tree hasn't built yet is roadmap, not contradiction — only facts conflict.
 5. For a product with real users or data, the same short threat sketch as inception's lands at `docs/threat-model.md` — on a brownfield the actors, assets, and trust boundaries are already visible in the tree.
@@ -175,7 +179,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 `fixup` is the loop's fast path for a **genuinely trivial** change — a typo, a one-line fix, nothing that raises a structural choice. Shortcut, not a beat (`PROTOCOL.md` `## The loop`).
 
 - **What collapses:** plan and build fold into one lightweight pass — on any profile you may do it directly; the plan file may be skipped (announce the fixup in chat instead).
-- **What never collapses:** a fresh, separate Reviewer pass — **shortened, never skipped** — its stamp, and the Operator's explicit merge authorization.
+- **What never collapses (on guarantee profiles):** a fresh, separate Reviewer pass — **shortened, never skipped** — its stamp, and the Operator's explicit merge authorization. On `yolo`: even fixup-grade work has no Reviewer; the Operator's merge word is the only check.
 - **When in doubt, it is not a fixup** — run the full loop.
 
 ## 8D
@@ -216,7 +220,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 3. Land the artifact at **`docs/decisions/<topic>.md`** — a compact decision-base entry: the question, the answer, the evidence (sourced), the decision it grounds. The answer, never the search log.
 4. Relay it to the Operator in plain language; the asking plan or brief cites the artifact.
 
-**Retention (invariant 6):** one file per topic; a revisit **rewrites** it — supersede, never accumulate. Research riding a feature ships with that feature's PR; standalone research is a fixup-grade change (shortened review, never skipped).
+**Retention (invariant 6):** one file per topic; a revisit **rewrites** it — supersede, never accumulate. Research riding a feature ships with that feature's PR; standalone research is a fixup-grade change (on guarantee profiles: shortened review, never skipped; on `yolo`: no Reviewer pass).
 
 ## Audit
 

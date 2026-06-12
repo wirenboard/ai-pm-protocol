@@ -26,4 +26,4 @@ A cut that silently re-opens a failure is forbidden. (Example accepted risk: a g
 
 ## What survives every cut
 
-Independent review by a separate context (builder ≠ reviewer), the honesty gates, the deny-list, git-flow, and plain-language Operator comms. These are load-bearing and already short — they are the floor a `lite`/`solo` profile trims ceremony around but never cuts (see `docs/decisions/direction.md`).
+Independent review by a separate context (builder ≠ reviewer), the honesty gates, the deny-list, git-flow, and plain-language Operator comms. These are load-bearing and already short — they are the floor a guarantee profile (`full`/`lite`/`solo`) trims ceremony around but never cuts; `yolo` explicitly opts out of the Reviewer and merge-gate floors (see `docs/decisions/direction.md`).

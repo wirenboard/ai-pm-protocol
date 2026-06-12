@@ -9,7 +9,7 @@ The protocol is a **development engine**, not a product — the products built o
 1. **Product discovery** — force *aiming* (market · users · where each feature lands), not just coding what's asked.
 2. **Threat model** — an explicit, assembleable security capability, not a discipline diffused across the Reviewer checklist + deny layer. (Shipped as the `threat-model` capability module.)
 3. **Discipline** — relentless doc + code brevity, no prose-in-comments, whole-surface no-duplication. **Pillar 3 polices the other three.**
-4. **Configurable rigor** — at setup a project chooses where to cut ceremony (orchestrator-builds vs spawn-a-Builder, plan formality, optional beats). The speed↔quality dial is the project's choice, never a fixed cost. (Shipped as the `profile` config: `full | lite | solo`.)
+4. **Configurable rigor** — at setup a project chooses where to cut ceremony (orchestrator-builds vs spawn-a-Builder, plan formality, optional beats). The speed↔quality dial is the project's choice, never a fixed cost. (Shipped as the `profile` config: `full | lite | solo | yolo`; see `## Project config` in `PROTOCOL.md`.)
 
 ## The architecture principle (non-negotiable)
 
@@ -21,7 +21,7 @@ Pillars 1, 2, 4 grow as **side-tools, config, and capability modules — never a
 
 ## The floor (configurable rigor must not cut the value)
 
-Some rigor is **not** cuttable: **independent review by a separate context** (builder ≠ reviewer), the **honesty gates**, and **the Operator's explicit merge authorization** (the orchestrator may execute the merge, never decide it). A `lite`/`solo` profile trims ceremony, never the floor. A profile that cuts the floor is no protocol.
+Some rigor is **not** cuttable by a guarantee profile: **independent review by a separate context** (builder ≠ reviewer), the **honesty gates**, and **the Operator's explicit merge authorization** (the orchestrator may execute the merge, never decide it). A guarantee profile (`full`/`lite`/`solo`) trims ceremony, never the floor. `yolo` is the explicit off-guarantee escape hatch — merge-gate off, no Reviewer required; the Operator's explicit merge word remains (see `PROTOCOL.md` `## Project config`).
 
 ## Sequence
 

@@ -4,7 +4,7 @@
 
 ## 0. The idea — what is this product?
 
-A platform-neutral protocol that gives AI-assisted software and documentation development a disciplined, reviewable loop — three roles (Orchestrator / Builder / Reviewer), five beats (understand → plan → build → review → ship), and a mechanical enforcement layer — so the builder and the reviewer are always different contexts and nothing ships unreviewed.
+A platform-neutral protocol that gives AI-assisted software and documentation development a disciplined, reviewable loop — three roles (Orchestrator / Builder / Reviewer), five beats (understand → plan → build → review → ship), and a mechanical enforcement layer — so on guarantee profiles the builder and the reviewer are always different contexts and nothing ships unreviewed.
 
 ## 1. Customer — who exactly?
 
@@ -14,7 +14,7 @@ A platform-neutral protocol that gives AI-assisted software and documentation de
 
 **Not for:** one-off scripts, vibe-coding experiments, teams that already have a mature CI/CD and code-review culture, anyone who does not care whether the AI cuts corners.
 
-**Speed↔quality dial.** One axis, implemented as `profile` in `ai-dev.config.json`: `lite`/`solo` verify a hypothesis fast, `full` trades speed for no-rewrites — the floor (independent review, explicit merge go) holds at every position. The dial's contract: `PROTOCOL.md` `## Project config`.
+**Speed↔quality dial.** One axis, implemented as `profile` in `ai-dev.config.json`: `lite`/`solo` verify a hypothesis fast, `full` trades speed for no-rewrites — the floor (independent review, explicit merge go) holds at every position on the guarantee profiles. A fourth value, `yolo`, is an explicit off-guarantee escape hatch (no Reviewer, no stamp, no merge-gate; Operator's merge word remains). The dial's contract: `PROTOCOL.md` `## Project config`.
 
 ## 2. Problem — from their point of view
 

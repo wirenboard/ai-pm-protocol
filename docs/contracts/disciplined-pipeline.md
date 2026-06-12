@@ -1,6 +1,8 @@
 # Contract: disciplined-pipeline
 
-**Every change is carried through the fixed plan → build → review → ship loop, and nothing reaches a release without a review stamp.**
+**Every change on a guarantee profile (`full`, `lite`, `solo`) is carried through the fixed plan → build → review → ship loop, and nothing reaches a release without a review stamp.**
+
+The `yolo` profile is explicitly outside this contract — it names no Reviewer and turns the merge-gate off by design, under the Operator's informed consent; see `PROTOCOL.md ## Project config`.
 
 Whoever drives a change — an AI agent or the Operator behind it — gets one predictable path from idea to release, with independent review wired into the path so quality does not depend on anyone remembering to be careful. A change cannot quietly skip planning, skip review, or land half-finished. The Operator watches a plain-language conversation; the structure runs underneath.
 
@@ -13,6 +15,6 @@ Whoever drives a change — an AI agent or the Operator behind it — gets one p
 
 ## Must not break
 
-- No change reaches a release with an unstamped review — the ship gate refuses an unstamped feature (the merge-gate floor, fail-closed on stamp presence).
+- No change on a guarantee profile reaches a release with an unstamped review — the ship gate refuses an unstamped feature (the merge-gate floor, fail-closed on stamp presence).
 - The order holds even when a session has no memory of it — the route is reasserted on change-intent and enforced at the gate, not by recollection.
 - Merge and ship need the Operator's explicit authorization in both authority modes — the loop may execute a merge only once it is given, never on its own (see `decision-authority`).

@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.2.0] — 2026-06-12
+
+### Added
+
+- **`profile: yolo`** — a named escape hatch explicitly outside the reliability guarantee. `full`/`lite`/`solo` are the guarantee profiles (floor enforced: independent Reviewer, merge stamp, Operator's explicit merge word). `yolo` turns the merge-gate off and requires no Reviewer; the Operator's explicit merge word is the one floor that remains. Compensating control: the audit cadence is `yolo`'s primary safety net. Requires explicit acknowledgement in the setup dialog — absent/unrecognised config still resolves to `solo`, never `yolo`. Touches: `PROTOCOL.md` (profile section reframed, invariant 3 carve-out, enforcement gate-off note); `engine.mjs` (`projectProfile` recognises yolo, `mergeWithUnstampedReview` gate-off, `orchestratorWritingContent` relaxed set); `orchestrator.md` (yolo lane in profile routing, yolo in setup dialog with explicit-acknowledgement requirement); `docs/contracts/disciplined-pipeline.md` + `cross-session-enforcement.md` scoped to guarantee profiles; `docs/product.md` + `README.md` speed-dial description. Tests: `rigor-profile.test.mjs` yolo cases; `parity.test.mjs` yolo push → allow.
+
+---
+
 ## [5.1.0] — 2026-06-12
 
 ### Added

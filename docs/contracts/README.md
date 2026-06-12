@@ -6,7 +6,7 @@ These are the *promises*, not the mechanism. Where a rule is enforced lives in i
 
 | Contract | Guarantees |
 | --- | --- |
-| `disciplined-pipeline` | every change runs the fixed plan → build → review → ship loop; nothing ships without a review stamp |
+| `disciplined-pipeline` | on guarantee profiles (`full`/`lite`/`solo`): every change runs the fixed plan → build → review → ship loop; nothing ships without a review stamp; `yolo` explicitly opts out |
 | `plan-fidelity` | the code that lands matches the approved plan — no silent scope drift, every scenario built and tested |
 | `cross-model-review` | review runs on a different model than the one that wrote the work — independent blind spots, announced, with graceful fallback |
 | `cross-session-enforcement` | the load-bearing rules hold mechanically across fresh/forgetful sessions — a named deny-list, not a blanket block |

@@ -45,6 +45,10 @@ const STAMP = path.join(ROOT, ".ai-dev", "reviews", "x_review.md");  // the Revi
 // default-resolution itself is pinned in rigor-profile.test.mjs.
 const FULL = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-parity-full-"));
 fs.writeFileSync(path.join(FULL, "ai-dev.config.json"), '{ "profile": "full" }');
+
+// A third root with an EXPLICIT `yolo` profile — turns the merge-gate OFF.
+const YOLO = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-parity-yolo-"));
+fs.writeFileSync(path.join(YOLO, "ai-dev.config.json"), '{ "profile": "yolo" }');
 const ARCH = path.join(FULL, "docs", "architecture.md");           // canonical doc (not orch-writable)
 
 // Each case carries BOTH platforms' native payloads + the expected ENGINE verdict
@@ -159,6 +163,12 @@ const FIXTURE = [
   { name: "allow-spawn-dev-role", expect: "allow",
     claude: { tool_name: "Task", tool_input: { subagent_type: "dev-builder" } },
     opencode: { tool: "task", args: { subagent_type: "dev-builder" } } },
+
+  // yolo profile turns the merge-gate OFF — an unstamped push on a yolo project allows.
+  // Uses a dedicated yolo root so only this case sees that profile.
+  { name: "yolo-merge-gate-off", expect: "allow", root: YOLO,
+    claude: { tool_name: "Bash", tool_input: { command: "git push origin feature/foo" } },
+    opencode: { tool: "bash", args: { command: "git push origin feature/foo" } } },
 ];
 
 // ── 1. PARITY ────────────────────────────────────────────────────────────────
@@ -277,5 +287,6 @@ console.log(`  node-per-call latency ≈ ${msPerCall.toFixed(0)} ms (cold spawn;
 // ── cleanup + report ─────────────────────────────────────────────────────────
 fs.rmSync(ROOT, { recursive: true, force: true });
 fs.rmSync(FULL, { recursive: true, force: true });
+fs.rmSync(YOLO, { recursive: true, force: true });
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

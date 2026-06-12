@@ -16,7 +16,7 @@ The whole protocol is one short constitution you can read in one sitting: **[`PR
 
 **You decide product, not code.** The orchestrator leads with user impact, frames decisions as trade-offs, asks one question at a time, and never shows you code.
 
-**Speed↔quality dial.** One axis, set per project (`profile` in `ai-dev.config.json`): `lite`/`solo` verify a hypothesis fast — lighter plan ceremony, the orchestrator may build directly; `full` trades speed for no-rewrites. The floor — working code or docs, an independent review by a fresh Reviewer, your explicit go on every merge — holds at every dial position; the dial caps ceremony, never rigor.
+**Speed↔quality dial.** One axis, set per project (`profile` in `ai-dev.config.json`): `lite`/`solo` verify a hypothesis fast — lighter plan ceremony, the orchestrator may build directly; `full` trades speed for no-rewrites. The floor — working code or docs, an independent review by a fresh Reviewer, your explicit go on every merge — holds at every dial position on the guarantee profiles (`full`/`lite`/`solo`); the dial caps ceremony, never rigor. A fourth value, `yolo`, is an explicit off-guarantee escape hatch: no Reviewer, no merge-gate, maximum speed — your explicit merge word is the one floor that remains.
 
 ## Platform-neutral by design
 

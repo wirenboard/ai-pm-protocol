@@ -14,4 +14,4 @@ The protocol's job is to guarantee quality in the projects it drives. An AI revi
 
 - No specific tool is hard-coded in the core or the template — the stack is discovered and the right tools are chosen per project; a downstream on a different stack gets different tools by the same procedure (the project-agnostic rule).
 - A quality-gate config is never loosened to make code pass: the AI fixes the code to the standard, and a config relaxation is a deliberate Operator decision, recorded with its reason — never the author's (and never the AI-author's) convenience.
-- The tools augment the independent-review floor, they never replace it — a separate fresh Reviewer/audit still gates every change.
+- The tools augment the independent-review floor, they never replace it — on guarantee profiles (`full`/`lite`/`solo`) a separate fresh Reviewer/audit still gates every change.
