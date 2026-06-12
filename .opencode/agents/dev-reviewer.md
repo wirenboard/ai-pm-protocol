@@ -184,6 +184,35 @@ sequential read-through suggests. `[persona]`: this sharpens judgement, denies n
 
 > Depth: **light** — the core subset.
 
+## Modularity
+
+The **modularity** module is on, so the floor's scope check is deepened from
+"does the diff match the plan" to a **boundary verification**: confirm that
+cross-module dependencies introduced by this change were named in the plan and
+intentional, and that any boundary update landed in `docs/architecture.md`. A
+new undocumented cross-boundary dependency, or a boundary changed without an
+`architecture.md` update, **blocks**. `[persona]`: this sharpens judgement,
+denies nothing.
+
+- **Boundary documented** — if the change introduced or modified a module boundary, confirm `docs/architecture.md` was updated; an undocumented new boundary is a finding.
+- **Dependency direction** — any new inter-module dependency follows the direction rules; a dependency against the grain requires a recorded Operator decision, not a silent bypass.
+
+> Depth: **light** — the core subset.
+
+## Plan-adversary
+
+The **plan-adversary** module is on, so the plan check is deepened from "does the
+plan match the work" to **probe evidence**: confirm the plan shows signs of
+adversarial self-examination before build. A plan with no named failure mode, no
+replaced fuzzy criterion, and no surfaced fork under a `rich` depth is likely
+unexamined — flag it. `[persona]`: this sharpens judgement, denies nothing.
+
+- **Probe present** — does the plan name at least one failure mode or missing scenario? Absence of any adversarial signal under `rich` depth is a finding.
+- **Forks resolved** — every structural fork the probe surfaced has a named decision and a recommendation; none passed silently into the build.
+- **Fuzzy criteria replaced** — any criterion left fuzzy is explicitly recorded as a gap with its implication; none is tacitly carried forward as "good enough".
+
+> Depth: **rich** — the full enumeration.
+
 ## Verdict
 
 - Stamp a clear verdict the ship gate can read: **write `.ai-dev/reviews/<topic>_review.md` with a `## Code review:` heading** (`docs`-kind projects use `## Doc review:`), carrying either **approve** or **changes requested** — **the verdict must appear inline on the same heading line**: `## Code review: APPROVED`. Changes-requested includes each finding tied to a file and line, ranked by severity. The merge-gate reads that exact file + heading for the stamp's *presence*; an absent, empty, or `NOT YET RUN` stamp blocks the ship (`PROTOCOL.md` `## Enforcement`).

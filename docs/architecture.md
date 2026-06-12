@@ -129,7 +129,7 @@ So a bad config can only ever turn MORE rigor on, never silently disable it — 
 
 The registry, the config doc, and the fragments all label it so; over-claiming a module as mechanical enforcement is a Reviewer honesty-gate find.
 
-Ten modules ship; the catalog — each module's purpose, toggle shape, per-kind defaults — is the registry, its single home. A module's FLOOR stays in the role floor bodies (e.g. threat-model's "a security-relevant change has its threats named", product-advocate's `product-readiness-gate` contract); the fragment is purely the deepening, self-gated to the changes it applies to.
+Twelve modules ship; the catalog — each module's purpose, toggle shape, per-kind defaults — is the registry, its single home. A module's FLOOR stays in the role floor bodies (e.g. threat-model's "a security-relevant change has its threats named", product-advocate's `product-readiness-gate` contract); the fragment is purely the deepening, self-gated to the changes it applies to.
 
 ## Extension points
 

@@ -197,6 +197,37 @@ nothing.
 
 > Depth: **light** — the core subset.
 
+## Modularity
+
+The **modularity** module is on, so the plan's scope check is deepened from
+"what files change" to a **boundary pass**: where the change touches a module
+interface or introduces a new inter-module dependency, the plan must name the
+boundary and confirm the direction is intentional. An unexamined cross-boundary
+dependency added silently is the defect this catches early. Where the project
+carries a `docs/architecture.md` with module/layer names, cite the boundary there
+instead of re-describing it. `[persona]`: this sharpens the plan, denies nothing.
+
+- **Boundary named** — does this change touch a module interface described in `docs/architecture.md`? Name it; if the boundary is undocumented, surface that as a plan decision (document it now, or record the gap).
+- **Dependency direction** — does the change introduce a new inter-module dependency? Confirm it follows the direction rules in `docs/architecture.md`; a dependency against the grain is a structural choice the Operator approves, not an implementation detail.
+
+> Depth: **light** — the core subset.
+
+## Plan-adversary
+
+The **plan-adversary** module is on, so the plan draft is not complete until it
+has been **adversarially probed**: before showing the plan to the Operator, take
+the opposite side and attack it. The goal is to find what the plan gets wrong,
+not to confirm it. Record findings as plan amendments or explicitly scoped gaps —
+not inline commentary. A probe that found nothing suspicious warrants re-examination.
+`[persona]`: this sharpens the plan, denies nothing.
+
+- **What breaks?** Name the most plausible failure: the test that would catch it, the edge case not covered, the upstream dependency that might shift.
+- **What is missing?** Walk the plan's scope: a scenario not listed, a data state not handled, an actor or role not considered.
+- **Fuzzy expected values** — replace every "should be fast", "should be clean", "should be tested" with a concrete, falsifiable criterion — or record it explicitly as a known gap with its implication.
+- **Hidden structural fork** — is there a design choice the plan silently takes? Surface it as an explicit decision with a recommended option: the Operator approves a named fork, never a buried assumption.
+
+> Depth: **rich** — the full enumeration.
+
 ## Build
 
 The contract (core) says *what* you guarantee — confined to plan, build-beat tools green, tests never weakened. The procedure is yours:

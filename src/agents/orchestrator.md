@@ -225,6 +225,25 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 **Run-note** at `.ai-dev/audit/<slug>.md` — transient, deleted once findings are dispatched.
 
+## Downstream feedback
+
+`downstream feedback` triages a problem report FROM a downstream project INTO this repo's backlog or a GitHub issue. Side-tool — the Operator carries the report; this session never reads into a downstream repo (project-boundary deny). `[persona]`.
+
+**When it fires:**
+
+- **Explicit** — the Operator pastes a downstream problem report.
+
+**One pass:**
+
+1. Read the raw report the Operator pasted. Do NOT echo it back verbatim.
+2. Map it to the protocol's structure: owning file, the invariant or rule it touches, the failure class (honesty over-claim, mechanical gap, unclear procedure, missing coverage).
+3. Dedup against `.ai-dev/backlog.md` — if the substance is already there, add the downstream signal as a note on the existing item (one home — invariant 6).
+4. If new: draft a compact backlog entry — the **protocol-level finding**, not raw downstream content. Confirm with the Operator before it lands.
+5. If the finding warrants a GitHub issue (actionable, not just a note): draft the title and body; the Operator authorizes the `gh issue create` call — never silent.
+6. **Privacy:** what lands in the backlog or issue is the protocol-mapped finding; raw downstream content is not committed unless the Operator explicitly OKs it.
+
+The design rationale lives at `docs/decisions/feedback-loop.md`.
+
 ## When something is off
 
 - A spawned role **fails, or its gate isn't met** → retry the same spawn up to twice, then **stop and report to the Operator**. Never synthesize the deliverable in its place (invariant 3).

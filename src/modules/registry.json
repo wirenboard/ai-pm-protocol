@@ -188,6 +188,42 @@
         "builder": "src/modules/concurrency/builder.md",
         "reviewer": "src/modules/concurrency/reviewer.md"
       }
+    },
+    {
+      "id": "modularity",
+      "for": "Boundary discipline where the change touches a module interface or introduces a new inter-module dependency — name the boundary, check the dependency direction against `docs/architecture.md`, flag missing linter — adding the boundary dimension to the Builder's plan and the Reviewer's correctness check.",
+      "toggle": { "depth": "rich | light" },
+      "defaults": {
+        "code": { "depth": "rich" },
+        "docs": false,
+        "mixed": { "depth": "light" }
+      },
+      "targets": [
+        { "role": "builder", "beat": "plan" },
+        { "role": "reviewer", "beat": "review" }
+      ],
+      "fragments": {
+        "builder": "src/modules/modularity/builder.md",
+        "reviewer": "src/modules/modularity/reviewer.md"
+      }
+    },
+    {
+      "id": "plan-adversary",
+      "for": "Adversarial self-probe of the plan draft before build — name the most plausible failure, surface missing scenarios, replace fuzzy criteria, expose hidden structural forks — so the plan's weaknesses are found before the build, not during review.",
+      "toggle": { "depth": "rich | light" },
+      "defaults": {
+        "code": { "depth": "rich" },
+        "docs": { "depth": "light" },
+        "mixed": { "depth": "rich" }
+      },
+      "targets": [
+        { "role": "builder", "beat": "plan" },
+        { "role": "reviewer", "beat": "review" }
+      ],
+      "fragments": {
+        "builder": "src/modules/plan-adversary/builder.md",
+        "reviewer": "src/modules/plan-adversary/reviewer.md"
+      }
     }
   ]
 }

@@ -12,6 +12,16 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.3.0] — 2026-06-12
+
+### Added
+
+- **`modularity` capability module** — boundary discipline for a change that touches a module interface or introduces a new inter-module dependency: Builder names the boundary and checks the dependency direction against `docs/architecture.md`; Reviewer verifies no undocumented cross-boundary dependency was introduced and the linter (if registered) is green. `[light]` depth: boundary named + dependency direction; `[rich]` adds linter gap flag + cohesion check. Defaults: `code: rich`, `docs: off`, `mixed: light`.
+- **`plan-adversary` capability module** — adversarial self-probe of the plan draft before build: Builder attacks its own plan (most plausible failure, missing scenarios, fuzzy criteria replaced, hidden structural forks surfaced); Reviewer checks that the probe was present and honest. `[light]` depth: failure and missing-scenario check; `[rich]` adds fuzzy-criteria replacement and fork surfacing. Defaults: `code: rich`, `docs: light`, `mixed: rich`.
+- **`downstream feedback` side-tool** (`orchestrator.md ## Downstream feedback`) — procedure for triaging a downstream problem report into this repo's backlog or a GitHub issue: Operator carries the report, session maps it to the protocol's structure, deduplicates against the backlog, drafts a protocol-level entry (not raw downstream content), and opens a GitHub issue only on explicit Operator authorization. Design rationale at `docs/decisions/feedback-loop.md`.
+
+---
+
 ## [5.2.0] — 2026-06-12
 
 ### Added
