@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.7.0] — 2026-06-12
+
+### Added
+
+- **Downstream self-report — the emitting half of `downstream feedback`** (`orchestrator.md`, ships to every install). When the protocol itself fails a downstream session (a deny blocking legitimate work, a gap, an unsatisfiable gate, contradictory instructions), the session writes `.ai-dev/feedback/<slug>.md` immediately — the failure through its own eyes: what was asked, what the rule said, where it broke, **what its context held at that moment**, what it did instead, the cost. Marked honestly as a symptom report by the model that just failed, never a diagnosis.
+- **Direct issue filing with leak control** — with the Operator's explicit OK the report is filed as a GitHub issue against the upstream protocol repo. Mandatory before any send: a leak-sweep (secrets, credentialed URLs, internal paths, project names, personal/business content — stripped to the protocol-level symptom) and **showing the Operator the exact title and body to be published, verbatim** — approval is on the shown text, never a paraphrase. Declined or no `gh` ⇒ the Operator carries the file by hand.
+
+### Changed
+
+- `## Downstream feedback` restructured into the two halves (emit / intake); the intake now also accepts a filed issue, not only a pasted report. `## When something is off` protocol-gap bullet now routes to the emitting procedure. PROTOCOL.md side-tool line updated.
+
+---
+
 ## [5.6.0] — 2026-06-12
 
 ### Added
