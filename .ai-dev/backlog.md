@@ -3,6 +3,23 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Downstream field report: ratchet-test + verification scenario gap — ad-md-editor, 2026-06-13
+
+Four bugs in one downstream session, all of the same class: code compiled, Reviewer passed, but the user-visible outcome was wrong. Root: the protocol checks that code exists and compiles, not that it does what it's supposed to do in a real flow.
+
+**Pattern from four cycles:**
+- DOM lifecycle race (silent `return` when `containerEl === null`) — appeared twice, second time after a refactor of the same module. Neither compile nor Reviewer caught it.
+- `current = translated` always-equal (diff never triggers) — code correct syntactically, wrong semantically.
+- `indexOf(original_heading)` in translated text → `-1` (diff misses heading changes) — Reviewer confirmed the method exists, not that the scenario "translate → edit → see diff" works.
+
+**Two protocol gaps:**
+
+1. **No ratchet-test requirement.** After fixing a bug of a given class, the loop has no requirement to add a test that would catch a regression of that class. If such a test existed after the first DOM-race fix, the second occurrence would have failed before commit. Fix candidate: Builder build checklist gains a ratchet rule — "if this commit fixes a defect, a test covering that defect class must exist or be explicitly deferred with a reason."
+
+2. **No verification scenario in the plan.** "How will I know this works?" is not a required plan element. A plan for a user-facing flow that names no concrete verification scenario can be built and reviewed without anyone asking "what does the user actually see?" Fix candidate: Builder plan checklist gains a required field for user-facing flows: "verification scenario — one concrete path (trigger → action → observable result) that a person could perform right now." This is the named prosthesis for the unfelt deficit "optimizing for compile-time correctness, not for user completing the target action" (the META track).
+
+**What the downstream can do now without protocol changes:** assertions instead of silent `if (!x) return`, smoke tests after init, before-commit self-check "what one scenario can I verify right now?"
+
 ## Downstream field report: GUI plan/review needs a user-flow check — ad-md-editor, 2026-06-13
 
 Two concrete bugs from the first downstream, both caught by the same missing check.

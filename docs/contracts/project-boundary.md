@@ -2,7 +2,7 @@
 
 **Agents stay within the project, and repo-owned files change only through git** — no agent reads, searches, or writes outside the project root, and a repo-owned file is never silently edited in place on a remote system.
 
-An AI agent loose on the filesystem — reading sibling repos, editing production files in place — is a trust and integrity hazard. Two hard lines: every agent stays inside the project root; and any file the repo owns changes through git, never by an in-place edit on a remote system, so git history stays the single source of truth.
+Two hard lines: every agent stays inside the project root; and any repo-owned file changes through git, never by an in-place remote edit.
 
 ## Must work
 

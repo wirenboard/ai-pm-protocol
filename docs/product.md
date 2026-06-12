@@ -1,7 +1,5 @@
 # Product brief
 
-> The one home for **what this project is and why**. Every feature grounds in it.
-
 ## 0. The idea — what is this product?
 
 A platform-neutral protocol that gives AI-assisted software and documentation development a disciplined, reviewable loop — three roles (Orchestrator / Builder / Reviewer), five beats (understand → plan → build → review → ship), and a mechanical enforcement layer — so on guarantee profiles the builder and the reviewer are always different contexts and nothing ships unreviewed.
@@ -14,7 +12,7 @@ A platform-neutral protocol that gives AI-assisted software and documentation de
 
 **Not for:** one-off scripts, vibe-coding experiments, teams that already have a mature CI/CD and code-review culture, anyone who does not care whether the AI cuts corners.
 
-**Speed↔quality dial.** One axis, implemented as `profile` in `.ai-dev/config.json`: `lite`/`solo` verify a hypothesis fast, `full` trades speed for no-rewrites — the floor (independent review, explicit merge go) holds at every position on the guarantee profiles. A fourth value, `yolo`, is an explicit off-guarantee escape hatch (no Reviewer, no stamp, no merge-gate; Operator's merge word remains). The dial's contract: `PROTOCOL.md` `## Project config`.
+**Speed↔quality dial.** One dial: `lite`/`solo` = fast, `full` = slower but thorough, `yolo` = off-guarantee (no Reviewer, no stamp, no merge-gate; Operator's merge word remains).
 
 ## 2. Problem — from their point of view
 
@@ -27,9 +25,7 @@ Four pains in play:
 
 ## 3. Discovery & onboarding — zero to working
 
-**How a new user finds out it exists:** organic / GitHub (open repo, README, word-of-mouth in the dev community) and the platform's plugin marketplace (Claude Code / OpenCode).
-
-**First steps from nothing to working:**
+Discovery is organic / GitHub (open repo, README, word-of-mouth) and the platform's plugin marketplace. First steps:
 
 1. Wire the protocol — one command: `node src/adapter/install.mjs <target-dir> --platform claude|opencode`.
 2. Start a fresh session; the harness loads as the orchestrator.
@@ -58,10 +54,10 @@ Prerequisite: Claude Code or OpenCode installed and authenticated; no other depe
 
 **Residual gap — the compound matters, not any one part:**
 
-- **Cross-platform from one neutral core** — a vendor will never ship cross-platform policy; the core/adapter split is structurally un-absorbable.
-- **Hook-enforced floor, not prose-only discipline** — a real deny layer (tool-call intercepts, merge-gate stamp check) at both Claude Code and OpenCode parity-tested from one engine. BMAD-class frameworks are prose-held.
-- **Product discovery as a first-class beat** — `docs/product.md` before any feature; vendors do code, not product-management loop.
-- **Honest enforcement map** — every constraint labelled `[mechanical]` vs `[persona]`; over-claiming is a Reviewer blocking-find. Rare.
+- **Cross-platform from one neutral core** — vendors won't ship cross-platform policy; the core/adapter split is structurally un-absorbable.
+- **Hook-enforced floor, not prose-only discipline** — real deny layer at both platforms, parity-tested from one engine; BMAD-class frameworks are prose-held.
+- **Product discovery as a first-class beat** — `docs/product.md` before any feature; vendors do code, not product-management.
+- **Honest enforcement map** — every constraint labelled `[mechanical]` vs `[persona]`; over-claiming blocks at review.
 
 The protocol does not guarantee a "floor" — it is **protocol-held discipline with mechanical backstops** (boundary denies, stamp-presence merge-gate, role-substitution guard). Most rules are prose-held, as §7 states. The value is that the discipline is externally defined, version-controlled, and honest about its limits — not that it is infallible.
 
@@ -80,18 +76,18 @@ The protocol does not guarantee a "floor" — it is **protocol-held discipline w
 **Success criteria (provisional):**
 
 - One non-author project onboarded and shipping within 6 months of v5.0.
-- Rework metric — reverted or re-opened shipped features per shipped feature, read from git history (revert commits, reopened topics) — tracked in the dogfood repo from 4.12.0; none observed in the 4.x line so far.
+- Rework metric — reverted/reopened shipped features, tracked from 4.12.0; none observed in the 4.x line.
 - Cost-per-feature measured and published for the dogfood repo (first measurement: the review-pass numbers above).
 
 ## 7. The case against
 
-- **The dial is no longer a differentiator.** BMAD v6 and Kiro ship speed↔quality toggles; GSD ships quality-vs-cost model profiles. The dial is now table stakes, not a moat.
-- **Platform absorption risk is real but bounded by the adapter.** A single platform absorbing the mechanism (Claude Code shipped agent teams, workflows, PreToolUse deny hooks; OpenCode has its own equivalents) shifts value toward policy + wiring, not to zero — and the protocol migrates to the next platform via its adapter (OpenCode is live-verified; adding a platform is its adapter and zero core edits). The unabsorbable residual: cross-platform parity, the honest enforcement map (mechanical vs persona), and product discovery. The true risk is coordinated multi-platform absorption of the policy layer — which no single vendor controls.
-- **The reviewer is usually the same model.** `auto` resolves to a different model only where the environment offers one. Most installations have a single model — structurally independent context (separate spawn, no shared memory) but not model-independent. Stated honestly, not papered over.
-- **Persona-only floor is thin.** The mechanical enforcement covers a narrow deny list (boundary writes, role substitution, merge-gate stamp presence). Spawning the Reviewer is a positive act the deny layer cannot force; the orchestrator-authors-content guard is `[persona]` on Claude, which is the platform this repo runs on. A session that pages out PROTOCOL.md can violate prose rules silently.
-- **Light profile leans on the Reviewer.** In `solo` or `lite`, plan ceremony is off by default, so the brief-fit question moves to review-time (the Reviewer's product-fit check — `[persona]` prose, not a mechanical gate). A light profile therefore rests more weight on one prose-held checklist item than `full` does.
-- **N=1 dogfood evidence.** Git history is single-author, at the extreme technical-operator end — and the dogfood runs on `profile: solo`, the lightest dial position: it exercises the floor (independent review, merge gates) daily, not the full-ceremony loop. Validates buildability; says nothing about demand, the PM segment, or the non-dogfood experience.
-- **No distribution engine.** Discovery is essentially "find it on GitHub" — a great product nobody finds. No hosted onboarding, no marketplace listing yet.
+- **The dial is no longer a differentiator.** BMAD v6, Kiro, and GSD all ship speed↔quality toggles. Table stakes, not a moat.
+- **Platform absorption risk is real but bounded by the adapter.** Absorption shifts value toward policy + wiring, not to zero; the protocol migrates to the next platform via a new adapter (zero core edits). The true risk is coordinated multi-platform absorption of the policy layer — which no single vendor controls.
+- **The reviewer is usually the same model.** `auto` resolves to a different model only where the environment offers one; most installs have a single model. Stated honestly, not papered over.
+- **Persona-only floor is thin.** Mechanical enforcement covers a narrow deny list; spawning the Reviewer is a positive act the deny layer cannot force. A session that pages out PROTOCOL.md can violate prose rules silently.
+- **Light profile leans on the Reviewer.** In `solo` or `lite`, the brief-fit question moves to review-time — a `[persona]` prose check, not a mechanical gate.
+- **N=1 dogfood evidence.** Single-author history at the extreme technical-operator end, running `profile: solo`. Validates buildability; says nothing about demand or the PM segment.
+- **No distribution engine.** Discovery is essentially "find it on GitHub." No hosted onboarding, no marketplace listing yet.
 - **Pure-OSS, bus-factor 1.** No funding; hard to sustain against funded rivals (BMAD, Kiro).
-- **"Product brief quality is the Operator's responsibility."** If `docs/product.md` is based on wrong assumptions, the review and plan machinery faithfully executes on those wrong assumptions. The protocol enforces the loop, not the quality of the Operator's product thinking.
-- **Wrong for:** someone who wants a one-click app (Lovable is simpler); a senior dev who finds the ceremony heavier than just coding; a team; a non-technical PM today (onboarding is hostile).
+- **"Product brief quality is the Operator's responsibility."** If `docs/product.md` is wrong, the machinery faithfully executes on those wrong assumptions. The protocol enforces the loop, not the Operator's product thinking.
+- **Wrong for:** someone who wants a one-click app; a senior dev who finds ceremony heavier than just coding; a team; a non-technical PM today (onboarding is hostile).

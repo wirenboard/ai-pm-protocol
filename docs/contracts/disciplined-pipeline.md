@@ -4,7 +4,7 @@
 
 The `yolo` profile is explicitly outside this contract — it names no Reviewer and turns the merge-gate off by design, under the Operator's informed consent; see `PROTOCOL.md ## Project config`.
 
-Whoever drives a change — an AI agent or the Operator behind it — gets one predictable path from idea to release, with independent review wired into the path so quality does not depend on anyone remembering to be careful. A change cannot quietly skip planning, skip review, or land half-finished. The Operator watches a plain-language conversation; the structure runs underneath.
+Every change follows one predictable path — plan → build → independent review → ship — so nothing ships by the Operator forgetting to ask for a review.
 
 ## Must work
 

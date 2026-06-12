@@ -2,7 +2,7 @@
 
 **A change cannot quietly break what already worked** — every user-facing feature records what must keep working, and any change that violates one of those recorded promises blocks the PR.
 
-The most dangerous failure in fast development is the silent regression — a new feature that quietly breaks an old one nobody re-tested. Every user-facing feature carries a contract naming, in plain language, what it must do and what must never break; a change that touches the feature re-checks those promises against the diff, and a violation blocks rather than slipping through. Protection accumulates without re-describing it each time.
+Every user-facing feature carries a contract naming what must keep working; a change that violates one blocks the PR.
 
 ## Must work
 

@@ -12,6 +12,18 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.9.3] — 2026-06-13
+
+Docs trim pass — all prose cut to one sitting.
+
+### Changed
+
+- `docs/product.md` — §1 dial paragraph to one sentence; §3 intro folded; §6 rework-metric bullet tightened; §5/§7 verbose bullets cut; blockquote header removed.
+- `docs/architecture.md` — blockquote header removed.
+- `docs/contracts/` — seven contracts trimmed (automated-quality-tooling, disciplined-pipeline, dual-harness-from-one-source, one-command-install, product-foundation, project-boundary, regression-protection).
+
+---
+
 ## [5.9.2] — 2026-06-13
 
 Downstream-feedback protocol fixes (ad-md-editor field report).

@@ -2,7 +2,7 @@
 
 **The protocol runs on two AI coding platforms from a single source of truth** — one neutral core, one thin adapter per platform, enforcement faithful on both.
 
-The protocol's guarantees should not be tied to one AI coding tool. It runs on Claude Code and OpenCode without maintaining two divergent copies: one platform-neutral core (this constitution, the role bodies, the deny-rules data) plus a thin adapter per platform that maps each neutral act to the platform's concrete tool. The Operator can adopt the protocol on either platform and get the same disciplined behaviour.
+One neutral core, one thin adapter per platform — the same rules on both without maintaining two divergent copies.
 
 ## Must work
 

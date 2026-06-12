@@ -1,7 +1,5 @@
 # Architecture
 
-> The engineer's mental model — how the pieces fit and where to change them. `PROTOCOL.md` is the constitution (*what* must happen); this file is the construction (*how* it is built). It stays **neutral**, like the rest of the core: platform specifics are not here, they live in the adapter (`src/adapter/README.md`, `src/adapter/INSTALL.md`). This file maps the parts; it does not restate the rules.
-
 ## What it is
 
 One neutral core plus one thin adapter per platform.

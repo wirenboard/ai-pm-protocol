@@ -2,7 +2,7 @@
 
 **One command installs the protocol into a target project** — it vendors the shared adapter, wires the active platform (its deny hooks, agents, commands, and any plugin), and lays down the structure (the constitution, the role agents, the quality-layer shape, the capability modules, the doc templates, and a config slot) — **idempotently**, so re-running is always safe.
 
-Adopting the protocol must not be a manual checklist a person follows by hand and gets wrong. One command turns a plain repository into a protocol-driven one: the adapter the enforcement layer needs is vendored where the platform can reach it, the active platform is wired to the shared engine, and the downstream gets the core files and doc templates it needs to start the loop. Re-running the command is a safe no-op-shaped operation — it converges the target to the same wired state rather than duplicating a hook, an import, or a file. The single home for *what each step does* is `src/adapter/INSTALL.md`; this contract names only the guarantee.
+The single home for what each step does is `src/adapter/INSTALL.md`; this contract names only the guarantee.
 
 ## Must work
 

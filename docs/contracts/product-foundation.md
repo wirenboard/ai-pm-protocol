@@ -2,7 +2,7 @@
 
 **A project defines its product and its users — a durable brief — before it builds features, through GENUINE discovery: gather the product's real zero-to-working story prejudice-free, then conclude — able, at the end, to conclude "we built the wrong thing." Every feature then grounds in that brief.**
 
-Onboarding wires the machinery but never establishes *what product, and for whom* — discovery inserts that missing first step: a dialog recording a durable brief (`docs/product.md`) that every feature then grounds in. It is grounded in the established discovery frameworks (*Working Backwards*, *Lean Canvas*, Cagan's four risks, Torres): customer and problem first, the competition named explicitly, a case-against built in. The procedure lives in `src/agents/orchestrator.md` `## Product discovery`; the brief's shape in `src/templates/product.md`.
+Onboarding wires the machinery but never establishes *what product, and for whom* — discovery inserts that missing first step: a dialog recording a durable brief (`docs/product.md`) that every feature then grounds in. Customer and problem first, competition named explicitly, a case-against built in.
 
 ## Must work
 
