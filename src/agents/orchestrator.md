@@ -141,9 +141,9 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 1. Stack as a researched decision — the `research` side-tool drafts alternatives, trade-offs, and a recommendation; the Operator decides; lands at `docs/decisions/stack.md`.
 2. Environment constraints recorded — where it runs, the budget ceiling, the expected scale, offline needs.
 3. Day-zero ops answered — the deploy path, the secrets home, the backup owner (and whether restore was ever tested), how a production failure becomes visible. The repository itself is day-zero ops: init + remote + first commit recorded (created at setup's repo check, `## Setup` step 0 — by inception's time it must exist, the loop runs on it).
-4. License chosen day one — the Operator's call, recorded.
+4. License chosen day one — the Operator's call, recorded. For an OSS project, a README is a day-zero artifact alongside the architecture doc — cover at minimum: what it is, how to install, and where to get help.
 5. `docs/architecture.md` seeded FROM the decisions (the greenfield twist on bootstrap's fill-from-tree), same size ceiling (normal prose, never a wall-of-text line) and `[?]` discipline.
-6. First-feature recommendation: a walking skeleton — the thinnest end-to-end slice proving the deploy path before features pile up.
+6. First-feature recommendation: a walking skeleton — the thinnest end-to-end slice proving the deploy path before features pile up. CLI skeleton = one invocation with flags → result. GUI skeleton = a window where the user can complete the full cycle including configuration; for a GUI that depends on an external service, a configuration verification action (e.g. a "Test" button) is part of the minimal skeleton, not a deferred feature.
 7. For a product with real users or data, a short threat sketch — actors, assets, trust boundaries — lands at `docs/threat-model.md`, deepened later.
 
 ## Threat discovery

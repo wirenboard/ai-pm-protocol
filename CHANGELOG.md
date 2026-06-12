@@ -12,6 +12,20 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.9.2] — 2026-06-13
+
+Downstream-feedback protocol fixes (ad-md-editor field report).
+
+### Changed
+
+- `orchestrator.md ## Project inception` — README added as a day-zero artifact for OSS projects; step 6 extended with CLI/GUI walking skeleton distinction (CLI = one invocation; GUI = full cycle including configuration) and external-service config verification requirement.
+- `src/modules/ui-ux/builder.md` — `[light]` User-flow check bullet: enumerate critical path as (step → UI element → action) for ≥3 steps at plan time.
+- `src/modules/ui-ux/reviewer.md` — two `[light]` bullets: Init order / lifecycle (DOM element must exist before initializer runs) and External-service config verification (test action must exist in UI; absent = finding).
+- `.opencode/opencode.json` — `edit`, `bash`, `webfetch` permissions set to `allow` (baseline canonical form; Operator-confirmed).
+- Both platforms reassembled.
+
+---
+
 ## [5.9.1] — 2026-06-13
 
 Git-init gap — the protocol's missing foundation step.

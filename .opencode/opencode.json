@@ -5,10 +5,17 @@
     "PROTOCOL.md"
   ],
   "permission": {
-    "question": "allow"
+    "question": "allow",
+    "edit": "allow",
+    "bash": "allow",
+    "webfetch": "allow"
   },
   "agent": {
-    "build": { "disable": true },
-    "plan": { "disable": true }
+    "build": {
+      "disable": true
+    },
+    "plan": {
+      "disable": true
+    }
   }
 }

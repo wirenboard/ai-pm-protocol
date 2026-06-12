@@ -97,6 +97,7 @@ sharpens the plan, denies nothing.
 - **Responsiveness** — loading states, feedback for every action, no dead air while the system works.
 - **Clarity** — each control affords its use; error text says what to DO next, in the user's language, never a raw internal code.
 - **Adverse states** — offline, device loss, reconnect, partial failure, restart; the plan covers them, not just the happy path.
+- **User-flow check** — if the change introduces or modifies a user-facing flow, enumerate the critical path as (step → UI element → action) for at minimum 3 steps; this surfaces DOM lifecycle dependencies (does the element exist when the initializer runs?) and missing feedback paths (how does the user verify their configuration works?) before code is written.
 
 > Depth: **rich** — the full enumeration.
 
