@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.8.1] — 2026-06-12
+
+Token economy — cut redundant agent work without touching the guarantee floor.
+
+### Changed
+
+- Builder continuation is now the **default** across steps of one feature (plan→build, build→address-findings) where the platform offers a continue primitive; fresh-spawn is the fallback (OpenCode records `null` → falls back automatically). The Reviewer is still always a fresh spawn.
+- New orchestrator rule: **spawn prompts point, never restate** — an on-disk artifact (plan, verdict) is referenced by path + delta, never copied into the prompt (invariant 6 applied to prompts).
+- New reviewer rule: a **re-review round** scopes to the named findings' fixes plus any unexplained change in the diff — not a second full derivation; reconciled with the fresh-read rule (identical bytes stand on round 1).
+- Dogfood: this repo's own config migrated to `.ai-dev/config.json` (its own 5.8.0 migration); stale `ai-dev.config.json` references fixed in `dev-setup.fm` (both platforms), `tool-map.json`, `modules/registry.json`; agents and commands reassembled on both platforms.
+
+---
+
 ## [5.8.0] — 2026-06-12
 
 Stealth layout — protocol artifacts moved into `.ai-dev/`; downstream project root is now clean.

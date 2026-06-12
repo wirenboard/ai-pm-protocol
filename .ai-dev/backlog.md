@@ -7,6 +7,8 @@ Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 a
 
 `orchestrator.md` sits at the upper edge of "readable in one sitting". The rule for the NEXT side-tool addition: trim or fold, never append past the edge. (Low-1, the `Validation` stamp label, resolved in 4.19.2 — dropped, no live consumer.)
 
+**Token-economy remedy candidate (2026-06-12):** ~11 side-tool "one pass" bodies load every turn though a typical turn uses none (~7.9k tok always-on; floor would be ~3.5k). Precedent: the elicitation catalog already lives in its own file, read at fire time. Candidate refactor: keep the trigger lines ("when it fires") in orchestrator.md, move the procedure bodies to per-tool files read on fire. Measure first — prompt caching absorbs most of the static reload (~10% cost on a warm cache), so the realized saving may be modest; do not refactor on raw size alone.
+
 ## [who] axis / operator-scenario presets — retracted from README, parked as a hypothesis epic — 2026-06-12 (Operator decision)
 
 **Decision (Operator, 2026-06-12):** the `[who] × [speed↔quality]` matrix was retracted from `README.md` (4.10.3) — the `[who]` axis had zero implementation and its tech-lead cell ("you see the diff") contradicted `PROTOCOL.md` "Never show code". The honest surface today is the one-axis `profile` dial.
@@ -28,6 +30,10 @@ The proactive trigger is in (orchestrator `## Audit`: offer after ~5 shipped fea
 - **Asymmetric failure-naming** (8D ceremony-drift, D7) — a dial/gate whose failure modes are named on ONE side only breeds drift to the unnamed side: sweep for it (doc-quality names bloat but not brevity-to-uselessness; audit cadence names under- but not over-auditing; the profile dial named under-rigor but not over-ceremony until 4.20.0). Each found asymmetry is a candidate fix.
 - **Single-source drift includes `.ai-dev/state/current.md`** (8D pointer-lied, D7) — the resume pointer is durable canon, not exempt from invariant 6; the audit's single-source-drift dimension scans it for restated facts (version, shipped-set, PR state) that belong to the tag / CHANGELOG / forge.
 - **Implicit counter dependencies** (8D missed-audit-offer, D7) — any cadence/counter rule must name WHERE its counter lives and WHICH mandatory step reads it; sweep rules for counters with no enforced home or reading step (the audit-cadence counter died exactly this way at a state rewrite).
+
+## Fixup-grade spawns with floor-only role bodies — token economy — 2026-06-12
+
+Assembled agents carry every enabled module on every spawn (~3.8k tok of modules over a ~1–2k floor, per seat); a fixup-grade change (typo, one-line fix) pays the full module stack twice (Builder + Reviewer). The fixup Reviewer pass is already "shortened, never skipped" — a floor-only body is a defensible realisation of "shortened". Design questions: where the lane decides body composition (spawn-time flag vs a second assembled variant per role); fail-safe direction (a misclassified non-trivial change spawned floor-only loses module rigor — the "when in doubt, not a fixup" rule is the guard, name it explicitly). Both platforms: Claude resolves at spawn, OpenCode bakes at assembly — a second variant means two assembled files per role there.
 
 ## Parallel feature work — Operator request 2026-06-12
 

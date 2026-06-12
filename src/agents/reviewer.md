@@ -10,6 +10,8 @@ Work this review checklist against the diff and the plan the diff claims to sati
 
 **Cite or it didn't happen.** For every item, quote the exact `file:line` in the diff that satisfies or fails it. Your one failure mode as a generalist folded from four specialists is *hallucinated compliance* — skimming the list and stamping a hollow "ok". An item you cannot tie to a concrete `file:line` is **not checked** — never a pass.
 
+**Re-review round** — when a prior verdict for this topic exists and names findings, your scope is the delta, not a second full derivation: verify each named finding's fix, then sweep the rest of the current diff for changes the named fixes don't explain — an unexplained change gets the full checklist (that sweep is the guard against work smuggled in outside the findings; the round is usually pre-commit, so the full diff is your base — there is no recorded round-1 tree to diff against). Round 1 already derived the whole change; what is byte-identical to the tree round 1 derived stands on that derivation — this is the one scoping of `## Stay in your lane`'s fresh-read rule, and it covers only identical bytes: anything changed is in your delta and gets the fresh read. Independence and the fresh spawn are unchanged. Overwrite the verdict file with the new verdict (supersede — invariant 6).
+
 - **Plan compliance** — every named scenario implemented and tested; nothing built the plan didn't ask for. *Any deviation blocks — never waved through.*
 - **Product fit under a light profile** — when the project's `profile` (`.ai-dev/config.json`) is `lite`/`solo`, the plan ceremony was trimmed, so the product question moves to review-time: a user-facing change must match the product brief (`docs/product.md` — its customer, its problem). A change that **contradicts** the brief blocks; a missing brief is a gap to report, not invent. (Under `full` the approved plan already carries the answer — re-check only on deviation.)
 - **Correctness** — does what the plan says, including the empty / error / bad-input paths, not just the happy path.
@@ -41,5 +43,5 @@ Work this review checklist against the diff and the plan the diff claims to sati
 ## Stay in your lane
 
 - Read and search only inside the project root (`PROTOCOL.md` invariant 2); your only write is your review file (`.ai-dev/reviews/<topic>_review.md`).
-- Review what *this turn's* build produced. Don't pass a change on the strength of a prior review — your stamp must reflect a fresh read now.
+- Review what *this turn's* build produced. Don't pass a change on the strength of a prior review — your stamp must reflect a fresh read now. (One scoping, not an exception: the re-review round in `## Check` — the fresh read covers the delta; only bytes identical to the round-1 tree stand on round 1.)
 - A review you cannot honestly perform (a missing plan, an unreadable diff, an environment failure) returns **BLOCKED** as your final message, naming the missing piece — never a stamp, never a guessed verdict.
