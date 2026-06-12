@@ -26,11 +26,13 @@ Part of that adapter is a real **enforcement layer** — a deny layer that mecha
 
 ## Install
 
-One idempotent command from a protocol checkout:
+One idempotent command, no checkout needed:
 
 ```sh
-node src/adapter/install.mjs <target-dir> --platform claude|opencode
+npx github:aadegtyarev/ai-pm-protocol-uni <target-dir> --platform claude|opencode
 ```
+
+(From a protocol checkout, the same installer runs directly: `node src/adapter/install.mjs <target-dir> --platform claude|opencode`.)
 
 It vendors the adapter, lays down the core and doc templates (only where the target has none), and wires the chosen platform — hooks, role agents, the `PROTOCOL.md` load. Per-platform detail: **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)**. After wiring, start a fresh session so the harness loads the protocol.
 

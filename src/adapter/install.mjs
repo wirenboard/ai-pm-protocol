@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // The unified installer — the one realisation of the adapter's "install into a
 // project" contract point (PROTOCOL.md `## Core and adapter`,
 // docs/contracts/one-command-install.md). It automates exactly the manual
@@ -258,8 +259,10 @@ export function install(targetDir, platformFlag) {
   return platform;
 }
 
-// CLI entry — only when invoked directly, not when imported by the test.
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// CLI entry — only when invoked directly, not when imported by the test. argv[1] is
+// realpath'd because an npm bin shim invokes this file through a symlink, while the
+// loaded module URL is the real path — without it the npx run would silently no-op.
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const flagIdx = args.indexOf("--platform");
   const platformFlag = flagIdx >= 0 ? args[flagIdx + 1] : undefined;

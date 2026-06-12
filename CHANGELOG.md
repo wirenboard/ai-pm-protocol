@@ -12,6 +12,16 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.17.0] — 2026-06-12
+
+### Added
+
+- **Threat discovery** — the product-level threat model gets its standing procedure (the 4.16.0 inception/bootstrap *sketch* is the seed; this is the depth): a template (`src/templates/threat-model.md` — actors / assets / trust boundaries / abuse cases / consciously-out-of-scope / the "currently exposed" conclusion; ~40–80 lines of normal prose, secret locations never values) instantiated by the procedure and never auto-landed by install; an orchestrator `## Threat discovery` section (one axis per round; the conclude phase must be able to say "this is currently exposed" — a model unable to say it is theater); the threat-model module cites the standing document where it exists instead of enumerating from scratch, and a security-relevant change contradicting it is a finding; the understand beat reads it where present. `[persona]`.
+- **npx distribution** — `npx github:aadegtyarev/ai-pm-protocol-uni <target-dir> --platform claude|opencode` installs with nothing cloned: `package.json` publish-ready (`bin`, `files` whitelist — state/docs/harness dirs never ship, `license`/`repository`/`engines`, `private` dropped), shebang + a realpathed CLI-entry guard in `install.mjs` (an npm bin shim invokes through a symlink; without the realpath the npx run silently no-oped — reproduced, fixed, e2e-verified). README leads with the npx form. Registry publish stays external (the Operator's npm account).
+- **Autonomy-decision journal** — an autonomous announce-then-act call is recorded (the fork, the decision, the canon) in the active plan's progress note at decision time, and ship copies the "Decisions made under autonomy" digest into the PR body before the plan is deleted — chat scrollback stops being the only trace of decisions taken while the Operator is away. `[persona]`, honestly labelled.
+
+---
+
 ## [4.16.0] — 2026-06-12
 
 ### Added

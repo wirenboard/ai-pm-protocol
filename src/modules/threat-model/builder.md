@@ -4,7 +4,9 @@ The **threat-model** module is on, so the plan's **Security surface** question i
 deepened from one threat-and-mitigation line to a plan-time **enumeration**: where the
 change touches auth, secrets, untrusted input, or a network boundary, walk the surfaces
 below and record each live threat WITH its mitigation and the `file:line` that closes
-it. Silence on a surface means "considered, not exposed" — not skipped. `[persona]`:
+it. Silence on a surface means "considered, not exposed" — not skipped. Where the
+project has a standing threat model (`docs/threat-model.md`), cite which named actor,
+boundary, or asset the change touches instead of enumerating from scratch. `[persona]`:
 this sharpens the plan, denies nothing.
 
 - `[light]` **Attack surface** — every new input / endpoint / parser / format / interface this change exposes; validate each where untrusted data first enters.

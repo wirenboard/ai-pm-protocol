@@ -1,9 +1,23 @@
 {
   "name": "ai-pm-protocol",
-  "version": "4.16.0",
-  "private": true,
+  "version": "4.17.0",
   "type": "module",
   "description": "The AI-PM Protocol — its own source (this repo develops itself under its own protocol).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aadegtyarev/ai-pm-protocol-uni.git"
+  },
+  "bin": {
+    "ai-pm-protocol": "src/adapter/install.mjs"
+  },
+  "files": [
+    "PROTOCOL.md",
+    "src/"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "quality": "node src/quality/run.mjs build"
   },

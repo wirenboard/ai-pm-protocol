@@ -2,13 +2,13 @@
 
 > Resume pointer — READ FIRST, by this exact path. Deferred detail: `.ai-pm/backlog.md`. History: commits + CHANGELOG.
 
-**Status (2026-06-12).** `main` = `uni/main` = **4.15.0** (PRs #25–#39); `feature/dewater-and-modules` = **4.16.0**, PR pending — awaiting Operator merge.
-**Next in flight:** branch 2 STACKED on dewater-and-modules (Operator-approved stacking): threat discovery (full procedure + template + module linkage), npx distribution (bin/shebang/files), autonomy-decision journal (announce-then-act recorded in the plan progress note; ship carries the digest into the PR body). After PR 1 squash-merges: rebase branch 2 onto fresh main (force-push with Operator present, or fresh branch + cherry-pick).
+**Status (2026-06-12).** `main` = `uni/main` = **4.16.0** (PRs #25–#40, #40 merged on Operator's word); `feature/threat-discovery-npx` = **4.17.0**, PR #41 — awaiting Operator merge (they are away; merges queue, never inferred).
+**Conveyor (Operator: "дальше без меня автоматом, от веточек отпочкуй"):** branch 3 next, STACKED on branch 2 — `no-product-brief-discover` inject blindness fix (template sentinel + content predicate); fix/review-loop ceilings; platform-switch detection (running harness ≠ config.platform ⇒ declinable re-wire offer + config flip + model revalidation with cross-model intent preserved + apply-config re-bake). Then branch 4: verification ladder (mandatory `Runtime verification:` verdict field) + blocked-role return contract. Epics with non-derivable forks (parallel-work, [who]-axis) wait for the Operator.
 
 ## What was just shipped
-- 4.14.0 (#38) — stamp-authorship floor (orchestrator denied writing review stamps where the actor resolves)
 - 4.15.0 (#39) — doc bootstrap: brownfield onboarding procedure; `[persona]`
-- 4.16.0 (PR pending) — de-water pass complete; capability axis 2→10 (test-methodology, ui-ux, research-methodology, debug-methodology, performance, database, i18n, concurrency) + assembler per-kind default-OFF; `## Project inception` (greenfield mirror) + CI offer + audit security dimension; brownfield truth reconciliation (brief reconstruction mode + bootstrap cross-check); reviewer floor sharpened (over-engineering, naming, secret-value floor)
+- 4.16.0 (#40) — de-water pass complete; capability axis 2→10 + assembler per-kind default-OFF; `## Project inception` + CI offer + audit security dimension; brownfield truth reconciliation; reviewer floor sharpened (over-engineering, naming, secret-value floor)
+- 4.17.0 (PR #41 pending) — threat discovery (standing model: template + procedure + module linkage); npx distribution (zero-registry `npx github:` works; registry publish external); autonomy-decision journal (progress-note record + PR-body digest)
 
 ## Up next
 Detail in `.ai-pm/backlog.md`:

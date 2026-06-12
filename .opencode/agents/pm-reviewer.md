@@ -50,7 +50,9 @@ The **threat-model** module is on, so the floor's **Security** item is deepened 
 change, confirm each surface below was named in the plan AND handled in the diff,
 tying every threat to the `file:line` that opens or closes it. An **unhandled
 exposure, or a security claim the diff doesn't back, blocks** — same cite-or-it-
-didn't-happen rule as the floor. `[persona]`: this sharpens judgement, denies nothing.
+didn't-happen rule as the floor. Where the project has a standing threat model
+(`docs/threat-model.md`), a security-relevant change that contradicts it is a finding.
+`[persona]`: this sharpens judgement, denies nothing.
 
 - **Attack surface** — new input / endpoint / parser / format / interface; is each validated where untrusted data first enters?
 - **Secrets & credentials** — no secret read from a live file, logged, or committed; secrets come from a git-ignored source, keys are not hard-coded.
