@@ -41,12 +41,64 @@ function maskQuotedSpans(command) {
   );
   return out;
 }
+// Strip non-shell heredoc BODIES from a bash command before any rule pattern
+// runs (applied once in evaluate(), so every predicate sees the same prepared
+// string). A heredoc body fed to a non-shell consumer (python3, node, cat, …)
+// is data — prose in it mentioning `git push` must not trip the verb rules
+// (live 4.19.x false deny). Strict-side carve-outs — each keeps the body matched:
+//   • a SHELL consumer (sh/bash/zsh/dash/…) executes its body;
+//   • an ambiguous opener (several heredocs on one line, unparseable delimiter,
+//     no visible consuming command);
+//   • an unterminated body (no closing-delimiter line) — malformed ⇒ keep.
+// Line-anchored literal scanning only — no nested quantifiers, no backtracking
+// surface. The opener line and the closing-delimiter line are KEPT, so a real
+// push before or after the heredoc in the same compound still matches.
+// Known limit: an indirect execution of the body (python os.system, a heredoc
+// written to a file and run later) is invisible here — persona is the backstop.
+const SHELL_CONSUMERS = new Set(["sh", "bash", "zsh", "dash", "ksh", "mksh", "ash", "csh", "tcsh", "fish"]);
+function stripHeredocBodies(command) {
+  if (typeof command !== "string" || !command.includes("<<")) return command;
+  const lines = command.split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    out.push(line); // the opener line itself always stays matched
+    i += 1;
+    const masked = maskQuotedSpans(line); // a quoted "<<" is not an operator
+    const ops = [...masked.matchAll(/<{2,3}/g)].filter((m) => m[0] === "<<"); // <<< is a herestring, not a heredoc
+    if (ops.length !== 1) continue; // none, or several on one line (ambiguous) ⇒ keep
+    const at = ops[0].index;
+    // The delimiter word, read from the RAW line (the mask hides a quoted one).
+    const dm = line.slice(at).match(/^<<(-?)[ \t]*(?:'([A-Za-z0-9_.-]+)'|"([A-Za-z0-9_.-]+)"|\\?([A-Za-z0-9_.-]+))/);
+    if (!dm) continue; // unparseable opener ⇒ keep
+    const delim = dm[2] ?? dm[3] ?? dm[4];
+    // The consuming command: the simple-command segment the operator belongs to.
+    const words = masked.slice(0, at).split(/[;&|()`]/).pop().trim().split(/\s+/)
+      .filter((w) => w && !/^[A-Za-z_][A-Za-z0-9_]*=/.test(w)); // skip env assignments
+    if (words.length === 0) continue; // no visible consumer ⇒ ambiguous ⇒ keep
+    if (words.some((w) => SHELL_CONSUMERS.has(w.slice(w.lastIndexOf("/") + 1)))) continue;
+    // Find the closing-delimiter line (exact match; <<- permits leading tabs).
+    let close = -1;
+    for (let j = i; j < lines.length; j += 1) {
+      const cand = dm[1] === "-" ? lines[j].replace(/^\t+/, "") : lines[j];
+      if (cand === delim) { close = j; break; }
+    }
+    if (close === -1) continue; // unterminated ⇒ malformed ⇒ keep (deny-side)
+    out.push(lines[close]); // body dropped; the closer and everything after stay
+    i = close + 1;
+  }
+  return out.join("\n");
+}
 // Best-effort write-target extraction from a bash command (redirect / tee /
 // sed -i / cp|mv dest / dd of=). Not a shell parser — permissive on miss (the
 // persona is the fail-safe). Runs on a quote-masked copy.
 function bashWriteTargets(command) {
   if (typeof command !== "string" || !command) return [];
   command = maskQuotedSpans(command);
+  // Drop heredoc openers (`<<EOF`, `<<-'EOF'` → masked to `<<_____`) — an operator,
+  // never a write target; left in, `tee file <<EOF` extracts a phantom `<<EOF`.
+  command = command.replace(/<<-?[ \t]*[\w.-]*/g, " ");
   const targets = [];
   const isStream = (t) =>
     t === "/dev/null" || t === "/dev/stdout" || t === "/dev/stderr" ||
@@ -113,16 +165,64 @@ function writesIntoNever(root, resolved, ow) {
 }
 // Resolve the merge-gate topic from ANY branch, prefix stripped: the topic is the
 // branch name with its leading work-prefix dropped (feature/foo→foo, fix/bar→bar,
-// hotfix/x→x, a bare `topic`→topic). The reliable signal is HEAD (the actual
-// checked-out branch); the command match is a fallback for a push naming a
-// <prefix>/<topic> ref. A non-feature prefix (fix/…) must resolve too, or its
-// unstamped push escapes the floor. Pure regex reads — no interpolation, no shell.
+// hotfix/x→x, a bare `topic`→topic). The ref named in the push/merge command
+// OUTRANKS the checkout — pushing branch A from branch B's checkout must read A's
+// stamp, not B's (live 4.19.x failure); .git/HEAD is the fallback for a bare
+// `git push`/`git merge` naming no ref. A non-feature prefix (fix/…) must resolve
+// too, or its unstamped push escapes the floor. Pure regex reads — no
+// interpolation, no shell.
 function stripPrefix(branch) {
   const slash = branch.indexOf("/");
   return slash === -1 ? branch : branch.slice(slash + 1);
 }
+// One refspec token → topic. Only a slashed token is a branch ref (a remote name
+// has no slash). In a <src>:<dst> refspec the slashed side carries the topic —
+// src preferred (the local feature being shipped); `HEAD:feature/x` resolves the
+// dst side, its only named ref. The safe ref character class must hold over the
+// WHOLE side (plus `<>` excluded — redirect chars, never a ref the gate trusts);
+// a dirty token resolves nothing rather than mis-parse.
+const REF_SIDE = /^[^\s;&|"':~^@<>]+$/;
+function topicFromRefToken(token) {
+  if (token.startsWith("+")) token = token.slice(1); // refspec force marker
+  const sides = token.split(":");
+  if (sides.length > 2) return null; // not a refspec shape
+  for (const side of sides) {
+    if (!REF_SIDE.test(side)) continue;
+    const slash = side.indexOf("/");
+    if (slash > 0 && slash < side.length - 1) return side.slice(slash + 1);
+  }
+  return null;
+}
+// The ref named in the command, read from each `git push|merge` invocation's OWN
+// argument span (to the next shell separator) — never an unrelated slashed token
+// elsewhere in a compound command (`cd src/foo && git push` resolves no ref).
+// Quoted spans are masked first, so `-m "mentions feature/x"` prose never
+// resolves. push's first non-flag argument is the <remote> (possibly a slashed
+// URL — never a topic) and is skipped; merge's arguments are all candidates.
+function refTopicFromCommand(command) {
+  const masked = maskQuotedSpans(command);
+  const inv = /\bgit\s+(push|merge)\b([^;&|\n]*)/g;
+  let m;
+  while ((m = inv.exec(masked)) !== null) {
+    const args = m[2].split(/\s+/).filter((t) => t && !t.startsWith("-"));
+    const candidates = m[1] === "push" ? args.slice(1) : args;
+    for (const token of candidates) {
+      const topic = topicFromRefToken(token);
+      if (topic) return topic;
+    }
+  }
+  return null;
+}
+// Resolution stays SYNTACTIC — it returns the extracted topic as-is, even an
+// unclean one. Traversal validation lives downstream at the stamp boundary
+// (isCleanTopic in reviewStampSatisfied), NOT here: nulling an unclean
+// command-ref topic here would fall back to HEAD and could read a stamped
+// checkout's stamp instead — a bypass. An unclean topic must stay non-null so
+// the gate denies it, never resolves around it.
 function resolveMergeTopic(command, root) {
   if (typeof command !== "string" || !command) return null;
+  const fromCommand = refTopicFromCommand(command);
+  if (fromCommand) return fromCommand;
   try {
     const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
     const hm = head.match(/^ref:\s*refs\/heads\/(.+)$/);
@@ -130,15 +230,29 @@ function resolveMergeTopic(command, root) {
       const topic = stripPrefix(hm[1].trim());
       if (topic) return topic;
     }
-  } catch { /* fall through to the command match */ }
-  // Fallback: a <prefix>/<topic> ref named in the command. A remote name has no
-  // slash, so only a slashed token is a branch ref; take the segment after its
-  // first slash, with the same safe character class as the ref body.
-  const m = command.match(/[^\s;&|"':~^@/]+\/([^\s;&|"':~^@]+)/);
-  if (m) return m[1];
+  } catch { /* no usable HEAD ⇒ unresolvable */ }
   return null;
 }
+// A merge-gate topic becomes a path SEGMENT (`<topic>_review.md`), so it must be
+// a single clean segment. Anything carrying a path separator (`/` / `\`), a NUL,
+// or a bare dot-segment (`.` / `..`) is not a usable topic — it could traverse
+// out of reviews/. Plain character tests, no regex (no backtracking surface in
+// the deny layer).
+function isCleanTopic(topic) {
+  return typeof topic === "string" && topic.length > 0 &&
+    !topic.includes("/") && !topic.includes("\\") && !topic.includes("\0") &&
+    topic !== "." && topic !== "..";
+}
+// The CHOKE POINT every topic source (command ref, HEAD, any future source)
+// funnels through before a stamp path is built — so the traversal guard here
+// cannot be bypassed by a second entry path. A crafted ref `feature/../EVIL`
+// resolves topic `../EVIL`; left unguarded, `.ai-pm/reviews/../EVIL_review.md`
+// escapes reviews/ and a planted stamp would satisfy the [mechanical] floor. An
+// unclean topic leaves the stamp UNsatisfiable ⇒ the merge-gate DENIES (fail
+// toward deny). A nested branch name (feature/sub/topic → `sub/topic`) is
+// rejected by the same rule: the convention is a single `<prefix>/<topic>`.
 function reviewStampSatisfied(root, topic) {
+  if (!isCleanTopic(topic)) return false;
   const file = path.join(path.resolve(root), ".ai-pm", "reviews", topic + "_review.md");
   let text;
   try { text = fs.readFileSync(file, "utf8"); } catch { return false; }
@@ -156,7 +270,9 @@ function reviewStampSatisfied(root, topic) {
     if (!content || /^NOT YET RUN$/i.test(content)) return false;
     return true;
   };
-  return stampOK("Code review") || stampOK("Doc review") || stampOK("Validation");
+  // The accepted heading labels are exactly the Reviewer's documented stamp
+  // forms (src/agents/reviewer.md, Verdict).
+  return stampOK("Code review") || stampOK("Doc review");
 }
 function fileNonEmpty(p) {
   try { return fs.statSync(p).size > 0; } catch { return false; }
@@ -341,6 +457,12 @@ export function loadConfig(dir) {
 // (deny outranks ask), else the first ASK hit, else an INJECT for a prompt, else
 // allow. `ruleId`/`reason` identify what fired.
 export function evaluate(input, config) {
+  // Prepare the command string ONCE for every rule: non-shell heredoc bodies are
+  // data, not commands — stripped here so no predicate pattern-matches prose.
+  if (input.act === "bash" && typeof input.command === "string") {
+    const prepared = stripHeredocBodies(input.command);
+    if (prepared !== input.command) input = { ...input, command: prepared };
+  }
   let ask = null;
   for (const rule of config.rules) {
     if (!rule.act.split("|").includes(input.act)) continue;
@@ -353,4 +475,4 @@ export function evaluate(input, config) {
   return ask || { verdict: "allow", ruleId: null, reason: "" };
 }
 
-export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, projectProfile, PREDICATES };
+export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, PREDICATES };

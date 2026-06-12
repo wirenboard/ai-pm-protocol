@@ -90,6 +90,12 @@ const FIXTURE = [
     claude: { tool_name: "Bash", tool_input: { command: "git push" } },
     opencode: { tool: "bash", args: { command: "git push" } } },
 
+  // A non-shell heredoc body is DATA: push prose inside it must not trip the
+  // merge-gate verbs on either platform (the engine strips it before any rule).
+  { name: "heredoc-body-is-data", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "python3 <<'EOF'\nprint(\"git push origin main\")\nEOF" } },
+    opencode: { tool: "bash", args: { command: "python3 <<'EOF'\nprint(\"git push origin main\")\nEOF" } } },
+
   { name: "role-generic-in-seat", expect: "deny",
     claude: { tool_name: "Task", tool_input: { subagent_type: "general" } },
     opencode: { tool: "task", args: { subagent_type: "general" } } },

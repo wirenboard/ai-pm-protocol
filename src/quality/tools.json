@@ -51,7 +51,7 @@
     },
     {
       "id": "merge-gate",
-      "checks": "the unstamped-review merge-gate holds on ANY branch prefix — resolveMergeTopic strips feature/, fix/, hotfix/, bare; an unstamped fix/ push is denied, a stamped one allowed; an UNRESOLVABLE topic (detached HEAD, no branch ref in the command) asks, never passes",
+      "checks": "the unstamped-review merge-gate parses commands correctly — the pushed/merged ref outranks .git/HEAD (cross-branch push reads the right stamp), any branch prefix strips (feature/, fix/, bare), non-shell heredoc bodies are data (no verb false positives; shell-heredoc and malformed bodies stay matched), the accepted stamp labels are exactly the documented two, and an UNRESOLVABLE topic asks, never passes",
       "config": null,
       "run": "node src/adapter/merge-gate.test.mjs",
       "beat": "build",

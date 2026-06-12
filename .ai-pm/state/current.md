@@ -2,7 +2,7 @@
 
 > Resume pointer — READ FIRST, by this exact path. Deferred detail: `.ai-pm/backlog.md`. History: commits + CHANGELOG.
 
-**Status (2026-06-12).** `main` = `uni/main` = **4.19.0** (PRs #25–#44; tags v4.17–v4.19 auto-fired). The autonomous conveyor is complete and merged. **Active:** `fix/8d-stacked-merge` — 4.19.1 fixup (8D outcome: git-discipline bullets), shortened review pending.
+**Status (2026-06-12).** `main` = `uni/main` = **4.19.1** (PRs #25–#45). **Active:** `fix/merge-gate-parsing` = **4.19.2**, shipping (review APPROVED whole-branch incl. the traversal HIGH); `proportionality by default` cut next, stacked.
 
 ## What was just shipped
 - 4.17.0 (#41) — threat discovery (standing model); npx distribution; autonomy-decision journal
@@ -10,11 +10,8 @@
 - 4.19.0 (#43) — verification ladder (`Runtime verification:` stamp line); BLOCKED return contract; session-reset hygiene
 
 ## Up next
-Detail in `.ai-pm/backlog.md`:
-- **Merge-gate parsing fixes** (8D findings): topic from the pushed ref first; heredoc false-positive — one small mechanical feature
-- ad-md-editor rollout — first real downstream (run install from ITS session); live test for bootstrap + modules + npx
-- Audit 4.19.0 Lows: `Validation` stamp label undocumented; orchestrator.md length watch
-- Non-derivable (Operator's): plan-adversary fork, version-bump-confirmation policy, model matrix, parallel-work epic; external: npm registry publish
+Operator-ordered queue (2026-06-12): (1) **merge-gate parsing fixes** — traversal addendum in build; (1.5) **proportionality by default** (8D ceremony-drift outcome, Operator-grown): default profile → `solo` (floor untouched), routing trigger, over-ceremony named as a defect, cost line in ship relay, setup explains both costs — all in the SHIPPED bodies (downstream-universal); rigor-profile tests updated deliberately; (2) **RENAME ai-pm-protocol → ai-dev-protocol, MAJOR 5.0.0** (Operator decision: FULL depth — repo renamed to `ai-dev-protocol` (clean, no -uni), package/bin, titles, AND internals: `.ai-pm/`→`.ai-dev/`, `ai-pm.config.json`→`ai-dev.config.json`, agent id `ai-pm`→`ai-dev`, every path in hooks/engine/tests; INSTALL Upgrade gains the MAJOR what-to-rename entry + the F4 migration test rides — cheapest now at 0 downstreams); (3) **old-protocol migration** (design DECIDED — see backlog; written in post-rename names); (4) **modularity module**; (5) **plan-adversary** (fork at planning: Reviewer mode vs module); (6) **downstream feedback-as-issues** (When-something-is-off extension + .github issue template; ask-class consent covers opt-in).
+Also in `.ai-pm/backlog.md`: ad-md-editor rollout (its own session, post-rename); audit Low-2 length watch; version-bump-confirmation policy, model matrix, parallel-work epic (Operator's); npm registry publish (external, post-rename name `ai-dev-protocol`).
 
 **Last audit:** 2026-06-12 — proactive whole-tree sweep at 4.19.0: **HEALTHY** (zero drift, zero secrets, 0 npm vulns, contracts hold); 2 Lows dispatched. Next ≈ after 4.24.0.
 **Last 8D:** 2026-06-12 — stacked-merge conveyor failures: root causes = async-merge-treated-as-settled, scope-blind `git add -A`, gate topic-from-HEAD; fixes = 3 git-discipline bullets (4.19.1) + 2 backlog items + field notes in the parallel-work epic.

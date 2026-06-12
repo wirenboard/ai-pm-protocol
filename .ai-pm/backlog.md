@@ -2,17 +2,9 @@
 
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
-## Audit 4.19.0 Lows — stamp label gap + orchestrator length watch — 2026-06-12
+## Audit 4.19.0 Low-2 — orchestrator length watch — 2026-06-12
 
-Two Low findings from the proactive sweep (HEALTHY overall), neither merge-blocking:
-
-- **Low-1, one-home gap:** `engine.mjs:159` accepts a third stamp label `Validation` (`stampOK("Validation")`) that no doc names — `reviewer.md` documents only `## Code review:` / `## Doc review:`. Either document it as the forward-compat downstream label (one line in the Verdict bullet) or drop it from the engine; ride the next feature touching either file.
-- **Low-2, length watch:** `orchestrator.md` at 224 lines / 11 sections sits at the upper edge of "readable in one sitting". Not a violation; the rule for the NEXT side-tool addition: trim or fold, never append past the edge.
-
-## Merge-gate topic + verb parsing — two 8D findings — 2026-06-12
-
-1. `resolveMergeTopic` (`engine.mjs:124`) reads `.git/HEAD` first and the command's ref only as a fallback — pushing branch A from branch B's checkout reads branch B's stamp (hit live during the stacked-merge conveyor; contained by pushing from the right checkout). Fix direction: parse the pushed ref from the command FIRST, HEAD as the fallback for a bare push; + merge-gate test cases for a cross-branch push.
-2. The bash verb parser matches the verb words INSIDE a heredoc payload (hit live: a heredoc writing prose ABOUT pushes was denied as a push). Fix direction: strip heredoc/quoted-string bodies before verb matching, or anchor the match to command position; + a false-positive test case. Sits beside the recorded `Validation` stamp-label Low.
+`orchestrator.md` sits at the upper edge of "readable in one sitting". The rule for the NEXT side-tool addition: trim or fold, never append past the edge. (Low-1, the `Validation` stamp label, resolved in 4.19.2 — dropped, no live consumer.)
 
 ## [who] axis / operator-scenario presets — retracted from README, parked as a hypothesis epic — 2026-06-12 (Operator decision)
 
@@ -49,9 +41,17 @@ The packaging shipped 4.17.0 (`npx github:aadegtyarev/ai-pm-protocol-uni <target
 
 The Operator asked to roll the protocol into ad-md-editor; this repo's session cannot (the project-boundary deny blocks cross-repo writes, correctly). Run `node src/adapter/install.mjs` against it from its own checkout/session. First real downstream = the strongest install + upgrade test we lack (N=1 → N=2; `docs/product.md` success criterion).
 
-## Old-template downstream (nula) → minimal core — one-time migration — 2026-06-10
+## Old-protocol migration — design DECIDED (Operator, 2026-06-12); queue position 2
 
-A deployed downstream on the OLD template (nula: `.ai-pm/tooling` submodule + symlinks to the old `.claude/agents/pm-*` + `WORKFLOW.md`) needs a one-time, file-level move to the minimal core (`install.mjs` now does the wiring; the migration is the cleanup of the old surface). Design when the nula WAIT lifts. Harness note kept from those sessions: a long OpenCode session can hit a SQLite session-insert failure that kills every subagent spawn — restart OpenCode; an environment crash is a failed gate, never a license to self-substitute the verdict (invariant 3). Audit 2026-06-12 (F4): when this migration (or the first MAJOR) lands, add a migration test — installer re-run over a PRIOR version's artifacts; the idempotency test covers only two fresh installs, and the "MAJOR names what to rename" path has never been exercised.
+**The insight (Operator):** an old-protocol downstream is a brownfield whose DOCS are more accurate than its code as a source — the old protocol's discipline kept them true, just bloated. So the content migration is doc bootstrap with a richer source, not a new procedure.
+
+**Decided shape (no new orchestrator section — the length watch holds):**
+
+1. **Content procedure → `## Doc bootstrap` source mode** (~5-6 lines): old-protocol docs present ⇒ the Builder drafts FROM the old docs as primary source, compressed into the new templates under the new ceilings; the TREE is the verification ground — an old-doc claim contradicting the code surfaces as a finding, never migrates silently; old docs are DELETED once their truth moves (supersede, one home); then a comment de-water pass over the code (wall comments duplicating docs go; the local *why* stays — invariant 6 on code); then a closing whole-project audit is offered.
+2. **Wire runbook → `INSTALL.md ## Upgrade`**: the mechanical half — the one-command install lays the new structure; cleanup of the old surface (old pm-* agent roster, WORKFLOW.md, `.ai-pm/tooling` submodule/symlinks); the MAJOR-bump framing already lives there.
+3. **F4 migration test** rides: installer re-run over a PRIOR version's artifacts (the idempotency test covers only fresh installs).
+
+Live case: nula (execution still in ITS session when the WAIT lifts). Harness note kept: a long OpenCode session can hit a SQLite session-insert failure killing every spawn — restart; an environment crash is a failed gate, never a license to self-substitute (invariant 3).
 
 ## Downstream→upstream protocol-feedback loop — 2026-06-07
 

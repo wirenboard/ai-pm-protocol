@@ -1,6 +1,6 @@
 {
   "name": "ai-pm-protocol",
-  "version": "4.19.1",
+  "version": "4.19.2",
   "type": "module",
   "description": "The AI-PM Protocol — its own source (this repo develops itself under its own protocol).",
   "license": "MIT",

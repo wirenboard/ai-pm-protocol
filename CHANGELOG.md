@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.19.2] — 2026-06-12
+
+### Fixed
+
+- **Merge-gate parsing** (the 8D mechanical findings + a review-found HIGH): the topic now resolves from the PUSHED ref first (span-anchored, quote-masked, refspec-aware; HEAD only for bare commands) — pushing branch A from branch B no longer consults the wrong stamp; heredoc bodies are data unless a shell interprets them (fail-toward-deny on ambiguity) — prose about pushes stops tripping the gate, a bash heredoc push still does; **a topic path-traversal guard** at the single fs choke point — a crafted ref (feature/../EVIL) could escape the reviews dir and turn an unstamped push into an ALLOW via a planted file (pre-existing, reviewer-proven end-to-end; now DENY, test-pinned); nested branch names rejected outright (strict, not clever); a heredoc opener no longer yields a phantom write-target. The undocumented Validation stamp label dropped (pre-4.0 artifact, no live consumer). merge-gate 24→52, parity 64→67.
+
+---
+
 ## [4.19.1] — 2026-06-12
 
 ### Fixed

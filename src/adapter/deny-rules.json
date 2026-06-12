@@ -83,7 +83,7 @@
     },
     {
       "id": "merge-while-unstamped",
-      "intent": "Block a git merge/push of any branch (prefix stripped — feature/, fix/, hotfix/, …) whose review file lacks a satisfied review/validation stamp. Checks stamp PRESENCE, not authorship (fabrication stays persona). An unresolvable topic is escalated by the sibling ask rule (merge-topic-unresolvable), never silently passed.",
+      "intent": "Block a git merge/push of any branch (prefix stripped — feature/, fix/, hotfix/, …) whose review file lacks a satisfied review stamp. Checks stamp PRESENCE, not authorship (fabrication stays persona). An unresolvable topic is escalated by the sibling ask rule (merge-topic-unresolvable), never silently passed.",
       "class": "deny",
       "act": "bash",
       "predicate": "mergeWithUnstampedReview"
