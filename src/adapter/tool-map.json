@@ -6,6 +6,7 @@
     "edit-a-file":            { "claude": "Edit",            "opencode": "edit" },
     "run-a-shell-command":    { "claude": "Bash",            "opencode": "bash" },
     "spawn-a-sub-agent":      { "claude": "Task",            "opencode": "task" },
+    "explore-a-codebase":     { "claude": "Agent(subagent_type='Explore')", "opencode": "task (read-only framing — no built-in Explore primitive; frame the instruction as 'find and read, do not write')", "_doc": "A read-only exploration sub-agent. On Claude Code the Explore subagent type is native (fast, read-only enforced at the harness level); on OpenCode there is no built-in Explore equivalent — a task with explicit read-only instructions is the closest analog (the model infers the constraint from the framing, not from the harness)." },
     "continue-a-sub-agent":   { "claude": "SendMessage",     "opencode": null, "_fallback": "spawn-a-sub-agent", "_doc": "Resume an existing sub-agent. Optional — absent or null ⇒ fall back to spawn-a-sub-agent (no loss of capability, only the re-read token cost). Never use to continue a gate role (Reviewer): invariant 3 non-gate carve-out only." },
     "ask-a-structured-question": { "claude": "AskUserQuestion", "opencode": "question" },
     "the-project-entry-file": { "claude": "CLAUDE.md",       "opencode": "AGENTS.md" },

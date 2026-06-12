@@ -112,6 +112,14 @@
       "fallback": "persona on a platform without remote-edit detection"
     },
     {
+      "id": "opaque-bash-boundary-risk",
+      "intent": "Confirm a bash command that inline-executes code the engine cannot trace (interpreter -c/-e, decode-pipe-shell, curl-pipe-shell, eval-subst) AND whose opaque region contains a boundary-relevant token (absolute path, path traversal `../`, outbound HTTP(S) URL). Ask — never hard deny — to avoid blocking legitimate use like `python3 -c 'print(1)'`. Heuristic only: raises the bar on accidental/obvious boundary escapes through opaque interpreters; not a sandbox. [persona] on OpenCode (no ask-return there).",
+      "class": "ask",
+      "act": "bash",
+      "predicate": "opaqueBashBoundaryRisk",
+      "fallback": "persona on a platform with no ask-return (e.g. OpenCode)"
+    },
+    {
       "id": "ssh-mutating-action",
       "intent": "Confirm before a mutating action on a remote system (ssh + systemctl/docker/apt/npm/kubectl/rm/cp/mv/mkdir/touch). Legitimate for deploy/maintenance/runtime-state; never for editing a repo-owned file.",
       "class": "ask",

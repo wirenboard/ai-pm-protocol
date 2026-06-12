@@ -43,6 +43,18 @@ After the re-run, rename these in your project by hand (the installer cannot ren
 8. **Re-run** `node .ai-dev/tooling/src/adapter/install.mjs . --platform <your-platform>` one more time to regenerate assembled agents with the new IDs.
 9. **Search your codebase** for any remaining `/pm-setup`, `.ai-pm`, `ai-pm.config`, `pm-builder`, `pm-reviewer` references and update them.
 
+### Old-protocol migration
+
+A downstream running a **prior protocol version** (pre-5.0, when the docs were `WORKFLOW.md`, agent roster `pm-*`, state dir `.ai-pm/`) migrates mechanically then runs doc bootstrap in old-protocol source mode (`src/agents/orchestrator.md` `## Doc bootstrap`).
+
+**Mechanical steps:**
+
+1. **Bump and re-run** — bump the tooling to the new version and re-run `node .ai-dev/tooling/src/adapter/install.mjs . --platform <platform>`. The installer vendors the new adapter and lays down the new template docs (only where absent — it never clobbers existing content).
+2. **Rename the old surface** — follow MAJOR 5.0.0 steps above for any `ai-pm.config.json`, `.ai-pm/` dirs, `pm-*` agent files, and command files not already renamed.
+3. **Run doc bootstrap (old-protocol source mode)** — the Builder reads the old docs (`WORKFLOW.md`, prior role files, the legacy agent roster) as primary source and compresses their truth into the new templates (`docs/architecture.md`, `docs/contracts.md`). Any old-doc claim contradicting the code surfaces as a finding for the Operator. After drafting, a comment de-water pass removes wall comments that duplicate the new docs.
+4. **Delete old docs** — once their content moved, delete `WORKFLOW.md` and any pm-* role files (supersede, one home — invariant 6).
+5. **Accept the closing audit** — the orchestrator offers a whole-project sweep after close; take it to catch any drift the per-diff bootstrap missed.
+
 ## Claude Code
 
 Merge this into the project's `.claude/settings.json` (the fragment lives at `claude/hooks.json`). One `PreToolUse` hook and one `UserPromptSubmit` hook, both piping the harness payload to `node claude/shim.mjs`; the shim self-locates `deny-rules.json` (two dirs up) and prints the verdict JSON.
@@ -124,10 +136,12 @@ UNLIKE Claude (where the orchestrator IS the session, held by `CLAUDE.md`), an O
 {
   "default_agent": "ai-dev",
   "instructions": ["PROTOCOL.md"],
-  "permission": { "question": "allow" },
+  "permission": { "edit": "allow", "bash": "allow", "webfetch": "allow", "question": "allow" },
   "agent": { "build": { "disable": true }, "plan": { "disable": true } }
 }
 ```
+
+The permission block sets native OpenCode permissions to full-speed inside the project. Division of labor: the **protocol plugin is the sole boundary guard** (mechanically denies reads/writes/finds outside the project root); native `permission` is the speed dial for tool calls inside that boundary. Honest residual: `bash` boundary is best-effort (the engine parses obvious path tokens; an opaque escape like `python3 -c '...'` is flagged by the `opaque-bash-boundary-risk` ask rule, not a hard deny). `edit`/`read`/`write` tool-call checks are exact. `webfetch: allow` because research needs outbound fetches; sending project data out is a separate `[persona]` rule, not a filesystem-boundary concern.
 
 The generic `build`/`plan` primaries are disabled so none can fill the orchestrator seat (invariant 1); `AGENTS.md` (repo root) is OpenCode's always-on surface and points at the same constitution.
 

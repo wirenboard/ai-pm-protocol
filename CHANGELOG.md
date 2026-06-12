@@ -12,6 +12,18 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.1.0] — 2026-06-12
+
+### Added
+
+- **`explore-a-codebase` contract point in `tool-map.json`** — registers the neutral read-only exploration act with per-platform resolutions: Claude Code's native `Explore` subagent type (harness-enforced read-only); OpenCode task with read-only framing (no built-in Explore primitive — `[persona]` on that platform). One-line note added to `docs/architecture.md` Extension points. Closes the tool-map gap noted in the backlog.
+- **OpenCode boundary-strict default permissions** — `wireOpenCode` in `install.mjs` now sets `{ edit/bash/webfetch/question: allow }` in the generated `opencode.json`. The protocol plugin is the sole project-boundary guard; native `permission` is the speed dial for inside-the-boundary tool calls. Division of labor documented in `INSTALL.md`. Honest residual named: bash boundary is best-effort (opaque escapes handled by the new ask rule below); edit/read/write checks are exact; webfetch=allow for research.
+- **Opaque-bash boundary-risk classifier** (`engine.mjs` + `deny-rules.json`) — new `opaqueBashBoundaryRisk` predicate (class: ask, never deny) fires when a bash command combines an opaque inline-interpreter (`python3 -c`, `node -e`, `perl -e`, `ruby -e`, `bash/sh -c`, base64-decode-pipe-shell, curl-pipe-shell, eval-subst) with a boundary-relevant token in the opaque region (absolute path, `../`, `https://`). Anti-ritual tuning: `python3 -c 'print(1)'` → no boundary token → no flag. Heuristic ceiling stated honestly: raises the bar on obvious escapes, not a sandbox. `[persona]` on OpenCode (no ask-return). Three parity test cases added.
+- **Old-protocol migration runbook** (`INSTALL.md` `## Upgrade → Old-protocol migration`) — 5-step mechanical guide: bump + re-run the installer, rename old surface (MAJOR 5.0.0 steps), run doc bootstrap in source mode, delete old docs, accept the closing audit.
+- **Doc bootstrap old-protocol source mode** (`src/agents/orchestrator.md` `## Doc bootstrap` step 2) — when old-protocol docs are present, the Builder drafts from them as primary source (compressed into new templates under new ceilings); tree is the verification ground; contradictions surface as findings; old docs deleted once superseded; comment de-water pass; closing audit offered. No new orchestrator section (length watch).
+
+---
+
 ## [5.0.0] — 2026-06-12
 
 ### Changed (breaking)

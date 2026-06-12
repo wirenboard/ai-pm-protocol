@@ -213,7 +213,16 @@ function wireOpenCode(target) {
   const oc = fs.existsSync(ocPath) ? JSON.parse(fs.readFileSync(ocPath, "utf8")) : {};
   oc.default_agent = "ai-dev";
   oc.instructions = Array.from(new Set([...(oc.instructions || []), "PROTOCOL.md"]));
-  oc.permission = { ...(oc.permission || {}), question: "allow" };
+  // The protocol plugin is the SOLE project-boundary guard; OpenCode's native
+  // permission dial is set to full-speed inside the project. Division of labor:
+  // plugin = the mechanical boundary (deny outside-root reads/writes/finds);
+  // native permission = speed dial for tool calls inside the boundary.
+  // Honest residual: bash boundary is best-effort (the engine parses obvious path
+  // tokens; an opaque escape like `python3 -c` is flagged by the ask rule, not a
+  // hard deny — see deny-rules.json `opaque-bash-boundary-risk`). edit/read/write
+  // tool checks are exact; webfetch=allow because research needs it (exfil via
+  // HTTP is a separate persona rule, not a filesystem-boundary concern).
+  oc.permission = { ...(oc.permission || {}), edit: "allow", bash: "allow", webfetch: "allow", question: "allow" };
   oc.agent = { ...(oc.agent || {}), build: { disable: true }, plan: { disable: true } };
   fs.mkdirSync(path.dirname(ocPath), { recursive: true });
   fs.writeFileSync(ocPath, JSON.stringify(oc, null, 2) + "\n");

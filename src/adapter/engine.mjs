@@ -413,6 +413,38 @@ const PREDICATES = {
     return /(^|[\s;&|`(])ssh(\s|$)/.test(c) &&
       /(sed[\s"'`]+-i|[\s"'`]vi[\s"'`]|[\s"'`]vim[\s"'`]|[\s"'`]nano[\s"'`]|[\s"'`]tee[\s"'`]|>\s*[^\s&|;>]+)/.test(c);
   },
+  // Opaque-bash boundary-risk detector: a bash act that inline-executes code the
+  // engine cannot trace (interpreter -c/-e flag, decode-pipe-shell, curl-pipe-shell,
+  // eval-subst) AND whose opaque region contains a boundary-relevant token (absolute
+  // path, path traversal, outbound HTTP(S) URL). The verdict is ask (never deny) —
+  // a false deny on a flagged-but-legitimate command is worse than a confirmation;
+  // anti-ritual tuning: `python3 -c 'print(1)'` has no boundary token → not flagged.
+  // Honest ceiling: heuristic, not airtight — raises the bar on accidental/obvious
+  // escapes; named [persona] on OpenCode (no ask-return there). See backlog item
+  // "opaque-bash classifier" for the rationale and the arms-race caveat.
+  opaqueBashBoundaryRisk(input) {
+    const c = input.command || "";
+    if (!c) return false;
+    const isOpaque = (
+      /(?:^|[\s;&|(])python3?\s+(?:-\w\s+)*-[ce]\b/.test(c) ||
+      /(?:^|[\s;&|(])node\s+(?:-\w\s+)*-e\b/.test(c) ||
+      /(?:^|[\s;&|(])perl\s+(?:-\w\s+)*-e\b/.test(c) ||
+      /(?:^|[\s;&|(])ruby\s+(?:-\w\s+)*-e\b/.test(c) ||
+      /(?:^|[\s;&|(])(?:ba)?sh\s+(?:-\w\s+)*-c\b/.test(c) ||
+      /\bbase64\s+(?:-d|--decode)\b[^|]*\|\s*\b(?:ba)?sh\b/.test(c) ||
+      /\bcurl\b[^|]*\|\s*\b(?:ba)?sh\b/.test(c) ||
+      /(?:^|[\s;&|(])eval\s+["'`]?\$\(/.test(c)
+    );
+    if (!isOpaque) return false;
+    // Flag only when a boundary-relevant token is visible in the opaque context:
+    // an absolute path (preceded by a non-letter — avoids "hello/world" embedded
+    // in a string), a path traversal, or an outbound HTTP(S) URL.
+    return (
+      /(?:^|['"\s(;`|,])\/[a-zA-Z]{2}/.test(c) ||
+      /\.\.\//.test(c) ||
+      /https?:\/\//.test(c)
+    );
+  },
   sshMutatingAction(input) {
     const c = input.command || "";
     return /(^|[\s;&|`(])ssh(\s|$)/.test(c) &&

