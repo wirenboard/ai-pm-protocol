@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.15.0] — 2026-06-12
+
+### Added
+
+- **Doc bootstrap for brownfield onboarding** — an existing project adopting the protocol now has a procedure to fill its system canon from its own tree: the Orchestrator offers (declinable, never a block) to draft `docs/architecture.md` and any visible `docs/contracts.md` blocks as a normal loop feature — Builder (codebase-reader fold) reads the tree and drafts into the installed templates; Operator corrects in plain language; Reviewer checks the draft **against the tree** (an invented component or bound blocks). Structural guards against monstrous docs: explicit size ceiling (~60–120 lines; past ~150, cut inventory), fill-or-delete discipline, `[?]` for unmeasured bounds, point-don't-restate. Fires in three modes mirroring product discovery: at onboarding right after discovery (install → setup → discovery → doc bootstrap → first feature); lazily on a work request while `docs/architecture.md` is absent or still the unfilled install template; explicitly on request. Never on a greenfield (no tree to read). `orchestrator.md ## Doc bootstrap` (new section, sibling of `## Product discovery`); `PROTOCOL.md` beat-1 clause; `.opencode/agents/ai-pm.md` regenerated. `[persona]`.
+
+---
+
 ## [4.14.0] — 2026-06-12
 
 ### Added

@@ -92,6 +92,25 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - **Lazy** — on the first feature request to a configured project with no `docs/product.md`. Short, declinable offer — not a block.
 - **Explicit** — the Operator asks to define or revisit.
 
+## Doc bootstrap
+
+`doc bootstrap` fills the system canon of an **existing** project from its tree — `docs/architecture.md`, plus `docs/contracts.md` blocks where the code shows a visible user-facing promise. Discovery records the product (what, for whom); bootstrap records the system (how it is built). Not a side-tool: it runs through the normal loop as the project's first feature. `[persona]`.
+
+**When it fires:**
+
+- **At onboarding** — right after product discovery, the next link in the chain (install → setup → discovery → doc bootstrap → first feature).
+- **Lazy** — on a work request while `docs/architecture.md` is absent or still the unfilled install template (its `<placeholder>` lines unreplaced). Short, declinable offer — never a block.
+- **Explicit** — the Operator asks.
+- **Never on a greenfield** — no tree to read; a new project's canon grows from discovery and its features.
+
+**One pass:**
+
+1. The plan names which docs get drafted.
+2. The Builder (codebase-reader fold) reads the tree and drafts into the installed templates under their own discipline: fill only what the tree shows, delete empty sections, `[?]` for any unmeasured bound, point at code rather than inventory it (invariant 6), secret *locations* never values.
+3. Ceiling: current state only, readable in one sitting — expect ~60–120 lines, past ~150 cut inventory. A bloated draft is a Reviewer doc-quality block.
+4. Relay the draft's claims to the Operator in plain language; the Operator corrects the facts.
+5. The Reviewer checks the draft **against the tree** — a claimed component that doesn't exist or an invented bound blocks (honesty item). Ship like any feature.
+
 ## 8D
 
 `8D` works a **failure** (bug, production incident) past a quick patch to root cause and systemic prevention. Side-tool, not a beat — optional, on-demand. `[persona]`.
