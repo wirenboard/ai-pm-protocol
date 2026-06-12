@@ -12,6 +12,20 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.5.0] — 2026-06-12
+
+### Added
+
+- **State fallback on fresh clone** (`PROTOCOL.md` step 1, `orchestrator.md`) — if `.ai-dev/state/current.md` is absent (fresh clone or first session), fall back: `git log --oneline -5` for recent context, `gh pr list` for any open PR awaiting merge.
+- **Two-phase state update per feature** (`orchestrator.md`) — (1) after opening the PR: write "PR #N open, awaiting Operator merge"; (2) after merge confirmed: write "no active branch". Closes the window where a resumed session had no signal about a pending PR.
+- **Skip fetch-verify for state-only PRs** (`orchestrator.md`) — post-merge content verification skipped when the PR carried no code or doc artifacts.
+
+### Changed
+
+- **`.ai-dev/state/current.md` is now gitignored** — local-only pointer; not committed to git. Downstream installer update (adding `.ai-dev/state/` to the project's `.gitignore`) is a follow-up item.
+
+---
+
 ## [5.4.1] — 2026-06-12
 
 ### Fixed
