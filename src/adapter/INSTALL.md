@@ -141,7 +141,7 @@ UNLIKE Claude (where the orchestrator IS the session, held by `CLAUDE.md`), an O
 }
 ```
 
-The permission block sets native OpenCode permissions to full-speed inside the project. Division of labor: the **protocol plugin is the sole boundary guard** (mechanically denies reads/writes/finds outside the project root); native `permission` is the speed dial for tool calls inside that boundary. Honest residual: `bash` boundary is best-effort (the engine parses obvious path tokens; an opaque escape like `python3 -c '...'` is flagged by the `opaque-bash-boundary-risk` ask rule, not a hard deny). `edit`/`read`/`write` tool-call checks are exact. `webfetch: allow` because research needs outbound fetches; sending project data out is a separate `[persona]` rule, not a filesystem-boundary concern.
+The permission block sets native OpenCode permissions to full-speed inside the project. Division of labor: the **protocol plugin is the sole boundary guard** (mechanically denies reads/writes/finds outside the project root); native `permission` is the speed dial for tool calls inside that boundary. Honest residual: `bash` boundary is best-effort (the engine parses obvious path tokens; an opaque escape like `python3 -c '...'` is not mechanically caught). `edit`/`read`/`write` tool-call checks are exact. `webfetch: allow` because research needs outbound fetches; sending project data out is a separate `[persona]` rule, not a filesystem-boundary concern.
 
 The generic `build`/`plan` primaries are disabled so none can fill the orchestrator seat (invariant 1); `AGENTS.md` (repo root) is OpenCode's always-on surface and points at the same constitution.
 

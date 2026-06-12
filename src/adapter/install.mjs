@@ -218,8 +218,7 @@ function wireOpenCode(target) {
   // plugin = the mechanical boundary (deny outside-root reads/writes/finds);
   // native permission = speed dial for tool calls inside the boundary.
   // Honest residual: bash boundary is best-effort (the engine parses obvious path
-  // tokens; an opaque escape like `python3 -c` is flagged by the ask rule, not a
-  // hard deny — see deny-rules.json `opaque-bash-boundary-risk`). edit/read/write
+  // tokens; an opaque escape like `python3 -c` is not mechanically caught). edit/read/write
   // tool checks are exact; webfetch=allow because research needs it (exfil via
   // HTTP is a separate persona rule, not a filesystem-boundary concern).
   oc.permission = { ...(oc.permission || {}), edit: "allow", bash: "allow", webfetch: "allow", question: "allow" };

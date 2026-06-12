@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.3.1] — 2026-06-12
+
+### Removed
+
+- **`opaque-bash-boundary-risk` ask rule** — removed from `deny-rules.json`, `engine.mjs`, and `parity.test.mjs`. The rule confirmed inline-interpreter + boundary-token commands before running. In practice it interrupted legitimate autonomous work without proportionate gain. Operator decision: friction cost exceeds heuristic value.
+
+---
+
 ## [5.3.0] — 2026-06-12
 
 ### Added
