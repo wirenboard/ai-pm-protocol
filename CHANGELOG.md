@@ -12,6 +12,16 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.19.0] — 2026-06-12
+
+### Added
+
+- **Verification ladder** — "didn't run it" stops being silent: every Reviewer verdict carries a mandatory second stamp line, `Runtime verification: <rung — evidence / NOT RUN — reason>`, rungs **static · suite · entrypoint · exercised · target** — the highest the review *actually performed*, with its evidence cite; claiming a rung without evidence is the hallucinated-compliance failure the Cite-rule already names. `NOT RUN — <reason>` is legal and honest; silence is not. Honestly labelled: the merge-gate reads stamp presence only and never parses the line — `[persona]`, held by the checklist and the auditor's honesty dimension. The disciplined-pipeline contract carries the rung promise.
+- **BLOCKED return** — a spawned role that cannot honestly complete its deliverable returns BLOCKED naming exactly what is missing and what would unblock: never a best-effort artifact dressed as done (Builder), never a stamp or guessed verdict (Reviewer). The orchestrator treats BLOCKED as a failed gate's sibling — fix the blocker when it is yours, else stop and report; retry and ceiling bounds unchanged; never substitute. `[persona]`.
+- **Session-reset hygiene** — the checkpoint-and-reset discipline gets its trigger (felt degradation — repeated re-reads, contradictory recall, lost thread — or a natural boundary) and checklist (state pointer current · plan note ticked · work committed-or-named); a fresh session resumes losslessly from `.ai-pm/state/current.md`. `[persona]`.
+
+---
+
 ## [4.18.0] — 2026-06-12
 
 ### Added

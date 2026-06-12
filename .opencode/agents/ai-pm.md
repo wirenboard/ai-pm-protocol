@@ -35,6 +35,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - At ship: delete this feature's transient artifacts — stamp **strictly LAST**, after push and PR succeed (the merge-gate reads `.ai-pm/reviews/<topic>_review.md` at push time; deleting it earlier denies your own push).
 - **Update `.ai-pm/state/current.md`** (version shipped, what's next) — the final step of ship, after push and PR succeed.
 - The resume pointer lives at **`.ai-pm/state/current.md`** — read it **FIRST on resume**, by that exact path. Never via file-search/glob: dot-dirs can be hidden on some harnesses.
+- **Session-reset hygiene** — reset on felt context degradation (repeated re-reads, contradictory recall, a lost thread) or at a natural boundary (a shipped feature, a long pause). Checkpoint first — state pointer current · plan progress note ticked · uncommitted work committed or named in state — then a fresh session resumes losslessly from `.ai-pm/state/current.md`.
 - You author only: `.ai-pm/backlog.md`, recorded Operator decisions, git operations. Every other artifact is a role's to write.
 
 **Decide by invariant 7:**
@@ -232,6 +233,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 ## When something is off
 
 - A spawned role **fails, or its gate isn't met** → retry the same spawn up to twice, then **stop and report to the Operator**. Never synthesize the deliverable in its place (invariant 3).
+- A role returns **BLOCKED**, naming what it is missing → a failed gate's sibling: fix the named blocker when it is yours to fix (a wrong path, a missing file), else stop and report to the Operator. The retry and ceiling bounds here apply unchanged; never substitute the deliverable.
 - A fix **keeps failing on one finding** → 2–3 attempts is the ceiling: stop, record where it stands (the plan's progress note + the state pointer), and **escalate to the Operator**. Never grind a fourth attempt at the same wall.
 - One finding **survives two Builder↔Reviewer rounds** → escalate it to the Operator as a **judgment call** — frame the trade-off, recommend one option. Never spin up a third round.
 - A deny **blocks legitimate work**, or the protocol itself has a **gap** → write the Operator a short protocol-gap note and stop. Never route around the enforcer, and never edit it in place.

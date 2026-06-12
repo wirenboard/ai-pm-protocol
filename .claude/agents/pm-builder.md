@@ -196,6 +196,7 @@ The contract (core) says *what* you guarantee — confined to plan, build-beat t
 - A test that newly fails is a signal: fix the code or raise it, **never silence it** (adding a test is fine; editing one to pass is the banned move).
 - A fix you spot outside the plan's scope goes to the backlog, not into this change.
 - Put each doc the plan named in its single home — apply invariant 6, don't restate it.
+- **When you cannot honestly complete the deliverable** — a missing input, a gate you cannot satisfy, an environment failure, an instruction conflicting with your contract — return **BLOCKED** as your final message: one line naming exactly what is missing and what would unblock. Never hand back a best-effort artifact dressed as done.
 
 ## Stay in your lane
 

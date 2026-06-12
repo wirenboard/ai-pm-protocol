@@ -8,6 +8,7 @@ Whoever drives a change — an AI agent or the Operator behind it — gets one p
 
 - Every change runs the ordered loop: check git state, read context, plan (the Operator approves), build on a feature branch, independent review, ship via a PR the Operator merges.
 - Review is a fresh spawn this turn, separate from the Builder; its result is a positive, greppable stamp written only after review actually clears — the accepted stamp forms are pinned by `src/adapter/merge-gate.test.mjs`; anything else blocks.
+- The verdict carries its runtime-verification rung — the highest execution the review actually performed, or `NOT RUN — <reason>`; never silent on whether anything ran.
 - A trivial change has a proportionate fast path (`fixup`) that still runs a real, shortened review.
 
 ## Must not break

@@ -2,13 +2,13 @@
 
 > Resume pointer — READ FIRST, by this exact path. Deferred detail: `.ai-pm/backlog.md`. History: commits + CHANGELOG.
 
-**Status (2026-06-12).** `main` = `uni/main` = **4.16.0** (PRs #25–#40). Merge queue for the Operator (away; merges never inferred): **PR #41** = branch 2 (`threat-discovery-npx`, 4.17.0) → **PR #42** = branch 3 (`inject-ceilings-platform-switch`, 4.18.0, stacked on 2). Merge in order; after each squash-merge the next branch gets rebased onto fresh main.
-**Conveyor (Operator: "дальше без меня автоматом, от веточек отпочкуй"):** branch 4 next, STACKED on branch 3 — verification ladder (mandatory `Runtime verification: <rung / NOT RUN — reason>` verdict field) + blocked-role return contract (a recognized "blocked" outcome for spawned roles + session-reset checkpoint discipline). Epics with non-derivable forks (parallel-work, [who]-axis) wait for the Operator.
+**Status (2026-06-12).** `main` = `uni/main` = **4.16.0** (PRs #25–#40). Merge queue for the Operator (away; merges never inferred), IN ORDER: **#41** (`threat-discovery-npx`, 4.17.0) → **#42** (`inject-ceilings-platform-switch`, 4.18.0, stacked) → **#43** (`verification-ladder-blocked-role`, 4.19.0, stacked). After each squash-merge the next branch gets rebased onto fresh main and retargeted.
+**Conveyor:** 4.19.0 was the last well-specified derivable batch. Next: the **proactive audit** (5 features shipped since the 4.14.0 sweep — the cadence fires; it runs while the Operator is away, findings come back dispatched). Remaining backlog is non-derivable (plan-adversary fork, version-bump-confirmation policy, model matrix — Operator's), external (npm publish, ad-md-editor session), or WAIT-gated (nula).
 
 ## What was just shipped
-- 4.16.0 (#40) — de-water pass complete; capability axis 2→10 + assembler per-kind default-OFF; `## Project inception` + CI offer + audit security dimension; brownfield truth reconciliation; reviewer floor sharpened (over-engineering, naming, secret-value floor)
-- 4.17.0 (PR #41 pending) — threat discovery (standing model: template + procedure + module linkage); npx distribution (zero-registry `npx github:` works; registry publish external); autonomy-decision journal (progress-note record + PR-body digest)
-- 4.18.0 (PR #42 pending) — inject blindness fixed (brief nudge fires on installed-but-unfilled projects; two-layer literal markers); loop ceilings (fix 2–3 / review 2 rounds ⇒ escalate); platform switch (declinable re-wire offer + config flip + model revalidation with cross-model intent + re-bake)
+- 4.17.0 (#41 pending) — threat discovery (standing model); npx distribution (zero-registry `npx github:` works); autonomy-decision journal (progress-note record + PR-body digest)
+- 4.18.0 (#42 pending) — inject blindness fixed (brief nudge fires on installed-but-unfilled projects); loop ceilings; platform switch (re-wire offer + config flip + model revalidation with cross-model intent)
+- 4.19.0 (#43 pending) — verification ladder (`Runtime verification:` mandatory stamp line, five rungs); BLOCKED return contract for spawned roles; session-reset hygiene (trigger + checkpoint checklist)
 
 ## Up next
 Detail in `.ai-pm/backlog.md`:

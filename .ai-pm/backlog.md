@@ -49,11 +49,6 @@ Formalize the existing hand-relayed channel: a downstream's model emits a raw pr
 
 Product discovery (shipped) covers the PRODUCT level; nothing scaffolds the per-idea level: a non-trivial idea captured to the backlog gets no design-space interrogation (actors and addressing/identity, multi-party isolation, loss/failure/recovery modes, privacy/deniability surface, accessibility incl. assistive tech), so parked ideas carry deep holes invisibly and completeness falls on Operator memory. Fix direction: capturing a non-trivial idea is an elicitation act — a short cross-domain probe, suggestion-only and proportional (a trivial idea gets no six-axis interrogation). Accessibility's review-time half shipped in the ui-ux module (4.16.0); what remains here is its place in the capture-time probe.
 
-## Blocked-role return contract + session-reset hygiene — 2026-06-06 (field-experience essay)
-
-- **Escape hatch:** the orchestrator's failure path exists (retry twice → stop and report); what's missing is the AGENT side — a recognized "blocked / cannot proceed" return for a spawned role, modeled as a first-class expected outcome instead of forcing a best-effort artifact the review then rejects.
-- **Session hygiene:** long orchestrator conversations degrade; the durable state (`.ai-pm/state/current.md` + git) makes a reset lossless, but no discipline says WHEN to checkpoint-and-reset. Define the trigger and the checklist.
-
 ## META: "deficit → prosthesis" as a protocol-design method — 2026-06-06 (Operator-originated)
 
 A generator for features and an audit lens, not a feature. Take a structural LLM weakness, build an EXTERNAL organ that compensates (the address-book pattern: externalize, don't improve). Key asymmetry: **felt vs unfelt deficits** — an unfelt deficit (a hallucinated call-graph edge feels exactly as confident as a real one) cannot rely on an opt-in prosthesis the agent invokes when it notices weakness; unfelt → always-on organ, felt → on-demand acceptable.
@@ -80,7 +75,6 @@ The flagship unfelt-deficit prosthesis. Decided design (Operator, 2026-06-06): a
 Still-open ideas (the rest of that plan shipped in other forms — cross-model review, semgrep, test discipline):
 
 - **Plan-adversary pass**: an adversarial review of the PLAN DRAFT itself (what breaks, what's missing, fuzzy expected values, hidden structural forks) — the plan is the review's ground truth, so an error IN the plan is caught by no one. Distinct from post-build review. Could be a Reviewer mode or a capability module.
-- **Verification ladder + mandatory verdict field**: take the highest reachable rung (entrypoint boots → runs on mocks → runs on target) and force the Reviewer verdict to carry `Runtime verification: <rung / NOT RUN — reason>` so "didn't run it" stops being silent.
 - **Version-bump confirmation + release rollback**: a bump above PATCH confirmed with the Operator; "roll back the release" as a named procedure (revert the merge commit, re-tag).
 - **Per-seat default model matrix**: the config supports per-seat models; the open part is a recommended DEFAULT matrix (spend thinking where errors propagate furthest). Operator caveat from a failed prior attempt: revisit deliberately; no weak models on generative seats.
 
