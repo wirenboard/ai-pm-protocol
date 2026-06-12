@@ -23,13 +23,13 @@
     "pattern": "implement|refactor|feature|deploy|release|\\bfix\\b|\\badd\\b|\\bchange\\b|\\bbuild\\b|\\bcommit\\b|\\bmerge\\b|\\bbug\\b|\\bremove\\b|\\bdelete\\b|\\bdrop\\b|\\brename\\b|\\bextract\\b|\\bupdate\\b|сдела|делай|поправ|добав|исправ|реализ|почини|зарелиз|закоммит|смерж|внедри|перепиш|рефактор|фич|убери|убрать|удали|сними|вынеси|переименуй|обнови"
   },
   "orchestrator_writable": {
-    "_doc": "Paths the orchestrator session MAY author (everything else source/canonical is sub-agent-only). Covers its state, backlog, the transient plan files (.ai-pm/plans/), and the project config. The tooling submodule is never writable (self-patch guard); the review-stamp dir is carved out by its own floor rule (review_stamps).",
-    "allow_prefixes": [".ai-pm/", "ai-pm.config.json"],
-    "never": [".ai-pm/tooling/"]
+    "_doc": "Paths the orchestrator session MAY author (everything else source/canonical is sub-agent-only). Covers its state, backlog, the transient plan files (.ai-dev/plans/), and the project config. The tooling submodule is never writable (self-patch guard); the review-stamp dir is carved out by its own floor rule (review_stamps).",
+    "allow_prefixes": [".ai-dev/", "ai-dev.config.json"],
+    "never": [".ai-dev/tooling/"]
   },
   "review_stamps": {
     "_doc": "The merge-gate's stamp directory. A stamp is the Reviewer's deliverable: the orchestrator never authors one (fabrication guard) — denied where the platform resolves the actor, persona where it cannot (Claude). NOT relaxed by profile: the Reviewer seat never collapses into the orchestrator. Deletion at ship (rm) is not a write and stays allowed.",
-    "prefix": ".ai-pm/reviews/"
+    "prefix": ".ai-dev/reviews/"
   },
   "rules": [
     {
@@ -69,7 +69,7 @@
     },
     {
       "id": "orchestrator-writes-review-stamp",
-      "intent": "Block the orchestrator session writing into the review-stamp directory (.ai-pm/reviews/) — the stamp is the Reviewer's deliverable and the merge-gate reads its presence, so an orchestrator-authored stamp is a fabricated gate. Mechanical where the platform resolves the actor (OpenCode); persona on Claude (no actor signal — fails open). Never relaxed by profile.",
+      "intent": "Block the orchestrator session writing into the review-stamp directory (.ai-dev/reviews/) — the stamp is the Reviewer's deliverable and the merge-gate reads its presence, so an orchestrator-authored stamp is a fabricated gate. Mechanical where the platform resolves the actor (OpenCode); persona on Claude (no actor signal — fails open). Never relaxed by profile.",
       "class": "deny",
       "act": "write|bash",
       "predicate": "orchestratorWritesReviewStamp"
@@ -137,7 +137,7 @@
     },
     {
       "id": "no-config-run-setup",
-      "intent": "This project is not configured (no ai-pm.config.json). Before doing the task, offer the Operator exactly two choices — run `/pm-setup` now, or proceed on the safe defaults — then STOP and wait for their answer. Do not start the task, do not explore the repo, do not run git. Keep the offer short.",
+      "intent": "This project is not configured (no ai-dev.config.json). Before doing the task, offer the Operator exactly two choices — run `/dev-setup` now, or proceed on the safe defaults — then STOP and wait for their answer. Do not start the task, do not explore the repo, do not run git. Keep the offer short.",
       "class": "inject",
       "act": "prompt",
       "predicate": "promptNeedsSetup",

@@ -8,8 +8,8 @@ Adopting the protocol must not be a manual checklist a person follows by hand an
 
 - One command (`node src/adapter/install.mjs <target-dir> [--platform claude|opencode]`) installs the protocol into the target: the shared adapter is vendored into the target's tooling location, the active platform is wired (deny hooks, the spawnable agents, the setup command, and the plugin where the platform has one), and the load-instructions surface imports the constitution.
 - The core the downstream needs lands in the target — the constitution, the role agents, the quality-registry shape (the format, not this repo's own tool rows), the capability modules — and the doc templates (contracts, architecture, README, product) are laid down where the target does not already have them.
-- The active platform is resolved from the `--platform` flag, else the target's `ai-pm.config.json` `platform`, else a clear error — never a silent guess.
-- The command finishes by reporting what it did and the next step (run `/pm-setup` to configure the project).
+- The active platform is resolved from the `--platform` flag, else the target's `ai-dev.config.json` `platform`, else a clear error — never a silent guess.
+- The command finishes by reporting what it did and the next step (run `/dev-setup` to configure the project).
 
 ## Must not break
 

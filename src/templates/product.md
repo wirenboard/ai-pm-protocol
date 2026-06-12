@@ -1,4 +1,4 @@
-<!-- ai-pm:template -->
+<!-- ai-dev:template -->
 # Product brief
 
 > The one home for **what this project is and why** — filled at onboarding (the orchestrator's `## Product discovery`), kept current; every feature grounds in it. Discovery deletes the first line's template marker when it fills this file — the marker is how the protocol tells an installed skeleton from a real brief.

@@ -7,7 +7,7 @@
 //
 // What counts as a leak — the signal, not a blunt word match:
 //   • a PRIMITIVE rendered as a `code-span` — the core writes every real tool /
-//     config / hook name in backticks (`find`, `ai-pm.config.json`), so a leaked
+//     config / hook name in backticks (`find`, `ai-dev.config.json`), so a leaked
 //     `Bash` / `settings.json` shows up backticked. The bare English verbs
 //     "Read this file" / "read and write" are NOT primitives and must pass.
 //   • a few primitives unambiguous even unbackticked — a hook event name

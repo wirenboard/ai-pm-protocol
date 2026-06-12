@@ -8,7 +8,7 @@
 # Claude Code worktree + throwaway scratch dirs
 .claude/worktrees/
 .claude/tmp/
-.ai-pm/tmp/
+.ai-dev/tmp/
 
 # Node dependencies (the linters; package-lock.json IS committed)
 node_modules/

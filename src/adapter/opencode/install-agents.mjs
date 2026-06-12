@@ -9,8 +9,8 @@
 // UNLIKE Claude (where the orchestrator IS the session, held by CLAUDE.md), OpenCode runs
 // the session as a PRIMARY agent — so here the orchestrator gets its own agent file
 // (`mode: primary`, from orchestrator.fm), wired as opencode.json `default_agent`. The
-// Builder and Reviewer are `mode: subagent`. The agent id comes from ai-pm.config.json
-// `roles` (its single home): orchestrator→ai-pm, builder→pm-builder, reviewer→pm-reviewer.
+// Builder and Reviewer are `mode: subagent`. The agent id comes from ai-dev.config.json
+// `roles` (its single home): orchestrator→ai-dev, builder→dev-builder, reviewer→dev-reviewer.
 //
 // Run from the repo root: node src/adapter/opencode/install-agents.mjs [outDir]
 //   outDir defaults to .opencode/agents/ (pass a temp dir to dry-run).
@@ -46,7 +46,7 @@ export function install(outDir, config) {
   const written = {};
   for (const role of ROLES) {
     const agentId = config.roles?.[role]?.agent;
-    if (!agentId) throw new Error(`ai-pm.config.json roles.${role}.agent is missing`);
+    if (!agentId) throw new Error(`ai-dev.config.json roles.${role}.agent is missing`);
     const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "opencode", "agents", `${role}.fm`), "utf8").trim();
     // FLOOR body + the enabled capability modules' fragments, composed at the marker
     // by the SHARED assembler (one home with the Claude shim; never copied here).
@@ -64,12 +64,12 @@ export function install(outDir, config) {
 }
 
 // Run only when invoked directly (not when imported by a test for resolveModelPin /
-// install). Config path: the project's own ai-pm.config.json by default; AI_PM_CONFIG
+// install). Config path: the project's own ai-dev.config.json by default; AI_DEV_CONFIG
 // lets a test drive a fixture config without mutating the repo's real one.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const configPath = process.env.AI_PM_CONFIG
-    ? path.resolve(process.env.AI_PM_CONFIG)
-    : path.join(ROOT, "ai-pm.config.json");
+  const configPath = process.env.AI_DEV_CONFIG
+    ? path.resolve(process.env.AI_DEV_CONFIG)
+    : path.join(ROOT, "ai-dev.config.json");
   const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
   const outDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, ".opencode", "agents");
   install(outDir, config);

@@ -14,7 +14,7 @@ A platform-neutral protocol that gives AI-assisted software and documentation de
 
 **Not for:** one-off scripts, vibe-coding experiments, teams that already have a mature CI/CD and code-review culture, anyone who does not care whether the AI cuts corners.
 
-**Speed↔quality dial.** One axis, implemented as `profile` in `ai-pm.config.json`: `lite`/`solo` verify a hypothesis fast, `full` trades speed for no-rewrites — the floor (independent review, explicit merge go) holds at every position. The dial's contract: `PROTOCOL.md` `## Project config`.
+**Speed↔quality dial.** One axis, implemented as `profile` in `ai-dev.config.json`: `lite`/`solo` verify a hypothesis fast, `full` trades speed for no-rewrites — the floor (independent review, explicit merge go) holds at every position. The dial's contract: `PROTOCOL.md` `## Project config`.
 
 ## 2. Problem — from their point of view
 
@@ -33,7 +33,7 @@ Four pains in play:
 
 1. Wire the protocol — one command: `node src/adapter/install.mjs <target-dir> --platform claude|opencode`.
 2. Start a fresh session; the harness loads as the orchestrator.
-3. `/pm-setup` — plain-language config dialog that writes `ai-pm.config.json`.
+3. `/dev-setup` — plain-language config dialog that writes `ai-dev.config.json`.
 4. Product discovery — writes this brief before the first feature.
 5. Build loop.
 
@@ -41,7 +41,7 @@ Prerequisite: Claude Code or OpenCode installed and authenticated; no other depe
 
 ## 4. Continuity & recovery
 
-- **Across sessions and machines:** state carries through the resume pointer (`.ai-pm/state/current.md`) plus git — a fresh session reads the pointer to continue; any machine with the repo continues.
+- **Across sessions and machines:** state carries through the resume pointer (`.ai-dev/state/current.md`) plus git — a fresh session reads the pointer to continue; any machine with the repo continues.
 - **Crash recovery:** the same resume pointer and git history pick up where the loop stopped.
 - **Lost access / keys:** N/A — no accounts, no keys beyond the LLM API credentials the harness manages.
 - **Multi-party:** single-Operator by design. Several people = several branches coordinated by ordinary git — not the protocol's concern.

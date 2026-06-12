@@ -1,18 +1,18 @@
 {
-  "_doc": "Merge into the project's .claude/settings.json. The two hooks that wire Claude to the shared engine: every guarded tool call and every prompt is piped to claude/shim.mjs, which self-locates deny-rules.json and prints the verdict JSON. Path assumes the adapter ships at .ai-pm/tooling/src/adapter/ — rewrite it if vendored elsewhere. See INSTALL.md.",
+  "_doc": "Merge into the project's .claude/settings.json. The two hooks that wire Claude to the shared engine: every guarded tool call and every prompt is piped to claude/shim.mjs, which self-locates deny-rules.json and prints the verdict JSON. Path assumes the adapter ships at .ai-dev/tooling/src/adapter/ — rewrite it if vendored elsewhere. See INSTALL.md.",
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "Read|Write|Edit|Bash|Task|Skill",
         "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-pm/tooling/src/adapter/claude/shim.mjs\"" }
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-dev/tooling/src/adapter/claude/shim.mjs\"" }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-pm/tooling/src/adapter/claude/shim.mjs\"" }
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-dev/tooling/src/adapter/claude/shim.mjs\"" }
         ]
       }
     ]

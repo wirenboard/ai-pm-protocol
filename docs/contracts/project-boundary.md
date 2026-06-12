@@ -6,7 +6,7 @@ An AI agent loose on the filesystem — reading sibling repos, editing productio
 
 ## Must work
 
-- Every agent stays within the project root — never reads, searches, or writes outside it; the carve-out inside the root is that the enforcer's own source (`.ai-pm/tooling/`) is off-limits to read and write.
+- Every agent stays within the project root — never reads, searches, or writes outside it; the carve-out inside the root is that the enforcer's own source (`.ai-dev/tooling/`) is off-limits to read and write.
 - A repo-owned file (code, schema, config template, manifest) changes through git — never by an in-place edit on a remote system.
 - Runtime state, deployment actions, dev experiments, and Operator-initiated remote maintenance remain permitted — the boundary is about the source of truth, not about whether remote access is allowed at all.
 

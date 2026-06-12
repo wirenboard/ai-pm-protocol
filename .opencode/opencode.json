@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "default_agent": "ai-pm",
+  "default_agent": "ai-dev",
   "instructions": [
     "PROTOCOL.md"
   ],

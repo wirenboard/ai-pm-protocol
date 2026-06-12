@@ -246,14 +246,14 @@ function isCleanTopic(topic) {
 // The CHOKE POINT every topic source (command ref, HEAD, any future source)
 // funnels through before a stamp path is built — so the traversal guard here
 // cannot be bypassed by a second entry path. A crafted ref `feature/../EVIL`
-// resolves topic `../EVIL`; left unguarded, `.ai-pm/reviews/../EVIL_review.md`
+// resolves topic `../EVIL`; left unguarded, `.ai-dev/reviews/../EVIL_review.md`
 // escapes reviews/ and a planted stamp would satisfy the [mechanical] floor. An
 // unclean topic leaves the stamp UNsatisfiable ⇒ the merge-gate DENIES (fail
 // toward deny). A nested branch name (feature/sub/topic → `sub/topic`) is
 // rejected by the same rule: the convention is a single `<prefix>/<topic>`.
 function reviewStampSatisfied(root, topic) {
   if (!isCleanTopic(topic)) return false;
-  const file = path.join(path.resolve(root), ".ai-pm", "reviews", topic + "_review.md");
+  const file = path.join(path.resolve(root), ".ai-dev", "reviews", topic + "_review.md");
   let text;
   try { text = fs.readFileSync(file, "utf8"); } catch { return false; }
   const stampOK = (label) => {
@@ -277,11 +277,11 @@ function reviewStampSatisfied(root, topic) {
 function fileNonEmpty(p) {
   try { return fs.statSync(p).size > 0; } catch { return false; }
 }
-// Is the project configured? True iff ai-pm.config.json exists at the project
+// Is the project configured? True iff ai-dev.config.json exists at the project
 // root. Root-relative, fs-checked — the lazy-setup predicate reads only this
 // presence (it adds context, never executes), within invariant 2.
 function projectConfigured(root) {
-  return fs.existsSync(path.join(path.resolve(root), "ai-pm.config.json"));
+  return fs.existsSync(path.join(path.resolve(root), "ai-dev.config.json"));
 }
 // Does the project have a FILLED product brief? False when docs/product.md is
 // absent OR still the install-landed template — the installer copies the
@@ -289,13 +289,13 @@ function projectConfigured(root) {
 // could never fire on a real install (the 4.18.0 fix). Template detection is
 // TWO literal-substring layers (includes() on fixed text, never a regex — no
 // prompt data reaches this read, no backtracking surface):
-//   1. the sentinel `<!-- ai-pm:template -->` the template carries as line 1
+//   1. the sentinel `<!-- ai-dev:template -->` the template carries as line 1
 //      (forward-looking; discovery deletes it on fill),
 //   2. the §0 placeholder line, byte-identical in every template version ever
 //      shipped (legacy; catches installs that copied a pre-sentinel template).
 // Same fixed root-relative read as projectConfigured, within invariant 2.
 const BRIEF_TEMPLATE_MARKERS = [
-  "<!-- ai-pm:template -->",
+  "<!-- ai-dev:template -->",
   "<one plain sentence: what this product is and what it does",
 ];
 function productBriefFilled(root) {
@@ -304,7 +304,7 @@ function productBriefFilled(root) {
   catch { return false; } // absent or unreadable ⇒ no brief
   return !BRIEF_TEMPLATE_MARKERS.some((m) => text.includes(m));
 }
-// The project's rigor profile (ai-pm.config.json `profile`). Defaults to "solo"
+// The project's rigor profile (ai-dev.config.json `profile`). Defaults to "solo"
 // on absent / unreadable / malformed / unknown value — proportionality by default
 // (PROTOCOL.md `## Project config`), a deliberate Operator decision, not fail-strict:
 // the ONLY predicate this gates is the orchestrator-content deny; the floor
@@ -314,7 +314,7 @@ function productBriefFilled(root) {
 // never a write.
 function projectProfile(root) {
   try {
-    const cfg = JSON.parse(fs.readFileSync(path.join(path.resolve(root), "ai-pm.config.json"), "utf8"));
+    const cfg = JSON.parse(fs.readFileSync(path.join(path.resolve(root), "ai-dev.config.json"), "utf8"));
     return cfg.profile === "full" || cfg.profile === "lite" ? cfg.profile : "solo";
   } catch { return "solo"; }
 }
@@ -429,7 +429,7 @@ const PREDICATES = {
     return !!pat && new RegExp(pat, "i").test(input.prompt || "");
   },
   // Lazy-setup nudge: a work-request prompt (same change_verbs list — no second
-  // verb list) to a project with NO ai-pm.config.json. Reinforces the persona
+  // verb list) to a project with NO ai-dev.config.json. Reinforces the persona
   // act, never forces it. False once the config is present (a configured project
   // gets the change-route-reminder instead).
   promptNeedsSetup(input, config) {

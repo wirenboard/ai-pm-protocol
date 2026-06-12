@@ -1,10 +1,10 @@
-// Command-assembly test — proves the `/pm-setup` explicit-trigger command assembles
+// Command-assembly test — proves the `/dev-setup` explicit-trigger command assembles
 // correctly for BOTH platforms from ONE neutral body + per-platform frontmatter,
 // and that it stays a THIN WRAPPER (no copy of the `## Setup` dialog). The contract
 // this locks (PROTOCOL.md invariant 6, single home):
 //   • each platform's installer writes a setup command file;
 //   • the file carries the neutral body's pointer at the orchestrator's `## Setup`;
-//   • the per-platform frontmatter is right (OpenCode targets `agent: ai-pm`);
+//   • the per-platform frontmatter is right (OpenCode targets `agent: ai-dev`);
 //   • the body does NOT restate the dialog steps — it points, never copies.
 // A regression in either direction fails loudly here.
 //
@@ -23,7 +23,7 @@ function check(name, cond) {
 }
 
 function assembled(install) {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-cmd-"));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-cmd-"));
   const outPath = install(outDir);
   const text = fs.readFileSync(outPath, "utf8");
   const base = path.basename(outPath);
@@ -44,8 +44,8 @@ const DIALOG_MARKERS = [
 ];
 
 for (const [platform, install, wantBase, wantFm] of [
-  ["claude", claudeInstall, "pm-setup.md", null],
-  ["opencode", opencodeInstall, "pm-setup.md", "agent: ai-pm"],
+  ["claude", claudeInstall, "dev-setup.md", null],
+  ["opencode", opencodeInstall, "dev-setup.md", "agent: ai-dev"],
 ]) {
   const { text, base } = assembled(install);
   check(`${platform}: writes ${wantBase}`, base === wantBase);
@@ -65,4 +65,4 @@ check("both platforms share the one neutral body (no per-platform dialog copy)",
 
 console.log(`\nINSTALL-COMMANDS: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
-console.log("PASS — /pm-setup assembles for both platforms, thin wrapper, one shared body");
+console.log("PASS — /dev-setup assembles for both platforms, thin wrapper, one shared body");

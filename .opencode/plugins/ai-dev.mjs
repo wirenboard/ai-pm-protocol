@@ -8,14 +8,14 @@ import { decide, decidePrompt } from "../../src/adapter/opencode/normalise.mjs";
 const ADAPTER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "src", "adapter");
 
 // Resolve whether the calling session is the orchestrator (no parentID, or agent id
-// `ai-pm`). FAIL-OPEN to false on any lookup failure — a miss never produces a false
+// `ai-dev`). FAIL-OPEN to false on any lookup failure — a miss never produces a false
 // denial; persona is the fail-safe (matches the engine's fail-open-on-actor contract).
 async function isOrchestrator(client, sessionID) {
   try {
     if (!client || !client.session || !client.session.get || !sessionID) return false;
     const res = await client.session.get({ path: { id: sessionID } });
     const data = (res && res.data) || {};
-    if (data.agent === "ai-pm") return true;
+    if (data.agent === "ai-dev") return true;
     return data.parentID == null;
   } catch { return false; }
 }
@@ -27,7 +27,7 @@ export const AiPmEnforcement = async (ctx) => {
     "tool.execute.before": async (input, output) => {
       const isOrch = await isOrchestrator(ctx && ctx.client, input && input.sessionID);
       const r = decide(input && input.tool, (output && output.args) || {}, root, isOrch, config);
-      if (r.verdict === "deny") throw new Error("[ai-pm] " + r.reason);
+      if (r.verdict === "deny") throw new Error("[ai-dev] " + r.reason);
     },
     // chat.message — OpenCode's analog of Claude's UserPromptSubmit: it fires once
     // per user message before the LLM call, and output.parts is MUTABLE. This is

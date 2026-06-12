@@ -4,7 +4,7 @@
 // the engine returned inject, nothing pushed it, the nudge never reached the model.
 //
 // This test drives the plugin's `chat.message` hook DIRECTLY against the deployed
-// plugin (.opencode/plugins/ai-pm.mjs — the module OpenCode actually loads) and
+// plugin (.opencode/plugins/ai-dev.mjs — the module OpenCode actually loads) and
 // asserts the SIDE EFFECT: a no-config root + a change-verb message ⇒ output.parts
 // gains the reminder; a configured root OR a non-change message ⇒ no part pushed.
 // It asserts application, not decision — the decision is parity.test.mjs's job.
@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { AiPmEnforcement } from "../../.opencode/plugins/ai-pm.mjs";
+import { AiPmEnforcement } from "../../.opencode/plugins/ai-dev.mjs";
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -47,7 +47,7 @@ const CHANGE_MSG = "please implement the new export feature";
 const PLAIN_MSG = "good morning, how are you";
 
 // ── 1. the hook is registered at all (the exact bug: it was absent) ───────────
-const tmpUnconfigured = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-oc-nocfg-"));
+const tmpUnconfigured = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-oc-nocfg-"));
 const hooks = await hooksFor(tmpUnconfigured);
 check("chat.message hook is registered", typeof hooks["chat.message"] === "function");
 check("tool.execute.before hook still registered", typeof hooks["tool.execute.before"] === "function");
@@ -68,8 +68,8 @@ check("no-config + non-change ⇒ no part pushed", partsNoCfgPlain.length === 1)
 // A configured project gets a later-stage inject instead of the setup nudge (with
 // no docs/product.md at all, the discovery nudge) — still an inject, so a part is
 // still pushed. WHICH nudge is pinned by cases 5b/5c below via the part text.
-const tmpConfigured = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-oc-cfg-"));
-fs.writeFileSync(path.join(tmpConfigured, "ai-pm.config.json"), "{}");
+const tmpConfigured = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-oc-cfg-"));
+fs.writeFileSync(path.join(tmpConfigured, "ai-dev.config.json"), "{}");
 const hooksCfg = await hooksFor(tmpConfigured);
 const partsCfgChange = await runChat(hooksCfg, CHANGE_MSG);
 check("configured + change-verb ⇒ a part is pushed", partsCfgChange.length === 2);
@@ -83,8 +83,8 @@ check("configured + non-change ⇒ no part pushed", partsCfgPlain.length === 1);
 // template verbatim, so a template-state brief must still draw the discovery
 // nudge — before the fix, presence alone silenced it on every real install. The
 // REAL template file drives the case; the part text pins WHICH nudge was applied.
-const tmpTemplate = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-oc-tmpl-"));
-fs.writeFileSync(path.join(tmpTemplate, "ai-pm.config.json"), "{}");
+const tmpTemplate = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-oc-tmpl-"));
+fs.writeFileSync(path.join(tmpTemplate, "ai-dev.config.json"), "{}");
 fs.mkdirSync(path.join(tmpTemplate, "docs"));
 fs.writeFileSync(path.join(tmpTemplate, "docs", "product.md"), fs.readFileSync(new URL("../templates/product.md", import.meta.url)));
 const hooksTmpl = await hooksFor(tmpTemplate);
@@ -94,8 +94,8 @@ check("configured + template brief + change-verb ⇒ a part is pushed", tmplPart
 check("the template-brief part is the discovery nudge", tmplPart !== null && tmplPart.text.includes("product-discovery"));
 
 // ── 5c. configured + FILLED brief ⇒ the route-reminder part is pushed ──────────
-const tmpFilled = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-oc-filled-"));
-fs.writeFileSync(path.join(tmpFilled, "ai-pm.config.json"), "{}");
+const tmpFilled = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-oc-filled-"));
+fs.writeFileSync(path.join(tmpFilled, "ai-dev.config.json"), "{}");
 fs.mkdirSync(path.join(tmpFilled, "docs"));
 fs.writeFileSync(path.join(tmpFilled, "docs", "product.md"), "# Product brief\n\nA real, filled brief.\n");
 const hooksFilled = await hooksFor(tmpFilled);

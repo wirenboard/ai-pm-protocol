@@ -12,7 +12,7 @@
 
 ## Contributing
 
-This project is built with the ai-pm protocol: an operator describes what they want and AI roles plan, build, review, and ship it. Start here — `PROTOCOL.md` (the loop and the rules), `architecture.md` (how it is built), `contracts.md` (what the product promises). `<Then the project-specific steps: how to propose a change, how to run the checks.>`
+This project is built with the ai-dev protocol: an operator describes what they want and AI roles plan, build, review, and ship it. Start here — `PROTOCOL.md` (the loop and the rules), `architecture.md` (how it is built), `contracts.md` (what the product promises). `<Then the project-specific steps: how to propose a change, how to run the checks.>`
 
 ## License
 

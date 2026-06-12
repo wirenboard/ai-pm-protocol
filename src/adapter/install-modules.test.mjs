@@ -155,11 +155,11 @@ check("in-root pointer resolves", resolveFragmentPath(ROOT, "src/modules/threat-
 // ── 6. END-TO-END through a real shim (Claude) — the deployed agent gains/loses
 //      the section, floor intact. Proves the shared helper is wired into install().
 console.log("END-TO-END — Claude install composes the module:");
-const baseRoles = { builder: { agent: "pm-builder" }, reviewer: { agent: "pm-reviewer" } };
+const baseRoles = { builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer" } };
 function reviewerAgentText(modulesCfg) {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-modtest-"));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-modtest-"));
   const written = claudeInstall(outDir, { roles: baseRoles, kind: "code", ...modulesCfg });
-  const text = fs.readFileSync(written["pm-reviewer"], "utf8");
+  const text = fs.readFileSync(written["dev-reviewer"], "utf8");
   fs.rmSync(outDir, { recursive: true, force: true });
   return text;
 }
@@ -271,9 +271,9 @@ check("both: no leftover marker", !both.includes(MARKER));
 //      the product-advocate fragment, floor intact.
 console.log("END-TO-END — Claude install composes product-advocate into the builder:");
 function builderAgentText(modulesCfg) {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-pa-e2e-"));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-pa-e2e-"));
   const written = claudeInstall(outDir, { roles: baseRoles, kind: "code", ...modulesCfg });
-  const text = fs.readFileSync(written["pm-builder"], "utf8");
+  const text = fs.readFileSync(written["dev-builder"], "utf8");
   fs.rmSync(outDir, { recursive: true, force: true });
   return text;
 }

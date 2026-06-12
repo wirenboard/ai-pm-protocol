@@ -1,5 +1,5 @@
 // Plugin-generation anti-drift test — the WHOLE POINT of the generator. The
-// deployed plugin (.opencode/plugins/ai-pm.mjs — the module OpenCode loads) must
+// deployed plugin (.opencode/plugins/ai-dev.mjs — the module OpenCode loads) must
 // inline its hook bodies (opencode only registers hooks off an inline-defined
 // function, never a re-export — dogfood finding, src/adapter/INSTALL.md), so it cannot
 // be a thin re-export of the source. A generator instead produces it FROM the
@@ -11,8 +11,8 @@
 //     so a hand-edit to EITHER file, or a source change left un-regenerated, fails
 //     here — the two cannot silently drift.
 //   • the rewrite is correct per layout: the dev layout (this repo, adapter at
-//     <root>/src/adapter) retargets the source's .ai-pm/tooling/src/adapter path; the
-//     downstream layout (adapter at <root>/.ai-pm/tooling/src/adapter) leaves it as-is.
+//     <root>/src/adapter) retargets the source's .ai-dev/tooling/src/adapter path; the
+//     downstream layout (adapter at <root>/.ai-dev/tooling/src/adapter) leaves it as-is.
 // Mirrors the agent/command re-assembly discipline (install-model/install-commands).
 //
 // Run: node src/adapter/install-plugin.test.mjs
@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..", "..");
-const DEPLOYED = path.join(ROOT, ".opencode", "plugins", "ai-pm.mjs");
+const DEPLOYED = path.join(ROOT, ".opencode", "plugins", "ai-dev.mjs");
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -35,8 +35,8 @@ function check(name, cond) {
 
 // ── 1. ANTI-DRIFT: the committed deployed file IS the generator's output ──────
 // Generate to a temp path and compare byte-for-byte with the committed file.
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-plugin-"));
-const outPath = install(path.join(tmp, "ai-pm.mjs"));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-plugin-"));
+const outPath = install(path.join(tmp, "ai-dev.mjs"));
 const generated = fs.readFileSync(outPath, "utf8");
 const committed = fs.readFileSync(DEPLOYED, "utf8");
 check("generated output is byte-identical to the committed deployed plugin", generated === committed);
@@ -48,12 +48,12 @@ check("output carries the generated-file header", generated.startsWith("// GENER
 // This repo is the dev layout — the deployed file must use the in-repo adapter dir,
 // NOT the downstream tooling-submodule path.
 check("dev layout: import resolves to ../../src/adapter", generated.includes('from "../../src/adapter/engine.mjs"'));
-check("dev layout: no leftover tooling-submodule path", !generated.includes(".ai-pm/tooling/src/adapter"));
+check("dev layout: no leftover tooling-submodule path", !generated.includes(".ai-dev/tooling/src/adapter"));
 
 // A forced downstream layout leaves the source's tooling-submodule path intact.
 const downstream = generate(ROOT, "downstream");
-check("downstream layout: keeps the tooling-submodule import path", downstream.includes('from "../../../.ai-pm/tooling/src/adapter/engine.mjs"'));
-check("downstream layout: keeps the tooling-submodule ADAPTER resolve", downstream.includes('".ai-pm", "tooling", "src", "adapter"'));
+check("downstream layout: keeps the tooling-submodule import path", downstream.includes('from "../../../.ai-dev/tooling/src/adapter/engine.mjs"'));
+check("downstream layout: keeps the tooling-submodule ADAPTER resolve", downstream.includes('".ai-dev", "tooling", "src", "adapter"'));
 
 fs.rmSync(tmp, { recursive: true, force: true });
 

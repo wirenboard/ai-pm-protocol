@@ -33,18 +33,18 @@ function check(name, got, want) {
 }
 
 // ── fixture root: a real tmp dir (paths are fs-checked by some predicates) ────
-const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-parity-"));
+const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-parity-"));
 fs.writeFileSync(path.join(ROOT, "existing.txt"), "real content"); // for truncating-write
 fs.writeFileSync(path.join(ROOT, "README.md"), "readme");          // for allow-read
-const TOOLING = path.join(ROOT, ".ai-pm", "tooling", "engine.mjs"); // never-writable
-const STAMP = path.join(ROOT, ".ai-pm", "reviews", "x_review.md");  // the Reviewer's deliverable
+const TOOLING = path.join(ROOT, ".ai-dev", "tooling", "engine.mjs"); // never-writable
+const STAMP = path.join(ROOT, ".ai-dev", "reviews", "x_review.md");  // the Reviewer's deliverable
 
 // A second root with an EXPLICIT `full` profile, for the orchestrator-content case
 // only: the profile default is `solo` (PROTOCOL.md `## Project config`), so on the
 // unconfigured ROOT that deny relaxes — only an explicit `full` keeps it. The
 // default-resolution itself is pinned in rigor-profile.test.mjs.
-const FULL = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-parity-full-"));
-fs.writeFileSync(path.join(FULL, "ai-pm.config.json"), '{ "profile": "full" }');
+const FULL = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-parity-full-"));
+fs.writeFileSync(path.join(FULL, "ai-dev.config.json"), '{ "profile": "full" }');
 const ARCH = path.join(FULL, "docs", "architecture.md");           // canonical doc (not orch-writable)
 
 // Each case carries BOTH platforms' native payloads + the expected ENGINE verdict
@@ -142,9 +142,9 @@ const FIXTURE = [
     claude: { tool_name: "Read", tool_input: { file_path: path.join(ROOT, "README.md") } },
     opencode: { tool: "read", args: { filePath: path.join(ROOT, "README.md") } } },
 
-  { name: "allow-spawn-pm-role", expect: "allow",
-    claude: { tool_name: "Task", tool_input: { subagent_type: "pm-builder" } },
-    opencode: { tool: "task", args: { subagent_type: "pm-builder" } } },
+  { name: "allow-spawn-dev-role", expect: "allow",
+    claude: { tool_name: "Task", tool_input: { subagent_type: "dev-builder" } },
+    opencode: { tool: "task", args: { subagent_type: "dev-builder" } } },
 ];
 
 // ── 1. PARITY ────────────────────────────────────────────────────────────────
@@ -192,15 +192,15 @@ if (divergences.length) {
 console.log("CONFIG-SENSITIVE INJECT (no config ⇒ setup; configured no-brief ⇒ discovery; configured+brief ⇒ route):");
 const changePrompt = { hook_event_name: "UserPromptSubmit", prompt: "please implement the new export feature" };
 
-// Stage 1 — unconfigured root: a fresh tmp dir with NO ai-pm.config.json.
-const NOCFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-nocfg-"));
+// Stage 1 — unconfigured root: a fresh tmp dir with NO ai-dev.config.json.
+const NOCFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-nocfg-"));
 check("no-config-run-setup:fires", claudeDecide(changePrompt, NOCFG, config).ruleId, "no-config-run-setup");
 fs.rmSync(NOCFG, { recursive: true, force: true });
 
 // Stage 2 — configured but NO docs/product.md ⇒ promptNeedsSetup is false but
 // promptNeedsProductBrief is true ⇒ the discovery nudge fires.
-const CFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-cfg-"));
-fs.writeFileSync(path.join(CFG, "ai-pm.config.json"), "{}");
+const CFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-cfg-"));
+fs.writeFileSync(path.join(CFG, "ai-dev.config.json"), "{}");
 check("no-product-brief-discover:fires-when-configured-no-brief", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
 
 // Stage 2b — configured AND docs/product.md present but STILL THE TEMPLATE ⇒ the
@@ -213,7 +213,7 @@ check("no-product-brief-discover:fires-when-configured-no-brief", claudeDecide(c
 fs.mkdirSync(path.join(CFG, "docs"));
 fs.writeFileSync(path.join(CFG, "docs", "product.md"), fs.readFileSync(path.join(HERE, "..", "templates", "product.md")));
 check("no-product-brief-discover:fires-on-installed-template", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
-fs.writeFileSync(path.join(CFG, "docs", "product.md"), "<!-- ai-pm:template -->\n# Product brief\n");
+fs.writeFileSync(path.join(CFG, "docs", "product.md"), "<!-- ai-dev:template -->\n# Product brief\n");
 check("no-product-brief-discover:fires-on-sentinel-marker", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
 fs.writeFileSync(path.join(CFG, "docs", "product.md"), "# Product brief\n\n`<one plain sentence: what this product is and what it does. …>`\n");
 check("no-product-brief-discover:fires-on-legacy-placeholder", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");

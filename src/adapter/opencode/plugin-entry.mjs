@@ -9,27 +9,27 @@
 // fire. opencode only registers hooks off a function DEFINED in the loaded module. So
 // the thin wrappers live here, inline; only the rule logic (engine + decide/decidePrompt)
 // is imported, so the rules stay single-sourced. Verified live: the inline form blocks a
-// write into `.ai-pm/tooling/` (the engine's self-patch deny).
+// write into `.ai-dev/tooling/` (the engine's self-patch deny).
 //
 // Two hooks, the two classes OpenCode realises: `tool.execute.before` (deny — throw)
 // and `chat.message` (inject — push a text part, the analog of Claude UserPromptSubmit).
 // `ask` has no plugin-hook realisation and falls back to persona.
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadConfig } from "../../../.ai-pm/tooling/src/adapter/engine.mjs";
-import { decide, decidePrompt } from "../../../.ai-pm/tooling/src/adapter/opencode/normalise.mjs";
+import { loadConfig } from "../../../.ai-dev/tooling/src/adapter/engine.mjs";
+import { decide, decidePrompt } from "../../../.ai-dev/tooling/src/adapter/opencode/normalise.mjs";
 
-const ADAPTER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", ".ai-pm", "tooling", "src", "adapter");
+const ADAPTER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", ".ai-dev", "tooling", "src", "adapter");
 
 // Resolve whether the calling session is the orchestrator (no parentID, or agent id
-// `ai-pm`). FAIL-OPEN to false on any lookup failure — a miss never produces a false
+// `ai-dev`). FAIL-OPEN to false on any lookup failure — a miss never produces a false
 // denial; persona is the fail-safe (matches the engine's fail-open-on-actor contract).
 async function isOrchestrator(client, sessionID) {
   try {
     if (!client || !client.session || !client.session.get || !sessionID) return false;
     const res = await client.session.get({ path: { id: sessionID } });
     const data = (res && res.data) || {};
-    if (data.agent === "ai-pm") return true;
+    if (data.agent === "ai-dev") return true;
     return data.parentID == null;
   } catch { return false; }
 }
@@ -41,7 +41,7 @@ export const AiPmEnforcement = async (ctx) => {
     "tool.execute.before": async (input, output) => {
       const isOrch = await isOrchestrator(ctx && ctx.client, input && input.sessionID);
       const r = decide(input && input.tool, (output && output.args) || {}, root, isOrch, config);
-      if (r.verdict === "deny") throw new Error("[ai-pm] " + r.reason);
+      if (r.verdict === "deny") throw new Error("[ai-dev] " + r.reason);
     },
     // chat.message — OpenCode's analog of Claude's UserPromptSubmit: it fires once
     // per user message before the LLM call, and output.parts is MUTABLE. This is

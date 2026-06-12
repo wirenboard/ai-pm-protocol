@@ -10,7 +10,7 @@
 // core (PROTOCOL.md, the role bodies, docs/architecture.md prose) names none of them.
 //
 // Usage:  node src/adapter/install.mjs <target-dir> [--platform claude|opencode]
-//   platform: the --platform flag, else the target's ai-pm.config.json `platform`,
+//   platform: the --platform flag, else the target's ai-dev.config.json `platform`,
 //   else a clear error (never a silent guess).
 //
 // Security (threat-model): the two untrusted inputs are the target path and the
@@ -76,9 +76,9 @@ function ensureLine(file, line) {
 }
 
 // Run a vendored install script as a child process (node, argv array — no shell).
-// `env` overrides (e.g. AI_PM_CONFIG) layer onto the current environment.
+// `env` overrides (e.g. AI_DEV_CONFIG) layer onto the current environment.
 function runScript(scriptRelPath, args, target, env) {
-  const script = path.join(target, ".ai-pm", "tooling", scriptRelPath);
+  const script = path.join(target, ".ai-dev", "tooling", scriptRelPath);
   execFileSync("node", [script, ...args], {
     stdio: "inherit",
     env: { ...process.env, ...env },
@@ -89,10 +89,10 @@ function runScript(scriptRelPath, args, target, env) {
 
 // 1. Vendor the shared adapter AND the neutral bodies the assembler reads, into the
 // target's tooling location. The vendored install-*.mjs self-locate their ROOT as
-// .ai-pm/tooling/ (three dirs up from the script), and read src/agents, src/modules,
-// src/adapter from there — so all three must sit under .ai-pm/tooling/src/.
+// .ai-dev/tooling/ (three dirs up from the script), and read src/agents, src/modules,
+// src/adapter from there — so all three must sit under .ai-dev/tooling/src/.
 function vendorTooling(target) {
-  const tooling = path.join(target, ".ai-pm", "tooling", "src");
+  const tooling = path.join(target, ".ai-dev", "tooling", "src");
   copyTree(path.join(SOURCE, "src", "adapter"), path.join(tooling, "adapter"));
   copyTree(path.join(SOURCE, "src", "agents"), path.join(tooling, "agents"));
   copyTree(path.join(SOURCE, "src", "modules"), path.join(tooling, "modules"));
@@ -121,11 +121,11 @@ function layDownCore(target) {
 }
 
 // 3. Ensure a config exists so the agent assembly has its `roles` bindings. A real
-// project configures via /pm-setup; pre-setup we write a minimal default carrying
+// project configures via /dev-setup; pre-setup we write a minimal default carrying
 // the resolved platform + the standard seat ids. Written ONLY where absent — a
 // re-run never overwrites the Operator's configured file.
 function ensureConfig(target, platform) {
-  const dest = path.join(target, "ai-pm.config.json");
+  const dest = path.join(target, "ai-dev.config.json");
   if (fs.existsSync(dest)) return;
   const config = {
     mode: "interactive",
@@ -133,9 +133,9 @@ function ensureConfig(target, platform) {
     platform,
     kind: "code",
     roles: {
-      orchestrator: { agent: "ai-pm" },
-      builder: { agent: "pm-builder" },
-      reviewer: { agent: "pm-reviewer", model: "auto" },
+      orchestrator: { agent: "ai-dev" },
+      builder: { agent: "dev-builder" },
+      reviewer: { agent: "dev-reviewer", model: "auto" },
     },
   };
   fs.writeFileSync(dest, JSON.stringify(config, null, 2) + "\n");
@@ -145,7 +145,7 @@ function ensureConfig(target, platform) {
 // merge the deny hooks into .claude/settings.json (keyed so a re-run never
 // duplicates), and import the constitution + the orchestrator procedure via CLAUDE.md.
 function wireClaude(target) {
-  const cfg = { AI_PM_CONFIG: path.join(target, "ai-pm.config.json") };
+  const cfg = { AI_DEV_CONFIG: path.join(target, "ai-dev.config.json") };
   runScript(path.join("src", "adapter", "claude", "install-agents.mjs"), [path.join(target, ".claude", "agents")], target, cfg);
   runScript(path.join("src", "adapter", "claude", "install-commands.mjs"), [path.join(target, ".claude", "commands")], target, cfg);
 
@@ -153,7 +153,7 @@ function wireClaude(target) {
   // fragment is the vendored claude/hooks.json (the single home of the hook shape);
   // we merge its PreToolUse/UserPromptSubmit arrays, de-duping by command.
   const hooksFragment = JSON.parse(
-    fs.readFileSync(path.join(target, ".ai-pm", "tooling", "src", "adapter", "claude", "hooks.json"), "utf8"),
+    fs.readFileSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "claude", "hooks.json"), "utf8"),
   );
   const settingsPath = path.join(target, ".claude", "settings.json");
   const settings = fs.existsSync(settingsPath) ? JSON.parse(fs.readFileSync(settingsPath, "utf8")) : {};
@@ -191,19 +191,19 @@ function mergeHooks(existing, fragment) {
 }
 
 // 4b. Wire OpenCode: assemble the three agents + the setup command + generate the
-// plugin (downstream layout, since the adapter is now vendored under .ai-pm/tooling/),
+// plugin (downstream layout, since the adapter is now vendored under .ai-dev/tooling/),
 // merge opencode.json keys, and import the constitution via AGENTS.md.
 function wireOpenCode(target) {
-  const cfg = { AI_PM_CONFIG: path.join(target, "ai-pm.config.json") };
+  const cfg = { AI_DEV_CONFIG: path.join(target, "ai-dev.config.json") };
   runScript(path.join("src", "adapter", "opencode", "install-agents.mjs"), [path.join(target, ".opencode", "agents")], target, cfg);
   runScript(path.join("src", "adapter", "opencode", "install-commands.mjs"), [path.join(target, ".opencode", "commands")], target, cfg);
   // The plugin generator resolves the adapter layout from the TARGET root (passed via
   // --root, since the vendored script self-locates to the tooling root, not the target).
-  // The target has .ai-pm/tooling/src/adapter ⇒ downstream layout ⇒ the deployed plugin
+  // The target has .ai-dev/tooling/src/adapter ⇒ downstream layout ⇒ the deployed plugin
   // keeps the tooling-submodule import path.
   runScript(
     path.join("src", "adapter", "opencode", "install-plugin.mjs"),
-    [path.join(target, ".opencode", "plugins", "ai-pm.mjs"), "--root", target],
+    [path.join(target, ".opencode", "plugins", "ai-dev.mjs"), "--root", target],
     target,
     cfg,
   );
@@ -211,7 +211,7 @@ function wireOpenCode(target) {
   // opencode.json — merge the protocol's keys without dropping a project's own.
   const ocPath = path.join(target, ".opencode", "opencode.json");
   const oc = fs.existsSync(ocPath) ? JSON.parse(fs.readFileSync(ocPath, "utf8")) : {};
-  oc.default_agent = "ai-pm";
+  oc.default_agent = "ai-dev";
   oc.instructions = Array.from(new Set([...(oc.instructions || []), "PROTOCOL.md"]));
   oc.permission = { ...(oc.permission || {}), question: "allow" };
   oc.agent = { ...(oc.agent || {}), build: { disable: true }, plan: { disable: true } };
@@ -233,14 +233,14 @@ function resolvePlatform(target, flag) {
     }
     return flag;
   }
-  const cfgPath = path.join(target, "ai-pm.config.json");
+  const cfgPath = path.join(target, "ai-dev.config.json");
   if (fs.existsSync(cfgPath)) {
     const platform = JSON.parse(fs.readFileSync(cfgPath, "utf8")).platform;
     if (PLATFORMS.includes(platform)) return platform;
   }
   throw new Error(
     `cannot resolve the platform — pass --platform ${PLATFORMS.join("|")} ` +
-      `or set "platform" in ${path.join(target, "ai-pm.config.json")}`,
+      `or set "platform" in ${path.join(target, "ai-dev.config.json")}`,
   );
 }
 
@@ -276,11 +276,11 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
   try {
     const platform = install(targetDir, platformFlag);
     const rel = path.relative(process.cwd(), path.resolve(targetDir)) || ".";
-    console.log(`\nInstalled the ai-pm protocol into ${rel} (platform: ${platform}).`);
-    console.log("  • vendored the shared adapter into .ai-pm/tooling/");
+    console.log(`\nInstalled the ai-dev protocol into ${rel} (platform: ${platform}).`);
+    console.log("  • vendored the shared adapter into .ai-dev/tooling/");
     console.log("  • laid down PROTOCOL.md, the role agents, the quality shape, the modules, the doc templates");
-    console.log(`  • wired ${platform} (deny hooks, agents, the /pm-setup command${platform === "opencode" ? ", the plugin" : ""})`);
-    console.log("\nNext: run /pm-setup to configure roles, models, mode, and the module kit.");
+    console.log(`  • wired ${platform} (deny hooks, agents, the /dev-setup command${platform === "opencode" ? ", the plugin" : ""})`);
+    console.log("\nNext: run /dev-setup to configure roles, models, mode, and the module kit.");
   } catch (e) {
     console.error(`install failed: ${e.message}`);
     process.exit(1);

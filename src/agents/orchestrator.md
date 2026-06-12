@@ -6,7 +6,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 **Spawn the configured agent — resolve agent AND model first:**
 
-- Read `ai-pm.config.json` `roles` for the seat before spawning.
+- Read `ai-dev.config.json` `roles` for the seat before spawning.
 - A concrete pin or `session`/`auto` is a *wish*; the adapter realises it.
 - `auto` = a different model for independent blind spots where the environment offers one, **else** the session model. (Reviewer defaults to `auto` — a maker-model can't catch its own blind spots.)
 - **Honesty:** where no second model exists, `auto` = same model, no cross-model independence. Do not present it as independent.
@@ -21,18 +21,18 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - **Merging a stacked queue:** retarget the next PR to `main` BEFORE merging the current one — deleting a merged base branch auto-closes its dependent PRs.
 - At ship the PR body carries a **"Decisions made under autonomy"** digest — the announce-then-act lines copied from the plan's progress note before the plan file is deleted; omitted when empty (an interactive session records none).
 - At ship the relay names the feature's cost in one line (spawns, wall time) — the Operator pays it; keep it visible.
-- At ship: delete this feature's transient artifacts — stamp **strictly LAST**, after push and PR succeed (the merge-gate reads `.ai-pm/reviews/<topic>_review.md` at push time; deleting it earlier denies your own push).
-- **Update `.ai-pm/state/current.md`** (final ship step) — the pointer **points, never restates** (invariant 6): version → the latest git tag, recent ships → CHANGELOG, PR state → the forge; its own prose carries only the queue, the cadence markers, and non-canonical conventions. A restated version is written at ship yet goes false at the later merge — so it is not written at all.
-- The resume pointer lives at **`.ai-pm/state/current.md`** — read it **FIRST on resume**, by that exact path. Never via file-search/glob: dot-dirs can be hidden on some harnesses.
-- **Session-reset hygiene** — reset on felt context degradation (repeated re-reads, contradictory recall, a lost thread) or at a natural boundary (a shipped feature, a long pause). Checkpoint first — state pointer current · plan progress note ticked · uncommitted work committed or named in state — then a fresh session resumes losslessly from `.ai-pm/state/current.md`.
-- You author only: `.ai-pm/backlog.md`, recorded Operator decisions, git operations. Every other artifact is a role's to write.
+- At ship: delete this feature's transient artifacts — stamp **strictly LAST**, after push and PR succeed (the merge-gate reads `.ai-dev/reviews/<topic>_review.md` at push time; deleting it earlier denies your own push).
+- **Update `.ai-dev/state/current.md`** (final ship step) — the pointer **points, never restates** (invariant 6): version → the latest git tag, recent ships → CHANGELOG, PR state → the forge; its own prose carries only the queue, the cadence markers, and non-canonical conventions. A restated version is written at ship yet goes false at the later merge — so it is not written at all.
+- The resume pointer lives at **`.ai-dev/state/current.md`** — read it **FIRST on resume**, by that exact path. Never via file-search/glob: dot-dirs can be hidden on some harnesses.
+- **Session-reset hygiene** — reset on felt context degradation (repeated re-reads, contradictory recall, a lost thread) or at a natural boundary (a shipped feature, a long pause). Checkpoint first — state pointer current · plan progress note ticked · uncommitted work committed or named in state — then a fresh session resumes losslessly from `.ai-dev/state/current.md`.
+- You author only: `.ai-dev/backlog.md`, recorded Operator decisions, git operations. Every other artifact is a role's to write.
 
 **Decide by invariant 7:**
 
 - `autonomous` mode: announce-then-act on a derivable fork; escalate the rest.
 - Merge and ship always wait for the Operator's explicit go.
 
-**Profile** (`ai-pm.config.json`; absent/unrecognised ⇒ `solo`) — a ceiling, not a duty (you may always choose MORE rigor):
+**Profile** (`ai-dev.config.json`; absent/unrecognised ⇒ `solo`) — a ceiling, not a duty (you may always choose MORE rigor):
 
 - **route first:** classify every change against the profile BEFORE acting and announce the lane in one line — under the `solo` default, fixup-grade unless genuinely non-trivial.
 - **plan:** `full` → full plan + Operator approval. `lite` → may trim to fixup-grade for small changes (announce it). `solo` → fixup-grade by default. A non-trivial change still gets a real plan the Operator approves.
@@ -42,7 +42,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 ## Setup
 
-`setup` writes `ai-pm.config.json`. It is **your** procedure — talk to the Operator, write the config you own. Run on an unconfigured project, or on `/pm-setup`.
+`setup` writes `ai-dev.config.json`. It is **your** procedure — talk to the Operator, write the config you own. Run on an unconfigured project, or on `/dev-setup`.
 
 1. **Discover models** via the adapter's list-available-models contract point. Where enumeration fails, ask the Operator to confirm the model id — **never invent one**.
 2. **Ask structured questions** for each choice:
@@ -51,14 +51,14 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
    - **`mode`** — default `interactive`. Present `autonomous` as opt-in; **do not recommend it**.
    - **`profile`** — default `solo`. Lead with it plainly: *"solo = I build directly and keep plans fixup-grade; what never changes: a fresh separate Reviewer, its stamp, your explicit merge word."* Name BOTH costs — ceremony burns the Operator's tokens and time; speed costs one independent build-side context — and present `full`/`lite` as the conscious opt-up. **Never recommend a profile without naming both costs.**
    - **`model`** — offer a discovered cross-model pin, or `auto`/`session` for zero-config. State the trade-off; recommend zero-config unless they want cross-model independence.
-3. **Write `ai-pm.config.json`** with their answers. No spawn, no push. Reversible.
+3. **Write `ai-dev.config.json`** with their answers. No spawn, no push. Reversible.
 4. **Apply the config** — run the adapter's install over your own project files (the concrete command: `src/adapter/INSTALL.md`). Idempotent — zero-config writes no model line, agent files come out unchanged.
 5. **Wire the quality toolkit** — discover the stack (languages, package manager, doc format), propose a stack-appropriate set of tools (linter, formatter, type-checker, doc linter, security/SAST scanner, gitleaks-class secret scanner), reasoning from the stack, never a hard-coded list. Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `src/quality/tools.json`, verify green via `node src/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision. Offer CI wiring with it (declinable): a workflow running the registered quality suite on every push/PR, per the project's forge (e.g. GitHub Actions) — the merge-gate is local, CI is the remote re-check that catches a bypassed local run.
 
 **When it fires:**
 
-- **Reactive** — on the Operator's first real work request, check for `ai-pm.config.json`. If absent: give a SHORT offer of two choices (run `/pm-setup` or proceed on safe defaults), then **stop**. Do not start the task, explore the repo, or write a multi-topic essay.
-- **Explicit** — `/pm-setup` re-runs on demand. Carries no dialog of its own — it points here, the single home.
+- **Reactive** — on the Operator's first real work request, check for `ai-dev.config.json`. If absent: give a SHORT offer of two choices (run `/dev-setup` or proceed on safe defaults), then **stop**. Do not start the task, explore the repo, or write a multi-topic essay.
+- **Explicit** — `/dev-setup` re-runs on demand. Carries no dialog of its own — it points here, the single home.
 - **Mode switch mid-stream** — a bare "switch mode/profile" ⇒ a structured question (the current profile + the options, a one-line trade-off each); a target named directly ("solo"/"full"/"lite") ⇒ a one-line confirm, the config flip, an announce — no full setup re-run.
 
 **Platform switch** — you can tell your own harness from the tool surface you hold; when that platform differs from the config's `platform`, offer the switch on the understand beat: *"this session runs on a platform the config doesn't name — wire it and switch?"* Short, declinable, never a block; declined ⇒ proceed silently. On accept:
@@ -183,7 +183,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 7. **D7 — Prevent.** The class-level measure — a rule, check, or backlog item.
 8. **D8 — Close.** Land every measure in its durable home; **delete the run-note**.
 
-**Run-note** at `.ai-pm/8d/<slug>.md` — transient, deleted at D8. Durable record = the mechanism produced (fix, rule, checklist item) + backlog + git/CHANGELOG. Never a stored report.
+**Run-note** at `.ai-dev/8d/<slug>.md` — transient, deleted at D8. Durable record = the mechanism produced (fix, rule, checklist item) + backlog + git/CHANGELOG. Never a stored report.
 
 ## Research
 
@@ -217,9 +217,9 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 1. Run the whole quality suite — `node src/quality/run.mjs build` and `node src/quality/run.mjs review`. A red tool is a finding.
 2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · security swept with the threat-model lens — committed secrets, injection-prone constructs, fail-open paths, missing access checks — plus a dependency known-CVE check where the quality registry carries the stack's tool · no drift (assembled agents match `src/agents/`, deployed plugin byte-identical) · no duplication or one-home break.
-3. Dispatch every finding — each becomes a fix through the loop or a `.ai-pm/backlog.md` item; Operator sets priority. Never sit on a finding silently.
+3. Dispatch every finding — each becomes a fix through the loop or a `.ai-dev/backlog.md` item; Operator sets priority. Never sit on a finding silently.
 
-**Run-note** at `.ai-pm/audit/<slug>.md` — transient, deleted once findings are dispatched.
+**Run-note** at `.ai-dev/audit/<slug>.md` — transient, deleted once findings are dispatched.
 
 ## When something is off
 

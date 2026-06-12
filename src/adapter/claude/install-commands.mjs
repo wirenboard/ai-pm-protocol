@@ -1,7 +1,7 @@
 // Claude realisation of the adapter's explicit-setup-command contract point.
-// Assembles the platform-neutral command body (src/adapter/commands/pm-setup.body.md) +
-// the Claude per-command frontmatter (src/adapter/claude/commands/pm-setup.fm) into a
-// Claude slash-command file (.claude/commands/pm-setup.md → the `/pm-setup` command).
+// Assembles the platform-neutral command body (src/adapter/commands/dev-setup.body.md) +
+// the Claude per-command frontmatter (src/adapter/claude/commands/dev-setup.fm) into a
+// Claude slash-command file (.claude/commands/dev-setup.md → the `/dev-setup` command).
 // Concatenation, NOT a generator: the neutral body is the single source (shared
 // with the OpenCode adapter), the .fm adds only Claude's frontmatter. The body is
 // a thin wrapper — it points at the orchestrator's `## Setup`, never restates the
@@ -21,12 +21,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 // read the result without re-deriving it.
 export function install(outDir) {
   fs.mkdirSync(outDir, { recursive: true });
-  const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "claude", "commands", "pm-setup.fm"), "utf8").trim();
-  const body = fs.readFileSync(path.join(ROOT, "src", "adapter", "commands", "pm-setup.body.md"), "utf8").trimStart();
+  const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "claude", "commands", "dev-setup.fm"), "utf8").trim();
+  const body = fs.readFileSync(path.join(ROOT, "src", "adapter", "commands", "dev-setup.body.md"), "utf8").trimStart();
   const out = `---\n${fm}\n---\n\n${body}`;
-  const outPath = path.join(outDir, "pm-setup.md");
+  const outPath = path.join(outDir, "dev-setup.md");
   fs.writeFileSync(outPath, out);
-  console.log(`wrote ${path.relative(ROOT, outPath)}  (/pm-setup command)`);
+  console.log(`wrote ${path.relative(ROOT, outPath)}  (/dev-setup command)`);
   return outPath;
 }
 

@@ -10,24 +10,38 @@ node src/adapter/install.mjs <target-dir> [--platform claude|opencode]
 
 `install.mjs` does the **whole** procedure below in one idempotent pass — vendor the adapter, lay down the core + doc templates, wire the active platform — so a downstream is adopted by one command, not a hand-followed checklist. It:
 
-- **vendors** the shared adapter and the neutral bodies the assembler reads (`src/agents/`, `src/modules/`) into `<target>/.ai-pm/tooling/src/` (the convention below);
+- **vendors** the shared adapter and the neutral bodies the assembler reads (`src/agents/`, `src/modules/`) into `<target>/.ai-dev/tooling/src/` (the convention below);
 - **lays down** the core (`PROTOCOL.md`, the role agents, the `src/modules/` fragments, the quality-registry SHAPE — the template rows, not this repo's own) and the doc templates (`product.md`, `contracts.md`, `architecture.md`, `README.md`) into the target's `docs/`, **only where the target has no such doc** (never clobbers a real one);
 - **wires** the active platform by running its assembly scripts (the `## Claude Code` / `## OpenCode` sections) against the target and merging its load-instruction surface (the `CLAUDE.md` import + `.claude/settings.json` hooks for Claude; `opencode.json` + `AGENTS.md` + the generated plugin for OpenCode), de-duped so a re-run never duplicates a hook or an import;
-- writes a minimal default `ai-pm.config.json` where absent (a real project then runs `/pm-setup`), and prints a summary + the next step.
+- writes a minimal default `ai-dev.config.json` where absent (a real project then runs `/dev-setup`), and prints a summary + the next step.
 
-Platform resolution: the `--platform` flag, else the target's `ai-pm.config.json` `platform`, else a clear error — never a silent guess. The guarantee it realises is `docs/contracts/one-command-install.md`; the test is `src/adapter/install.test.mjs`.
+Platform resolution: the `--platform` flag, else the target's `ai-dev.config.json` `platform`, else a clear error — never a silent guess. The guarantee it realises is `docs/contracts/one-command-install.md`; the test is `src/adapter/install.test.mjs`.
 
 The rest of this file is the **underlying detail** — what each wiring step does, the single home for each. The installer automates exactly these; reach for a manual step only to understand or to wire one platform by hand.
 
-Convention used below: the adapter ships inside the protocol's tooling submodule at `.ai-pm/tooling/src/adapter/`. A project that vendors the adapter elsewhere rewrites the one path in each wiring step — nothing else changes.
+Convention used below: the adapter ships inside the protocol's tooling submodule at `.ai-dev/tooling/src/adapter/`. A project that vendors the adapter elsewhere rewrites the one path in each wiring step — nothing else changes.
 
 ## Upgrade
 
 A downstream upgrades by bumping the protocol source and re-running the same one command:
 
 1. Bump the protocol to the new version (the tooling-submodule bump, or re-fetch the release).
-2. Re-run the one command above — its idempotence and never-clobber guarantees are exactly why a re-run is the whole upgrade: the project's `ai-pm.config.json` and real docs survive.
+2. Re-run the one command above — its idempotence and never-clobber guarantees are exactly why a re-run is the whole upgrade: the project's `ai-dev.config.json` and real docs survive.
 3. Read the CHANGELOG between the two versions. A **MAJOR** bump is the one that may break the wiring (a renamed agent or command, a changed config key) — its entry names what to rename or re-run. MINOR/PATCH need nothing beyond the re-run.
+
+### MAJOR 5.0.0 — ai-pm → ai-dev rename
+
+After the re-run, rename these in your project by hand (the installer cannot rename files it did not create):
+
+1. **Config:** rename `ai-pm.config.json` → `ai-dev.config.json`. Update its `"platform"` and `"roles"` agent IDs: `"ai-pm"` → `"ai-dev"`, `"pm-builder"` → `"dev-builder"`, `"pm-reviewer"` → `"dev-reviewer"`.
+2. **State directory:** rename `.ai-pm/` → `.ai-dev/` (all subdirs: `state/`, `plans/`, `reviews/`, `audit/`, `8d/`, `backlog.md`; the `tooling/` submodule is re-vendored by the re-run, so delete the old `.ai-pm/tooling/` after renaming).
+3. **Commands:** rename `.claude/commands/pm-setup.md` → `dev-setup.md`; `.opencode/commands/pm-setup.md` → `dev-setup.md`.
+4. **Agents:** rename `.claude/agents/pm-builder.md` → `dev-builder.md`, `pm-reviewer.md` → `dev-reviewer.md`; `.opencode/agents/ai-pm.md` → `ai-dev.md`, `pm-builder.md` → `dev-builder.md`, `pm-reviewer.md` → `dev-reviewer.md`.
+5. **Plugin:** rename `.opencode/plugins/ai-pm.mjs` → `ai-dev.mjs`.
+6. **Hook paths** in `.claude/settings.json`: replace any `/.ai-pm/tooling/` path references with `/.ai-dev/tooling/` (the hook re-runs the shim — if you wired it manually, update the command path).
+7. **CLAUDE.md / AGENTS.md**: no changes needed (they import by protocol file names, not agent IDs).
+8. **Re-run** `node .ai-dev/tooling/src/adapter/install.mjs . --platform <your-platform>` one more time to regenerate assembled agents with the new IDs.
+9. **Search your codebase** for any remaining `/pm-setup`, `.ai-pm`, `ai-pm.config`, `pm-builder`, `pm-reviewer` references and update them.
 
 ## Claude Code
 
@@ -38,10 +52,10 @@ Merge this into the project's `.claude/settings.json` (the fragment lives at `cl
   "hooks": {
     "PreToolUse": [
       { "matcher": "Read|Write|Edit|Bash|Task|Skill",
-        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-pm/tooling/src/adapter/claude/shim.mjs\"" }] }
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-dev/tooling/src/adapter/claude/shim.mjs\"" }] }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-pm/tooling/src/adapter/claude/shim.mjs\"" }] }
+      { "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-dev/tooling/src/adapter/claude/shim.mjs\"" }] }
     ]
   }
 }
@@ -65,17 +79,17 @@ The orchestrator **is** the session; the Builder and Reviewer are spawned (below
 **`node src/adapter/claude/install-agents.mjs`** assembles the two spawnable roles into Claude agent files:
 
 - It reads each neutral role body (`src/agents/<role>.md`) + the Claude frontmatter (`src/adapter/claude/agents/<role>.fm`) and writes `.claude/agents/<agentId>.md`.
-- The **agent id comes from `ai-pm.config.json` `roles`** (so `builder` → `pm-builder`, `reviewer` → `pm-reviewer`).
+- The **agent id comes from `ai-dev.config.json` `roles`** (so `builder` → `dev-builder`, `reviewer` → `dev-reviewer`).
 - It is concatenation, not a generator — the neutral body stays the single source.
 - Re-run it whenever a role body, its frontmatter, or the config binding changes.
 
-The orchestrator spawns each by that id, on the model `ai-pm.config.json` resolves.
+The orchestrator spawns each by that id, on the model `ai-dev.config.json` resolves.
 
 ### Command (the explicit setup trigger)
 
-**`node src/adapter/claude/install-commands.mjs`** assembles the `/pm-setup` slash-command into **`.claude/commands/pm-setup.md`** — the neutral command body (`src/adapter/commands/pm-setup.body.md`) + the Claude frontmatter (`src/adapter/claude/commands/pm-setup.fm`).
+**`node src/adapter/claude/install-commands.mjs`** assembles the `/dev-setup` slash-command into **`.claude/commands/dev-setup.md`** — the neutral command body (`src/adapter/commands/dev-setup.body.md`) + the Claude frontmatter (`src/adapter/claude/commands/dev-setup.fm`).
 
-- The filename without extension is the command (`pm-setup.md` → `/pm-setup`).
+- The filename without extension is the command (`dev-setup.md` → `/dev-setup`).
 - The body becomes the prompt injected into the session; the orchestrator **is** the session, so it runs its own `## Setup`.
 - The body is a thin pointer — no copy of the dialog (single home, invariant 6).
 - Re-run it whenever the neutral body or the frontmatter changes.
@@ -88,7 +102,7 @@ The orchestrator spawns each by that id, on the model `ai-pm.config.json` resolv
 
 ### Enforce deny + inject (the plugin)
 
-**`node src/adapter/opencode/install-plugin.mjs`** generates the deployed plugin — `.opencode/plugins/ai-pm.mjs` — FROM the source entry `src/adapter/opencode/plugin-entry.mjs`. It retargets only the adapter location to where the target vendors it (downstream: `.ai-pm/tooling/src/adapter`, no rewrite; dev/this repo: `src/adapter`).
+**`node src/adapter/opencode/install-plugin.mjs`** generates the deployed plugin — `.opencode/plugins/ai-dev.mjs` — FROM the source entry `src/adapter/opencode/plugin-entry.mjs`. It retargets only the adapter location to where the target vendors it (downstream: `.ai-dev/tooling/src/adapter`, no rewrite; dev/this repo: `src/adapter`).
 
 - It must **define** each hook function inline — a hook imported from another module and re-exported under the entry's own name is NOT registered by the loader (it loads but its hook never fires).
 - So the thin wrappers are **inline in the entry**; only the rule logic (`decide`/`decidePrompt` + the engine) is imported from the adapter tree, which sits outside the scanned plugin dir. The rules stay single-sourced.
@@ -108,7 +122,7 @@ UNLIKE Claude (where the orchestrator IS the session, held by `CLAUDE.md`), an O
 
 ```json
 {
-  "default_agent": "ai-pm",
+  "default_agent": "ai-dev",
   "instructions": ["PROTOCOL.md"],
   "permission": { "question": "allow" },
   "agent": { "build": { "disable": true }, "plan": { "disable": true } }
@@ -121,22 +135,22 @@ The generic `build`/`plan` primaries are disabled so none can fill the orchestra
 
 `node src/adapter/opencode/install-agents.mjs` assembles the three role agents into `.opencode/agents/`: each neutral role body (`src/agents/<role>.md`) + its OpenCode frontmatter (`src/adapter/opencode/agents/<role>.fm`) → `.opencode/agents/<agentId>.md`.
 
-- The agent id comes from `ai-pm.config.json` `roles`: orchestrator → `ai-pm` with `mode: primary`; builder → `pm-builder`, reviewer → `pm-reviewer` with `mode: subagent`.
+- The agent id comes from `ai-dev.config.json` `roles`: orchestrator → `ai-dev` with `mode: primary`; builder → `dev-builder`, reviewer → `dev-reviewer` with `mode: subagent`.
 - On OpenCode the filename *is* the agent id, so the frontmatter carries no `name` key.
 - Concatenation, not a generator — the neutral body stays the single source, shared with the Claude adapter.
 - Re-run it whenever a role body, its frontmatter, or the config binding changes.
 
-The session runs as `ai-pm` (the personality loads) and a write into `.ai-pm/tooling/` is mechanically blocked by the plugin (the engine's self-patch deny).
+The session runs as `ai-dev` (the personality loads) and a write into `.ai-dev/tooling/` is mechanically blocked by the plugin (the engine's self-patch deny).
 
 ### Command (the explicit setup trigger)
 
-**`node src/adapter/opencode/install-commands.mjs`** assembles the `/pm-setup` command into **`.opencode/commands/pm-setup.md`** (the plural `commands/` dir, matching `.opencode/agents/` and `.opencode/plugins/`; the singular `.opencode/command/` is NOT loaded).
+**`node src/adapter/opencode/install-commands.mjs`** assembles the `/dev-setup` command into **`.opencode/commands/dev-setup.md`** (the plural `commands/` dir, matching `.opencode/agents/` and `.opencode/plugins/`; the singular `.opencode/command/` is NOT loaded).
 
-- The command body (`src/adapter/commands/pm-setup.body.md`, shared with Claude) is the prompt template.
-- The frontmatter (`src/adapter/opencode/commands/pm-setup.fm`) carries `description` + **`agent: ai-pm`** so the command targets the orchestrator primary, which runs its own `## Setup`.
+- The command body (`src/adapter/commands/dev-setup.body.md`, shared with Claude) is the prompt template.
+- The frontmatter (`src/adapter/opencode/commands/dev-setup.fm`) carries `description` + **`agent: ai-dev`** so the command targets the orchestrator primary, which runs its own `## Setup`.
 - It is a thin pointer — no copy of the dialog (single home, invariant 6).
 - Re-run it whenever the neutral body or the frontmatter changes.
 
 **Apply config** — the shared re-assemble-after-setup step is homed in `tool-map.json` `apply-config` + `docs/architecture.md`. OpenCode delta: there is no per-spawn model arg, so **`node src/adapter/opencode/install-agents.mjs`** *bakes* the reviewer `model:` line into the assembled frontmatter (re-run `install-commands.mjs` too if the command surface changed).
 
-> **Fallback (no dir guess needed):** if a future opencode stops loading the markdown command dir, define the command inline in `opencode.json` under the `command` key. The SDK `Config.command` schema (`{ template, description, agent, model, subtask }`, confirmed in `@opencode-ai/sdk`) takes the same body as `template` and `agent: ai-pm`. The markdown-dir form is preferred here because it shares the one neutral body file with Claude.
+> **Fallback (no dir guess needed):** if a future opencode stops loading the markdown command dir, define the command inline in `opencode.json` under the `command` key. The SDK `Config.command` schema (`{ template, description, agent, model, subtask }`, confirmed in `@opencode-ai/sdk`) takes the same body as `template` and `agent: ai-dev`. The markdown-dir form is preferred here because it shares the one neutral body file with Claude.

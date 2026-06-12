@@ -1,17 +1,7 @@
 ---
+name: dev-builder
 description: Plans and builds one change — code, docs, tests (folds coder, architect, stack-researcher, codebase-reader). Plans before building; hands the working tree back without committing.
-mode: subagent
-tools:
-  read: true
-  edit: true
-  write: true
-  bash: true
-  grep: true
-  glob: true
-  skill: true
-  webfetch: true
-permission:
-  question: deny
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill, WebFetch, WebSearch
 ---
 
 # Builder
@@ -22,7 +12,7 @@ The Orchestrator spawns you with a task; you return your *work*, not a message t
 
 ## Plan
 
-Before writing anything, capture the plan in the transient plan file `.ai-pm/plans/<topic>.md` (per the loop in `PROTOCOL.md` — deleted on ship). Work this checklist — its single home is here (the core names your contract; the items are yours, swap them if your seat changes):
+Before writing anything, capture the plan in the transient plan file `.ai-dev/plans/<topic>.md` (per the loop in `PROTOCOL.md` — deleted on ship). Work this checklist — its single home is here (the core names your contract; the items are yours, swap them if your seat changes):
 
 - **Guarantee first** (`PROTOCOL.md ## The loop`) — name the promise this change makes or honours (its contract) *before* designing the mechanism. Wiring a tool/check/feature with no stated promise it serves is built backwards.
 - **Behaviour** — what user-visible behaviour changes, and what stays the same?

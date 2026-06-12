@@ -37,7 +37,7 @@ function check(name, got, want) {
 
 // A temp root whose .git/HEAD points at `branch` (the reliable signal the gate reads).
 function rootOnBranch(branch) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-mergegate-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-mergegate-"));
   fs.mkdirSync(path.join(root, ".git"));
   fs.writeFileSync(path.join(root, ".git", "HEAD"), `ref: refs/heads/${branch}\n`);
   return root;
@@ -45,7 +45,7 @@ function rootOnBranch(branch) {
 
 // Drop a SATISFIED review stamp for `topic` into a root (so the gate sees it stamped).
 function stamp(root, topic) {
-  const dir = path.join(root, ".ai-pm", "reviews");
+  const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, `${topic}_review.md`), "## Code review: APPROVED\n");
 }
@@ -55,7 +55,7 @@ console.log("TOPIC RESOLUTION (any branch prefix stripped):");
 
 // 1a. via the command (no .git/HEAD in this root → command fallback).
 {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-mergegate-cmd-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-mergegate-cmd-"));
   for (const [branch, topic] of [
     ["feature/foo", "foo"],   // UNCHANGED — must resolve exactly as before
     ["fix/bar", "bar"],
@@ -118,7 +118,7 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
 // 3a. Verdict on the next line ⇒ ALLOW (the new fallback).
 {
   const root = rootOnBranch("feature/split");
-  const dir = path.join(root, ".ai-pm", "reviews");
+  const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "split_review.md"), "## Code review:\nAPPROVED\n\nFull review body follows.\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/split" }, config);
@@ -129,7 +129,7 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
 // 3b. Empty heading + no next-line content ⇒ DENY (truly empty stamp still blocks).
 {
   const root = rootOnBranch("feature/empty");
-  const dir = path.join(root, ".ai-pm", "reviews");
+  const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "empty_review.md"), "## Code review:\n\n\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/empty" }, config);
@@ -140,7 +140,7 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
 // 3c. "NOT YET RUN" on the next line ⇒ DENY (the NOT-YET-RUN guard applies to fallback content).
 {
   const root = rootOnBranch("feature/nyr");
-  const dir = path.join(root, ".ai-pm", "reviews");
+  const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "nyr_review.md"), "## Code review:\nNOT YET RUN\n\nMore text.\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/nyr" }, config);
@@ -151,7 +151,7 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
 // 3d. Verdict after a blank separator line ⇒ DENY (the fallback matches only the immediately-next line).
 {
   const root = rootOnBranch("feature/blanksep");
-  const dir = path.join(root, ".ai-pm", "reviews");
+  const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "blanksep_review.md"), "## Code review:\n\nAPPROVED\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/blanksep" }, config);
@@ -162,7 +162,7 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
 // 3e. A heading as the next line ⇒ DENY (the [^\r\n#] guard excludes it).
 {
   const root = rootOnBranch("feature/nextheading");
-  const dir = path.join(root, ".ai-pm", "reviews");
+  const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "nextheading_review.md"), "## Code review:\n## Another section\nAPPROVED\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/nextheading" }, config);
@@ -178,7 +178,7 @@ console.log("UNRESOLVABLE TOPIC (ask, never pass):");
 
 // A root whose HEAD is DETACHED (raw sha, no ref) — the HEAD signal yields nothing.
 function rootDetached() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-mergegate-det-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-mergegate-det-"));
   fs.mkdirSync(path.join(root, ".git"));
   fs.writeFileSync(path.join(root, ".git", "HEAD"), "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678\n");
   return root;
@@ -278,7 +278,7 @@ console.log("PUSHED REF OUTRANKS HEAD (cross-branch push/merge):");
 // side, its only named ref); refspec src (`feature/foo:main` ⇒ the local
 // feature); quoted prose masked (a `-m` message never resolves).
 {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-mergegate-ref-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-mergegate-ref-"));
   check("flag-form", resolveMergeTopic("git push --force-with-lease uni feature/alpha", root), "alpha");
   check("refspec-dst", resolveMergeTopic("git push uni HEAD:feature/x", root), "x");
   check("refspec-src", resolveMergeTopic("git push origin feature/foo:main", root), "foo");
@@ -354,7 +354,7 @@ console.log("STAMP LABELS (Code review / Doc review accepted; Validation dropped
 // 7a. A `## Validation:` stamp no longer satisfies the gate ⇒ DENY.
 {
   const root = rootOnBranch("feature/val");
-  const dir = path.join(root, ".ai-pm", "reviews");
+  const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "val_review.md"), "## Validation: APPROVED\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/val" }, config);
@@ -365,7 +365,7 @@ console.log("STAMP LABELS (Code review / Doc review accepted; Validation dropped
 // 7b. The `## Doc review:` label (docs-kind projects) still satisfies ⇒ ALLOW.
 {
   const root = rootOnBranch("feature/docs");
-  const dir = path.join(root, ".ai-pm", "reviews");
+  const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "docs_review.md"), "## Doc review: APPROVED\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/docs" }, config);
@@ -375,8 +375,8 @@ console.log("STAMP LABELS (Code review / Doc review accepted; Validation dropped
 
 // ── 8. PATH-TRAVERSAL IN THE TOPIC — the stamp path can't escape reviews/ ──────
 // Guards the HIGH the Reviewer drove end-to-end: a crafted ref `feature/../EVIL`
-// resolves topic `../EVIL`, and `.ai-pm/reviews/../EVIL_review.md` collapses to
-// `.ai-pm/EVIL_review.md` — OUTSIDE reviews/. A planted stamp there once ALLOWED
+// resolves topic `../EVIL`, and `.ai-dev/reviews/../EVIL_review.md` collapses to
+// `.ai-dev/EVIL_review.md` — OUTSIDE reviews/. A planted stamp there once ALLOWED
 // an unstamped push. The topic is now validated as a single clean segment at the
 // stamp boundary (the one choke point every source funnels through); an unclean
 // topic leaves the stamp unsatisfiable ⇒ DENY (fail toward deny).
@@ -386,8 +386,8 @@ console.log("PATH-TRAVERSAL (topic stays inside reviews/):");
 // ⇒ DENY (was ALLOW — the bypass). The checkout itself is unstamped.
 {
   const root = rootOnBranch("feature/beta");
-  fs.mkdirSync(path.join(root, ".ai-pm"), { recursive: true });
-  fs.writeFileSync(path.join(root, ".ai-pm", "EVIL_review.md"), "## Code review: APPROVED\n");
+  fs.mkdirSync(path.join(root, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".ai-dev", "EVIL_review.md"), "## Code review: APPROVED\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/../EVIL" }, config);
   check("traversal-planted-stamp:denies", v.verdict, "deny");
   check("traversal-planted-stamp:ruleId", v.ruleId, "merge-while-unstamped");
@@ -398,7 +398,7 @@ console.log("PATH-TRAVERSAL (topic stays inside reviews/):");
 // so the gate denies it; nulling it here would fall back to HEAD and could read a
 // stamped checkout's stamp (a bypass). Pins the no-second-entry-path design.
 {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-mergegate-trav-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-mergegate-trav-"));
   check("traversal-topic-syntactic", resolveMergeTopic("git push origin feature/../EVIL", root), "../EVIL");
   fs.rmSync(root, { recursive: true, force: true });
 }

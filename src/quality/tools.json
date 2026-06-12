@@ -27,7 +27,7 @@
     },
     {
       "id": "install-plugin",
-      "checks": "OpenCode plugin generation — the committed deployed plugin (.opencode/plugins/ai-pm.mjs) is byte-identical to the generator's output, so source and deployed cannot drift; the adapter-path rewrite is correct per layout",
+      "checks": "OpenCode plugin generation — the committed deployed plugin (.opencode/plugins/ai-dev.mjs) is byte-identical to the generator's output, so source and deployed cannot drift; the adapter-path rewrite is correct per layout",
       "config": null,
       "run": "node src/adapter/install-plugin.test.mjs",
       "beat": "build",

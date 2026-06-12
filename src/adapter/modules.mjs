@@ -1,7 +1,7 @@
 // The shared capability-module assembler. ONE copy of the compose logic, imported
 // by BOTH install-agents shims (Claude + OpenCode) — mirrors how engine.mjs is the
 // one home shared by both deny shims. A role agent is no longer a hand-authored
-// monolith: it is a lean FLOOR body carrying a single marker (`<!-- ai-pm:modules -->`),
+// monolith: it is a lean FLOOR body carrying a single marker (`<!-- ai-dev:modules -->`),
 // and this helper REPLACES that marker with the enabled modules' fragments, in
 // registry order. Toggle a module off and its fragment is simply not composed in.
 //
@@ -126,7 +126,7 @@ export function effectiveToggle(mod, config) {
 }
 
 // ── compose ─────────────────────────────────────────────────────────────────
-export const MARKER = "<!-- ai-pm:modules -->";
+export const MARKER = "<!-- ai-dev:modules -->";
 
 // Apply the resolved DEPTH to a fragment's tagged checklist. A fragment marks each
 // item with a leading code-span tag — `[light]` (the core subset every depth keeps)

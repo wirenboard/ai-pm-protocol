@@ -1,4 +1,4 @@
-// Configurable rigor — the engine respects ai-pm.config.json `profile`.
+// Configurable rigor — the engine respects ai-dev.config.json `profile`.
 //
 // The ONE mechanical change the profile makes: it relaxes the
 // orchestrator-content deny (the orchestrator may author source/doc paths), and
@@ -13,7 +13,7 @@
 //      truncating-write, and merge-gate denies ALL still fire.
 //
 // The profile is read at evaluate-time from input.root, so each case writes an
-// ai-pm.config.json into a temp root and asserts the engine verdict directly.
+// ai-dev.config.json into a temp root and asserts the engine verdict directly.
 //
 // Run: node src/adapter/rigor-profile.test.mjs
 
@@ -32,16 +32,16 @@ function check(name, got, want) {
   else { fail++; console.log(`  ✗ ${name}: got ${got}, want ${want}`); }
 }
 
-// A fresh temp root whose ai-pm.config.json carries `profileLine` verbatim
+// A fresh temp root whose ai-dev.config.json carries `profileLine` verbatim
 // (a JSON fragment, or "" for the absent case, or garbage for the malformed case).
 function rootWith(profileLine) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-rigor-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-rigor-"));
   if (profileLine === "NONE") return root; // unconfigured — no config file at all
   let body;
   if (profileLine === "MALFORMED") body = "{ this is not json";
   else if (profileLine === null) body = "{}"; // configured, profile key ABSENT
   else body = JSON.stringify({ profile: profileLine });
-  fs.writeFileSync(path.join(root, "ai-pm.config.json"), body);
+  fs.writeFileSync(path.join(root, "ai-dev.config.json"), body);
   return root;
 }
 
@@ -88,7 +88,7 @@ console.log("THE FLOOR (under solo — the loosest profile — these STILL deny)
 {
   const root = rootWith("solo");
   const v = evaluate(
-    { act: "write", root, path: path.join(root, ".ai-pm", "tooling", "engine.mjs"), content: "x", isOrchestrator: true },
+    { act: "write", root, path: path.join(root, ".ai-dev", "tooling", "engine.mjs"), content: "x", isOrchestrator: true },
     config
   );
   check("floor:tooling-write:denies", v.verdict, "deny");
@@ -140,7 +140,7 @@ console.log("THE FLOOR (under solo — the loosest profile — these STILL deny)
 //     bash-redirect form.
 {
   const root = rootWith("solo");
-  const stamp = path.join(root, ".ai-pm", "reviews", "topic_review.md");
+  const stamp = path.join(root, ".ai-dev", "reviews", "topic_review.md");
   const w = evaluate(
     { act: "write", root, path: stamp, content: "## Code review: APPROVED", isOrchestrator: true },
     config
@@ -170,7 +170,7 @@ for (const p of ["full", "lite", "solo"]) {
   // The Reviewer (a sub-agent, not the orchestrator) writes its own stamp — the
   // fabrication guard must never block the legitimate author.
   const reviewerStamp = evaluate(
-    { act: "write", root, path: path.join(root, ".ai-pm", "reviews", "topic_review.md"), content: "## Code review: APPROVED", isOrchestrator: false },
+    { act: "write", root, path: path.join(root, ".ai-dev", "reviews", "topic_review.md"), content: "## Code review: APPROVED", isOrchestrator: false },
     config
   );
   check(`sanity:reviewer-stamp:${p}:allows`, reviewerStamp.verdict, "allow");

@@ -6,7 +6,7 @@ The Orchestrator spawns you with a task; you return your *work*, not a message t
 
 ## Plan
 
-Before writing anything, capture the plan in the transient plan file `.ai-pm/plans/<topic>.md` (per the loop in `PROTOCOL.md` — deleted on ship). Work this checklist — its single home is here (the core names your contract; the items are yours, swap them if your seat changes):
+Before writing anything, capture the plan in the transient plan file `.ai-dev/plans/<topic>.md` (per the loop in `PROTOCOL.md` — deleted on ship). Work this checklist — its single home is here (the core names your contract; the items are yours, swap them if your seat changes):
 
 - **Guarantee first** (`PROTOCOL.md ## The loop`) — name the promise this change makes or honours (its contract) *before* designing the mechanism. Wiring a tool/check/feature with no stated promise it serves is built backwards.
 - **Behaviour** — what user-visible behaviour changes, and what stays the same?
@@ -19,7 +19,7 @@ Before writing anything, capture the plan in the transient plan file `.ai-pm/pla
 - **Estimate** — complexity, not file count. Three questions before quoting time: is there non-trivial logic? tests that could break? unresolved design decisions? See `docs/decisions/estimation.md` for the time-bucket table.
 - **Visual form** (user-facing doc changes only) — when introducing a new concept or relationship, name the intended visual form (table / list / diagram / prose) in the plan. Without it, form is left to the Builder's discretion and may not match Operator intent.
 
-<!-- ai-pm:modules -->
+<!-- ai-dev:modules -->
 ## Build
 
 The contract (core) says *what* you guarantee — confined to plan, build-beat tools green, tests never weakened. The procedure is yours:

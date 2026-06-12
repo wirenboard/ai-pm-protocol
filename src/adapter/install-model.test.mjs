@@ -32,15 +32,15 @@ check("no-pin: a {claude}-only pin gives no opencode id", resolveModelPin({ clau
 
 // A config skeleton with all three role agent ids (install() requires each).
 const baseRoles = {
-  orchestrator: { agent: "ai-pm" },
-  builder: { agent: "pm-builder" },
+  orchestrator: { agent: "ai-dev" },
+  builder: { agent: "dev-builder" },
 };
 
 function reviewerFrontmatter(reviewerModel) {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-bake-"));
-  const config = { roles: { ...baseRoles, reviewer: { agent: "pm-reviewer", ...(reviewerModel !== undefined ? { model: reviewerModel } : {}) } } };
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-bake-"));
+  const config = { roles: { ...baseRoles, reviewer: { agent: "dev-reviewer", ...(reviewerModel !== undefined ? { model: reviewerModel } : {}) } } };
   const written = install(outDir, config);
-  const text = fs.readFileSync(written["pm-reviewer"], "utf8");
+  const text = fs.readFileSync(written["dev-reviewer"], "utf8");
   const fm = text.split("\n---")[0]; // the frontmatter block, before the body
   fs.rmSync(outDir, { recursive: true, force: true });
   return fm;

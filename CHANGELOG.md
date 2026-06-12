@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.0.0] — 2026-06-12
+
+### Changed (breaking)
+
+- **RENAME: `ai-pm` → `ai-dev` throughout** — the protocol is AI-assisted development, not just project management. Full rename of the "pm" nomenclature: repo `ai-pm-protocol` → `ai-dev-protocol` (GitHub redirects the old URL); package + bin name; the `/pm-setup` command → `/dev-setup`; agent IDs `ai-pm`→`ai-dev`, `pm-builder`→`dev-builder`, `pm-reviewer`→`dev-reviewer`; config file `ai-pm.config.json`→`ai-dev.config.json`; state directory `.ai-pm/`→`.ai-dev/`. No behavioural change — pure mechanical rename. **Migration:** see `INSTALL.md ## Upgrade → MAJOR 5.0.0`.
+
+---
+
 ## [4.20.1] — 2026-06-12
 
 ### Fixed

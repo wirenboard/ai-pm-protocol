@@ -50,11 +50,11 @@ function testPlatform(platform, assertWiring) {
     check(`[${platform}] install returns the resolved platform`, resolved === platform);
 
     // 1. adapter vendored
-    check(`[${platform}] adapter engine vendored`, fs.existsSync(path.join(target, ".ai-pm", "tooling", "src", "adapter", "engine.mjs")));
-    check(`[${platform}] deny-rules vendored`, fs.existsSync(path.join(target, ".ai-pm", "tooling", "src", "adapter", "deny-rules.json")));
-    check(`[${platform}] neutral role bodies vendored beside the adapter`, fs.existsSync(path.join(target, ".ai-pm", "tooling", "src", "agents", "builder.md")));
-    check(`[${platform}] modules registry vendored`, fs.existsSync(path.join(target, ".ai-pm", "tooling", "src", "modules", "registry.json")));
-    check(`[${platform}] node_modules NOT vendored`, !fs.existsSync(path.join(target, ".ai-pm", "tooling", "src", "adapter", "node_modules")));
+    check(`[${platform}] adapter engine vendored`, fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "engine.mjs")));
+    check(`[${platform}] deny-rules vendored`, fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "deny-rules.json")));
+    check(`[${platform}] neutral role bodies vendored beside the adapter`, fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "agents", "builder.md")));
+    check(`[${platform}] modules registry vendored`, fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "modules", "registry.json")));
+    check(`[${platform}] node_modules NOT vendored`, !fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "node_modules")));
 
     // 2. core laid down
     check(`[${platform}] PROTOCOL.md laid down`, fs.existsSync(path.join(target, "PROTOCOL.md")));
@@ -70,7 +70,7 @@ function testPlatform(platform, assertWiring) {
     check(`[${platform}] product brief template landed`, fs.existsSync(path.join(target, "docs", "product.md")));
 
     // 3. config present
-    check(`[${platform}] config written with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, "ai-pm.config.json"), "utf8")).platform === platform);
+    check(`[${platform}] config written with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, "ai-dev.config.json"), "utf8")).platform === platform);
 
     // 4. platform wiring
     assertWiring(target);
@@ -90,8 +90,8 @@ function testPlatform(platform, assertWiring) {
 }
 
 testPlatform("claude", (target) => {
-  check("[claude] agents assembled", fs.existsSync(path.join(target, ".claude", "agents", "pm-builder.md")) && fs.existsSync(path.join(target, ".claude", "agents", "pm-reviewer.md")));
-  check("[claude] /pm-setup command assembled", fs.existsSync(path.join(target, ".claude", "commands", "pm-setup.md")));
+  check("[claude] agents assembled", fs.existsSync(path.join(target, ".claude", "agents", "dev-builder.md")) && fs.existsSync(path.join(target, ".claude", "agents", "dev-reviewer.md")));
+  check("[claude] /dev-setup command assembled", fs.existsSync(path.join(target, ".claude", "commands", "dev-setup.md")));
   const settings = JSON.parse(fs.readFileSync(path.join(target, ".claude", "settings.json"), "utf8"));
   const cmds = (settings.hooks.PreToolUse || []).flatMap((g) => g.hooks.map((h) => h.command));
   check("[claude] deny hook wired into settings.json", cmds.some((c) => c.includes("shim.mjs")));
@@ -104,14 +104,14 @@ testPlatform("claude", (target) => {
 });
 
 testPlatform("opencode", (target) => {
-  check("[opencode] three agents assembled", ["ai-pm", "pm-builder", "pm-reviewer"].every((id) => fs.existsSync(path.join(target, ".opencode", "agents", `${id}.md`))));
-  check("[opencode] /pm-setup command assembled", fs.existsSync(path.join(target, ".opencode", "commands", "pm-setup.md")));
-  const plugin = path.join(target, ".opencode", "plugins", "ai-pm.mjs");
+  check("[opencode] three agents assembled", ["ai-dev", "dev-builder", "dev-reviewer"].every((id) => fs.existsSync(path.join(target, ".opencode", "agents", `${id}.md`))));
+  check("[opencode] /dev-setup command assembled", fs.existsSync(path.join(target, ".opencode", "commands", "dev-setup.md")));
+  const plugin = path.join(target, ".opencode", "plugins", "ai-dev.mjs");
   check("[opencode] plugin generated", fs.existsSync(plugin));
   // downstream layout: the plugin keeps the tooling-submodule import path (adapter vendored there)
-  check("[opencode] plugin uses the downstream (tooling-submodule) adapter path", fs.readFileSync(plugin, "utf8").includes(".ai-pm/tooling/src/adapter"));
+  check("[opencode] plugin uses the downstream (tooling-submodule) adapter path", fs.readFileSync(plugin, "utf8").includes(".ai-dev/tooling/src/adapter"));
   const oc = JSON.parse(fs.readFileSync(path.join(target, ".opencode", "opencode.json"), "utf8"));
-  check("[opencode] opencode.json wires the orchestrator primary + constitution", oc.default_agent === "ai-pm" && oc.instructions.includes("PROTOCOL.md"));
+  check("[opencode] opencode.json wires the orchestrator primary + constitution", oc.default_agent === "ai-dev" && oc.instructions.includes("PROTOCOL.md"));
   check("[opencode] generic build/plan primaries disabled", oc.agent.build.disable === true && oc.agent.plan.disable === true);
   const agentsMd = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
   check("[opencode] AGENTS.md imports the constitution once", agentsMd.split("@PROTOCOL.md").length - 1 === 1);
