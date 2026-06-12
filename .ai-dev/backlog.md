@@ -84,6 +84,14 @@ The config supports per-seat models; the open part is a recommended DEFAULT matr
 
 Survey both platforms' built-in tools/agents and map which are safe for the orchestrator's AD-HOC use (offload instead of inline work): read-only and no role-overlap ⇒ allow (e.g. a read-only explorer for parallel analysis); write-capable generic or role-overlap ⇒ stays denied (`general`/`build`/`plan` — the role-substitution deny). Open question: does a write-capable ad-hoc generic ever have a legitimate seat, and can the deny distinguish intent? Outcome: a documented routing note (which built-ins the orchestrator may use for what) + possibly widened safe offload.
 
+## Missing git-init step for a repo-less project — Operator observation 2026-06-12
+
+The whole protocol stands on git (branches, commits, the merge-gate reads pushes), yet no step initializes a repository where none exists: the installer assumes a tree, `setup` configures roles, `## Project inception` records day-zero decisions — none runs `git init` or checks for `.git`. A greenfield or a copied-files project hits the git flow with no repo under it. Candidates: the installer warns (or offers init) when the target has no `.git`; inception's day-zero list gains the repo+remote+first-commit step; the understand beat's "git is clean" check names the no-repo case explicitly (today it would just error). Also the forge half: creating the GitHub repo / wiring `origin` is an Operator-side step nobody names.
+
+## OpenCode continue-subagent prosthesis — researched 2026-06-12, parked (Operator decision)
+
+Research verdict on `continue-a-sub-agent: null` for OpenCode: the built-in `task` tool has no resume/session-id parameter (docs confirm — each call is a fresh child session), so the tool-map `null` + fresh-spawn fallback stays honest. BUT a prosthesis is feasible: the SDK exposes `client.session.prompt({id})`, plugins get `client` in context and can register custom tools — our adapter plugin could add `continue_subagent(session_id, message)`. Open questions: how the orchestrator learns the child session id from the `task` result; the deny rule "Builder only, never the Reviewer" (the plugin already resolves the actor). Parked because the vendor is moving in this zone — human prompting of child sessions broke on Desktop/Web in 1.4.0 (issue anomalyco/opencode#22830, open) and may return as a native primitive that obsoletes the prosthesis. Re-assess at the next release-audit (vendor-watch). Sources: opencode.ai/docs/agents, /docs/plugins, /docs/custom-tools, issue #22830.
+
 ## deepseek-v4-flash as the OpenCode default cross-model reviewer — 2026-06-10 (idea)
 
 Cross-model independence needs the Reviewer on a *different* model, not a *weaker* one. If `deepseek-v4-flash` is review-grade, it could be the OpenCode reviewer default via the adapter's model policy. Validate review quality before defaulting; opt-in until then.

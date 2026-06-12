@@ -12,6 +12,21 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.9.0] — 2026-06-13
+
+Parallel feature work — worktree-per-feature design + minimal enablement.
+
+### Added
+
+- `src/agents/procedures/parallel-work.md` — the operating procedure for concurrent features: worktree-per-feature inside the root (`.ai-dev/worktrees/<topic>/`), disjoint-surfaces rule, serial ship beat with recut-on-advanced-main, ship-time cleanup. **Pilots the on-demand procedure pattern**: the orchestrator carries a one-line trigger; the body loads only when parallel work is invoked (`docs/architecture.md` names it the third role-content element).
+- `docs/decisions/parallel-work.md` — the design record: what parallelizes (Builder/Reviewer wall time), what honestly serializes (Operator approvals, merges, the ship beat), the enforcement caveat (never seat a standalone session inside a worktree — the vendored tooling is absent there), what is consciously deferred (no scheduler, no automatic surface detection).
+
+### Changed
+
+- Installer gitignores `.ai-dev/worktrees/` in downstream projects (alongside `state/` and `feedback/`).
+
+---
+
 ## [5.8.1] — 2026-06-12
 
 Token economy — cut redundant agent work without touching the guarantee floor.

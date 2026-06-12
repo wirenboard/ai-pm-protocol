@@ -138,12 +138,15 @@ function ensureConfig(target, platform) {
 }
 
 // 4. Ensure the local-only transient dirs are gitignored: state (the session
-// pointer) and feedback (the self-report holds RAW pre-leak-sweep context — a
-// crash before its delete, or a blind `git add -A`, must not commit it).
+// pointer), feedback (the self-report holds RAW pre-leak-sweep context — a
+// crash before its delete, or a blind `git add -A`, must not commit it), and
+// worktrees (parallel-feature checkouts live inside the root so the
+// project-boundary deny still covers them — but they are never repo content).
 // Idempotent: appends only the lines not already present.
 function ensureTransientsGitignore(target) {
   ensureLine(path.join(target, ".gitignore"), ".ai-dev/state/");
   ensureLine(path.join(target, ".gitignore"), ".ai-dev/feedback/");
+  ensureLine(path.join(target, ".gitignore"), ".ai-dev/worktrees/");
 }
 
 // 5a. Wire Claude: assemble the agents + the setup command against the target root,

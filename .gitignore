@@ -15,6 +15,7 @@
 
 # Self-report transients — raw pre-sweep failure context, never committed
 .ai-dev/feedback/
+.ai-dev/worktrees/
 
 # Node dependencies (the linters; package-lock.json IS committed)
 node_modules/

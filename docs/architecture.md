@@ -112,6 +112,8 @@ The pieces and their single homes:
 
 **Assembly.** Each install-agents shim builds a role file as `frontmatter + composeBody(floor)`. `composeBody` replaces the role's single marker with the enabled modules' fragments for that role, in **registry order** (stable, declared — not config order). A floor body with no marker takes no modules and is returned unchanged.
 
+A third role-content element sits beside the floor and the modules: **on-demand procedure bodies** (`src/agents/procedures/`) — operating procedures too situational to ride every turn's context; the floor carries a one-line trigger, the body is read when the trigger fires. Piloted by `parallel-work.md` (`docs/decisions/parallel-work.md`); not composed by the assembler — loaded at run time.
+
 **Enabled-resolution** mirrors the absent-`mode` ⇒ `interactive` fail-safe:
 
 - a module is OFF on a literal config `false` (or `{ enabled: false }`) — or, when the config never names it, on a registry-authored per-kind default of literal `false` (a `docs` project gets no UI module); the registry is our data, the config the untrusted input, so only the registry may default a kind off;
