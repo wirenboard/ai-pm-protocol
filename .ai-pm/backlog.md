@@ -12,17 +12,6 @@ Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 a
 
 Claude Code natively ships agent teams, review subagents, deny hooks; vendors absorb orchestration primitives over time (precedent: Agent-OS retired its phases). At each release-audit, check what the platforms absorbed and re-aim: the durable parts are cross-platform parity, the honesty map, and product discovery — never re-wrap a primitive the vendor ships. Related research idea: whether the loop itself could ride Claude Code's dynamic-Workflow primitive (deterministic fan-out) without losing the PM-in-the-loop forks — `research` first, it may be the absorption case in point.
 
-## Doc de-water pass — audit 2026-06-12 leftovers (M3–M6, L1–L3, L5, L7, L8) + product-deep audit F1–F3 — 2026-06-12
-
-The fix-now half of the doc-quality audit shipped 4.12.0 (CHANGELOG header, adapter-README archaeology, enforcement-map slips, README shop window, two trivia). Remaining findings, one structural pass:
-
-- **Summary-restate creep (M3–M5):** the discovery-frameworks sentence still has two homes (the contract is the keeper; drop the `src/templates/product.md` copy — the README copy went in 4.12.0); the dial block and roles table are mirrored README↔brief↔PROTOCOL (shop-window docs compress and point, never mirror); `docs/contracts/product-foundation.md` restates the orchestrator's discovery procedure clause-for-clause and is already drifting — cut to guarantee-only.
-- **Contracts inventory mechanism internals (M6):** `cross-session-enforcement.md` enumerates merge-gate test cases; `disciplined-pipeline.md` restates stamp line-forms — point at the test, don't inventory it (the parity-count disease).
-- **Walls (L1, L2):** `src/templates/product.md` header blockquote ~170 words (a downstream Operator's first read); reviewer.md and architecture.md 100+-word bullets.
-- **Small (L3, L5, L7, L8):** "four old roles" archaeology in builder/reviewer intros (drop "old", point at the Folds column); registry fail-safe stated twice in-file; `PROTOCOL.md` ship-beat names `contracts.md` where this repo's home is `docs/contracts/`; INSTALL.md leftover verification-status sentence.
-- **Style rule (systemic):** ≈ one dash-clause per sentence in human-facing docs — add to the Reviewer's doc-quality floor item when rewriting it (L2), then it polices itself; apply per file on next touch, not as a big-bang rewrite.
-- **Product-deep audit additions (2026-06-12, F1–F3):** (F1, Medium) PM→Operator rename sweep — `docs/contracts/` still says "PM" in README, cross-model-review, dual-harness-from-one-source, decision-authority, disciplined-pipeline, documentation-discipline, plan-fidelity, product-readiness-gate, regression-protection, plus `docs/decisions/minimal-core.md`; CHANGELOG 3.1.0 declared the rename done but missed this surface. (F2, Low) README `## Install` never states the literal command (`node src/adapter/install.mjs <target> --platform claude|opencode`) and keeps pre-4.5.0 submodule-era framing — add the command, refresh the framing. (F3, Low) `fixup` is the only side-tool without a procedure home — add a short `## Fixup` to the orchestrator, or record that the PROTOCOL.md one-liner fully specifies it.
-
 ## `audit` — extra dimension candidates — 2026-06-11 (post-restructure queue; trigger shipped 4.12.0)
 
 The proactive trigger is in (orchestrator `## Audit`: offer after ~5 shipped features, state records the last run — 4.12.0). What remains of this item: dimension candidates to fold into auditor sweeps as the need shows (salvaged from prior epics):
@@ -36,14 +25,6 @@ The proactive trigger is in (orchestrator `## Audit`: offer after ~5 shipped fea
 
 Modules shape *thinking* (checklists); `research` should *do* work: investigate (market / competitor / user / stack), synthesize a COMPACT decision-base artifact in `docs/decisions/` (the home already exists), with retention discipline — compact, human-readable, superseded-not-accumulated. Pairs with the product-advocate module: the advocate ASKS "who's the user?", research ANSWERS with evidence. Design fork to resolve: who authors the artifact (a spawned role, per invariant — the orchestrator routes, never authors canon).
 
-## Doc bootstrap for an existing project (brownfield onboarding) — gap confirmed 2026-06-12 (Operator check)
-
-The Operator asked whether a procedure exists to create the protocol's docs for an existing project adopting it. Verified: only the BRIEF is covered — the lazy product-discovery offer (deny-rules inject `product-discovery-offer`) plus discovery's legacy anchor ("legacy = read from the tree" — orchestrator `## Product discovery`; `src/templates/product.md` §0). Nothing creates the rest: install lands `docs/architecture.md` / `contracts.md` / `README.md` as `<placeholder>` skeletons only-where-absent; no role checklist even names `architecture.md` (grep over `src/agents/` + the pm-setup body: zero hits); the understand beat reads architecture / journeys / feature docs, but only the missing-brief case has a handler. A brownfield downstream starts every feature on empty canon — and the first real downstream (ad-md-editor, below) is exactly this case.
-
-History: the old template had exactly this — `pm-codebase-reader` (né `pm-legacy-reader`) drafted architecture/journeys/threat-model raw from the tree and `pm-architect` finalized and owned ("reader drafts raw → architect finalizes", CHANGELOG 2.x). The minimal-core fold kept `codebase-reader` as a Builder fold; the bootstrap procedure did not survive the fold.
-
-Fix direction: a doc-bootstrap pass as a routed feature through the loop — the Builder (codebase-reader fold) drafts `architecture.md` (+ contracts where the code shows visible promises) FROM the tree under the `[?]` discipline (never invent a bound), the Operator corrects, the Reviewer checks honesty against the code. Trigger mirrors the brief's: configured project + work request + no `docs/architecture.md` ⇒ short declinable offer (persona first; a deny-rules inject row only if persona proves insufficient). Natural sibling of `## Product discovery` in the orchestrator. Pairs with the ad-md-editor rollout — that rollout is its live test.
-
 ## `no-product-brief-discover` inject is blind post-install — found planning doc-bootstrap 2026-06-12
 
 `install.mjs` (~:116) lands the `docs/product.md` TEMPLATE while the nudge's predicate `promptNeedsProductBrief` (`engine.mjs:175`) is presence-only — so on any installed project the empty brief form counts as a brief and the nudge can never fire; its whole audience is exactly the installed-but-unfilled project. (The config sibling `no-config-run-setup` is blind by design — the installed default config IS valid safe defaults.) Fix: one shared "absent-or-unfilled-template" detection (template sentinel / `<placeholder>` content check, non-backtrackable, fixed root-relative path), used by the brief row and by the doc-bootstrap inject row if that trigger ever goes mechanical (the doc-bootstrap plan's recorded follow-up). Costed ≈1–1.5 h: predicate + rule row + sentinel + `parity.test.mjs` block-1b stage + `opencode-inject.test.mjs` case.
@@ -51,10 +32,6 @@ Fix direction: a doc-bootstrap pass as a routed feature through the loop — the
 ## Parallel feature work — Operator request 2026-06-12
 
 Today the loop is strictly serial: one session drives one feature, one branch per PR, the state pointer names ONE active plan. Features with disjoint surfaces could run in parallel — the platform offers concurrent sub-agents and git worktrees. Design questions: per-feature state (the pointer is singular); branch isolation (PROTOCOL `## Git flow`: conflicts ⇒ stale branch, cut fresh — parallel branches invite exactly that); the stamp/merge-gate is already per-topic (holds as-is); Operator bandwidth (plans and merges still serialize through one human — the honest bottleneck). Cheap 80% already allowed: several features batched on one branch serially. The real epic: worktree-per-feature with interleaved Builder spawns. Scope honestly before building.
-
-## Capability-module catalog underpopulated — no UI/UX, no test-writing methodology — Operator finding 2026-06-12
-
-The module axis (`src/modules/registry.json`, composed into role agents at assembly) is the designed home for methodology depth, yet only two modules exist (threat-model, product-advocate). The Operator names the gap: no UI/UX development methodology, no test-writing methodology, "and so on" — the infrastructure is built and unused. Candidates, each FOLDING an existing backlog item, not duplicating it: (1) **ui-ux / HMI module** — realizes the "HMI / platform-convention invariants + adverse-state gate" item below (its own note: cleanest as a product-advocate extension — resolve module-vs-extension there); (2) **test-methodology module** — realizes the "Test coverage of the client/I-O boundary layer" + "Test-first regression discipline" directions (plan must name how a unit-unreachable layer is covered; gate-caught bug ⇒ fast-tier test ratchet); (3) **accessibility** — first-class per the ideation/capture item below. Per-`kind` defaults matter (a `docs` project gets no UI module). Each module ships as its own feature through the loop.
 
 ## npx distribution — publish the installer — Operator request 2026-06-12
 
@@ -68,15 +45,10 @@ The Operator asked to roll the protocol into ad-md-editor; this repo's session c
 
 A deployed downstream on the OLD template (nula: `.ai-pm/tooling` submodule + symlinks to the old `.claude/agents/pm-*` + `WORKFLOW.md`) needs a one-time, file-level move to the minimal core (`install.mjs` now does the wiring; the migration is the cleanup of the old surface). Design when the nula WAIT lifts. Harness note kept from those sessions: a long OpenCode session can hit a SQLite session-insert failure that kills every subagent spawn — restart OpenCode; an environment crash is a failed gate, never a license to self-substitute the verdict (invariant 3). Audit 2026-06-12 (F4): when this migration (or the first MAJOR) lands, add a migration test — installer re-run over a PRIOR version's artifacts; the idempotency test covers only two fresh installs, and the "MAJOR names what to rename" path has never been exercised.
 
-## Test coverage of the client / I-O boundary layer — 2026-06-09 (downstream: nula)
+## Fix-loop and review-loop ceilings — 2026-06-09 (downstream: nula; trimmed 2026-06-12)
 
-A real bug lived in client glue (fetch + state population) and was caught ONLY by an optional, Operator-initiated E2E; unit coverage gated the pure core only. A whole architectural layer can be untested-by-design and still pass every gate. Minimal-core fix direction: the Builder's plan, when a feature touches a layer unit tests structurally cannot reach (fetch+state, route handlers, adapters), must name how that layer is covered (integration / E2E) or surface the untested-layer risk; an `audit` dimension can flag a layer with ZERO tests (presence-flag, not a %-gate).
+The ratchet and app-bug-vs-test-drift halves shipped in the `test-methodology` module (4.16.0). What remains — the escalation ceilings:
 
-## Test-first regression discipline + review-loop ceiling — 2026-06-09 (downstream: nula)
-
-Residuals from the E2E-ownership design (the tier split itself is in: `tools.json` beats — `build` fast tier, `ship` gate tier):
-
-- **On a gate failure**, classify the root cause — app bug vs test drift. App bug → the fix is test-first: write the fast-tier test for the CORRECT behavior, confirm RED on the buggy code, fix, GREEN — every gate-caught bug becomes a cheap fast-tier guard (the ratchet). Test drift (locator stale because the UI legitimately changed) → fix the test, no new guard.
 - **Fix-loop ceiling:** cap repeated fix attempts on one finding (2–3) → stop, write state, escalate to the Operator — never grind.
 - **Review-loop ceiling (sibling):** two Builder↔Reviewer rounds on one finding → escalate to the Operator as a judgment call.
 
@@ -86,7 +58,7 @@ Formalize the existing hand-relayed channel: a downstream's model emits a raw pr
 
 ## Ideation / capture-time elicitation + accessibility — 2026-06-06 (downstream: nula)
 
-Product discovery (shipped) covers the PRODUCT level; nothing scaffolds the per-idea level: a non-trivial idea captured to the backlog gets no design-space interrogation (actors and addressing/identity, multi-party isolation, loss/failure/recovery modes, privacy/deniability surface, accessibility incl. assistive tech), so parked ideas carry deep holes invisibly and completeness falls on Operator memory. Fix direction: capturing a non-trivial idea is an elicitation act — a short cross-domain probe, suggestion-only and proportional (a trivial idea gets no six-axis interrogation). Accessibility deserves first-class placement in the probe and in any UI-bearing project doc.
+Product discovery (shipped) covers the PRODUCT level; nothing scaffolds the per-idea level: a non-trivial idea captured to the backlog gets no design-space interrogation (actors and addressing/identity, multi-party isolation, loss/failure/recovery modes, privacy/deniability surface, accessibility incl. assistive tech), so parked ideas carry deep holes invisibly and completeness falls on Operator memory. Fix direction: capturing a non-trivial idea is an elicitation act — a short cross-domain probe, suggestion-only and proportional (a trivial idea gets no six-axis interrogation). Accessibility's review-time half shipped in the ui-ux module (4.16.0); what remains here is its place in the capture-time probe.
 
 ## Blocked-role return contract + session-reset hygiene — 2026-06-06 (field-experience essay)
 
@@ -102,8 +74,8 @@ Seed catalog (deficit → prosthesis → coverage):
 | Deficit | Felt? | Prosthesis | Coverage today |
 |---|---|---|---|
 | Hallucinated call-graph edges | no | LSP / tree-sitter graph as ground-truth input | contracts (partial); no tool |
-| Single-path sim, misses interleavings | no | property test / harness instead of mental run | optional real-run |
-| Quantity blindness (loop ×10000) | no | execute on representative inputs | optional real-run |
+| Single-path sim, misses interleavings | no | property test / harness instead of mental run | concurrency module checklist (4.16.0); harness tool still open |
+| Quantity blindness (loop ×10000) | no | execute on representative inputs | performance module checklist (4.16.0); real-run still optional |
 | Long-context degradation | partial | durable state + checkpoint-reset | state exists; reset discipline missing |
 | Forgot half the scenarios | yes | scenario↔path coverage checklist | Builder plan checklist |
 | Overconfidence in own output | no | independent reviewer, cross-model | covered (Reviewer, `auto` model) |
@@ -113,17 +85,6 @@ Two artifact tracks: (1) a living deficit catalog (each: prosthesis, felt/unfelt
 ### Track: grounded code-graph utility + contract anchors
 
 The flagship unfelt-deficit prosthesis. Decided design (Operator, 2026-06-06): a **standalone CLI** (not an MCP server; wrappable later), tiered backend (tree-sitter/ctags → LSP → data-flow tools) emitting ONE normalized graph; **surface uncertainty, don't hide it** — unresolved/dynamic edges marked explicitly (converts the unfelt deficit into a felt one). Contract mapping splits: structural conformance deterministic and cheap (surface drift, forbidden edge, reachability — adapt the existing fitness-function tool class), semantic conformance stays AI-judgment + tests. Prerequisite: contracts carry a machine-resolvable anchor (`path::symbol`), a contract-format change that is its own small feature. Minimal first step: tree-sitter wrapper + surface-drift detector against anchors.
-
-## HMI / platform-convention invariants + adverse-state gate — 2026-06-06 (downstream: matter-import-ble)
-
-A feature passed every gate (plan, review, green tests, on-hardware run) and the Operator still found user-facing defects by hand in minutes: device loss not painted as an error, optimistic state lying about an offline device, no action feedback. The protocol gates function, safety, and security, but nothing asks whether the feature is *usable* per the platform's HMI conventions, or how it behaves in adverse states. Amendments to land (mapped to the minimal core):
-
-- **Adverse-state enumeration in the plan** (strongest): a user-facing feature's plan must list lifecycle transitions and failures (offline, lost command, reconnect, partial failure, restart), not just the happy path — Builder plan checklist; absence is a Reviewer finding. (The Reviewer's correctness item covers error paths of what WAS built; this gates what the plan must consider.)
-- **Full-composition integration test**: at least one test exercising production wiring, not a trimmed harness — the slice-tested-but-system-broken class.
-- **HMI conventions as a project doc**: the protocol carries only the universal gate ("a user-facing surface must conform to the project's platform-convention invariants"); the CONTENT is project-authored at setup (like a threat model), never hardcoded into the core.
-- **Proportionality**: real-use verification mandatory only for features touching the HMI surface, with an escape for trivial label changes.
-
-Cleanest composition: extend the product-advocate module with an HMI/adverse-state dimension rather than erecting a parallel stack.
 
 ## Salvaged residuals from the parked protocol-hardening branch — 2026-06-06 (re-implement fresh; AGPL-era branch deleted)
 

@@ -1,6 +1,6 @@
 # Product contracts
 
-The protocol's own product is a set of **enforced behavioural guarantees**. Each file here states one: what it must do for its user (the PM and the AI agent driving the loop), and what must never break. They are the regression floor — a change that touches a guarantee re-checks it; a violation blocks.
+The protocol's own product is a set of **enforced behavioural guarantees**. Each file here states one: what it must do for its user (the Operator and the AI agent driving the loop), and what must never break. They are the regression floor — a change that touches a guarantee re-checks it; a violation blocks.
 
 These are the *promises*, not the mechanism. Where a rule is enforced lives in its single home — `PROTOCOL.md` (the loop, invariants, enforcement map), `docs/architecture.md` (the mental model), the `src/adapter/` deny-rules + tests. A contract names the guarantee; it never restates the rule.
 

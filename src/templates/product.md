@@ -1,8 +1,8 @@
 # Product brief
 
-> The one home for **what this project is and why** — filled at onboarding (the orchestrator's `## Product discovery`), before the first feature. Every feature grounds in it: the loop's Understand beat reads it, and each feature's product questions check the change against it. Keep it current; it is not a one-time throwaway.
+> The one home for **what this project is and why** — filled at onboarding (the orchestrator's `## Product discovery`), kept current; every feature grounds in it.
 >
-> **How it is filled — gather first, conclude last.** Discovery walks these sections as a plain dialog (the structured-question tool, a different kind of inquiry each round), recording what the Operator gives and marking the rest `[?]` — never grading whether an answer is "good" (the Operator owns meaning). The spine (§3–§6) is the concrete **zero-to-working story** a non-expert can actually answer; the hard conclusions (§7, the case against, whether it even fits) come at the END, on top of what was gathered — never as a leading question up front. Grounded in the established discovery frameworks (Amazon *Working Backwards*, Ash Maurya's *Lean Canvas*, Marty Cagan's four risks, Teresa Torres' continuous discovery): customer and problem first, the competition named, a case-against built in — so the brief can reveal "we're building the wrong thing", never a sales pitch. A number not yet fixed is `[?]` — never invented; plain product language.
+> Filled gather-first, conclude-last: record what the Operator gives, mark the rest `[?]` — never invent an answer, never grade one. The case against (§7) comes at the end. Plain product language.
 
 ## 0. The idea — what is this product?
 

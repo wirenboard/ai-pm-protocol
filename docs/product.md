@@ -10,14 +10,11 @@ A platform-neutral protocol that gives AI-assisted software and documentation de
 
 **Primary (confirmed):** technical operators already using Claude Code or OpenCode to build real products — solo devs, technical leads, technical PMs. They want to move fast but cannot afford silent quality failures, unreviewed security surfaces, or "the AI did whatever I asked."
 
-**Hypothesis (not yet validated):** a non-technical PM or founder who wants to ship product using AI without reading code. The onboarding (git submodule + Node CLI) and the protocol ("Never show code") are currently hostile to this segment. This is a future bet, not a served segment today.
+**Hypothesis (not yet validated):** a non-technical PM or founder who wants to ship product using AI without reading code. The onboarding (a one-command Node install, run from a terminal) and the protocol ("Never show code") are currently hostile to this segment. This is a future bet, not a served segment today.
 
 **Not for:** one-off scripts, vibe-coding experiments, teams that already have a mature CI/CD and code-review culture, anyone who does not care whether the AI cuts corners.
 
-**Speed↔quality dial.** One axis, implemented as `profile` in `ai-pm.config.json`:
-
-- **Prototype mode** (`lite` / `solo`) — verify the hypothesis fast; the Orchestrator may build directly, plan ceremony is lighter. The floor holds: code works, review by a fresh independent Reviewer still runs.
-- **Quality mode** (`full`) — trade speed for no-rewrites; full research, independent deep review, explicit plan. The change is right and works before it ships.
+**Speed↔quality dial.** One axis, implemented as `profile` in `ai-pm.config.json`: `lite`/`solo` verify a hypothesis fast, `full` trades speed for no-rewrites — the floor (independent review, explicit merge go) holds at every position. The dial's contract: `PROTOCOL.md` `## Project config`.
 
 ## 2. Problem — from their point of view
 

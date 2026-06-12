@@ -2,7 +2,7 @@
 
 **Review runs on a model different from the session that wrote the plan and code** — by default, named transparently, degrading gracefully when no other model is available.
 
-A model reviewing its own work shares its own blind spots — it misses what it got wrong and over-rates its output. This makes the reviewer a *different brain* by default: a second set of blind spots catches what the first missed. The PM gets this out of the box, is always told which model is reviewing, and is never blocked by it.
+A model reviewing its own work shares its own blind spots — it misses what it got wrong and over-rates its output. This makes the reviewer a *different brain* by default: a second set of blind spots catches what the first missed. The Operator gets this out of the box, is always told which model is reviewing, and is never blocked by it.
 
 ## Must work
 

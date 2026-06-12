@@ -114,11 +114,11 @@ The pieces and their single homes:
 
 **Enabled-resolution** mirrors the engine's `projectProfile` fail-safe:
 
-- a module is OFF only on a literal `false` (or `{ enabled: false }`);
-- **everything else — `true`, an object, a malformed value, an absent key — resolves it ON**, with the per-`kind` default merged under any config override;
+- a module is OFF on a literal config `false` (or `{ enabled: false }`) — or, when the config never names it, on a registry-authored per-kind default of literal `false` (a `docs` project gets no UI module); the registry is our data, the config the untrusted input, so only the registry may default a kind off;
+- **every other named config value — `true`, an object, a malformed value — resolves it ON**, with the per-`kind` default merged under any config override; an absent key falls to the per-`kind` default;
 - an unknown/absent project `kind` takes the **strict-side** defaults.
 
-So a bad config can only ever turn MORE rigor on, never silently disable it.
+So a bad config can only ever turn MORE rigor on, never silently disable it — the one default-OFF path is registry-authored, never config-triggered.
 
 **Two security guards** (the assembler's own threat model):
 
@@ -129,7 +129,7 @@ So a bad config can only ever turn MORE rigor on, never silently disable it.
 
 The registry, the config doc, and the fragments all label it so; over-claiming a module as mechanical enforcement is a Reviewer honesty-gate find.
 
-Two modules ship. **threat-model** deepens the Reviewer's always-on security item and the Builder's plan-time Security-surface question into explicit threat enumeration. **product-advocate** deepens the Builder's plan-time product-question item into a discovery pass (who it is for, the user pain, the right bet, the cheapest test, what breaks if it is NOT built) and the Reviewer into one product dimension (does the shipped change serve its plan's user claim). Each module's FLOOR (threat-model: a security-relevant change has its threats named; product-advocate: a user-facing change has its product questions recorded, the `product-readiness-gate` contract) stays in the role floor bodies; the fragment is purely the deepening.
+Ten modules ship; the catalog — each module's purpose, toggle shape, per-kind defaults — is the registry, its single home. A module's FLOOR stays in the role floor bodies (e.g. threat-model's "a security-relevant change has its threats named", product-advocate's `product-readiness-gate` contract); the fragment is purely the deepening, self-gated to the changes it applies to.
 
 ## Extension points
 
@@ -141,4 +141,4 @@ Two modules ship. **threat-model** deepens the Reviewer's always-on security ite
 - **List available models.** A neutral contract point setup uses to put real model choices before the Operator (the orchestrator's `## Setup`). Each adapter realises it: Claude returns its known model pair, OpenCode discovers the environment's models — realisation noted in `tool-map.json` `models`, no environment-specific id in the core.
 - **Apply config / re-assemble agents.** The neutral act setup runs after writing `ai-pm.config.json` to make the choices take effect — re-assemble the role agents (and commands) from the just-written config (the orchestrator's `## Setup` step 4). Each adapter realises it as its install command, recorded in `tool-map.json` `apply-config`; no platform mechanism in this prose.
 - **Detect missing config / invoke setup.** Two neutral acts that fire the setup procedure. *Detect* — a work request to a project with no `ai-pm.config.json` runs setup first (the orchestrator's `## Setup` "when it fires", a `[persona]` act), reinforced by the `no-config-run-setup` inject row in `deny-rules.json` (it nudges, never blocks). *Invoke* — an explicit per-platform setup command runs it on demand; its assembly + deploy is the install step (`src/adapter/INSTALL.md`). Both point at the one home — the procedure is never restated.
-- **Detect missing product brief / offer discovery.** The same shape as missing-config, one stage later in the onboarding ladder: a change request to a project that *is* configured but has no `docs/product.md` offers product discovery first (the orchestrator's `## Product discovery`, a `[persona]` act), reinforced by the `no-product-brief-discover` inject row in `deny-rules.json` (predicate `promptNeedsProductBrief`; it nudges, never blocks). The three injects are registry-ordered — no-config → no-brief → route-reminder — so the nudge advances as the project fills in (`src/adapter/parity.test.mjs` block 1b). The brief is the single home of who/why; features ground in it (`docs/contracts/product-foundation.md`).
+- **Detect missing product brief / offer discovery.** Missing-config's sibling, one stage later in the onboarding ladder: a change request to a configured project with no `docs/product.md` offers product discovery first (the orchestrator's `## Product discovery`, a `[persona]` act), reinforced by the `no-product-brief-discover` inject row in `deny-rules.json` (it nudges, never blocks). The three injects are registry-ordered — no-config → no-brief → route-reminder — so the nudge advances as the project fills in (`src/adapter/parity.test.mjs` block 1b). The brief is the single home of who/why (`docs/contracts/product-foundation.md`).

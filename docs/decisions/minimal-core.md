@@ -4,7 +4,7 @@ Why this protocol is ~one constitution + 3 roles, not the ~2,200-line, 8-persona
 
 ## The one test
 
-A tech-PM reads the whole protocol in one sitting and holds its shape. `PROTOCOL.md` states this as a hard design constraint, not a wish: if the core ever grows past what a person holds in their head, the protocol has failed and is cut back.
+The Operator reads the whole protocol in one sitting and holds its shape. `PROTOCOL.md` states this as a hard design constraint, not a wish: if the core ever grows past what a person holds in their head, the protocol has failed and is cut back.
 
 ## The rule of the cut (non-negotiable)
 
@@ -26,4 +26,4 @@ A cut that silently re-opens a failure is forbidden. (Example accepted risk: a g
 
 ## What survives every cut
 
-Independent review by a separate context (builder ≠ reviewer), the honesty gates, the deny-list, git-flow, and plain-language PM comms. These are load-bearing and already short — they are the floor a `lite`/`solo` profile trims ceremony around but never cuts (see `docs/decisions/direction.md`).
+Independent review by a separate context (builder ≠ reviewer), the honesty gates, the deny-list, git-flow, and plain-language Operator comms. These are load-bearing and already short — they are the floor a `lite`/`solo` profile trims ceremony around but never cuts (see `docs/decisions/direction.md`).

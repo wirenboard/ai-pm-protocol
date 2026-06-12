@@ -2,7 +2,7 @@
 
 **The code that lands matches the plan that was approved** — every plan scenario has both an implementation and a test, and scope cannot silently drift.
 
-When the PM approves a plan they approve a promise: this is what will be built. An independent checker confirms every scenario in the approved plan is implemented *and* tested, and that the change did not grow beyond or shrink below what was agreed. The PM never reads code to know the plan was honoured; the agent cannot pass a half-built or scope-crept change.
+When the Operator approves a plan they approve a promise: this is what will be built. An independent checker confirms every scenario in the approved plan is implemented *and* tested, and that the change did not grow beyond or shrink below what was agreed. The Operator never reads code to know the plan was honoured; the agent cannot pass a half-built or scope-crept change.
 
 ## Must work
 

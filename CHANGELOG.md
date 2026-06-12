@@ -12,6 +12,23 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.16.0] — 2026-06-12
+
+### Added
+
+- **Eight capability modules** — the axis goes 2→10: `test-methodology` (unit-unreachable-layer coverage named in the plan, full-composition integration test, real-browser UI exercise for web e.g. Playwright, gate-caught-bug test-first ratchet), `ui-ux` (adaptivity · accessibility · responsiveness · clarity · adverse states; honours `docs/hmi-conventions.md` where present), `research-methodology` (source ladder, recency vs real dependency versions, triangulated load-bearing claims, confidence + date), `debug-methodology` (reproduce-before-fix, one variable at a time, cause not symptom, debuggable-by-design), `performance` (named scale, no unbounded paths, no N+1/O(n²) on user-scale data, measure-don't-guess), `database` (every schema change a migration, reversible-or-named, rollout-compatible, DB-level integrity), `i18n` (inert single-locale; externalized strings, locale APIs, per-language plurals), `concurrency` (atomic check-then-act, idempotent retries, ordering assumptions, stress/property test over mental interleaving). All self-gating, per-kind defaulted.
+- **Assembler: per-kind default-OFF** — the registry may default a module off for a kind (a `docs` project gets no UI/DB/debug/perf/test module); the fail-safe holds: any *named* config value, malformed included, resolves ON — only the registry, our data, may default a kind off. 13 new install-modules cases pin every branch.
+- **`## Project inception`** — greenfield onboarding mirror of doc bootstrap (bootstrap reads the tree; inception records the day-zero decisions): researched stack decision → `docs/decisions/stack.md`, environment constraints, day-zero ops (deploy, secrets home, backup + restore-tested, failure visibility), license, architecture seeded from the decisions, walking-skeleton first feature, threat sketch (actors/assets/boundaries → `docs/threat-model.md`) — the sketch mirrored into doc bootstrap for brownfield.
+- **Brownfield truth reconciliation** — product discovery gains a draft-first **reconstruction mode** for an Operator who declares the product unfamiliar (provenance-labelled hypotheses from the tree, corrected section by section); doc bootstrap gains a **brief cross-check** step (a factual brief↔tree contradiction surfaces with resolution options — correct / roadmap / investigate); the product-foundation anti-retrofit line scoped honestly (the ban targets confirmation theater when the product is *known*).
+- **Audit security dimension** — whole-tree threat-model sweep (committed secrets, injection-prone constructs, fail-open paths, access checks) + known-CVE dependency check; the per-diff module is blind to legacy that predates it. Security lifecycle now: per-change (module) → day-zero (sketch) → cadence (audit) → incident (8D).
+- **Reviewer floor sharpened** — Hygiene gains **over-engineering** (complexity paid for by a present need) and **naming** (names in the codebase's own vocabulary; a noise name is a finding); Security gains the untoggleable **secret-value floor**: a password/key/token value in ANY committed artifact — code, config, docs, examples, tests, commit messages — blocks regardless of module toggles. Setup's toolkit names a gitleaks-class secret scanner; setup also gains a declinable **CI-wiring offer**.
+
+### Fixed
+
+- **De-water pass** (doc-quality audit backlog half): PM→Operator rename completed across `docs/contracts/` + `decisions/minimal-core.md` (F1); README states the literal install command, submodule framing dropped (F2); `fixup` got its procedure home — orchestrator `## Fixup` (F3); summary-restate creep cut (frameworks sentence single-homed, README roles/dial compress-and-point, product-foundation guarantee-only); contract files point at `merge-gate.test.mjs` instead of inventorying it; template blockquote 170→57 words; 100+-word bullets split; "old roles" archaeology dropped; registry fail-safe deduped; ship-beat contracts path fixed; INSTALL.md husk deleted. New floor style rule: ≈ one dash-clause per sentence in human-facing docs; size ceilings state the normal-prose proxy (a wall-of-text line games nothing).
+
+---
+
 ## [4.15.0] — 2026-06-12
 
 ### Added

@@ -285,5 +285,50 @@ const paE2eOff = builderAgentText({ modules: { "product-advocate": false, "threa
 check("pa e2e: OFF ⇒ assembled builder omits the fragment", !paE2eOff.includes(PA_FRAGMENT_MARK));
 check("pa e2e: OFF ⇒ assembled builder keeps the product floor", paE2eOff.includes(BUILDER_PRODUCT_FLOOR));
 
+// ── 10. KIND-DEFAULT OFF: a REGISTRY-authored per-kind default of literal `false`
+//      defaults the module off for that kind — the "a docs project gets no UI module"
+//      behaviour. Registry-authored ONLY: the config-side fail-safe is untouched — a
+//      NAMED config value (even malformed) still resolves ON, explicit false still OFF,
+//      and an unknown/absent kind takes the strict side (the code-preferred default).
+//      Synthetic registry over a real on-disk fragment, so these cases hold regardless
+//      of the live catalog's content.
+console.log("KIND-DEFAULT OFF — registry false vs config override:");
+const koRegistry = { modules: [{
+  id: "ko",
+  toggle: { depth: "rich | light" },
+  defaults: { code: { depth: "rich" }, docs: false, mixed: { depth: "light" } },
+  targets: [{ role: "reviewer", beat: "review" }],
+  fragments: { reviewer: "src/modules/threat-model/reviewer.md" },
+}] };
+check("kind-default false: docs kind + silent config ⇒ disabled",
+  !enabledModules(koRegistry, { kind: "docs" }).some((m) => m.id === "ko"));
+check("kind-default false: docs kind ⇒ fragment ABSENT from composed body",
+  !composeBody(ROOT, reviewerFloor, "reviewer", koRegistry, { kind: "docs" }).includes(FRAGMENT_MARK));
+check("kind-default false: docs kind ⇒ floor still present",
+  composeBody(ROOT, reviewerFloor, "reviewer", koRegistry, { kind: "docs" }).includes(REVIEWER_FLOOR));
+check("kind-default non-false: code kind + silent config ⇒ enabled",
+  enabledModules(koRegistry, { kind: "code" }).some((m) => m.id === "ko"));
+// Explicit config value overrides the kind default BOTH ways.
+check("override beats kind-default false: explicit object ⇒ enabled",
+  enabledModules(koRegistry, { kind: "docs", modules: { ko: { depth: "light" } } }).some((m) => m.id === "ko"));
+check("override beats kind-default false: literal true ⇒ enabled",
+  enabledModules(koRegistry, { kind: "docs", modules: { ko: true } }).some((m) => m.id === "ko"));
+check("override beats kind-default false: explicit enable ⇒ fragment composes",
+  composeBody(ROOT, reviewerFloor, "reviewer", koRegistry, { kind: "docs", modules: { ko: { depth: "rich" } } }).includes(FRAGMENT_MARK));
+check("override beats kind-default on: literal false on code kind ⇒ disabled",
+  !enabledModules(koRegistry, { kind: "code", modules: { ko: false } }).some((m) => m.id === "ko"));
+// FAIL-SAFE unchanged: a NAMED-but-malformed config toggle resolves ON even where the
+// kind default is false — only the registry may default off, never a broken config.
+for (const bad of ["garbage", 42, null]) {
+  check(`fail-safe over kind-default false: malformed toggle ${JSON.stringify(bad)} ⇒ enabled`,
+    enabledModules(koRegistry, { kind: "docs", modules: { ko: bad } }).some((m) => m.id === "ko"));
+}
+// Unknown/absent kind ⇒ strict side: the code-preferred default (non-false here), never
+// another kind's `false`.
+check("unknown kind ⇒ strict side (code default, non-false) ⇒ enabled",
+  enabledModules(koRegistry, { kind: "bogus" }).some((m) => m.id === "ko"));
+check("absent kind ⇒ strict side (code default, non-false) ⇒ enabled",
+  enabledModules(koRegistry, {}).some((m) => m.id === "ko"));
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

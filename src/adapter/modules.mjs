@@ -22,9 +22,13 @@
 //      (invariant 2; mirrors the engine's isInsideRoot);
 //   2. a fragment file NAMED by an ENABLED module but MISSING on disk is a HARD ERROR
 //      — never silently ship a role missing its security section (the dangerous drop);
-//   3. the fail-safe direction is toward MORE rigor: an unknown/malformed toggle, or
-//      an unknown/absent project kind, resolves the module ON with the strict-side
-//      defaults — a bad config can never silently DISABLE the rigor.
+//   3. the fail-safe direction is toward MORE rigor: an unknown/malformed CONFIG
+//      toggle, or an unknown/absent project kind, resolves the module ON with the
+//      strict-side defaults — a bad config can never silently DISABLE the rigor.
+//      The ONE default-OFF path is REGISTRY-authored: a per-kind default of literal
+//      `false` (the registry is our data; the config is the untrusted input), and it
+//      applies only while the config never names the module — any named config value
+//      overrides it.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -73,13 +77,24 @@ function strictKind(mod, kind) {
 }
 
 // Is a config toggle value an explicit OFF? Only a literal `false` (or an object
-// `{ enabled: false }`) disables. EVERYTHING ELSE — true, an object, a malformed
-// value, or an absent key (undefined) — resolves the module ON (fail-safe to MORE
-// rigor). A bad/typo'd toggle can never silently disable the rigor.
+// `{ enabled: false }`) disables. Every other NAMED value — true, an object, a
+// malformed value — resolves the module ON (fail-safe to MORE rigor); an ABSENT key
+// falls to the registry's per-kind default (defaultOffForKind). A bad/typo'd toggle
+// can never silently disable the rigor.
 function isExplicitlyOff(toggle) {
   if (toggle === false) return true;
   if (toggle && typeof toggle === "object" && toggle.enabled === false) return true;
   return false;
+}
+
+// Is the REGISTRY's per-kind default for this config an explicit OFF? A kind default
+// of literal `false` (e.g. a docs project gets no UI module) defaults the module off
+// for that kind — the ONE default-OFF path, and it is registry-authored (our data,
+// never the untrusted config). Resolved through strictKind, so an unknown/absent kind
+// takes the strict-side (code-preferred) default, never another kind's `false`.
+function defaultOffForKind(mod, config) {
+  const sk = strictKind(mod, config && config.kind);
+  return sk !== null && (mod.defaults || {})[sk] === false;
 }
 
 // Compute the set of ENABLED module ids for this config, against the registry.
@@ -90,7 +105,8 @@ export function enabledModules(registry, config) {
   const out = [];
   for (const mod of registry.modules || []) {
     const toggle = toggles[mod.id]; // undefined when the project never names it
-    if (isExplicitlyOff(toggle)) continue; // the ONLY way off; everything else ⇒ on
+    if (isExplicitlyOff(toggle)) continue; // the ONLY config-side way off; every other named value ⇒ on
+    if (toggle === undefined && defaultOffForKind(mod, config)) continue; // registry kind-default OFF, config silent
     out.push({ id: mod.id, mod });
   }
   return out;

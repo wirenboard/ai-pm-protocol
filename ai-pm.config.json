@@ -16,7 +16,7 @@
   "modules": {
     "threat-model": { "depth": "rich", "nonSecurity": true }
   },
-  "_modules": "The enabled capability modules and their toggle values (docs/architecture.md `## Capability modules`; the catalog + per-kind defaults are homed in src/modules/registry.json). A key set to `false` turns a module OFF; anything else (an object, `true`, or an absent key) leaves it ON with the per-`kind` default merged under any override here (fail-safe to MORE rigor — a bad/typo'd value can never silently disable the rigor). This repo (kind: mixed) enables `threat-model` at `rich` depth, including for non-security changes. A module is `[persona]` prompt content composed into the role agents at assembly — it sharpens reasoning, it blocks nothing mechanically.",
+  "_modules": "The enabled capability modules and their toggle values (docs/architecture.md `## Capability modules`; the catalog + per-kind defaults are homed in src/modules/registry.json). A key set to `false` turns a module OFF; an absent key resolves to the registry's per-kind default; anything else named here (an object, `true`, a malformed value) leaves it ON with the per-`kind` default merged under the override (fail-safe to MORE rigor — a bad/typo'd value can never silently disable the rigor). This repo (kind: mixed) enables `threat-model` at `rich` depth, including for non-security changes. A module is `[persona]` prompt content composed into the role agents at assembly — it sharpens reasoning, it blocks nothing mechanically.",
 
   "roles": {
     "orchestrator": { "agent": "ai-pm" },

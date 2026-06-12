@@ -61,7 +61,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
    - **`model`** — offer a discovered cross-model pin, or `auto`/`session` for zero-config. State the trade-off; recommend zero-config unless they want cross-model independence.
 3. **Write `ai-pm.config.json`** with their answers. No spawn, no push. Reversible.
 4. **Apply the config** — run the adapter's install over your own project files (the concrete command: `src/adapter/INSTALL.md`). Idempotent — zero-config writes no model line, agent files come out unchanged.
-5. **Wire the quality toolkit** — discover the stack (languages, package manager, doc format), propose a stack-appropriate set of tools (linter, formatter, type-checker, doc linter, security/SAST scanner), reasoning from the stack, never a hard-coded list. Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `src/quality/tools.json`, verify green via `node src/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision.
+5. **Wire the quality toolkit** — discover the stack (languages, package manager, doc format), propose a stack-appropriate set of tools (linter, formatter, type-checker, doc linter, security/SAST scanner, gitleaks-class secret scanner), reasoning from the stack, never a hard-coded list. Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `src/quality/tools.json`, verify green via `node src/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision. Offer CI wiring with it (declinable): a workflow running the registered quality suite on every push/PR, per the project's forge (e.g. GitHub Actions) — the merge-gate is local, CI is the remote re-check that catches a bypassed local run.
 
 **When it fires:**
 
@@ -85,6 +85,8 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - Walk the user's zero-to-working story: who it is for · the problem in their words · how a new user finds out it exists · first steps from nothing to working · access across sessions/devices and what happens on lost access · who runs and funds it.
 - Customer is usually a spectrum — ask it openly; never force a pick-one fork on a range axis.
 - Research the competition first if unknown — use the `research` side-tool; draft what you found; let the Operator correct it.
+- When the Operator **declares the product unfamiliar** (adopting someone else's codebase), flip the whole brief to draft-first — the competition bullet's research-then-draft-then-correct pattern, extended from one question to every section: read the tree, draft each section as evidence-based hypotheses with confidence marks and the explicit provenance "reconstructed from the tree", then walk the Operator through it section by section to correct.
+- What the tree cannot show — the real users, their pain, who runs and funds it — stays `[?]` unless the Operator fills it; the conclude phase runs unchanged, still able to say "wrong product".
 
 **When it fires:**
 
@@ -101,15 +103,46 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - **At onboarding** — right after product discovery, the next link in the chain (install → setup → discovery → doc bootstrap → first feature).
 - **Lazy** — on a work request while `docs/architecture.md` is absent or still the unfilled install template (its `<placeholder>` lines unreplaced). Short, declinable offer — never a block.
 - **Explicit** — the Operator asks.
-- **Never on a greenfield** — no tree to read; a new project's canon grows from discovery and its features.
+- **Never on a greenfield** — no tree to read; that case is project inception's (`## Project inception`, the greenfield sibling).
 
 **One pass:**
 
 1. The plan names which docs get drafted.
 2. The Builder (codebase-reader fold) reads the tree and drafts into the installed templates under their own discipline: fill only what the tree shows, delete empty sections, `[?]` for any unmeasured bound, point at code rather than inventory it (invariant 6), secret *locations* never values.
-3. Ceiling: current state only, readable in one sitting — expect ~60–120 lines, past ~150 cut inventory. A bloated draft is a Reviewer doc-quality block.
-4. Relay the draft's claims to the Operator in plain language; the Operator corrects the facts.
-5. The Reviewer checks the draft **against the tree** — a claimed component that doesn't exist or an invented bound blocks (honesty item). Ship like any feature.
+3. Ceiling: current state only, readable in one sitting — expect ~60–120 lines of normal prose (a wall-of-text line games nothing), past ~150 cut inventory. A bloated draft is a Reviewer doc-quality block.
+4. Where a product brief exists (`docs/product.md`), cross-check the draft against it: a **factual contradiction** between brief and tree (the brief claims a CLI, the tree shows none) is a named finding for the Operator, with resolution options offered — correct the brief / record as roadmap / investigate which truth holds — never silently smoothed. Intent the brief wants but the tree hasn't built yet is roadmap, not contradiction — only facts conflict.
+5. For a product with real users or data, the same short threat sketch as inception's lands at `docs/threat-model.md` — on a brownfield the actors, assets, and trust boundaries are already visible in the tree.
+6. Relay the draft's claims to the Operator in plain language; the Operator corrects the facts.
+7. The Reviewer checks the draft **against the tree** — a claimed component that doesn't exist or an invented bound blocks (honesty item). Ship like any feature.
+
+## Project inception
+
+`project inception` records a greenfield's **day-zero decisions** — stack, environment, ops, license — into the decision-base and a seeded `docs/architecture.md`. Doc bootstrap's greenfield mirror: bootstrap reads an existing tree; inception records the decisions a new project has no tree to show yet. Not a side-tool: it runs through the normal loop as the project's first feature. `[persona]`.
+
+**When it fires:**
+
+- **At onboarding** — right after product discovery on a greenfield (no meaningful tree), the next link in the chain.
+- **Lazy** — on a work request while the tree is essentially empty. Short, declinable offer — never a block.
+- **Explicit** — the Operator asks.
+- **Never on a brownfield** — an existing tree is doc bootstrap's case (`## Doc bootstrap`).
+
+**One pass:**
+
+1. Stack as a researched decision — the `research` side-tool drafts alternatives, trade-offs, and a recommendation; the Operator decides; lands at `docs/decisions/stack.md`.
+2. Environment constraints recorded — where it runs, the budget ceiling, the expected scale, offline needs.
+3. Day-zero ops answered — the deploy path, the secrets home, the backup owner (and whether restore was ever tested), how a production failure becomes visible.
+4. License chosen day one — the Operator's call, recorded.
+5. `docs/architecture.md` seeded FROM the decisions (the greenfield twist on bootstrap's fill-from-tree), same size ceiling (normal prose, never a wall-of-text line) and `[?]` discipline.
+6. First-feature recommendation: a walking skeleton — the thinnest end-to-end slice proving the deploy path before features pile up.
+7. For a product with real users or data, a short threat sketch — actors, assets, trust boundaries — lands at `docs/threat-model.md`, deepened later.
+
+## Fixup
+
+`fixup` is the loop's fast path for a **genuinely trivial** change — a typo, a one-line fix, nothing that raises a structural choice. Shortcut, not a beat (`PROTOCOL.md` `## The loop`).
+
+- **What collapses:** plan and build fold into one lightweight pass — on any profile you may do it directly; the plan file may be skipped (announce the fixup in chat instead).
+- **What never collapses:** a fresh, separate Reviewer pass — **shortened, never skipped** — its stamp, and the Operator's explicit merge authorization.
+- **When in doubt, it is not a fixup** — run the full loop.
 
 ## 8D
 
@@ -164,7 +197,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 **One pass:**
 
 1. Run the whole quality suite — `node src/quality/run.mjs build` and `node src/quality/run.mjs review`. A red tool is a finding.
-2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · no drift (assembled agents match `src/agents/`, deployed plugin byte-identical) · no duplication or one-home break.
+2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · security swept with the threat-model lens — committed secrets, injection-prone constructs, fail-open paths, missing access checks — plus a dependency known-CVE check where the quality registry carries the stack's tool · no drift (assembled agents match `src/agents/`, deployed plugin byte-identical) · no duplication or one-home break.
 3. Dispatch every finding — each becomes a fix through the loop or a `.ai-pm/backlog.md` item; Operator sets priority. Never sit on a finding silently.
 
 **Run-note** at `.ai-pm/audit/<slug>.md` — transient, deleted once findings are dispatched.

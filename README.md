@@ -8,13 +8,7 @@ It runs inside an AI coding harness — Claude Code and OpenCode, both live-veri
 
 The whole protocol is one short constitution you can read in one sitting: **[`PROTOCOL.md`](PROTOCOL.md)**. The essence:
 
-**Three roles.** A Builder makes the change, a Reviewer independently checks it, an Orchestrator runs the loop — the reviewer is never the builder, so a maker can't catch its own blind spots.
-
-| Role | Does |
-| --- | --- |
-| **Orchestrator** | The running session. Talks to you, drives the loop, owns git and state. Routes every other task to a role; builds and reviews nothing itself. |
-| **Builder** | Plans the change, then writes the code, docs, and tests. |
-| **Reviewer** | Independently checks the built change against the plan and a tight quality / security / honesty checklist. A separate context from the Builder. |
+**Three roles.** A Builder plans and makes the change; a Reviewer independently checks it in a separate context; an Orchestrator drives the loop, talks to you, and owns git — the reviewer is never the builder, so a maker can't catch its own blind spots. The full role table: `PROTOCOL.md` `## The three roles`.
 
 **Product-first.** Onboarding goes **install → setup → product discovery → loop**. Before any feature, a genuine discovery dialog records a short brief (`docs/product.md`): the idea, the customer, the problem in their words, the zero-to-working story, the competition, who runs and funds it — and, at the end, the honest case against. It gathers prejudice-free and concludes willing to say "we are building the wrong thing". Every feature then grounds in that brief, so you are building a product, not churning code.
 
@@ -22,12 +16,7 @@ The whole protocol is one short constitution you can read in one sitting: **[`PR
 
 **You decide product, not code.** The orchestrator leads with user impact, frames decisions as trade-offs, asks one question at a time, and never shows you code.
 
-**Speed↔quality dial.** One axis, set per project (`profile` in `ai-pm.config.json`):
-
-- **Prototype mode** (`lite` / `solo`) — verify the hypothesis fast: lighter plan ceremony, the orchestrator may build directly.
-- **Quality mode** (`full`) — trade speed for no-rewrites: an explicit plan you approve, every structural choice surfaced, a separately spawned Builder.
-
-The floor — working code or docs, an independent review by a fresh Reviewer, your explicit go on every merge — holds at every dial position. The dial is a ceiling on ceremony, never on rigor: the orchestrator may always choose more.
+**Speed↔quality dial.** One axis, set per project (`profile` in `ai-pm.config.json`): `lite`/`solo` verify a hypothesis fast — lighter plan ceremony, the orchestrator may build directly; `full` trades speed for no-rewrites. The floor — working code or docs, an independent review by a fresh Reviewer, your explicit go on every merge — holds at every dial position; the dial caps ceremony, never rigor.
 
 ## Platform-neutral by design
 
@@ -37,7 +26,13 @@ Part of that adapter is a real **enforcement layer** — a deny layer that mecha
 
 ## Install
 
-The protocol is consumed as a git submodule; the active platform's adapter is then wired — the deny hooks, the role agents, and the `PROTOCOL.md` import. One command does it all, and the per-platform detail lives in **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)**. After wiring, start a fresh session so the harness loads the protocol.
+One idempotent command from a protocol checkout:
+
+```sh
+node src/adapter/install.mjs <target-dir> --platform claude|opencode
+```
+
+It vendors the adapter, lays down the core and doc templates (only where the target has none), and wires the chosen platform — hooks, role agents, the `PROTOCOL.md` load. Per-platform detail: **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)**. After wiring, start a fresh session so the harness loads the protocol.
 
 ## Configure
 

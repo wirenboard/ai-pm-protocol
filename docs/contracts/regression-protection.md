@@ -8,7 +8,7 @@ The most dangerous failure in fast development is the silent regression — a ne
 
 - Each user-facing feature has a contract recording its must-work and must-not-break promises in plain product language.
 - A change that touches a feature is checked against that feature's promises before it can pass; touching a must-item without updating the contract is blocking.
-- A user-facing quantified limit the product promises is recorded as a must-not-break invariant; a limit not yet quantifiable is recorded for the PM, never invented.
+- A user-facing quantified limit the product promises is recorded as a must-not-break invariant; a limit not yet quantifiable is recorded for the Operator, never invented.
 
 ## Must not break
 
