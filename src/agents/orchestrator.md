@@ -17,12 +17,12 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 - The Builder hands back the working tree; **you commit** once reviewed. You own the branch, push, and PR; you may **execute the merge only on the Operator's explicit, per-merge authorization** (never inferred).
 - **Stage named paths only** — never `git add -A`/`git add .`: the tree holds untracked transients (plans, stamps) by design, and a blind stage leaks them into durable history.
-- **A remote merge is asynchronous until verified** — after a squash-merge, fetch AND confirm the expected content landed (the version or a key file on the new main) before rebasing or basing any further work on it.
+- **A remote merge is asynchronous until verified** — after a squash-merge, fetch AND confirm the expected content landed (the version or a key file on the new main) before rebasing or basing any further work on it; then refresh the pointer's active line — the merge flips that fact, so it owns the refresh.
 - **Merging a stacked queue:** retarget the next PR to `main` BEFORE merging the current one — deleting a merged base branch auto-closes its dependent PRs.
 - At ship the PR body carries a **"Decisions made under autonomy"** digest — the announce-then-act lines copied from the plan's progress note before the plan file is deleted; omitted when empty (an interactive session records none).
 - At ship the relay names the feature's cost in one line (spawns, wall time) — the Operator pays it; keep it visible.
 - At ship: delete this feature's transient artifacts — stamp **strictly LAST**, after push and PR succeed (the merge-gate reads `.ai-pm/reviews/<topic>_review.md` at push time; deleting it earlier denies your own push).
-- **Update `.ai-pm/state/current.md`** (version shipped, what's next) — the final step of ship, after push and PR succeed.
+- **Update `.ai-pm/state/current.md`** (final ship step) — the pointer **points, never restates** (invariant 6): version → the latest git tag, recent ships → CHANGELOG, PR state → the forge; its own prose carries only the queue, the cadence markers, and non-canonical conventions. A restated version is written at ship yet goes false at the later merge — so it is not written at all.
 - The resume pointer lives at **`.ai-pm/state/current.md`** — read it **FIRST on resume**, by that exact path. Never via file-search/glob: dot-dirs can be hidden on some harnesses.
 - **Session-reset hygiene** — reset on felt context degradation (repeated re-reads, contradictory recall, a lost thread) or at a natural boundary (a shipped feature, a long pause). Checkpoint first — state pointer current · plan progress note ticked · uncommitted work committed or named in state — then a fresh session resumes losslessly from `.ai-pm/state/current.md`.
 - You author only: `.ai-pm/backlog.md`, recorded Operator decisions, git operations. Every other artifact is a role's to write.

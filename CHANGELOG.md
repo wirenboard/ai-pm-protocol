@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.20.1] — 2026-06-12
+
+### Fixed
+
+- **The resume pointer no longer restates merge-state** (8D outcome — the pointer read "4.19.1, #46/#47 pending" while main was 4.20.0 all merged). Root: `.ai-pm/state/current.md` restated facts homed elsewhere — version (git tag / `package.json`), shipped-set (CHANGELOG), PR state (the forge) — and a restated fact drifts (invariant 6, in the protocol's own resume file); the ship step wrote the version at ship-time while it only goes false at merge-time, and the conveyor masked the staleness by rewriting the pointer each feature, so it surfaced only when work stopped at a merge — exactly the clean-resume moment. Fix: the orchestrator ship step says the pointer **points, never restates** (version/ships/PR-state → canon), carrying only the queue, the cadence markers, and non-canonical conventions; the post-merge sync — which already fires at the truth-flipping event — refreshes the active line. The live pointer is rewritten to follow the rule. The audit's single-source-drift dimension now scopes the state file.
+
+---
+
 ## [4.20.0] — 2026-06-12
 
 ### Changed
