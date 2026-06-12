@@ -114,8 +114,7 @@ export function enabledModules(registry, config) {
 
 // Resolve the effective toggle VALUE a module runs with (its depth / nonSecurity /
 // …), merging the per-kind default with any config override. Fail-safe: unknown
-// kind ⇒ strict-side defaults. Exposed for setup and for tests; the fragment text
-// itself is depth-agnostic in the skeleton (Slice 2 will branch on it).
+// kind ⇒ strict-side defaults. Exposed for setup and for tests.
 export function effectiveToggle(mod, config) {
   const kind = config && config.kind;
   const sk = strictKind(mod, kind);

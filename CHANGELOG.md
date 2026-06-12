@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.4.1] — 2026-06-12
+
+### Fixed
+
+- **Stale comment in `src/adapter/modules.mjs`** — removed archaeology phrase "Slice 2 will branch on it" from `effectiveToggle` JSDoc; the historical build phase is long done.
+
+---
+
 ## [5.4.0] — 2026-06-12
 
 ### Added
