@@ -36,9 +36,16 @@ function check(name, got, want) {
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-parity-"));
 fs.writeFileSync(path.join(ROOT, "existing.txt"), "real content"); // for truncating-write
 fs.writeFileSync(path.join(ROOT, "README.md"), "readme");          // for allow-read
-const ARCH = path.join(ROOT, "docs", "architecture.md");           // canonical doc (not orch-writable)
 const TOOLING = path.join(ROOT, ".ai-pm", "tooling", "engine.mjs"); // never-writable
 const STAMP = path.join(ROOT, ".ai-pm", "reviews", "x_review.md");  // the Reviewer's deliverable
+
+// A second root with an EXPLICIT `full` profile, for the orchestrator-content case
+// only: the profile default is `solo` (PROTOCOL.md `## Project config`), so on the
+// unconfigured ROOT that deny relaxes — only an explicit `full` keeps it. The
+// default-resolution itself is pinned in rigor-profile.test.mjs.
+const FULL = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-parity-full-"));
+fs.writeFileSync(path.join(FULL, "ai-pm.config.json"), '{ "profile": "full" }');
+const ARCH = path.join(FULL, "docs", "architecture.md");           // canonical doc (not orch-writable)
 
 // Each case carries BOTH platforms' native payloads + the expected ENGINE verdict
 // (pre platform-mapping). `claudeExpect` / `opencodeExpect` override `expect` only
@@ -64,7 +71,8 @@ const FIXTURE = [
   // THE documented actor divergence: the orchestrator-content rule is mechanical
   // on OpenCode (session lookup resolves the actor) but persona on Claude (a hook
   // payload carries no session-role signal → isOrchestrator undefined → allow).
-  { name: "orchestrator-authors-content", claudeExpect: "allow", opencodeExpect: "deny", divergence: true,
+  // Runs on the explicit-`full` root — under the `solo` default this deny relaxes.
+  { name: "orchestrator-authors-content", claudeExpect: "allow", opencodeExpect: "deny", divergence: true, root: FULL,
     claude: { tool_name: "Write", tool_input: { file_path: ARCH, content: "x" } },
     opencode: { tool: "write", args: { filePath: ARCH, content: "x" }, isOrchestrator: true } },
 
@@ -143,20 +151,21 @@ const FIXTURE = [
 console.log("PARITY (each case through both shims → identical engine verdict):");
 const divergences = [];
 for (const c of FIXTURE) {
+  const root = c.root ?? ROOT; // a case may pin its own root (the explicit-`full` one)
   let cv, ov;
   if (c.claude) {
-    cv = claudeDecide(c.claude, ROOT, config).verdict;
+    cv = claudeDecide(c.claude, root, config).verdict;
     check(`claude:${c.name}`, cv, c.claudeExpect ?? c.expect);
   }
   if (c.opencode) {
-    ov = ocDecide(c.opencode.tool, c.opencode.args, ROOT, c.opencode.isOrchestrator ?? false, config).verdict;
+    ov = ocDecide(c.opencode.tool, c.opencode.args, root, c.opencode.isOrchestrator ?? false, config).verdict;
     check(`opencode:${c.name}`, ov, c.opencodeExpect ?? c.expect);
   }
   // Prompt-act cases drive the OpenCode chat.message path (decidePrompt) rather
   // than the tool path — same shared engine, asserting OpenCode reaches the same
   // verdict as Claude on a prompt.
   if (c.opencodePrompt) {
-    ov = ocDecidePrompt(c.opencodePrompt, ROOT, false, config).verdict;
+    ov = ocDecidePrompt(c.opencodePrompt, root, false, config).verdict;
     check(`opencode:${c.name}`, ov, c.opencodeExpect ?? c.expect);
   }
   // Cross-check: where both platforms run and NO divergence is declared, the two
@@ -253,5 +262,6 @@ console.log(`  node-per-call latency ≈ ${msPerCall.toFixed(0)} ms (cold spawn;
 
 // ── cleanup + report ─────────────────────────────────────────────────────────
 fs.rmSync(ROOT, { recursive: true, force: true });
+fs.rmSync(FULL, { recursive: true, force: true });
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

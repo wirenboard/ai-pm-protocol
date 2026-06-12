@@ -12,6 +12,18 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.20.0] — 2026-06-12
+
+### Changed
+
+- **Proportionality by default** (the ceremony-drift 8D outcome) — the default rigor profile flips `full`→`solo`: absent/unrecognised ⇒ `solo` (the orchestrator builds directly, plans are fixup-grade). The protocol named every UNDER-rigor failure and no OVER-rigor one, so ceremony was the unpunished attractor; the dial cuts ceremony, the FLOOR holds rigor unchanged in every profile — a fresh separate Reviewer, the stamp, the merge-gate, and the Operator's explicit merge word carry zero profile dependence (verified in code: the only profile-gated predicate is the orchestrator-content deny). Setup leads the profile dialog with `solo`, naming BOTH costs honestly (ceremony burns the Operator's tokens/time; speed costs one independent build-side context), with `full`/`lite` as a conscious opt-up; a mode-switch-by-words clause flips the profile mid-project without a full setup re-run.
+
+### Added
+
+- **Over-ceremony named as a defect** — the profile definition now states that ceremony above a change's risk is a defect the Operator pays for, not extra virtue; a routing-trigger line classifies each change's lane first; the ship relay names the feature's cost (spawns, wall time). The fix-loop ceiling widens to ANY repeated-failed-attempt loop — review findings, debugging experiments, deploy retries (two failed attempts on a live remote target) — and its escalation carries a declinable **8D offer** (the mirror trigger lands in `## 8D`): a repeatedly-failed fix is the symptom-chasing signal that warrants root-cause analysis.
+
+---
+
 ## [4.19.2] — 2026-06-12
 
 ### Fixed

@@ -64,7 +64,7 @@ export function loadRegistry(root) {
 // ── enabled-resolution (fail-safe to ON / strict side) ────────────────────────
 // The project's kind (config.kind). Unknown/absent ⇒ the strict side: the kind
 // whose defaults this module declares first, falling to "code" — mirrors the
-// engine's projectProfile fail-safe-to-`full`. A module's defaults map names the
+// absent-`mode` ⇒ `interactive` fail-safe. A module's defaults map names the
 // per-kind default toggle; an unknown kind takes the strictest declared default.
 function strictKind(mod, kind) {
   const defaults = mod.defaults || {};

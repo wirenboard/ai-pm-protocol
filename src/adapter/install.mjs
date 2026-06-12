@@ -129,7 +129,7 @@ function ensureConfig(target, platform) {
   if (fs.existsSync(dest)) return;
   const config = {
     mode: "interactive",
-    profile: "full",
+    profile: "solo",
     platform,
     kind: "code",
     roles: {

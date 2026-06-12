@@ -112,7 +112,7 @@ The pieces and their single homes:
 
 **Assembly.** Each install-agents shim builds a role file as `frontmatter + composeBody(floor)`. `composeBody` replaces the role's single marker with the enabled modules' fragments for that role, in **registry order** (stable, declared — not config order). A floor body with no marker takes no modules and is returned unchanged.
 
-**Enabled-resolution** mirrors the engine's `projectProfile` fail-safe:
+**Enabled-resolution** mirrors the absent-`mode` ⇒ `interactive` fail-safe:
 
 - a module is OFF on a literal config `false` (or `{ enabled: false }`) — or, when the config never names it, on a registry-authored per-kind default of literal `false` (a `docs` project gets no UI module); the registry is our data, the config the untrusted input, so only the registry may default a kind off;
 - **every other named config value — `true`, an object, a malformed value — resolves it ON**, with the per-`kind` default merged under any config override; an absent key falls to the per-`kind` default;

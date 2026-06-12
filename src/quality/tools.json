@@ -43,7 +43,7 @@
     },
     {
       "id": "rigor-profile",
-      "checks": "configurable rigor — the engine relaxes the orchestrator-content deny under a lite/solo profile and denies under full/absent/unknown/malformed; the floor (tooling, boundary, truncation, merge-gate, stamp-write) never relaxes under any profile",
+      "checks": "configurable rigor — the engine resolves the profile to solo by default (absent/unknown/malformed/unconfigured) and relaxes the orchestrator-content deny under lite/solo, denying only under an explicit full; the floor (tooling, boundary, truncation, merge-gate, stamp-write) never relaxes under any profile",
       "config": null,
       "run": "node src/adapter/rigor-profile.test.mjs",
       "beat": "build",

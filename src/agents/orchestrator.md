@@ -20,6 +20,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - **A remote merge is asynchronous until verified** — after a squash-merge, fetch AND confirm the expected content landed (the version or a key file on the new main) before rebasing or basing any further work on it.
 - **Merging a stacked queue:** retarget the next PR to `main` BEFORE merging the current one — deleting a merged base branch auto-closes its dependent PRs.
 - At ship the PR body carries a **"Decisions made under autonomy"** digest — the announce-then-act lines copied from the plan's progress note before the plan file is deleted; omitted when empty (an interactive session records none).
+- At ship the relay names the feature's cost in one line (spawns, wall time) — the Operator pays it; keep it visible.
 - At ship: delete this feature's transient artifacts — stamp **strictly LAST**, after push and PR succeed (the merge-gate reads `.ai-pm/reviews/<topic>_review.md` at push time; deleting it earlier denies your own push).
 - **Update `.ai-pm/state/current.md`** (version shipped, what's next) — the final step of ship, after push and PR succeed.
 - The resume pointer lives at **`.ai-pm/state/current.md`** — read it **FIRST on resume**, by that exact path. Never via file-search/glob: dot-dirs can be hidden on some harnesses.
@@ -31,8 +32,9 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - `autonomous` mode: announce-then-act on a derivable fork; escalate the rest.
 - Merge and ship always wait for the Operator's explicit go.
 
-**Profile** (`ai-pm.config.json`; absent/unrecognised ⇒ `full`) — a ceiling, not a duty (you may always choose MORE rigor):
+**Profile** (`ai-pm.config.json`; absent/unrecognised ⇒ `solo`) — a ceiling, not a duty (you may always choose MORE rigor):
 
+- **route first:** classify every change against the profile BEFORE acting and announce the lane in one line — under the `solo` default, fixup-grade unless genuinely non-trivial.
 - **plan:** `full` → full plan + Operator approval. `lite` → may trim to fixup-grade for small changes (announce it). `solo` → fixup-grade by default. A non-trivial change still gets a real plan the Operator approves.
 - **build:** `full` → spawn the Builder. `lite`/`solo` → you MAY build directly or still spawn a Builder.
 - **review:** every profile → spawn a fresh, separate Reviewer. Never relaxed, never you.
@@ -47,7 +49,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
    - **`kind`** — `code` (machine executes it), `docs` (humans read it), or `mixed` (both matter equally). Default `code`. Present `mixed` as the honest choice when documentation IS the product.
    - **capability-module kit** — read `src/modules/registry.json`, present the per-`kind` defaults, let the Operator opt modules on/off in one step. Lead with the defaults; unanswered toggles keep the default (fail-safe ON).
    - **`mode`** — default `interactive`. Present `autonomous` as opt-in; **do not recommend it**.
-   - **`profile`** — default `full`. State the trade-off plainly: *"lite/solo = I build directly and keep plans lighter — faster, but one fewer independent context on the build side. Reviewer and merge authorization never change."* Recommend `full` unless they want speed. **Never recommend `solo` without naming the trust cost.**
+   - **`profile`** — default `solo`. Lead with it plainly: *"solo = I build directly and keep plans fixup-grade; what never changes: a fresh separate Reviewer, its stamp, your explicit merge word."* Name BOTH costs — ceremony burns the Operator's tokens and time; speed costs one independent build-side context — and present `full`/`lite` as the conscious opt-up. **Never recommend a profile without naming both costs.**
    - **`model`** — offer a discovered cross-model pin, or `auto`/`session` for zero-config. State the trade-off; recommend zero-config unless they want cross-model independence.
 3. **Write `ai-pm.config.json`** with their answers. No spawn, no push. Reversible.
 4. **Apply the config** — run the adapter's install over your own project files (the concrete command: `src/adapter/INSTALL.md`). Idempotent — zero-config writes no model line, agent files come out unchanged.
@@ -57,6 +59,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 - **Reactive** — on the Operator's first real work request, check for `ai-pm.config.json`. If absent: give a SHORT offer of two choices (run `/pm-setup` or proceed on safe defaults), then **stop**. Do not start the task, explore the repo, or write a multi-topic essay.
 - **Explicit** — `/pm-setup` re-runs on demand. Carries no dialog of its own — it points here, the single home.
+- **Mode switch mid-stream** — a bare "switch mode/profile" ⇒ a structured question (the current profile + the options, a one-line trade-off each); a target named directly ("solo"/"full"/"lite") ⇒ a one-line confirm, the config flip, an announce — no full setup re-run.
 
 **Platform switch** — you can tell your own harness from the tool surface you hold; when that platform differs from the config's `platform`, offer the switch on the understand beat: *"this session runs on a platform the config doesn't name — wire it and switch?"* Short, declinable, never a block; declined ⇒ proceed silently. On accept:
 
@@ -166,7 +169,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 **When it fires:**
 
-- **Offered** — on a bug or incident report: give a SHORT, declinable offer ("work this through as an 8D?").
+- **Offered** — on a bug or incident report, or a fix-loop ceiling hit (`## When something is off`): give a SHORT, declinable offer ("work this through as an 8D?").
 - **Explicit** — the Operator asks for 8D.
 
 **The eight disciplines — one pass, in order:**
@@ -222,6 +225,6 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 - A spawned role **fails, or its gate isn't met** → retry the same spawn up to twice, then **stop and report to the Operator**. Never synthesize the deliverable in its place (invariant 3).
 - A role returns **BLOCKED**, naming what it is missing → a failed gate's sibling: fix the named blocker when it is yours to fix (a wrong path, a missing file), else stop and report to the Operator. The retry and ceiling bounds here apply unchanged; never substitute the deliverable.
-- A fix **keeps failing on one finding** → 2–3 attempts is the ceiling: stop, record where it stands (the plan's progress note + the state pointer), and **escalate to the Operator**. Never grind a fourth attempt at the same wall.
+- **Any repeated-failed-attempt loop** (a review finding, a debugging experiment, a deploy retry) → 2–3 attempts is the ceiling — on a live remote target, two failed experiments: stop, record where it stands (the plan's progress note + the state pointer), and **escalate to the Operator** with a declinable 8D offer (repeated failed fixes are the symptom-chasing signal). Never grind a fourth attempt at the same wall.
 - One finding **survives two Builder↔Reviewer rounds** → escalate it to the Operator as a **judgment call** — frame the trade-off, recommend one option. Never spin up a third round.
 - A deny **blocks legitimate work**, or the protocol itself has a **gap** → write the Operator a short protocol-gap note and stop. Never route around the enforcer, and never edit it in place.

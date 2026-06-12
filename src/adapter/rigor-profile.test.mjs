@@ -1,10 +1,14 @@
 // Configurable rigor — the engine respects ai-pm.config.json `profile`.
 //
 // The ONE mechanical change the profile makes: it relaxes the
-// orchestrator-content deny (the orchestrator may author source/doc paths) under
-// `lite`/`solo`, and ONLY that predicate. This test proves:
-//   1. orchestrator source WRITE is ALLOWED under lite/solo,
-//   2. and DENIED under full / absent / unknown / malformed (fail-safe to strict),
+// orchestrator-content deny (the orchestrator may author source/doc paths), and
+// ONLY that predicate. The default is `solo` — proportionality by default
+// (PROTOCOL.md `## Project config`) — so the relaxation also holds on absent /
+// unknown / malformed / unconfigured; only an explicit `full` keeps the deny.
+// This test proves:
+//   1. orchestrator source WRITE is ALLOWED under lite / solo / absent / unknown /
+//      malformed / no config at all (the solo default, pinned directly in 1b),
+//   2. and DENIED under an explicit `full`,
 //   3. the FLOOR never relaxes — under `solo`, the tooling-submodule, out-of-root,
 //      truncating-write, and merge-gate denies ALL still fire.
 //
@@ -13,7 +17,7 @@
 //
 // Run: node src/adapter/rigor-profile.test.mjs
 
-import { evaluate, loadConfig } from "./engine.mjs";
+import { evaluate, loadConfig, _internals } from "./engine.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -32,6 +36,7 @@ function check(name, got, want) {
 // (a JSON fragment, or "" for the absent case, or garbage for the malformed case).
 function rootWith(profileLine) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pm-rigor-"));
+  if (profileLine === "NONE") return root; // unconfigured — no config file at all
   let body;
   if (profileLine === "MALFORMED") body = "{ this is not json";
   else if (profileLine === null) body = "{}"; // configured, profile key ABSENT
@@ -50,19 +55,28 @@ function orchWriteVerdict(root) {
 
 console.log("RIGOR PROFILE — orchestrator-content relaxation:");
 
-// 1. lite / solo ALLOW the orchestrator source write (relaxation fires).
-for (const p of ["lite", "solo"]) {
-  const root = rootWith(p);
-  check(`orch-write:${p}:allows`, orchWriteVerdict(root).verdict, "allow");
+// 1. lite / solo — and every default-resolving case (absent / unknown / malformed /
+//    unconfigured) — ALLOW the orchestrator source write: `solo` is the default.
+for (const [label, line] of [["lite", "lite"], ["solo", "solo"], ["absent", null], ["unknown", "bogus"], ["malformed", "MALFORMED"], ["unconfigured", "NONE"]]) {
+  const root = rootWith(line);
+  check(`orch-write:${label}:allows`, orchWriteVerdict(root).verdict, "allow");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
-// 2. full / absent / unknown / malformed DENY (fail-safe to strict).
-for (const [label, line] of [["full", "full"], ["absent", null], ["unknown", "bogus"], ["malformed", "MALFORMED"]]) {
+// 1b. the default itself, pinned directly: absent / unknown / malformed /
+//     unconfigured all resolve to `solo` (proportionality by default), never `full`.
+for (const [label, line] of [["absent", null], ["unknown", "bogus"], ["malformed", "MALFORMED"], ["unconfigured", "NONE"]]) {
   const root = rootWith(line);
+  check(`profile-default:${label}:solo`, _internals.projectProfile(root), "solo");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 2. an explicit `full` DENIES — the conscious strict opt-up.
+{
+  const root = rootWith("full");
   const v = orchWriteVerdict(root);
-  check(`orch-write:${label}:denies`, v.verdict, "deny");
-  check(`orch-write:${label}:ruleId`, v.ruleId, "orchestrator-authors-content");
+  check("orch-write:full:denies", v.verdict, "deny");
+  check("orch-write:full:ruleId", v.ruleId, "orchestrator-authors-content");
   fs.rmSync(root, { recursive: true, force: true });
 }
 

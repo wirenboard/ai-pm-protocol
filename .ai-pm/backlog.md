@@ -2,6 +2,18 @@
 
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
+## `profile: yolo` — a named escape hatch OUTSIDE the reliability guarantee — Operator decision 2026-06-12, queue position ~1.7
+
+The Operator wants a fourth profile for hypothesis-checking and prototyping: the orchestrator does EVERYTHING alone — no Builder spawn, no per-change Reviewer, AND **no batch review before merge** (the mechanical merge-gate goes off for a yolo project). The plan collapses into a RUNNING SPEC kept current during the run; the durable artifact is the docs, which survive even when the code is discarded. Conscious tech-debt for maximum speed; the code is then either brought to standards or rewritten from scratch against the spec through the normal loop.
+
+**This is a constitutional amendment, not a profile addendum — scope it as such:**
+
+- **The manifesto must be reframed honestly.** Today: "a profile that cuts the floor is no protocol; the floor holds in every profile." yolo cuts the floor, so the claim becomes false unless reframed: full/lite/solo are the GUARANTEE profiles (floor enforced); **yolo is a named escape hatch that trades the guarantee for speed, under informed consent.** The manifesto keeps integrity by NAMING this, not by pretending the floor is universal. The product promise ("reliability that doesn't depend on remembering") reworded to scope it to the guarantee profiles.
+- **The mechanical merge-gate becomes profile-aware** — a `[mechanical]` deny going OFF for yolo: a security-relevant enforcement change needing its own threat pass (what stops a project silently sitting in yolo? the honest answer: the Operator chose it, setup disclosed it, the audit cadence catches drift).
+- **The one floor yolo KEEPS:** the Operator's explicit per-merge authorization. That is not independent review — it is the Operator consciously taking the risk, which is the whole basis of "responsibility on the user." (The Operator did NOT ask to remove this.)
+- **Compensating control:** the audit cadence becomes yolo's PRIMARY safety net (not a supplement) — offered every N features as a full-review "bring to standards" sweep; the yolo setup framing states this is the catch-up gate.
+- Touches: PROTOCOL.md manifesto + `## Project config` + invariant 3 phrasing; the merge-gate deny + engine `projectProfile`; `disciplined-pipeline.md` / `cross-session-enforcement.md` contracts; the product promise; setup's profile dialog (the fourth option, with brutally honest disclosure: debt is conscious, the mechanical gate is off, code-discard is a legal outcome); rigor-profile + merge-gate tests. Its own threat-discovery-grade pass on the gate-off surface.
+
 ## Audit 4.19.0 Low-2 — orchestrator length watch — 2026-06-12
 
 `orchestrator.md` sits at the upper edge of "readable in one sitting". The rule for the NEXT side-tool addition: trim or fold, never append past the edge. (Low-1, the `Validation` stamp label, resolved in 4.19.2 — dropped, no live consumer.)
@@ -24,6 +36,7 @@ The proactive trigger is in (orchestrator `## Audit`: offer after ~5 shipped fea
 - **Temporal-status conflation** — "planned / interim / temporary" in one doc vs "done / current" in another.
 - **Whole-tree code-quality sweep** — legacy or never-diff-reviewed code; cross-cutting patterns invisible per-diff (architectural and functional/integration review types).
 - **Instruction-file overreach** — decision/security content sitting in a harness instruction file (CLAUDE.md-class) whose own pointer says it is owned by `docs/` canon; remediation is move-not-copy.
+- **Asymmetric failure-naming** (8D ceremony-drift, D7) — a dial/gate whose failure modes are named on ONE side only breeds drift to the unnamed side: sweep for it (doc-quality names bloat but not brevity-to-uselessness; audit cadence names under- but not over-auditing; the profile dial named under-rigor but not over-ceremony until 4.20.0). Each found asymmetry is a candidate fix.
 
 ## `research` as a doing side-tool — 2026-06-11 (post-restructure queue)
 

@@ -2,12 +2,14 @@
 
 > Resume pointer — READ FIRST, by this exact path. Deferred detail: `.ai-pm/backlog.md`. History: commits + CHANGELOG.
 
-**Status (2026-06-12).** `main` = `uni/main` = **4.19.1** (PRs #25–#45). **Active:** `fix/merge-gate-parsing` = **4.19.2**, shipping (review APPROVED whole-branch incl. the traversal HIGH); `proportionality by default` cut next, stacked.
+**Status (2026-06-12).** `main` = `uni/main` = **4.19.1** (PRs #25–#45). Stacked, awaiting Operator merge IN ORDER: **PR #46** (`fix/merge-gate-parsing`, 4.19.2) → **PR #47** (`feature/proportionality-default`, 4.20.0, stacked on #46, review APPROVED). Then queue: yolo escape-hatch (constitutional, see backlog) → rename 5.0.0 → migration → modularity → plan-adversary → feedback-as-issues.
 
 ## What was just shipped
-- 4.17.0 (#41) — threat discovery (standing model); npx distribution; autonomy-decision journal
-- 4.18.0 (#44, replaced auto-closed #42) — inject blindness fixed; loop ceilings; platform switch with model revalidation
-- 4.19.0 (#43) — verification ladder (`Runtime verification:` stamp line); BLOCKED return contract; session-reset hygiene
+- 4.18.0 (#44) — inject blindness fixed; loop ceilings; platform switch with model revalidation
+- 4.19.0 (#43) — verification ladder; BLOCKED return contract; session-reset hygiene
+- 4.19.1 (#45) — git discipline from the stacked-merge 8D
+- 4.19.2 (#46 pending) — merge-gate parsing (topic-from-ref, heredoc-aware) + topic path-traversal HIGH closed
+- 4.20.0 (#47 pending) — proportionality by default: default profile full→solo (floor untouched), over-ceremony named a defect, ceiling→8D edge, cost visibility
 
 ## Up next
 Operator-ordered queue (2026-06-12): (1) **merge-gate parsing fixes** — traversal addendum in build; (1.5) **proportionality by default** (8D ceremony-drift outcome, Operator-grown): default profile → `solo` (floor untouched), routing trigger, over-ceremony named as a defect, cost line in ship relay, setup explains both costs — all in the SHIPPED bodies (downstream-universal); rigor-profile tests updated deliberately; (2) **RENAME ai-pm-protocol → ai-dev-protocol, MAJOR 5.0.0** (Operator decision: FULL depth — repo renamed to `ai-dev-protocol` (clean, no -uni), package/bin, titles, AND internals: `.ai-pm/`→`.ai-dev/`, `ai-pm.config.json`→`ai-dev.config.json`, agent id `ai-pm`→`ai-dev`, every path in hooks/engine/tests; INSTALL Upgrade gains the MAJOR what-to-rename entry + the F4 migration test rides — cheapest now at 0 downstreams); (3) **old-protocol migration** (design DECIDED — see backlog; written in post-rename names); (4) **modularity module**; (5) **plan-adversary** (fork at planning: Reviewer mode vs module); (6) **downstream feedback-as-issues** (When-something-is-off extension + .github issue template; ask-class consent covers opt-in).

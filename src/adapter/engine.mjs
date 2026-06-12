@@ -304,16 +304,19 @@ function productBriefFilled(root) {
   catch { return false; } // absent or unreadable ⇒ no brief
   return !BRIEF_TEMPLATE_MARKERS.some((m) => text.includes(m));
 }
-// The project's rigor profile (ai-pm.config.json `profile`). Fails SAFE to the
-// strict default "full" on absent / unreadable / malformed / unknown value — so a
-// bad value can only ever DENY more, never widen a floor (mirrors absent-mode →
-// the safer "interactive"). Only "lite"/"solo" relax; everything else ⇒ "full".
-// Same presence/value read within invariant 2 as projectConfigured — never a write.
+// The project's rigor profile (ai-pm.config.json `profile`). Defaults to "solo"
+// on absent / unreadable / malformed / unknown value — proportionality by default
+// (PROTOCOL.md `## Project config`), a deliberate Operator decision, not fail-strict:
+// the ONLY predicate this gates is the orchestrator-content deny; the floor
+// predicates (tooling, boundary, truncation, merge-gate, stamp-write) never read
+// the profile, so the default widens no floor. Only an explicit "full" keeps the
+// strict lane. Same presence/value read within invariant 2 as projectConfigured —
+// never a write.
 function projectProfile(root) {
   try {
     const cfg = JSON.parse(fs.readFileSync(path.join(path.resolve(root), "ai-pm.config.json"), "utf8"));
-    return cfg.profile === "lite" || cfg.profile === "solo" ? cfg.profile : "full";
-  } catch { return "full"; }
+    return cfg.profile === "full" || cfg.profile === "lite" ? cfg.profile : "solo";
+  } catch { return "solo"; }
 }
 
 // ── predicates: (input, config) => boolean ───────────────────────────────────
