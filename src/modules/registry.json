@@ -208,6 +208,22 @@
       }
     },
     {
+      "id": "elicitation",
+      "for": "Angle-changing inquiry at decision points — a draft brief section, a feature plan, a captured idea — via a compact technique catalog (pre-mortem, inversion, user role-play, persona panel…); entry always offers a depth choice (light default / deeper / skip), one technique per round, never a block. The catalog and the Builder's plan-beat round live here; the interactive offer is the orchestrator's `## Elicitation`.",
+      "toggle": { "depth": "rich | light" },
+      "defaults": {
+        "code": { "depth": "light" },
+        "docs": { "depth": "light" },
+        "mixed": { "depth": "rich" }
+      },
+      "targets": [
+        { "role": "builder", "beat": "plan" }
+      ],
+      "fragments": {
+        "builder": "src/modules/elicitation/builder.md"
+      }
+    },
+    {
       "id": "plan-adversary",
       "for": "Adversarial self-probe of the plan draft before build — name the most plausible failure, surface missing scenarios, replace fuzzy criteria, expose hidden structural forks — so the plan's weaknesses are found before the build, not during review.",
       "toggle": { "depth": "rich | light" },

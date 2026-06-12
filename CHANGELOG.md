@@ -12,6 +12,17 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.6.0] — 2026-06-12
+
+### Added
+
+- **`elicitation` capability module** (BMAD-inspired, our shape) — angle-changing inquiry at decision points: a drafted brief section, a feature plan, an idea captured to the backlog. A compact ~12-technique catalog (`src/modules/elicitation/catalog.md` — pre-mortem, inversion, user role-play, persona panel, scale shock…) is the one home; the Builder gets a plan-beat fragment; the interactive offer is the orchestrator's new `## Elicitation` (PROTOCOL.md side-tool line added). The entry rule, per the Operator: **depth choice first, always** — light (one technique, default) / deeper / skip; one technique per round; never a block; stop at the first "enough". Closes the capture-time-elicitation backlog item.
+- **Browser walkthrough in the ui-ux reviewer fragment** — `[rich]` item: where the environment carries a browser tool (Playwright-class), the Reviewer drives the live surface (screenshot, accessibility snapshot, console, primary-path click-through) with captured evidence per finding; honest residual named where no browser tool exists.
+- **`docs/decisions/bmad-adoption.md`** — the research artifact: what BMAD does, what was adopted (three mechanics), what was consciously not (the 12-agent roster, story-file pipelines, the 79-technique catalog size).
+- **README `## Acknowledgements`** — credits the projects whose ideas the protocol reshaped: BMAD Method (nominative reference per its trademark guidelines; no code copied), the 8D discipline, Keep a Changelog + SemVer.
+
+---
+
 ## [5.5.1] — 2026-06-12
 
 ### Fixed

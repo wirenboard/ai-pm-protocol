@@ -55,6 +55,7 @@ Side-tools and shortcuts (not pipeline beats):
 - **`audit`** `[persona]` — whole-project health-check: the quality suite plus a fresh auditor sweep over the whole tree. Offered on a shipped-feature cadence, before a release/rollout, or as an "audit on top" of a `solo`/`lite` batch. Single home: orchestrator's `## Audit`.
 - **`setup`** — writes `ai-dev.config.json` through a plain-language dialog: roles, models, mode, profile, platform, kind. Platform-neutral — the same flow on every harness. Fires lazily on an unconfigured project (declinable offer, never a block) or on `/dev-setup`. Single home: orchestrator's `## Setup`.
 - **`8D`** `[persona]` — failure-analysis for a bug or production incident: drives past the symptom patch to root cause and systemic prevention. Offered (declinable, never a gate). Single home: orchestrator's `## 8D`.
+- **`elicitation`** `[persona]` — stress-tests a draft (a brief section, a feature plan, a captured idea) by changing the angle of inquiry; entry always offers a depth choice, light by default, declinable. Single home: orchestrator's `## Elicitation`; the technique catalog: `src/modules/elicitation/catalog.md`.
 - **`downstream feedback`** `[persona]` — triages a downstream problem report into this repo's backlog or a GitHub issue; the Operator carries the report, the session maps it to the protocol's structure. Single home: orchestrator's `## Downstream feedback`.
 
 ---

@@ -73,6 +73,14 @@ ai-dev.config.json  the project's choices — roles, mode, platform, kind
 
 This repo develops itself under its own protocol — the same loop, roles, and checks it ships. Start with `PROTOCOL.md` (the rules), `docs/architecture.md` (how it is built), and the `src/quality/` checks: `node src/adapter/parity.test.mjs` and `node src/quality/neutral-prose.test.mjs`.
 
+## Acknowledgements
+
+Ideas this protocol gratefully borrowed and reshaped:
+
+- **[BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)** — the elicitation mechanic (a technique menu offered at decision points) and the browser-driven UX review, adopted in our shape as the `elicitation` capability module and the ui-ux reviewer's browser walkthrough (`docs/decisions/bmad-adoption.md` records what was taken and what consciously was not).
+- **The 8D problem-solving discipline** (Ford's Eight Disciplines) — the failure-analysis side-tool follows its eight steps.
+- **[Keep a Changelog](https://keepachangelog.com/) and [SemVer](https://semver.org/)** — the release record's format and versioning contract.
+
 ## License
 
 MIT — free use, including commercial. Modifications may stay closed; there is no copyleft.

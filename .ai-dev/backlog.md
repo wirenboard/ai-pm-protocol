@@ -2,49 +2,6 @@
 
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
-## `explore-a-codebase` contract point missing from tool-map.json — 2026-06-12
-
-`tool-map.json` maps `spawn-a-sub-agent` generically but has no entry for specialized read-only exploration (Claude Code's `Explore` subagent type). On Claude Code the orchestrator passes `subagent_type: "Explore"` directly (works, but undocumented in the adapter); on OpenCode there is no registered analog — the model must infer "use a generic task with read-only instructions." Fix: add `explore-a-codebase` row to `tool-map.json` with `claude: "Agent(subagent_type=Explore)"` / `opencode: "task(read-only instructions)"`. Small fixup in tool-map.json + one line in docs/architecture.md.
-
-## `profile: yolo` — a named escape hatch OUTSIDE the reliability guarantee — Operator decision 2026-06-12, queue position ~1.7
-
-The Operator wants a fourth profile for hypothesis-checking and prototyping: the orchestrator does EVERYTHING alone — no Builder spawn, no per-change Reviewer, AND **no batch review before merge** (the mechanical merge-gate goes off for a yolo project). The plan collapses into a RUNNING SPEC kept current during the run; the durable artifact is the docs, which survive even when the code is discarded. Conscious tech-debt for maximum speed; the code is then either brought to standards or rewritten from scratch against the spec through the normal loop.
-
-**This is a constitutional amendment, not a profile addendum — scope it as such:**
-
-- **The manifesto must be reframed honestly.** Today: "a profile that cuts the floor is no protocol; the floor holds in every profile." yolo cuts the floor, so the claim becomes false unless reframed: full/lite/solo are the GUARANTEE profiles (floor enforced); **yolo is a named escape hatch that trades the guarantee for speed, under informed consent.** The manifesto keeps integrity by NAMING this, not by pretending the floor is universal. The product promise ("reliability that doesn't depend on remembering") reworded to scope it to the guarantee profiles.
-- **The mechanical merge-gate becomes profile-aware** — a `[mechanical]` deny going OFF for yolo: a security-relevant enforcement change needing its own threat pass (what stops a project silently sitting in yolo? the honest answer: the Operator chose it, setup disclosed it, the audit cadence catches drift).
-- **The one floor yolo KEEPS:** the Operator's explicit per-merge authorization. That is not independent review — it is the Operator consciously taking the risk, which is the whole basis of "responsibility on the user." (The Operator did NOT ask to remove this.)
-- **Compensating control:** the audit cadence becomes yolo's PRIMARY safety net (not a supplement) — offered every N features as a full-review "bring to standards" sweep; the yolo setup framing states this is the catch-up gate.
-- Touches: PROTOCOL.md manifesto + `## Project config` + invariant 3 phrasing; the merge-gate deny + engine `projectProfile`; `disciplined-pipeline.md` / `cross-session-enforcement.md` contracts; the product promise; setup's profile dialog (the fourth option, with brutally honest disclosure: debt is conscious, the mechanical gate is off, code-discard is a legal outcome); rigor-profile + merge-gate tests. Its own threat-discovery-grade pass on the gate-off surface.
-
-## RENAME ai-dev-protocol → ai-dev-protocol — MAJOR 5.0.0, STANDALONE — Operator decision 2026-06-12
-
-Operator: "dev" is honester than "pm" (it is AI-assisted DEVELOPMENT, not just project management). FULL depth, its own feature, NOT bundled with anything (it is the first-ever MAJOR; the migration story gets exercised here). Operator flag: "префиксы агентов и скиллы и всё потянет за собой" — the surface is the whole role nomenclature, not just paths.
-
-**Scope (the whole "pm" nomenclature, resolved consistently):**
-
-- Repo `ai-dev-protocol` → `ai-dev-protocol` (clean, no -uni; GitHub redirects old URL); package + bin name; titles/prose.
-- **Agent prefixes (fork to resolve at planning):** `ai-pm` → `ai-dev` (orchestrator); `dev-builder`/`dev-reviewer` → `dev-builder`/`dev-reviewer` (the `pm-` prefix is the same "pm" being renamed) — OR drop the prefix to `builder`/`reviewer`. Decide at plan; whatever it becomes, the config `roles.*.agent` bindings, both adapters' assembled filenames, and every spawn-by-id follow.
-- **Skills/commands:** `/dev-setup` → `/dev-setup` (the command body, both platforms' command frontmatter, the `.claude/commands/` + `.opencode/commands/` filenames, every doc reference).
-- **Internals:** `.ai-dev/` → `.ai-dev/` (state, plans, reviews, audit, 8d, backlog, tooling carve-out); `ai-dev.config.json` → `ai-dev.config.json`; every path in hooks, `engine.mjs`, `deny-rules.json` (the tooling/stamp/state path patterns), tests, INSTALL.md.
-- INSTALL `## Upgrade` gains the MAJOR what-to-rename entry (the first real content for that path); the F4 migration test rides (installer re-run over prior-version artifacts). Cheapest now at 0 downstreams.
-- Honesty: a MAJOR-bump-confirmation is itself a backlog item (salvaged residual) — this rename is the live case to wire it.
-
-## OpenCode default permissions — boundary-strict, rest-permissive — Operator design 2026-06-12
-
-Operator philosophy: "не вылезать за пределы проекта без спросу, остальное — на духу." Maps to the existing enforcement taxonomy: the project boundary is already the strictest tier (the plugin's mechanical outside-root deny, invariant 2 — independent of any permission setting). The gap: OpenCode's NATIVE permissions can ask before bash/edit ON TOP of the plugin (double-ask ritual). Fix: the generated `opencode.json` default `permission` block becomes `{ "edit": "allow", "bash": "allow", "webfetch": "allow" }` (plus the existing `"question": "allow"`) — the plugin is the SOLE guard, full speed inside the project, mechanical deny at the boundary. Ask-class (force-push, remote mutate) already falls to persona on OpenCode (no ask-hook). One INSTALL line names the division of labor (plugin = boundary mechanical; native permission = speed dial for the rest). **Honest residual to record in that line:** the bash boundary is best-effort (the engine parses obvious path tokens; an obfuscated escape like `python3 -c "open('/abs')"` carries none) — exact on read/write/edit tools, best-effort on bash; airtight bash is a separate heavy hardening (cwd-jail), out of scope. webfetch=allow because research needs it; the exfil axis (sending data out) is a separate persona rule, not a filesystem-boundary concern. Pending Operator's choice: own small feature, or attach to the rename pass (which already retouches the adapter).
-
-## Opaque-bash classifier — boundary opacity as the signal — Operator idea 2026-06-12 (pairs with the OpenCode-permissions item above)
-
-Closes the honest residual in the permissions item: the engine cannot trace paths THROUGH an interpreter, so instead of tracing it DETECTS opacity and treats opacity as the signal — a bash act that runs inline interpreter code (`python3 -c`, `node -e`, `perl -e`, `sh -c <blob>`), decodes-then-executes (`base64 -d | sh`, `curl … | sh`), or `eval`s a substitution is statically un-boundary-checkable. The unfelt→felt prosthesis from the META deficit catalog: an obfuscated escape looks like clean bash; the classifier makes it felt.
-
-**Design forks (why this is a small FEATURE, not a fixup — deny-layer false-positive tuning needs review):**
-
-- **ask/warn, NOT deny** — a hard deny on every `python3 -c` breaks legitimate work, and a false-positive on the deny layer is worse than nothing (trains bypass). The opacity verdict escalates to ask (persona on OpenCode, no ask-hook), never a hard block; worst case is one confirmation.
-- **Anti-ritual tuning** — to avoid dinging `python3 -c "print(1)"`, the classifier peers INSIDE the opaque blob for boundary-relevant tokens (absolute path, `..`, a network call) and flags only those. This tuning is the expensive, review-worthy part.
-- **Honest ceiling** — heuristic = arms race; it raises the bar on accidental/obvious dirty bash (the Operator's "ловить совсем грязный"), it does NOT make the boundary airtight vs an adversary. The label must say so. Airtight = a cwd-jail/sandbox, separate heavy work.
-- Mechanism sits beside the just-hardened bash verb/heredoc parsing (`engine.mjs`); composes with the OpenCode-permissions item (same bash-boundary surface) — do them as one pass.
 
 ## Audit 4.19.0 Low-2 — orchestrator length watch — 2026-06-12
 
@@ -71,10 +28,6 @@ The proactive trigger is in (orchestrator `## Audit`: offer after ~5 shipped fea
 - **Asymmetric failure-naming** (8D ceremony-drift, D7) — a dial/gate whose failure modes are named on ONE side only breeds drift to the unnamed side: sweep for it (doc-quality names bloat but not brevity-to-uselessness; audit cadence names under- but not over-auditing; the profile dial named under-rigor but not over-ceremony until 4.20.0). Each found asymmetry is a candidate fix.
 - **Single-source drift includes `.ai-dev/state/current.md`** (8D pointer-lied, D7) — the resume pointer is durable canon, not exempt from invariant 6; the audit's single-source-drift dimension scans it for restated facts (version, shipped-set, PR state) that belong to the tag / CHANGELOG / forge.
 
-## `research` as a doing side-tool — 2026-06-11 (post-restructure queue)
-
-Modules shape *thinking* (checklists); `research` should *do* work: investigate (market / competitor / user / stack), synthesize a COMPACT decision-base artifact in `docs/decisions/` (the home already exists), with retention discipline — compact, human-readable, superseded-not-accumulated. Pairs with the product-advocate module: the advocate ASKS "who's the user?", research ANSWERS with evidence. Design fork to resolve: who authors the artifact (a spawned role, per invariant — the orchestrator routes, never authors canon).
-
 ## Parallel feature work — Operator request 2026-06-12
 
 Today the loop is strictly serial: one session drives one feature, one branch per PR, the state pointer names ONE active plan. Features with disjoint surfaces could run in parallel — the platform offers concurrent sub-agents and git worktrees. Design questions: per-feature state (the pointer is singular); branch isolation (PROTOCOL `## Git flow`: conflicts ⇒ stale branch, cut fresh — parallel branches invite exactly that); the stamp/merge-gate is already per-topic (holds as-is); Operator bandwidth (plans and merges still serialize through one human — the honest bottleneck). Cheap 80% already allowed: several features batched on one branch serially. The real epic: worktree-per-feature with interleaved Builder spawns. Scope honestly before building. Field notes from the first stacked-PR conveyor (8D, 2026-06-12): a dependent PR auto-closes when its base branch is deleted by a merge — retarget the next PR to main BEFORE merging the current one; a remote squash-merge is asynchronous — verify the content landed before rebasing onto it; the per-topic stamp/merge-gate held throughout (two honest denials).
@@ -87,25 +40,9 @@ The packaging shipped 4.17.0 (`npx github:aadegtyarev/ai-dev-protocol-uni <targe
 
 The Operator asked to roll the protocol into ad-md-editor; this repo's session cannot (the project-boundary deny blocks cross-repo writes, correctly). Run `node src/adapter/install.mjs` against it from its own checkout/session. First real downstream = the strongest install + upgrade test we lack (N=1 → N=2; `docs/product.md` success criterion).
 
-## Old-protocol migration — design DECIDED (Operator, 2026-06-12); queue position 2
-
-**The insight (Operator):** an old-protocol downstream is a brownfield whose DOCS are more accurate than its code as a source — the old protocol's discipline kept them true, just bloated. So the content migration is doc bootstrap with a richer source, not a new procedure.
-
-**Decided shape (no new orchestrator section — the length watch holds):**
-
-1. **Content procedure → `## Doc bootstrap` source mode** (~5-6 lines): old-protocol docs present ⇒ the Builder drafts FROM the old docs as primary source, compressed into the new templates under the new ceilings; the TREE is the verification ground — an old-doc claim contradicting the code surfaces as a finding, never migrates silently; old docs are DELETED once their truth moves (supersede, one home); then a comment de-water pass over the code (wall comments duplicating docs go; the local *why* stays — invariant 6 on code); then a closing whole-project audit is offered.
-2. **Wire runbook → `INSTALL.md ## Upgrade`**: the mechanical half — the one-command install lays the new structure; cleanup of the old surface (old pm-* agent roster, WORKFLOW.md, `.ai-dev/tooling` submodule/symlinks); the MAJOR-bump framing already lives there.
-3. **F4 migration test** rides: installer re-run over a PRIOR version's artifacts (the idempotency test covers only fresh installs).
-
-Live case: nula (execution still in ITS session when the WAIT lifts). Harness note kept: a long OpenCode session can hit a SQLite session-insert failure killing every spawn — restart; an environment crash is a failed gate, never a license to self-substitute (invariant 3).
-
 ## Downstream→upstream protocol-feedback loop — 2026-06-07
 
 Formalize the existing hand-relayed channel: a downstream's model emits a raw problem report about the protocol as it experienced it; the upstream model maps it onto the protocol's structure (root cause, owning file, minimal fix, dedup against backlog). Open questions: transport without violating the project boundary (the report is authored downstream, CARRIED by the Operator — never the upstream model reading into a downstream repo); privacy (no downstream content leaks); opt-in per downstream.
-
-## Ideation / capture-time elicitation + accessibility — 2026-06-06 (downstream: nula)
-
-Product discovery (shipped) covers the PRODUCT level; nothing scaffolds the per-idea level: a non-trivial idea captured to the backlog gets no design-space interrogation (actors and addressing/identity, multi-party isolation, loss/failure/recovery modes, privacy/deniability surface, accessibility incl. assistive tech), so parked ideas carry deep holes invisibly and completeness falls on Operator memory. Fix direction: capturing a non-trivial idea is an elicitation act — a short cross-domain probe, suggestion-only and proportional (a trivial idea gets no six-axis interrogation). Accessibility's review-time half shipped in the ui-ux module (4.16.0); what remains here is its place in the capture-time probe.
 
 ## META: "deficit → prosthesis" as a protocol-design method — 2026-06-06 (Operator-originated)
 
@@ -128,23 +65,17 @@ Two artifact tracks: (1) a living deficit catalog (each: prosthesis, felt/unfelt
 
 The flagship unfelt-deficit prosthesis. Decided design (Operator, 2026-06-06): a **standalone CLI** (not an MCP server; wrappable later), tiered backend (tree-sitter/ctags → LSP → data-flow tools) emitting ONE normalized graph; **surface uncertainty, don't hide it** — unresolved/dynamic edges marked explicitly (converts the unfelt deficit into a felt one). Contract mapping splits: structural conformance deterministic and cheap (surface drift, forbidden edge, reachability — adapt the existing fitness-function tool class), semantic conformance stays AI-judgment + tests. Prerequisite: contracts carry a machine-resolvable anchor (`path::symbol`), a contract-format change that is its own small feature. Minimal first step: tree-sitter wrapper + surface-drift detector against anchors.
 
-## Salvaged residuals from the parked protocol-hardening branch — 2026-06-06 (re-implement fresh; AGPL-era branch deleted)
+## Assembled-agent drift check for the orchestrator — 2026-06-12 (reviewer note, 5.6.0)
 
-Still-open ideas (the rest of that plan shipped in other forms — cross-model review, semgrep, test discipline):
+No quality check compares the COMMITTED assembled orchestrator (`.opencode/agents/ai-dev.md`) against its source (`src/agents/orchestrator.md`) — parity covers deny rules, install-modules covers builder/reviewer composition; the assembled orchestrator went stale between 5.4.0 and 5.6.0 unnoticed. Candidate: a byte-compare test row (assemble fresh, diff against committed), same pattern as the plugin drift guard.
 
-- **Plan-adversary pass**: an adversarial review of the PLAN DRAFT itself (what breaks, what's missing, fuzzy expected values, hidden structural forks) — the plan is the review's ground truth, so an error IN the plan is caught by no one. Distinct from post-build review. Could be a Reviewer mode or a capability module.
-- **Version-bump confirmation + release rollback**: a bump above PATCH confirmed with the Operator; "roll back the release" as a named procedure (revert the merge commit, re-tag).
-- **Per-seat default model matrix**: the config supports per-seat models; the open part is a recommended DEFAULT matrix (spend thinking where errors propagate furthest). Operator caveat from a failed prior attempt: revisit deliberately; no weak models on generative seats.
+## Per-seat default model matrix — 2026-06-06 (salvaged residual)
+
+The config supports per-seat models; the open part is a recommended DEFAULT matrix (spend thinking where errors propagate furthest). Operator caveat from a failed prior attempt: revisit deliberately; no weak models on generative seats.
 
 ## Platform built-ins survey — safe orchestrator offload — 2026-06-08/09
 
 Survey both platforms' built-in tools/agents and map which are safe for the orchestrator's AD-HOC use (offload instead of inline work): read-only and no role-overlap ⇒ allow (e.g. a read-only explorer for parallel analysis); write-capable generic or role-overlap ⇒ stays denied (`general`/`build`/`plan` — the role-substitution deny). Open question: does a write-capable ad-hoc generic ever have a legitimate seat, and can the deny distinguish intent? Outcome: a documented routing note (which built-ins the orchestrator may use for what) + possibly widened safe offload.
-
-## state/current.md + backlog.md tracking — gitignore or feature-branch-only? — 2026-06-10
-
-The resume pointer is per-session orchestrator bookkeeping yet git-tracked — a recurring tension with "never commit to main": a state refresh between features has no branch to ride (hit again 2026-06-12: the merge-gate denies a stampless push of main, so state rode the next feature branch). Decide: gitignore `.ai-dev/state/` (pure local pointer) vs keep tracked-but-feature-branch-only (current de-facto). Same question, lighter, for `backlog.md`.
-
-**Design discussion (2026-06-12):** The root cause is the merge-gate blocking any push to main without a review stamp — state files have no stamp. Options evaluated: (a) exempt `state/` topics from the merge-gate check (but exempting a branch topic from stamp check also exempts its MERGE to main, a security hole without content verification); (b) a separate `state` branch pushed via `git push <remote> HEAD:feature/state` — topic resolves to `state`, exempt list works, but merge to main still exempt; (c) content-aware gate (check git diff for state-only changes — requires shell exec from engine, significant surface change); (d) state on a separate remote ref that is never merged to main (e.g. `refs/notes/`). Decision: design this properly as a separate feature; the current `state/current.md` on main via feature branches is the interim. Whoever designs this: the security constraint is that the carve-out must NOT allow non-state content to bypass the merge-gate.
 
 ## deepseek-v4-flash as the OpenCode default cross-model reviewer — 2026-06-10 (idea)
 

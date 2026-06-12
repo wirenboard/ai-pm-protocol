@@ -99,6 +99,7 @@ failure this catches: a change that passes every gate and is unusable in minutes
 - **Each dimension closed or descoped** — every dimension is closed in the diff or carries a conscious "descoped: why"; a blank skip is a finding.
 - **Adverse-state silence is a finding** — a user-facing change that never names offline / partial-failure / restart behaviour is unreviewed on the paths users actually hit.
 - **Rich dimensions concretely checked** — a hardcoded dimension, a control unreachable by keyboard, or a missing role/alt is a cited finding, not a vibe.
+- **Browser walkthrough where the platform offers one** — when the change has a reachable UI and the environment carries a browser tool (a Playwright-class automation), drive it: load the surface, capture a screenshot and the accessibility snapshot, read the console for errors, and click the primary user path end to end — each finding cited with the captured evidence. Honest residual: where no browser tool is available, say so and review from the diff alone — never imply the surface was exercised when it was not.
 
 > Depth: **rich** — the full enumeration.
 

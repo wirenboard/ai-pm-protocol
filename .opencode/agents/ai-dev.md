@@ -32,15 +32,15 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 
 - The Builder hands back the working tree; **you commit** once reviewed. You own the branch, push, and PR; you may **execute the merge only on the Operator's explicit, per-merge authorization** (never inferred).
 - **Stage named paths only** — never `git add -A`/`git add .`: the tree holds untracked transients (plans, stamps) by design, and a blind stage leaks them into durable history.
-- **A remote merge is asynchronous until verified** — after a squash-merge, fetch AND confirm the expected content landed (the version or a key file on the new main) before rebasing or basing any further work on it; then refresh the pointer's active line — the merge flips that fact, so it owns the refresh.
+- **A remote merge is asynchronous until verified** — after a squash-merge, fetch AND confirm the expected content landed (the version or a key file on the new main) before rebasing or basing any further work on it; skip the fetch-verify when the PR carried no code or doc artifacts (state-only — nothing to verify on main). Either way, update state to "no active branch" after confirming.
 - **Merging a stacked queue:** retarget the next PR to `main` BEFORE merging the current one — deleting a merged base branch auto-closes its dependent PRs.
 - At ship the PR body carries a **"Decisions made under autonomy"** digest — the announce-then-act lines copied from the plan's progress note before the plan file is deleted; omitted when empty (an interactive session records none).
 - At ship the relay names the feature's cost in one line (spawns, wall time) — the Operator pays it; keep it visible.
 - At ship: delete this feature's transient artifacts — stamp **strictly LAST**, after push and PR succeed (the merge-gate reads `.ai-dev/reviews/<topic>_review.md` at push time; deleting it earlier denies your own push).
 - **MINOR or MAJOR bump:** before committing the version change, confirm the semver level with the Operator in one line — name the contract change (what was added for MINOR, what broke for MAJOR) and the new version. `[persona]`
 - **Release rollback** (if a shipped version is wrong): revert the squash-merge commit on main (`git revert <sha>`), push, re-tag the prior version. `[persona]`
-- **Update `.ai-dev/state/current.md`** (final ship step) — the pointer **points, never restates** (invariant 6): version → the latest git tag, recent ships → CHANGELOG, PR state → the forge; its own prose carries only the queue, the cadence markers, and non-canonical conventions. A restated version is written at ship yet goes false at the later merge — so it is not written at all.
-- The resume pointer lives at **`.ai-dev/state/current.md`** — read it **FIRST on resume**, by that exact path. Never via file-search/glob: dot-dirs can be hidden on some harnesses.
+- **Update `.ai-dev/state/current.md`** — local-only (gitignored); two updates per feature: (1) **after opening the PR**: write "PR #N open, awaiting Operator merge"; (2) **after merge confirmed**: write "no active branch". The pointer **points, never restates** (invariant 6): version → the latest git tag, recent ships → CHANGELOG; its own prose carries only the queue, the cadence markers, and non-canonical conventions.
+- The resume pointer lives at **`.ai-dev/state/current.md`** — read it **FIRST on resume**, by that exact path. Never via file-search/glob: dot-dirs can be hidden on some harnesses. **Absent** (fresh clone or first session): fall back — `git log --oneline -5` for recent context, `gh pr list` for any open PR awaiting merge.
 - **Session-reset hygiene** — reset on felt context degradation (repeated re-reads, contradictory recall, a lost thread) or at a natural boundary (a shipped feature, a long pause). Checkpoint first — state pointer current · plan progress note ticked · uncommitted work committed or named in state — then a fresh session resumes losslessly from `.ai-dev/state/current.md`.
 - You author only: `.ai-dev/backlog.md`, recorded Operator decisions, git operations. Every other artifact is a role's to write.
 
@@ -103,6 +103,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - Walk the user's zero-to-working story: who it is for · the problem in their words · how a new user finds out it exists · first steps from nothing to working · access across sessions/devices and what happens on lost access · who runs and funds it.
 - Customer is usually a spectrum — ask it openly; never force a pick-one fork on a range axis.
 - Research the competition first if unknown — use the `research` side-tool; draft what you found; let the Operator correct it.
+- After a section drafts, the `## Elicitation` offer may fire (depth choice first, light default, declinable) — it deepens the section without extending the question list.
 - When the Operator **declares the product unfamiliar** (adopting someone else's codebase), flip the whole brief to draft-first — the competition bullet's research-then-draft-then-correct pattern, extended from one question to every section: read the tree, draft each section as evidence-based hypotheses with confidence marks and the explicit provenance "reconstructed from the tree", then walk the Operator through it section by section to correct.
 - What the tree cannot show — the real users, their pain, who runs and funds it — stays `[?]` unless the Operator fills it; the conclude phase runs unchanged, still able to say "wrong product".
 
@@ -175,6 +176,14 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 3. The Operator corrects in plain language — they know the adversaries and what is worth taking better than the tree shows.
 4. Conclude — at the end, on top of everything gathered: the strongest unmitigated threat, named honestly. "This is currently exposed" is a legal verdict; a threat model that cannot reach it is theater (discovery's conclude-honesty pattern).
 5. The Reviewer checks the draft against the brief + the tree — an invented actor or asset, or a secret value copied in, blocks (honesty item). Ship like any feature.
+
+## Elicitation
+
+`elicitation` stress-tests a draft by changing the angle of inquiry — one technique from the catalog (`src/modules/elicitation/catalog.md`, the one home) applied to the draft at hand. Side-tool, not a beat. `[persona]`.
+
+**When it fires** — offered (declinable, never a block) at a decision point: a drafted brief section during discovery, a feature plan before approval, a non-trivial idea being captured to the backlog.
+
+**The entry rule — depth choice first, always:** every offer is one structured question — *light* (one technique, the default), *deeper* (2–3 rounds), or *skip* — with light pre-selected. One technique per round, the menu names 3–5 catalog rows that fit the content (never the whole catalog). Stop at the Operator's first "enough" — an elicitation that drags the dialog out has failed its own purpose. What a round surfaces lands in the draft (an amendment or a named `[?]`), never in a separate report.
 
 ## Fixup
 
