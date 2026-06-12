@@ -3,6 +3,14 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Downstream field report: cross-platform breadcrumb missing — ad-md-editor, 2026-06-13
+
+The project was created under OpenCode; the Operator later opened it in Claude Code. The Claude session started with ZERO protocol surface — the install wires only the active platform (`opencode.json` + `AGENTS.md` + plugin), so no `CLAUDE.md` import, no hooks, no agents exist for Claude. The session worked the repo as a bare project: no roles, no loop, no review.
+
+The platform-switch offer (orchestrator `## Setup`, "Platform switch") could not fire — it is prose homed in the orchestrator, and the orchestrator only loads through the installed platform's surface. A rule cannot fire on a harness that never loads it. Unfelt deficit (the session doesn't know what it's missing) ⇒ needs a mechanical breadcrumb, not more prose.
+
+**Fix candidate:** the installer always writes a minimal load-surface for BOTH platforms — the active platform gets the full wiring (as today); the inactive platform gets a 3-line pointer file (for Claude: a minimal `CLAUDE.md`; for OpenCode: a minimal `AGENTS.md`): "this project runs the ai-dev protocol, active platform is X — run the installer for this platform and offer the Operator the platform switch." De-duped on re-run like the existing load-instruction merge. Test rows: cross-platform breadcrumb present after install; breadcrumb does not clobber an existing real file (merge, don't overwrite); breadcrumb replaced by full wiring when its platform becomes active.
+
 ## Downstream field report: ratchet-test + verification scenario gap — ad-md-editor, 2026-06-13
 
 Four bugs in one downstream session, all of the same class: code compiled, Reviewer passed, but the user-visible outcome was wrong. Root: the protocol checks that code exists and compiles, not that it does what it's supposed to do in a real flow.
@@ -19,6 +27,16 @@ Four bugs in one downstream session, all of the same class: code compiled, Revie
 2. **No verification scenario in the plan.** "How will I know this works?" is not a required plan element. A plan for a user-facing flow that names no concrete verification scenario can be built and reviewed without anyone asking "what does the user actually see?" Fix candidate: Builder plan checklist gains a required field for user-facing flows: "verification scenario — one concrete path (trigger → action → observable result) that a person could perform right now." This is the named prosthesis for the unfelt deficit "optimizing for compile-time correctness, not for user completing the target action" (the META track).
 
 **What the downstream can do now without protocol changes:** assertions instead of silent `if (!x) return`, smoke tests after init, before-commit self-check "what one scenario can I verify right now?"
+
+**Addendum (Operator, 2026-06-13, second Claude session on the same project):** the session showed no awareness that the project HAS no automated UI checks — a Tauri app where the entire UI surface is unverifiable by the wired tools. Confirmed by research (`docs/decisions/ratchet-and-verification.md`): the Reviewer's browser walkthrough is `[rich]`-gated while `kind: code` defaults ui-ux to `light` — the GUI smoke organ is off on exactly the kind that needs it; and Playwright cannot reach Tauri IPC regardless. Worse (Operator, same day): the session shifted ALL testing onto the Operator — manual verification became the default, not the residual.
+
+**Fix shape (rides the ratchet/verification feature) — an exhaust-the-ladder rule, not just "name the path":**
+
+1. **Automatable-without-display first** — logic in unit tests, IPC layer on mocks, assertions over silent returns, dev-mode smoke. The Builder DOES this, never offers it to the Operator.
+2. **UI automation where the stack offers it** — if the GUI stack has a driver (tauri-driver/WebDriver, Playwright for web) and `tools.json` carries no UI tool, the Builder must OFFER the install with concrete tool names, install on the Operator's accept, register the row (setup step 5 pattern, re-fired lazily). Silently skipping to manual past this offer is a Reviewer finding.
+3. **Operator gets only the machine-unreachable residual** — one minimal named scenario per item ("open file X, expect Y"), each carrying the reason it cannot be automated. "Test the app" is never a deliverable.
+
+Offloading automatable verification to the Operator = a plan defect the Reviewer blocks. Sibling fix in setup step 5: UI/E2E automation joins the named tool classes proposed for a GUI stack (today the list names linter/formatter/type-checker/SAST/secrets — no UI class), plus a lazy re-trigger when the stack grows a GUI after setup. Third sibling — **audit gains a "verification coverage" dimension**: the registered quality suite checked against the actual stack — a GUI stack with no UI-automation row, a runnable artifact with no test row, is a finding naming the concrete tools to wire (so an Operator can kick an audit in any session and come out with the testing gap named and dispatched into the loop).
 
 ## Downstream field report: GUI plan/review needs a user-flow check — ad-md-editor, 2026-06-13
 
