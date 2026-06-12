@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [4.19.1] — 2026-06-12
+
+### Fixed
+
+- **Git discipline from the stacked-merge 8D** — three orchestrator-procedure rules closing the conveyor's live failures: stage named paths only (a blind `git add -A` leaked a transient stamp into durable history — contained same-day by a cleanup commit); a remote merge is asynchronous until verified (a rebase onto a stale fetch produced a tree silently missing the prior PR — caught by the forge refusing the merge); retarget the next stacked PR to main BEFORE merging the current one (a merged base-branch deletion auto-closes dependents). Two mechanical gate findings recorded in the backlog (topic-from-HEAD resolution; heredoc verb false-positive). 8D run-note closed at D8.
+
+---
+
 ## [4.19.0] — 2026-06-12
 
 ### Added

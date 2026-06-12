@@ -31,6 +31,9 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 **Own git and state:**
 
 - The Builder hands back the working tree; **you commit** once reviewed. You own the branch, push, and PR; you may **execute the merge only on the Operator's explicit, per-merge authorization** (never inferred).
+- **Stage named paths only** — never `git add -A`/`git add .`: the tree holds untracked transients (plans, stamps) by design, and a blind stage leaks them into durable history.
+- **A remote merge is asynchronous until verified** — after a squash-merge, fetch AND confirm the expected content landed (the version or a key file on the new main) before rebasing or basing any further work on it.
+- **Merging a stacked queue:** retarget the next PR to `main` BEFORE merging the current one — deleting a merged base branch auto-closes its dependent PRs.
 - At ship the PR body carries a **"Decisions made under autonomy"** digest — the announce-then-act lines copied from the plan's progress note before the plan file is deleted; omitted when empty (an interactive session records none).
 - At ship: delete this feature's transient artifacts — stamp **strictly LAST**, after push and PR succeed (the merge-gate reads `.ai-pm/reviews/<topic>_review.md` at push time; deleting it earlier denies your own push).
 - **Update `.ai-pm/state/current.md`** (version shipped, what's next) — the final step of ship, after push and PR succeed.

@@ -2,6 +2,18 @@
 
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
+## Audit 4.19.0 Lows — stamp label gap + orchestrator length watch — 2026-06-12
+
+Two Low findings from the proactive sweep (HEALTHY overall), neither merge-blocking:
+
+- **Low-1, one-home gap:** `engine.mjs:159` accepts a third stamp label `Validation` (`stampOK("Validation")`) that no doc names — `reviewer.md` documents only `## Code review:` / `## Doc review:`. Either document it as the forward-compat downstream label (one line in the Verdict bullet) or drop it from the engine; ride the next feature touching either file.
+- **Low-2, length watch:** `orchestrator.md` at 224 lines / 11 sections sits at the upper edge of "readable in one sitting". Not a violation; the rule for the NEXT side-tool addition: trim or fold, never append past the edge.
+
+## Merge-gate topic + verb parsing — two 8D findings — 2026-06-12
+
+1. `resolveMergeTopic` (`engine.mjs:124`) reads `.git/HEAD` first and the command's ref only as a fallback — pushing branch A from branch B's checkout reads branch B's stamp (hit live during the stacked-merge conveyor; contained by pushing from the right checkout). Fix direction: parse the pushed ref from the command FIRST, HEAD as the fallback for a bare push; + merge-gate test cases for a cross-branch push.
+2. The bash verb parser matches the verb words INSIDE a heredoc payload (hit live: a heredoc writing prose ABOUT pushes was denied as a push). Fix direction: strip heredoc/quoted-string bodies before verb matching, or anchor the match to command position; + a false-positive test case. Sits beside the recorded `Validation` stamp-label Low.
+
 ## [who] axis / operator-scenario presets — retracted from README, parked as a hypothesis epic — 2026-06-12 (Operator decision)
 
 **Decision (Operator, 2026-06-12):** the `[who] × [speed↔quality]` matrix was retracted from `README.md` (4.10.3) — the `[who]` axis had zero implementation and its tech-lead cell ("you see the diff") contradicted `PROTOCOL.md` "Never show code". The honest surface today is the one-axis `profile` dial.
@@ -27,7 +39,7 @@ Modules shape *thinking* (checklists); `research` should *do* work: investigate 
 
 ## Parallel feature work — Operator request 2026-06-12
 
-Today the loop is strictly serial: one session drives one feature, one branch per PR, the state pointer names ONE active plan. Features with disjoint surfaces could run in parallel — the platform offers concurrent sub-agents and git worktrees. Design questions: per-feature state (the pointer is singular); branch isolation (PROTOCOL `## Git flow`: conflicts ⇒ stale branch, cut fresh — parallel branches invite exactly that); the stamp/merge-gate is already per-topic (holds as-is); Operator bandwidth (plans and merges still serialize through one human — the honest bottleneck). Cheap 80% already allowed: several features batched on one branch serially. The real epic: worktree-per-feature with interleaved Builder spawns. Scope honestly before building.
+Today the loop is strictly serial: one session drives one feature, one branch per PR, the state pointer names ONE active plan. Features with disjoint surfaces could run in parallel — the platform offers concurrent sub-agents and git worktrees. Design questions: per-feature state (the pointer is singular); branch isolation (PROTOCOL `## Git flow`: conflicts ⇒ stale branch, cut fresh — parallel branches invite exactly that); the stamp/merge-gate is already per-topic (holds as-is); Operator bandwidth (plans and merges still serialize through one human — the honest bottleneck). Cheap 80% already allowed: several features batched on one branch serially. The real epic: worktree-per-feature with interleaved Builder spawns. Scope honestly before building. Field notes from the first stacked-PR conveyor (8D, 2026-06-12): a dependent PR auto-closes when its base branch is deleted by a merge — retarget the next PR to main BEFORE merging the current one; a remote squash-merge is asynchronous — verify the content landed before rebasing onto it; the per-topic stamp/merge-gate held throughout (two honest denials).
 
 ## npm registry publish — external half of npx distribution — 2026-06-12
 
