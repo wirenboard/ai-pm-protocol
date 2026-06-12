@@ -84,10 +84,6 @@ The config supports per-seat models; the open part is a recommended DEFAULT matr
 
 Survey both platforms' built-in tools/agents and map which are safe for the orchestrator's AD-HOC use (offload instead of inline work): read-only and no role-overlap ⇒ allow (e.g. a read-only explorer for parallel analysis); write-capable generic or role-overlap ⇒ stays denied (`general`/`build`/`plan` — the role-substitution deny). Open question: does a write-capable ad-hoc generic ever have a legitimate seat, and can the deny distinguish intent? Outcome: a documented routing note (which built-ins the orchestrator may use for what) + possibly widened safe offload.
 
-## Missing git-init step for a repo-less project — Operator observation 2026-06-12
-
-The whole protocol stands on git (branches, commits, the merge-gate reads pushes), yet no step initializes a repository where none exists: the installer assumes a tree, `setup` configures roles, `## Project inception` records day-zero decisions — none runs `git init` or checks for `.git`. A greenfield or a copied-files project hits the git flow with no repo under it. Candidates: the installer warns (or offers init) when the target has no `.git`; inception's day-zero list gains the repo+remote+first-commit step; the understand beat's "git is clean" check names the no-repo case explicitly (today it would just error). Also the forge half: creating the GitHub repo / wiring `origin` is an Operator-side step nobody names.
-
 ## OpenCode background/parallel spawn — research requested 2026-06-13 (Operator)
 
 The parallel-work value on OpenCode hinges on whether `task` spawns can run concurrently/in background (the tool-map records no background primitive — but that's our record, not a verified absence; the Operator suspects the docs may show one). Research the current OpenCode docs/SDK: concurrent task calls, background sessions, async child-session prompting. Outcome updates `tool-map.json` (+ the parallel-work decision doc's honest-bottleneck note) either way. Sibling of the continue-subagent entry below — one research pass can cover both.
