@@ -12,6 +12,16 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.9.4] — 2026-06-13
+
+Template blockquote cleanup — 8D D5/D7 fix.
+
+### Changed
+
+- `src/templates/product.md`, `contracts.md`, `threat-model.md`, `architecture.md` — each instruction blockquote gains `*Delete this guidance block when filling.*` Prevents filled docs from retaining instruction prose (the root cause of the docs-bloat 8D).
+
+---
+
 ## [5.9.3] — 2026-06-13
 
 Docs trim pass — all prose cut to one sitting.

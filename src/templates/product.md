@@ -4,12 +4,14 @@
 > The one home for **what this project is and why** — filled at onboarding (the orchestrator's `## Product discovery`), kept current; every feature grounds in it. Discovery deletes the first line's template marker when it fills this file — the marker is how the protocol tells an installed skeleton from a real brief.
 >
 > Filled gather-first, conclude-last: record what the Operator gives, mark the rest `[?]` — never invent an answer, never grade one. The case against (§7) comes at the end. Plain product language.
+>
+> *Delete this guidance block when filling.*
 
 ## 0. The idea — what is this product?
 
 `<one plain sentence: what this product is and what it does. For a LEGACY product largely given — read it from the codebase; for a NEW one, ask. No scope-gate theater: arriving at this protocol already implies a software-or-documentation product.>`
 
-> The **anchor for everything below.** Every question reasons AROUND this idea — its options stay plausible *given* the product (for an AI software/docs protocol: a PM, developer, founder, student — not an auto-mechanic). A question disconnected from the idea is a dead question.
+> The **anchor for everything below.** Every question reasons AROUND this idea — its options stay plausible *given* the product (for an AI software/docs protocol: a PM, developer, founder, student — not an auto-mechanic). A question disconnected from the idea is a dead question. *Delete this note when filling.*
 
 ## 1. Customer — who exactly?
 
