@@ -12,6 +12,22 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.7.1] — 2026-06-12
+
+Pre-downstream audit dispatch (Opus auditor, WARN) + the missed-audit-offer 8D prevention.
+
+### Fixed
+
+- **Self-report issue filing targets the wrong repo** (audit WARN-1) — the emit step now mandates the explicit flag `gh issue create --repo aadegtyarev/ai-dev-protocol`: a bare `gh issue create` inside a downstream checkout defaults to the downstream's own tracker and would publish the failure report to the wrong, possibly public, place.
+- **Raw self-reports were committable** (audit WARN-2) — `.ai-dev/feedback/` (pre-leak-sweep failure context) is now gitignored: the installer's gitignore step covers it (`ensureTransientsGitignore`, +2 install tests) and this repo's own `.gitignore` carries the line. A crash before the post-send delete, or a blind `git add -A`, can no longer commit an un-swept report.
+- **Stale module count in `docs/architecture.md`** (audit WARN-3) — the hardcoded "Twelve modules ship" drifted from the 13-row registry; the sentence now points at the registry without restating a count.
+
+### Added
+
+- **Audit-cadence read rides the mandatory ship step** (8D missed-audit-offer, D5/D7) — the post-merge state update now also refreshes the last-audit marker and features-since count; at ≥5 the audit offer goes into the same ship relay. Root cause: the cadence counter had no enforced home and no reading step — an unfelt quantity that died at a state rewrite.
+
+---
+
 ## [5.7.0] — 2026-06-12
 
 ### Added

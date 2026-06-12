@@ -141,10 +141,13 @@ function ensureConfig(target, platform) {
   fs.writeFileSync(dest, JSON.stringify(config, null, 2) + "\n");
 }
 
-// 4. Ensure .ai-dev/state/ is gitignored — local-only session pointer, never committed.
-// Idempotent: appends only when the line is not already present.
-function ensureStateGitignore(target) {
+// 4. Ensure the local-only transient dirs are gitignored: state (the session
+// pointer) and feedback (the self-report holds RAW pre-leak-sweep context — a
+// crash before its delete, or a blind `git add -A`, must not commit it).
+// Idempotent: appends only the lines not already present.
+function ensureTransientsGitignore(target) {
   ensureLine(path.join(target, ".gitignore"), ".ai-dev/state/");
+  ensureLine(path.join(target, ".gitignore"), ".ai-dev/feedback/");
 }
 
 // 5a. Wire Claude: assemble the agents + the setup command against the target root,
@@ -267,7 +270,7 @@ export function install(targetDir, platformFlag) {
   vendorTooling(target);
   layDownCore(target);
   ensureConfig(target, platform);
-  ensureStateGitignore(target);
+  ensureTransientsGitignore(target);
   if (platform === "claude") wireClaude(target);
   else wireOpenCode(target);
 

@@ -13,5 +13,8 @@
 # Session state — local-only pointer, never committed
 .ai-dev/state/
 
+# Self-report transients — raw pre-sweep failure context, never committed
+.ai-dev/feedback/
+
 # Node dependencies (the linters; package-lock.json IS committed)
 node_modules/

@@ -72,9 +72,10 @@ function testPlatform(platform, assertWiring) {
     // 3. config present
     check(`[${platform}] config written with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, "ai-dev.config.json"), "utf8")).platform === platform);
 
-    // 3b. .gitignore excludes session state
+    // 3b. .gitignore excludes the local-only transients (state + raw feedback reports)
     const gi = fs.existsSync(path.join(target, ".gitignore")) ? fs.readFileSync(path.join(target, ".gitignore"), "utf8") : "";
     check(`[${platform}] .gitignore excludes .ai-dev/state/`, gi.includes(".ai-dev/state/"));
+    check(`[${platform}] .gitignore excludes .ai-dev/feedback/`, gi.includes(".ai-dev/feedback/"));
 
     // 4. platform wiring
     assertWiring(target);

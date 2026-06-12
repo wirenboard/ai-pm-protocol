@@ -27,6 +27,7 @@ The proactive trigger is in (orchestrator `## Audit`: offer after ~5 shipped fea
 - **Instruction-file overreach** — decision/security content sitting in a harness instruction file (CLAUDE.md-class) whose own pointer says it is owned by `docs/` canon; remediation is move-not-copy.
 - **Asymmetric failure-naming** (8D ceremony-drift, D7) — a dial/gate whose failure modes are named on ONE side only breeds drift to the unnamed side: sweep for it (doc-quality names bloat but not brevity-to-uselessness; audit cadence names under- but not over-auditing; the profile dial named under-rigor but not over-ceremony until 4.20.0). Each found asymmetry is a candidate fix.
 - **Single-source drift includes `.ai-dev/state/current.md`** (8D pointer-lied, D7) — the resume pointer is durable canon, not exempt from invariant 6; the audit's single-source-drift dimension scans it for restated facts (version, shipped-set, PR state) that belong to the tag / CHANGELOG / forge.
+- **Implicit counter dependencies** (8D missed-audit-offer, D7) — any cadence/counter rule must name WHERE its counter lives and WHICH mandatory step reads it; sweep rules for counters with no enforced home or reading step (the audit-cadence counter died exactly this way at a state rewrite).
 
 ## Parallel feature work — Operator request 2026-06-12
 
@@ -34,15 +35,15 @@ Today the loop is strictly serial: one session drives one feature, one branch pe
 
 ## npm registry publish — external half of npx distribution — 2026-06-12
 
-The packaging shipped 4.17.0 (`npx github:aadegtyarev/ai-dev-protocol-uni <target>` works now). What remains is external: the Operator's npm account, name-availability check (scoped fallback), `npm publish`, optionally publish-on-tag CI (NPM_TOKEN secret riding the existing auto-tag workflow). Then the README lead becomes `npx ai-dev-protocol@latest`.
+The packaging shipped 4.17.0 (`npx github:aadegtyarev/ai-dev-protocol <target>` — repo renamed at 5.0.0, old `-uni` slug redirects). What remains is external: the Operator's npm account, name-availability check (scoped fallback), `npm publish`, optionally publish-on-tag CI (NPM_TOKEN secret riding the existing auto-tag workflow). Then the README lead becomes `npx ai-dev-protocol@latest`.
 
 ## ad-md-editor rollout — first real downstream — 2026-06-11
 
 The Operator asked to roll the protocol into ad-md-editor; this repo's session cannot (the project-boundary deny blocks cross-repo writes, correctly). Run `node src/adapter/install.mjs` against it from its own checkout/session. First real downstream = the strongest install + upgrade test we lack (N=1 → N=2; `docs/product.md` success criterion).
 
-## Downstream→upstream protocol-feedback loop — 2026-06-07
+## CI narrower than the local suite — 2026-06-12 (audit INFO-3, low)
 
-Formalize the existing hand-relayed channel: a downstream's model emits a raw problem report about the protocol as it experienced it; the upstream model maps it onto the protocol's structure (root cause, owning file, minimal fix, dedup against backlog). Open questions: transport without violating the project boundary (the report is authored downstream, CARRIED by the Operator — never the upstream model reading into a downstream repo); privacy (no downstream content leaks); opt-in per downstream.
+`.github/workflows/checks.yml` runs only parity + neutral-prose; the local registered suites run 10 build + 2 review tools. The merge-gate is local; CI is the remote re-check — today it would not catch a bypassed local run of the other eight. Candidate: CI runs `node src/quality/run.mjs build` wholesale.
 
 ## META: "deficit → prosthesis" as a protocol-design method — 2026-06-06 (Operator-originated)
 
