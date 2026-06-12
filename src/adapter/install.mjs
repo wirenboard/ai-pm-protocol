@@ -141,7 +141,13 @@ function ensureConfig(target, platform) {
   fs.writeFileSync(dest, JSON.stringify(config, null, 2) + "\n");
 }
 
-// 4a. Wire Claude: assemble the agents + the setup command against the target root,
+// 4. Ensure .ai-dev/state/ is gitignored — local-only session pointer, never committed.
+// Idempotent: appends only when the line is not already present.
+function ensureStateGitignore(target) {
+  ensureLine(path.join(target, ".gitignore"), ".ai-dev/state/");
+}
+
+// 5a. Wire Claude: assemble the agents + the setup command against the target root,
 // merge the deny hooks into .claude/settings.json (keyed so a re-run never
 // duplicates), and import the constitution + the orchestrator procedure via CLAUDE.md.
 function wireClaude(target) {
@@ -190,7 +196,7 @@ function mergeHooks(existing, fragment) {
   return merged;
 }
 
-// 4b. Wire OpenCode: assemble the three agents + the setup command + generate the
+// 5b. Wire OpenCode: assemble the three agents + the setup command + generate the
 // plugin (downstream layout, since the adapter is now vendored under .ai-dev/tooling/),
 // merge opencode.json keys, and import the constitution via AGENTS.md.
 function wireOpenCode(target) {
@@ -261,6 +267,7 @@ export function install(targetDir, platformFlag) {
   vendorTooling(target);
   layDownCore(target);
   ensureConfig(target, platform);
+  ensureStateGitignore(target);
   if (platform === "claude") wireClaude(target);
   else wireOpenCode(target);
 

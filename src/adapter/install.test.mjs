@@ -72,6 +72,10 @@ function testPlatform(platform, assertWiring) {
     // 3. config present
     check(`[${platform}] config written with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, "ai-dev.config.json"), "utf8")).platform === platform);
 
+    // 3b. .gitignore excludes session state
+    const gi = fs.existsSync(path.join(target, ".gitignore")) ? fs.readFileSync(path.join(target, ".gitignore"), "utf8") : "";
+    check(`[${platform}] .gitignore excludes .ai-dev/state/`, gi.includes(".ai-dev/state/"));
+
     // 4. platform wiring
     assertWiring(target);
 
@@ -128,6 +132,25 @@ testPlatform("opencode", (target) => {
     let threw2 = false;
     try { install(target, undefined); } catch { threw2 = true; }
     check("[resolve] no flag + no config platform is a hard error", threw2);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// ── F4 migration: installer over prior-version artifacts ─────────────────────
+// Verifies the installer succeeds and lays the new structure when a target already
+// carries old-protocol artifacts (WORKFLOW.md, .ai-pm/ state dir) without deleting them.
+{
+  const target = freshTarget("f4migration");
+  try {
+    fs.mkdirSync(path.join(target, ".ai-pm", "state"), { recursive: true });
+    fs.writeFileSync(path.join(target, ".ai-pm", "state", "current.md"), "# old state\n");
+    fs.writeFileSync(path.join(target, "WORKFLOW.md"), "# old workflow\n");
+    install(target, "claude");
+    check("[f4] installer succeeds over old-protocol artifacts", fs.existsSync(path.join(target, "PROTOCOL.md")));
+    check("[f4] old artifacts not deleted by installer", fs.existsSync(path.join(target, "WORKFLOW.md")) && fs.existsSync(path.join(target, ".ai-pm", "state", "current.md")));
+    check("[f4] new structure laid down alongside old", fs.existsSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "engine.mjs")));
+    check("[f4] .gitignore excludes .ai-dev/state/ after migration install", fs.readFileSync(path.join(target, ".gitignore"), "utf8").includes(".ai-dev/state/"));
   } finally {
     fs.rmSync(target, { recursive: true, force: true });
   }

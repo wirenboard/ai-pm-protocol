@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.5.1] — 2026-06-12
+
+### Fixed
+
+- **Installer adds `.ai-dev/state/` to downstream `.gitignore`** — follow-up to 5.5.0: `install.mjs` calls `ensureStateGitignore` idempotently on every install/re-run. Six new install tests: per-platform `.gitignore` check + F4 migration test (installer succeeds over prior-version artifacts such as `WORKFLOW.md` and `.ai-pm/`, without deleting them).
+
+---
+
 ## [5.5.0] — 2026-06-12
 
 ### Added
