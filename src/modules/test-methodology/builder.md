@@ -9,5 +9,4 @@ sharpens the plan, denies nothing.
 
 - `[light]` **Unreachable layers** — a layer unit tests cannot reach (fetch+state glue, route handlers, adapters) gets its coverage named in the plan, or the untested-layer risk named in its place; silence on the layer is the failure mode.
 - `[rich]` **Full-composition test** — a wiring-level feature carries at least one integration test exercising the real composition, not just each part in isolation.
-- `[rich]` **UI exercised** — a UI-bearing change names how the UI is exercised; for web, a real-browser run (e.g. Playwright) over the user's actual path.
 - `[light]` **App-bug vs test-drift** — classify every failing test before touching anything: a real app bug (fix the code) or test drift (raise it); never patch whichever is cheaper.

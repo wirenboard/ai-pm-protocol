@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.11.4] — 2026-06-13
+
+### Changed
+
+- Verification expectation is now **universal and split write-vs-run**, replacing the web-only / depth-gated GUI rows. Every consumer-facing artifact has a *primary integration layer* (a CLI invocation, a browser, a desktop app's IPC, a service's socket, a library's public API); the Builder's plan **always names** the verification scenario + that layer (free, floor), and the Reviewer claims the rung it actually reached without implying a run it didn't do. **Running** the real layer (e2e) is *expensive*, so it is an **offered, Operator-confirmed** act on a user-facing change or batched at the audit cadence — never automatic, never a per-change duty. The two web-only `test-methodology` rows ("UI exercised" / "UI claim backed") are superseded by the floor; ui-ux's browser-walkthrough is re-anchored as the graphical deepening (screenshot + a11y snapshot + console) on top of the offered exercise. Rationale: `docs/decisions/verification-floor.md`; merges the two open siblings from `ratchet-and-verification.md`.
+
+---
+
 ## [5.11.3] — 2026-06-13
 
 ### Fixed
