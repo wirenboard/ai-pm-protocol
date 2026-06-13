@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.10.2] — 2026-06-13
+
+### Added
+
+- `src/quality/version-skew.mjs` + registered `build`-beat quality row — mechanical check that the installed `.ai-dev/VERSION` stamp matches the vendored `.ai-dev/tooling/VERSION`; no-op on a source checkout where the stamp is absent. Closes the gap noted in `docs/decisions/upgrade-migration.md` (the row was planned but shipped as prose-only auditor dimension).
+- `PROTOCOL.md` — `upgrade` added to the side-tools enumeration (was referenced in the understand-beat clause but absent from the list); one line pointing to `orchestrator's ## Upgrade`.
+
+### Changed
+
+- `.ai-dev/backlog.md` — added "Gitignore tooling" epic (Operator request 2026-06-13): three variant designs for removing the vendored tooling tree from downstream repos while keeping enforcement.
+
+---
+
 ## [5.10.1] — 2026-06-13
 
 ### Added

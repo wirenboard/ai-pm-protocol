@@ -3,6 +3,24 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Gitignore tooling — zero protocol noise in downstream repos — 2026-06-13 (Operator)
+
+The downstream project currently commits the full `.ai-dev/tooling/` tree (~all protocol source). Operator wants to gitignore it while keeping enforcement.
+
+**Key insight:** tooling serves two purposes — (1) runtime: hook enforcement (shim + engine + deny-rules) + agent context (PROTOCOL.md + assembled role bodies); (2) re-install source (used only when `npx` upgrades). Only (1) needs to stay on disk permanently.
+
+**Three variants (ascending ambition):**
+
+1. **Assemble Claude orchestrator + gitignore tooling** — OpenCode already assembles the orchestrator into `.opencode/agents/ai-dev.md`; do the same for Claude (`.claude/agents/ai-dev.md`), switch CLAUDE.md to import from it. Committed = assembled agents + 3 enforcement files (shim/engine/deny-rules) + quality runner + PROTOCOL.md. Tooling gitignored; `npx` re-vendors on upgrade.
+
+2. **Self-contained shim** — bundle shim + engine + deny-rules into one file with no external imports. Committed = that one file + assembled agents + PROTOCOL.md. Zero tooling.
+
+3. **npx-at-hook-time** — settings.json hook calls `npx ai-dev-protocol@<version> --shim` instead of `node .ai-dev/tooling/...`. Zero code committed. Requires npm publish + network on every tool call.
+
+**Tradeoff for all three:** `git clone` on a new machine = no enforcement until `npx ai-dev-protocol@latest .` runs. Must be documented (README + `git clone` note).
+
+**Recommended first step:** `research` — scope variant 1 precisely (what files are actually needed at runtime vs install-time; confirm Claude agents/ can load an assembled orchestrator the same way OpenCode does). Prerequisite: npm publish is still deferred.
+
 ## Audit 4.19.0 Low-2 — orchestrator length watch — 2026-06-12
 
 `orchestrator.md` sits at the upper edge of "readable in one sitting". The rule for the NEXT side-tool addition: trim or fold, never append past the edge. (Low-1, the `Validation` stamp label, resolved in 4.19.2 — dropped, no live consumer.)

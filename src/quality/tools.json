@@ -74,6 +74,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "version-skew",
+      "checks": "installed VERSION stamp matches vendored tooling VERSION — a skew means npx updated the stamp without re-vendoring the tooling; no-op on a source checkout where .ai-dev/VERSION is absent",
+      "config": null,
+      "run": "node src/quality/version-skew.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "run-quality",
       "checks": "the whole-set quality runner itself — filters by beat, fails closed on a malformed registry, no-op-safe when empty/absent",
       "config": null,
