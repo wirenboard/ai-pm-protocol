@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.11.0] — 2026-06-13
+
+### Added
+
+- `src/templates/product.md` — §7 "The case against" restructured into three explicit fields (Strongest reason / Who it's wrong for / Stop signals) with a conclude-turn guidance blockquote referencing the elicitation catalog. Turns the conclude phase from a free-form blob into a structured mandatory artifact. (8D root cause: `discovery-conclude-skip`.)
+
+### Changed
+
+- `src/agents/orchestrator.md` (`## Product discovery`) — conclude phase is now a **named turn**: "announce it explicitly, apply 2–3 adversarial techniques from the elicitation catalog (Pre-mortem, Persona panel, Red vs blue); all-`[?]` in §7 is the same failure as skipping." Replaces the "at the END" prose that had no structural trigger.
+- `src/agents/reviewer.md` — new **Discovery conclude** floor item: when `docs/product.md` is in the diff, confirm §7 is populated (not all-`[?]`); blank or all-`[?]` is a finding.
+
+---
+
 ## [5.10.3] — 2026-06-13
 
 ### Changed

@@ -96,7 +96,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 **Two phases — never mix them:**
 
 1. **Gather** — gap detector, not a judge. Record what the Operator gives; mark unknowns `[?]`. Never grade whether an answer is "good"; never plant risk/trap flags mid-stream.
-2. **Conclude** — at the END, on top of everything gathered: strongest reasons this will NOT succeed, who it is wrong for, conflicts, stop signals. **Be willing to report the build is wrong.** A discovery that cannot reach that verdict is a confirmation ritual.
+2. **Conclude** — a **named turn after gather completes**: announce it explicitly ("now the conclude round"), then apply 2–3 adversarial techniques from the elicitation catalog (`src/modules/elicitation/catalog.md`) — Pre-mortem, Persona panel, and Red vs blue are the natural fit. Fill §7 of the brief: strongest reason this won't succeed · who it is wrong for · stop signals. **Be willing to report the build is wrong.** A discovery that cannot reach that verdict is a confirmation ritual. All-`[?]` in §7 is the same failure.
 
 **The dialog** — single home: `src/templates/product.md` (do not restate the questions here):
 

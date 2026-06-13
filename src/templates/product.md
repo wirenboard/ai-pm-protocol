@@ -37,6 +37,12 @@
 
 `<who operates it, who funds it, and what legal or operational constraints bind it (licensing, privacy, compliance, cost). The bet has to survive contact with the real world. Use [?] for anything not yet fixed.>`
 
-## 7. The case against *(the conclusion — at the end)*
+## 7. The case against *(conclude — mandatory last step)*
 
-`<having gathered all the above: the strongest reasons this will NOT succeed, who it is wrong for, and — honestly — whether it even fits what is being built. Licensed and required to conclude "the answers don't match what we built — the build is what's wrong." If you cannot name any real reason against, the discovery was a rubber stamp.>`
+> **Conclude turn** — run AFTER all sections above are gathered; announce it explicitly before filling. Apply an adversarial angle (Pre-mortem / Persona panel / Red vs blue from the elicitation catalog). All three fields below must be filled — not all `[?]`; "none found after challenge" is a legal answer, silence is not. *Delete this note when filled.*
+
+**Strongest reason this will not succeed:** `<one honest sentence — cannot stay [?]>`
+
+**Who this is wrong for:** `<the segment, context, or use-case this actively fails>`
+
+**Stop signals:** `<conditions under which continuing the build is the wrong call>`

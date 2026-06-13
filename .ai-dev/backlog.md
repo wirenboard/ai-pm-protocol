@@ -3,6 +3,17 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## "At the END" sweep — mandatory-final-step pattern — 2026-06-13 (8D D7, discovery-conclude)
+
+**Class found:** a procedure step described as "at the end" / "at the close" / "finally" without a structural anchor (template field, named turn, Reviewer check) is invisible to enforcement — the model follows gather momentum and skips it.
+
+**Fixed instance:** product discovery conclude phase (5.11.0) — named turn + template fields + Reviewer check.
+
+**Sweep candidates** (other procedures with the same pattern risk):
+- `## Doc bootstrap` step 4 cross-check — contradictions surfaced "where a product brief exists"; no Reviewer check that this cross-check actually happened.
+- `## 8D` D8 close — "land every measure in its durable home"; no template, relies entirely on D8 prose.
+- Any future procedure: before writing "at the end, do X" — ask whether X has a structural trigger, or add one.
+
 ## Gitignore tooling — zero protocol noise in downstream repos — 2026-06-13 (Operator)
 
 The downstream project currently commits the full `.ai-dev/tooling/` tree (~all protocol source). Operator wants to gitignore it while keeping enforcement.
