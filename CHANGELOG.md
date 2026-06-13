@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.11.3] — 2026-06-13
+
+### Fixed
+
+- Merge-gate accepts a review stamp at **any heading level** (`#`…`######`), not only `##`. A Reviewer authoring a fresh stamp file naturally opens with an H1 title (`# Code review: …`); the old `^##` matcher rejected it and blocked the push, costing a wasted re-review round. The heading level carries no meaning to the gate — only the label + the inline verdict do — so `engine.mjs` now matches `^#{1,6}`; `reviewer.md` documents the tolerance (`##` stays the convention); a `merge-gate` test pins the new acceptance (h1/h3/h6 ⇒ allow, while empty / `NOT YET RUN` / blank-separated / next-heading still deny). 8D `reviewer-stamp-heading-level`; D7 "fire-time anchor"-sibling class — a mechanical consumer must tolerate cosmetically-equivalent producer forms and a test must feed a producer-shaped artifact.
+
+---
+
 ## [5.11.2] — 2026-06-13
 
 ### Fixed

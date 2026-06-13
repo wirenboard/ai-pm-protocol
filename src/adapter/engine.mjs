@@ -301,7 +301,11 @@ function reviewStampSatisfied(root, topic) {
   let text;
   try { text = fs.readFileSync(file, "utf8"); } catch { return false; }
   const stampOK = (label) => {
-    const m = text.match(new RegExp("^##[ \\t]+" + label + ":[ \\t]*(.*)$", "m"));
+    // Heading level is incidental — the gate reads the verdict's PRESENCE, not
+    // the markdown level. Accept any level (#…######): a reviewer authoring a
+    // fresh file naturally opens with an H1 title, and pinning ## only cost a
+    // blocked push + a wasted re-review (8D reviewer-stamp-heading-level).
+    const m = text.match(new RegExp("^#{1,6}[ \\t]+" + label + ":[ \\t]*(.*)$", "m"));
     if (!m) return false;
     let content = m[1].trim();
     // Also accept the verdict on the very next non-blank line after the heading

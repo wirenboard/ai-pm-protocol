@@ -170,6 +170,22 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// 3f. HEADING LEVEL is incidental — any level (#…######) is accepted (8D
+// reviewer-stamp-heading-level): a reviewer opening a fresh file with an H1
+// title, or any other level, satisfies the gate. The load-bearing part is the
+// label + the verdict on the heading line, not the `#` count.
+{
+  for (const [lvl, hashes] of [["h1", "#"], ["h3", "###"], ["h6", "######"]]) {
+    const root = rootOnBranch(`feature/level-${lvl}`);
+    const dir = path.join(root, ".ai-dev", "reviews");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `level-${lvl}_review.md`), `${hashes} Code review: APPROVED\n`);
+    const v = evaluate({ act: "bash", root, command: `git push origin feature/level-${lvl}` }, config);
+    check(`heading-${lvl}:allows`, v.verdict, "allow");
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
 // ── 4. UNRESOLVABLE TOPIC — ask, never a silent pass ──────────────────────────
 // Guards the no-silent-pass companion (merge-topic-unresolvable, ask-class): when
 // neither HEAD nor the command yields a topic, the stamp is UNCHECKABLE — the old

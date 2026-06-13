@@ -3,6 +3,16 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Producer/consumer format coupling: tolerant parser + producer-shaped test — 2026-06-13 (8D reviewer-stamp-heading-level, D7)
+
+**Class found:** a mechanical consumer parses an artifact an agent authors, and (a) pins one cosmetic form the producer may vary (heading level, surrounding whitespace, case), relying on the producer's prose discipline to match it; (b) no test feeds a *producer-shaped* artifact through the consumer — only hand-authored ideal inputs. A model authoring the artifact slips to an equivalent form (here: opening a fresh stamp file with an H1 `#` title instead of the documented `##`), the strict consumer rejects it, and the failure surfaces only on a live run. Sibling of the layout-coupling/fail-open class below — but here the gate failed CLOSED (a wasted re-review round, never a silent bypass).
+
+**Fixed instance (5.11.3):** merge-gate regex `^##` → `^#{1,6}` (any heading level accepted — the verdict-on-the-heading-line is load-bearing, not the `#` count); `reviewer.md` documents the tolerance; `merge-gate.test.mjs` case 3f pins h1/h3/h6 ⇒ allow while the bad forms still deny.
+
+**Rule for future + audit sweep:**
+- When a mechanical consumer reads an agent-authored artifact, make the parser tolerant of cosmetically-equivalent forms rather than pinning one and trusting prose discipline.
+- A test MUST feed a producer-shaped form through the consumer, not only a hand-authored ideal. Sweep every machine-parsed agent artifact: the review-stamp heading (this), config-key reads, plan/state markers.
+
 ## Layout-coupled tooling: test the INSTALLED layout, not just the source — 2026-06-13 (8D quality-gate-silent-bypass, D7)
 
 **Class found (audit lens):** tooling whose default path assumes the source repo's layout, exercised (dogfood + self-test) ONLY against that layout, fails open on every other layout — invisibly. The quality runner defaulted its registry to `src/quality/tools.json`; the installer co-locates runner+registry in `.ai-dev/quality/`; downstream the path missed, the runner exited 0 (green) having run zero checks. Dogfood masked it (this repo holds tools.json in BOTH places) and the self-test reproduced the source layout (synthetic registry under `src/quality/`).
