@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.10.3] — 2026-06-13
+
+### Changed
+
+- `src/agents/reviewer.md` — added `paragraph necessity` to the `## Doc & prose quality` floor item: each block earns its place; a paragraph that only archives the author's reasoning, records a decision the reader doesn't need at this site, or restates context homed elsewhere is a finding. Closes the 8D-identified Reviewer checklist gap (docs-bloat root cause, 5.9.3 / 5.9.4).
+
+---
+
 ## [5.10.2] — 2026-06-13
 
 ### Added

@@ -90,7 +90,7 @@ The flagship unfelt-deficit prosthesis. Decided design (Operator, 2026-06-06): a
 
 The config supports per-seat models; the open part is a recommended DEFAULT matrix (spend thinking where errors propagate furthest). Operator caveat from a failed prior attempt: revisit deliberately; no weak models on generative seats.
 
-**Multimodality note (downstream OpenCode case, 2026-06-13):** GUI projects need vision named in the matrix — a non-multimodal model cannot read screenshots, so the Operator must describe UI bugs in words and the vision-dependent rungs of the UI-verification ladder are unavailable. Setup's model step should name vision as a recommended capability for the Builder/Reviewer seats on a GUI project.
+**Multimodality note (resolved 2026-06-13):** originally suggested recommending vision for GUI projects in setup. Dropped — the verification ladder (5.9.6) already handles this: functional checks belong to rung 2 (UI driver), visual residuals to rung 3 (named human scenario). Vision would be an optimisation of rung 3, not a gap.
 
 ## Platform built-ins survey — safe orchestrator offload — 2026-06-08/09
 
