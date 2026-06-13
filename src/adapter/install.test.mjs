@@ -91,6 +91,23 @@ function testPlatform(platform, assertWiring) {
     check(`[${platform}] .gitignore excludes .ai-dev/feedback/`, gi.includes(".ai-dev/feedback/"));
     check(`[${platform}] .gitignore excludes .ai-dev/worktrees/`, gi.includes(".ai-dev/worktrees/"));
 
+    // 3c. the gitignored session-state dir is CREATED, not just ignored (the
+    // orchestrator's first current.md write expects the parent to exist).
+    const stateDir = path.join(target, ".ai-dev", "state");
+    check(`[${platform}] .ai-dev/state/ created`, fs.existsSync(stateDir) && fs.statSync(stateDir).isDirectory());
+
+    // 3d. DOWNSTREAM-LAYOUT regression guard (8D quality-gate-silent-bypass): the
+    // laid-down runner must LOCATE the laid-down registry beside it. The temp
+    // target has no src/quality/ — exactly the layout where the old root-relative
+    // default failed open. `ship` matches zero template rows, so nothing executes;
+    // "no ship-beat tools" means the registry was found and zero matched, while
+    // "no tools.json" would mean the registry was never located (the bug signature).
+    const runner = path.join(target, ".ai-dev", "quality", "run.mjs");
+    const qr = spawnSync("node", [runner, "ship"], { encoding: "utf8" });
+    const qrOut = (qr.stdout || "") + (qr.stderr || "");
+    check(`[${platform}] laid-down runner LOCATES the laid-down registry (no ship-beat tools)`, qrOut.includes("no ship-beat tools"));
+    check(`[${platform}] runner does NOT report a missing registry (the silent-bypass signature)`, !qrOut.includes("no tools.json"));
+
     // 4. platform wiring
     assertWiring(target);
 

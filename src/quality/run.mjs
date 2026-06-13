@@ -25,17 +25,20 @@ import { execSync } from "node:child_process";
 
 const BEATS = ["build", "review", "ship"];
 
-// Run every tools.json row whose beat === `beat`, from `root`. Returns an exit
-// code (0 = all matched rows passed / none matched / no registry; non-zero =
-// failure or malformed registry). `registryPath` overrides the default location
-// (the self-test points it at a synthetic registry).
+// Run every tools.json row whose beat === `beat`, from `root` (the cwd the
+// commands execute in). Returns an exit code (0 = all matched rows passed /
+// none matched / no registry; non-zero = failure or malformed registry).
+// `registryPath` overrides the default location (the self-test points it at a
+// synthetic registry). The default registry resolves NEXT TO this runner — the
+// installer ships run.mjs and tools.json together as a pair (`.ai-dev/quality/`
+// downstream, `src/quality/` here), so "beside me" is correct on every layout.
 export function run(beat, root, registryPath) {
   if (!BEATS.includes(beat)) {
     console.error(`run.mjs: unknown beat "${beat}" — expected one of ${BEATS.join(" | ")}`);
     return 2;
   }
 
-  const file = registryPath || path.join(root, "src", "quality", "tools.json");
+  const file = registryPath || path.join(path.dirname(fileURLToPath(import.meta.url)), "tools.json");
 
   // Absent registry ⇒ no-op success: a downstream may legitimately define no checks.
   if (!fs.existsSync(file)) {

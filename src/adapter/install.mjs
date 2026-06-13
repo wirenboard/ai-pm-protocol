@@ -184,6 +184,12 @@ function layDownCore(target) {
   // The per-version migration notes, readable by the session (the tooling dir is
   // agent-read-denied). Overwritten every run — it is always the NEW version's copy.
   copyFile(path.join(SOURCE, "src", "adapter", "upgrades.md"), path.join(target, ".ai-dev", "upgrades.md"));
+
+  // The session-state dir: gitignored (ensureTransientsGitignore) but the
+  // orchestrator's first current.md write expects the parent to exist — create it
+  // here so a fresh install is write-ready. Only state/; feedback/ and worktrees/
+  // are created on demand by their own use.
+  fs.mkdirSync(path.join(target, ".ai-dev", "state"), { recursive: true });
 }
 
 // 3. Ensure a config exists so the agent assembly has its `roles` bindings. A real

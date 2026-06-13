@@ -12,6 +12,20 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.11.1] — 2026-06-13
+
+### Fixed
+
+- `src/quality/run.mjs` — the quality runner resolved its registry to `src/quality/tools.json` (the source-repo layout), but the installer co-locates the runner and the registry in a downstream's `.ai-dev/quality/`. So in **every downstream install** the runner found no registry, printed "no tools.json", and exited 0 (green) having run zero checks — the `build` and `review` gates were silently disabled. The default now resolves **beside the runner**, correct in both layouts (they always ship as a pair). (8D: `quality-gate-silent-bypass`; downstream field report.)
+- `src/adapter/install.mjs` — the installer gitignored `.ai-dev/state/` but never created it; the orchestrator's first `current.md` write expected the parent directory. `layDownCore` now creates it.
+
+### Changed
+
+- `src/quality/run.test.mjs` — every `run()` call now passes an explicit `registryPath` (synthetic), so the new beside-the-runner default is never consulted by the self-test (no recursion into the real registry).
+- `src/adapter/install.test.mjs` — first regression guard exercising the true downstream layout: spawns the laid-down `.ai-dev/quality/run.mjs` against the temp target (no `src/quality/`) and asserts it LOCATES the registry ("no ship-beat tools", never "no tools.json"); plus a `.ai-dev/state/` directory-exists assertion. Would have caught the silent bypass.
+
+---
+
 ## [5.11.0] — 2026-06-13
 
 ### Added
