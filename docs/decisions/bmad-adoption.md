@@ -30,9 +30,7 @@ The three mechanics behind the Operator's experience:
   depth choice at entry (light default / deeper / skip), one technique per round,
   never drag the brief out, fires for features and idea capture — not only new
   products. This closes the "capture-time elicitation" backlog item.
-- **Browser walkthrough** — a `[rich]` item in the ui-ux reviewer fragment:
-  where the platform carries a browser tool, the Reviewer exercises the live
-  surface; honest residual recorded where it cannot.
+- **Browser walkthrough** — a `[rich]` item in the ui-ux reviewer fragment, re-anchored in 5.11.4 as the graphical deepening of the *offered* real-layer exercise (`docs/decisions/verification-floor.md`): when the Operator confirms the exercise AND a UI driver is available, the Reviewer drives the graphical surface — screenshot + a11y snapshot + console + primary-path click-through; honest residual where it cannot.
 - **Not adopted:** the 12-agent roster (our three-role split with folds is the
   deliberate opposite), story-file pipelines (our plan file covers it), the
   79-technique catalog size (a menu nobody reads is ceremony — we start at a

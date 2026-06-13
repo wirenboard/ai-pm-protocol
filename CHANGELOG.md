@@ -12,6 +12,15 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.11.5] — 2026-06-13
+
+### Fixed
+
+- `src/modules/ui-ux/reviewer.md` — `[rich]` graphical walkthrough now requires the Operator to have confirmed the real-layer exercise (the offered act) before driving; honest-residual clause extended to cover "or the exercise was not confirmed". Resolves the contradiction with the 5.11.4 floor's "offered, Operator-confirmed, never run by default" rule.
+- `docs/decisions/bmad-adoption.md` — browser-walkthrough bullet updated to reflect the 5.11.4 re-anchoring as the graphical deepening of the *offered* real-layer exercise (pointer to `verification-floor.md` added); the stale "Reviewer exercises the live surface" phrasing removed.
+
+---
+
 ## [5.11.4] — 2026-06-13
 
 ### Changed
