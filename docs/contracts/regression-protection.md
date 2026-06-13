@@ -9,6 +9,7 @@ Every user-facing feature carries a contract naming what must keep working; a ch
 - Each user-facing feature has a contract recording its must-work and must-not-break promises in plain product language.
 - A change that touches a feature is checked against that feature's promises before it can pass; touching a must-item without updating the contract is blocking.
 - A user-facing quantified limit the product promises is recorded as a must-not-break invariant; a limit not yet quantifiable is recorded for the Operator, never invented.
+- A confirmed defect, once fixed, cannot recur silently: the fix carries the test that pins it — failing before the fix, passing after (the floor ratchet, `src/agents/builder.md`); a genuinely untestable fix records its deferral with a reason, never silence.
 
 ## Must not break
 

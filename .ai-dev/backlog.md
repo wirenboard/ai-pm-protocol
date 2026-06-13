@@ -3,10 +3,6 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
-## regression-protection contract row for the ratchet — 2026-06-13 (builder/reviewer note, 5.9.6)
-
-`docs/contracts/regression-protection.md` rows cover feature-contract promises only; the new floor ratchet ("a defect fix carries the test that pins it", 5.9.6) could gain a must-work row there. Fixup-grade.
-
 ## Audit 4.19.0 Low-2 — orchestrator length watch — 2026-06-12
 
 `orchestrator.md` sits at the upper edge of "readable in one sitting". The rule for the NEXT side-tool addition: trim or fold, never append past the edge. (Low-1, the `Validation` stamp label, resolved in 4.19.2 — dropped, no live consumer.)

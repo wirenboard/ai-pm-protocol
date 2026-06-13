@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.10.1] — 2026-06-13
+
+### Added
+
+- `docs/contracts/regression-protection.md` — Must-work row recording the ratchet as a product promise: a confirmed defect, once fixed, cannot recur silently — the fix carries the test that pins it (rule home: the 5.9.6 floor, `src/agents/builder.md`).
+
+---
+
 ## [5.10.0] — 2026-06-13
 
 Downstream upgrade + migration channel (decision base: `docs/decisions/upgrade-migration.md`). PR 4 of the research batch.
