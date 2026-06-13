@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.11.2] — 2026-06-13
+
+### Fixed
+
+- Platform-switch offer now fires: the understand beat's lazy-offer enumeration (`PROTOCOL.md` `## The loop` beat 1) lists the platform-mismatch case, pointing to the orchestrator's `## Setup` Platform-switch procedure. Before, the trigger lived only inside `## Setup` ("offer on the understand beat") while the beat itself did not name it — so a session on a harness differing from the config's `platform` (e.g. OpenCode on a `claude`-pinned project) never got the offer. 8D `platform-switch-orphaned-offer`; D7 folds this with the discovery-conclude and missed-audit-offer findings into one "fire-time anchor" class (a `[persona]` trigger must be anchored on the path the role walks when it fires, not only in the feature's own chapter).
+
+---
+
 ## [5.11.1] — 2026-06-13
 
 ### Fixed

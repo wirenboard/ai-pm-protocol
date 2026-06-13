@@ -24,6 +24,17 @@ Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 a
 - `## Doc bootstrap` step 4 cross-check — contradictions surfaced "where a product brief exists"; no Reviewer check that this cross-check actually happened.
 - `## 8D` D8 close — "land every measure in its durable home"; no template, relies entirely on D8 prose.
 - Any future procedure: before writing "at the end, do X" — ask whether X has a structural trigger, or add one.
+- Generalised by the *fire-time anchor* class below (8D platform-switch-orphaned-offer) — same root, the cross-chapter-trigger variant.
+
+## Fire-time anchor — a trigger must live on the path walked WHEN it fires — 2026-06-13 (8D platform-switch-orphaned-offer, D7)
+
+**Class found:** a `[persona]` trigger/offer documented only inside its own side-tool chapter — which the role reads on a *different* occasion than when the trigger must fire — is invisible. The role walks the fire-time path (a loop beat) and finds no pointer; it would have to spontaneously recall a line from an unrelated chapter. No deny, no inject, no enumeration entry ⇒ never fires.
+
+**Fixed instance (this version):** the platform-switch offer named "on the understand beat" inside `## Setup`, but `PROTOCOL.md` beat 1's own enumeration of lazy offers (no-brief→discovery, UPGRADING→upgrade, …) did not list it. An OpenCode session on a `claude`-pinned project never offered the switch. Fix: add the platform-mismatch case to the beat-1 enumeration, pointing to the `## Setup` procedure (one home preserved).
+
+**Meta-class (folds the two prior D7s into one):** *"At the END" mandatory-final-step* (discovery-conclude) and *implicit counter dependencies* (missed-audit-offer) are the same root — a step/trigger/counter not anchored on the path the role actually traverses at fire time. Unifying rule: **before writing "do X on the Y beat / at the end / every N" — anchor it in the enumeration the role walks AT THAT MOMENT (the beat's own list, a template field, a named turn, a Reviewer check), never only in the feature's own chapter.**
+
+**Audit sweep:** scan every "fires on the X beat" / "offer on X" trigger across the orchestrator's side-tools and confirm the corresponding beat (`PROTOCOL.md` `## The loop`) enumerates it. A trigger named in only one direction is a finding.
 
 ## Gitignore tooling — zero protocol noise in downstream repos — 2026-06-13 (Operator)
 
