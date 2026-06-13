@@ -3,6 +3,17 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Layout-coupled tooling: test the INSTALLED layout, not just the source — 2026-06-13 (8D quality-gate-silent-bypass, D7)
+
+**Class found (audit lens):** tooling whose default path assumes the source repo's layout, exercised (dogfood + self-test) ONLY against that layout, fails open on every other layout — invisibly. The quality runner defaulted its registry to `src/quality/tools.json`; the installer co-locates runner+registry in `.ai-dev/quality/`; downstream the path missed, the runner exited 0 (green) having run zero checks. Dogfood masked it (this repo holds tools.json in BOTH places) and the self-test reproduced the source layout (synthetic registry under `src/quality/`).
+
+**Fixed instance (5.11.1):** runner resolves its registry beside itself (works in both layouts); `install.test.mjs` now spawns the laid-down runner against the temp target (no `src/quality/`) and asserts it LOCATES the registry.
+
+**Rule for future tooling + audit sweep:**
+- A tool with a default path must be tested against the INSTALLED layout, not only the source layout — install into a temp target and run it there.
+- A fail-open default (exit 0 when an input is missing) needs an explicit "input located" assertion, or the failure is silent. Sweep `.ai-dev/quality/run.mjs`-class tools and any future runner for this pattern.
+
+
 ## "At the END" sweep — mandatory-final-step pattern — 2026-06-13 (8D D7, discovery-conclude)
 
 **Class found:** a procedure step described as "at the end" / "at the close" / "finally" without a structural anchor (template field, named turn, Reviewer check) is invisible to enforcement — the model follows gather momentum and skips it.
