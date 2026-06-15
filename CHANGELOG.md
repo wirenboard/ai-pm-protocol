@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.14.1] — 2026-06-16
+
+### Changed
+
+- **Firefight lane — batch-review-before-ship made visible, dropping review cadence made un-silent.** Fixes a downstream finding: during a rapid fix-test debugging firefight (sub-minute build-install-test cycles) the Reviewer cadence collapsed into a silent `solo`→`yolo` slide across 9+ changes. Two prose clarifications, no new mechanism: `PROTOCOL.md` beat 4 now states the fresh Reviewer checks the branch's **cumulative diff** — so a branch carrying several atomic fixes is covered by **one** Reviewer before ship (the compliant fast path: batch the fixes, review once, ship once; the floor is unchanged). A route-first **firefight** bullet in `src/agents/orchestrator.md` makes deferring per-fix review to one batch review an explicit **announce-and-acknowledge** step (`[persona]`), never silent — and states plainly that no `[mechanical]` deny catches an in-flight skip (the merge-gate is the only mechanical floor, and it catches the ship, not the drift). (`PROTOCOL.md` beat 4; `src/agents/orchestrator.md` route-first + `## When something is off`.)
+
+---
+
 ## [5.14.0] — 2026-06-16
 
 ### Added

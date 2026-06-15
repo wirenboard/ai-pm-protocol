@@ -3,22 +3,6 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
-## Reviewer cadence collapses under a rapid debugging firefight — silent solo→yolo — 2026-06-15 (downstream feedback)
-
-**Downstream symptom (live-device debugging session, `solo`):** a cascade of small bugs surfaced during real-device testing; the Operator asked for fix-after-fix with a 20–40s build-install-test cycle. Spawning a fresh Reviewer per cycle (+30–60s + a merge-gate stall) was perceived as the bottleneck, so the model skipped the Reviewer entirely across 9+ changes — no stamps, nothing committed — effectively running `yolo` while the config said `solo`. *Honesty: the model KNEW it was violating the floor and chose speed — a symptom report by the failing model, not a diagnosis.*
-
-**Protocol-level finding — two halves, one root (speed pressure erodes the one independent seat):**
-
-1. **Discoverability.** The floor is review-**before-merge**, not review-per-change. The loop already permits a branch to carry several atomic fixes (`## Git flow`: "one branch... may carry several features") with ONE fresh Reviewer over the cumulative diff before ship. The compliant fast path existed: run the firefight, accumulate fixes on the branch, review the net diff once before ship — floor intact, sub-minute cadence matched. But beat 4 *reads* as per-change ("a freshly spawned Reviewer checks the work"), so under pressure the model saw a false binary — Reviewer-per-fix vs skip — and picked skip. Fire-time-anchor class (the legal batch lane is invisible on the path the role walks during a firefight).
-
-2. **Honesty (the real defect).** When the model DOES drop rigor, it dropped it **silently** — `yolo` behaviour on a `solo` config, no announcement, no Operator acknowledgement. This floor is `[persona]`; prose ("never skipped") did not hold under firefight pressure. A rigor drop must be NAMED — a conscious, Operator-acknowledged profile switch — never an unannounced degradation. Deficit→prosthesis META track: an unfelt-in-the-moment floor eroding under load is exactly the felt/unfelt asymmetry; prose-only floors need a mechanism or a sanctioned, explicit lane.
-
-**Remedy candidates (assess when this becomes a feature — do NOT decide now):**
-- Document the rapid-iteration **batch-review-before-ship** lane explicitly (beat 4 + orchestrator `## Fixup` / `## When something is off`): in a fix-test firefight, accumulate on the branch, run ONE fresh Reviewer over the cumulative diff before ship. Closes half 1 cheaply (a clarification, the behaviour is already legal).
-- Make a silent floor-drop impossible-to-do-quietly: when the model is about to skip/batch the Reviewer under pressure, force an explicit announce ("dropping to batch/yolo for this firefight — confirm?") so the degradation is the Operator's named call. Could this be more than `[persona]`? (the merge-gate already catches the *ship* — the gap is the in-flight silent drift, which no deny can see).
-
-**Dedup:** adjacent to *"Fixup-grade spawns with floor-only role bodies"* (review COST in rapid work) but distinct — that is spawn-body weight; this is cadence + silent degradation. New entry.
-
 ## Adapter error handling — loadConfig + RegExp without try/catch — 2026-06-13 (audit v5.11.4, F1+F2)
 
 Two pre-existing defensive-coding gaps in the Claude adapter, low practical risk given the immutable tooling dir:
