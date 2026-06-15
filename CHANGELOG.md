@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.13.0] — 2026-06-15
+
+### Added
+
+- Installer **dogfood/source mode** (`node src/adapter/install.mjs . --dogfood`): wires the protocol's own source repo to its `src/` tree instead of a vendored copy, skipping vendoring + version-stamping, so a self-reinstall is idempotent against the committed source-mode state (`git status` clean) on both Claude and OpenCode — instead of churning the tracked wiring to the downstream layout. Symmetric **fail-closed** guard: `--dogfood` against a non-source target, and a no-flag install against the source repo, each exit 1 rather than wire the wrong layout. (`src/adapter/install.mjs`; contract `docs/contracts/one-command-install.md`; usage `src/adapter/INSTALL.md`.)
+
+---
+
 ## [5.12.1] — 2026-06-15
 
 ### Changed

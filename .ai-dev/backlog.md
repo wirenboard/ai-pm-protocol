@@ -56,6 +56,14 @@ Both fixes are one PR.
 
 **Audit sweep:** scan every "fires on the X beat" / "offer on X" trigger across the orchestrator's side-tools and confirm the corresponding beat (`PROTOCOL.md` `## The loop`) enumerates it. A trigger named in only one direction is a finding.
 
+## RESOLVED (5.13.0) — Installer churns tracked files in source/dogfood mode — 2026-06-15
+
+**Was:** running `node src/adapter/install.mjs .` on the protocol's OWN repo silently rewrote three tracked surfaces to the downstream (vendored) layout — Claude hook → `.ai-dev/tooling/src/adapter/claude/shim.mjs`, `CLAUDE.md` imports → `@.ai-dev/...`, `opencode.json` `instructions` → `.ai-dev/PROTOCOL.md` — and stamped `.ai-dev/VERSION` + a spurious `UPGRADING.md`, forcing a hand-revert and risking a committed broken-enforcement state (a stale vendored shim drifting from `src/`).
+
+**Resolved by the `--dogfood` self-host flag** (`src/adapter/install.mjs`; usage: `src/adapter/INSTALL.md` `### Dogfood / source mode`). It wires the tracked surfaces to `src/`, skips vendoring + the version stamp/marker, and writes no inactive breadcrumb — so a reinstall converges to the committed bytes (`git status --porcelain` empty, asserted on both platforms in `install.test.mjs`). Fail-closed and symmetric: `--dogfood` on a non-source target throws, and its absence on the source repo throws (the footgun made loud).
+
+**Cross-ref:** this is the targeted fix that stops the bleeding; the larger convergence of downstream and self-host layouts is the still-open *Gitignore tooling* item below (one would obviate the other by making the two layouts the same).
+
 ## Gitignore tooling — zero protocol noise in downstream repos — 2026-06-13 (Operator)
 
 The downstream project currently commits the full `.ai-dev/tooling/` tree (~all protocol source). Operator wants to gitignore it while keeping enforcement.

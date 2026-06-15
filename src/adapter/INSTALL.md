@@ -20,6 +20,22 @@ node src/adapter/install.mjs <target-dir> [--platform claude|opencode]
 
 Platform resolution: the `--platform` flag, else the target's `.ai-dev/config.json` `platform`, else a clear error — never a silent guess. The guarantee it realises is `docs/contracts/one-command-install.md`; the test is `src/adapter/install.test.mjs`.
 
+### Dogfood / source mode (`--dogfood`)
+
+```sh
+node src/adapter/install.mjs . --dogfood --platform claude     # or --platform opencode
+```
+
+The protocol's own repo develops itself under its own protocol, so it must wire to its **own `src/` tree**, not to a vendored copy of itself. `--dogfood` is that self-host mode — use it **only** when installing into the protocol's own source repo. It:
+
+- wires the three tracked surfaces to the source tree — the Claude hook → `src/adapter/claude/shim.mjs`; `CLAUDE.md` imports → `@PROTOCOL.md` + `@src/agents/orchestrator.md`; OpenCode `opencode.json` `instructions` → `PROTOCOL.md` and the plugin → `src/adapter` (the existing dev-layout auto-detection);
+- **skips** vendoring `.ai-dev/tooling/` (the repo already carries its core at the root — a copy would be untracked debris) and **skips** the `.ai-dev/VERSION` stamp + `UPGRADING.md` marker (the repo's authoritative version is its own `package.json`, read live);
+- writes no inactive-platform breadcrumb (both load surfaces are real, hand-authored, committed files).
+
+The guarantee: **a reinstall here converges to the committed bytes** — `git status --porcelain` is empty after a dogfood reinstall on either platform.
+
+Fail-closed and **symmetric** (the footgun made loud): `--dogfood` against a non-source target is a hard error (the wired `src/...` paths would dangle), and its **absence** when the target IS the source repo is equally a hard error (a downstream-mode install there would churn the tracked source-mode files). Neither direction proceeds silently.
+
 The rest of this file is the **underlying detail** — what each wiring step does, the single home for each. The installer automates exactly these; reach for a manual step only to understand or to wire one platform by hand.
 
 Convention used below: the adapter ships inside the protocol's tooling submodule at `.ai-dev/tooling/src/adapter/`. A project that vendors the adapter elsewhere rewrites the one path in each wiring step — nothing else changes.

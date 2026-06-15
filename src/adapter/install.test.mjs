@@ -314,6 +314,80 @@ testPlatform("opencode", (target) => {
 }
 
 
+// ── dogfood (self-host) mode — idempotent against the committed source tree ──
+// The flag wires the three tracked surfaces to src/, skips vendoring + stamping,
+// and converges to the committed bytes. The contract's falsifiable form is the
+// real-layer scenario (git status clean after a reinstall in THIS repo); here we
+// drive install() against the live repo root and assert it MUTATES NOTHING — the
+// surface files keep their committed bytes, no .ai-dev/tooling/ is created, no
+// VERSION/UPGRADING is written, and a second run is byte-identical. A snapshot of
+// the touched surfaces is restored at the end so the test never dirties the repo
+// even if an assertion regresses mid-run.
+{
+  const SURFACES = ["CLAUDE.md", "AGENTS.md", ".claude/settings.json", ".opencode/opencode.json"];
+  const before = {};
+  for (const s of SURFACES) before[s] = fs.readFileSync(path.join(ROOT, s), "utf8");
+  const toolingExisted = fs.existsSync(path.join(ROOT, ".ai-dev", "tooling"));
+  const versionExisted = fs.existsSync(path.join(ROOT, ".ai-dev", "VERSION"));
+  try {
+    // dogfood claude: the tracked surfaces stay at their committed (source-form) bytes
+    install(ROOT, "claude", { dogfood: true });
+    check("[dogfood] CLAUDE.md unchanged (already source-form)", fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8") === before["CLAUDE.md"]);
+    check("[dogfood] CLAUDE.md imports the SOURCE constitution", before["CLAUDE.md"].includes("@PROTOCOL.md") && before["CLAUDE.md"].includes("@src/agents/orchestrator.md"));
+    check("[dogfood] CLAUDE.md does NOT import the vendored layout", !before["CLAUDE.md"].includes("@.ai-dev/PROTOCOL.md"));
+    const settings = fs.readFileSync(path.join(ROOT, ".claude", "settings.json"), "utf8");
+    check("[dogfood] settings.json unchanged", settings === before[".claude/settings.json"]);
+    check("[dogfood] hook command points at src/adapter/claude/shim.mjs", settings.includes("src/adapter/claude/shim.mjs") && !settings.includes(".ai-dev/tooling/src/adapter/claude/shim.mjs"));
+
+    // dogfood opencode: opencode.json stays at its committed canonical shape
+    install(ROOT, "opencode", { dogfood: true });
+    check("[dogfood] opencode.json unchanged (canonical self-host shape)", fs.readFileSync(path.join(ROOT, ".opencode", "opencode.json"), "utf8") === before[".opencode/opencode.json"]);
+    check("[dogfood] opencode.json instructions = source PROTOCOL.md", JSON.parse(before[".opencode/opencode.json"]).instructions.includes("PROTOCOL.md"));
+    check("[dogfood] AGENTS.md unchanged (no @-import appended)", fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8") === before["AGENTS.md"]);
+    check("[dogfood] AGENTS.md carries NO @-import line (loads via opencode.json instructions)", !before["AGENTS.md"].includes("@.ai-dev/PROTOCOL.md") && !before["AGENTS.md"].includes("@PROTOCOL.md"));
+
+    // no vendored / stamped debris created by either dogfood run (only if absent before)
+    if (!toolingExisted) check("[dogfood] no .ai-dev/tooling/ vendored copy created", !fs.existsSync(path.join(ROOT, ".ai-dev", "tooling")));
+    if (!versionExisted) {
+      check("[dogfood] no .ai-dev/VERSION stamped", !fs.existsSync(path.join(ROOT, ".ai-dev", "VERSION")));
+      check("[dogfood] no .ai-dev/UPGRADING.md marker written", !fs.existsSync(path.join(ROOT, ".ai-dev", "UPGRADING.md")));
+    }
+
+    // second dogfood run is a no-op — byte-identical surfaces
+    install(ROOT, "claude", { dogfood: true });
+    const allSame = SURFACES.every((s) => fs.readFileSync(path.join(ROOT, s), "utf8") === before[s]);
+    check("[dogfood] a second dogfood run leaves every tracked surface byte-identical", allSame);
+  } finally {
+    // restore the committed bytes regardless of outcome (the test must never dirty the repo)
+    for (const s of SURFACES) fs.writeFileSync(path.join(ROOT, s), before[s]);
+    if (!toolingExisted) fs.rmSync(path.join(ROOT, ".ai-dev", "tooling"), { recursive: true, force: true });
+    if (!versionExisted) {
+      fs.rmSync(path.join(ROOT, ".ai-dev", "VERSION"), { force: true });
+      fs.rmSync(path.join(ROOT, ".ai-dev", "UPGRADING.md"), { force: true });
+    }
+  }
+}
+
+// ── dogfood fail-closed (symmetric) — both misuse directions are hard errors ──
+{
+  // (a) --dogfood against a NON-source temp target (no src/adapter/install.mjs)
+  const target = freshTarget("dogfood-nonsource");
+  try {
+    let threw = false;
+    try { install(target, "claude", { dogfood: true }); } catch { threw = true; }
+    check("[dogfood] --dogfood against a non-source target throws (fail-closed)", threw);
+    check("[dogfood] failed --dogfood wired nothing into the non-source target", !fs.existsSync(path.join(target, ".claude")) && !fs.existsSync(path.join(target, ".ai-dev")));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+  // (b) NO flag but the target IS the source repo → hard error (the footgun made loud)
+  let threw2 = false;
+  try { install(ROOT, "claude"); } catch { threw2 = true; }
+  check("[dogfood] downstream-mode install against the source repo throws (no silent churn)", threw2);
+  // assert nothing leaked: the source repo's committed surfaces are untouched
+  check("[dogfood] refused source-repo install left CLAUDE.md untouched", fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8").includes("@src/agents/orchestrator.md"));
+}
+
 // ── hasGitRepo — the CLI's no-repo warning predicate ─────────────────────────
 {
   const target = freshTarget("gitcheck");
