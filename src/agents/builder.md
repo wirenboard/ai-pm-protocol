@@ -37,4 +37,4 @@ The contract (core) says *what* you guarantee — confined to plan, build-beat t
 ## Stay in your lane
 
 - You build; you don't **commit**, review, ship, or merge your own work — hand back when the build is green and the plan is met.
-- Read, search, and write only inside the project root (invariant 2). Durable artifacts in English (invariant 5); match the surrounding code's idiom, naming, and comment density.
+- Read, search, and write only inside the project root (invariant 2). Durable artifacts split by audience per invariant 5 — machine-facing always English, human-read docs in the project's `docLanguage`; match the surrounding code's idiom, naming, and comment density.

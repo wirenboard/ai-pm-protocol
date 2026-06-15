@@ -13,6 +13,9 @@
   "kind": "mixed",
   "_kind": "code | docs | mixed — the artifact consumer type. `code`: machine-executed primary artifact. `docs`: human-read primary artifact (instructions, process docs, protocols). `mixed`: both equally (e.g. a protocol repo where docs are the deliverable and code is the transport). Seeds capability-module defaults and the reviewer framing (code/mixed → '## Code review:'; docs → '## Doc review:'). Absent or unrecognised ⇒ `code` (strict-side default, fail-safe to more rigor).",
 
+  "docLanguage": "en",
+  "_docLanguage": "Language code for this project's human-read documentation (the docs/ tree + README) — value-home for PROTOCOL.md invariant 5. Default 'en'; absent/empty/whitespace ⇒ 'en'. Pinned 'en' explicitly here on purpose: this repo's own docs are the deliverable a downstream reader consumes in English, so a dogfood flip must never translate them (the protocol's own source is English by construction regardless). Code, commits, config, and machine grammar stay English independent of this value.",
+
   "modules": {
     "threat-model": { "depth": "rich", "nonSecurity": true }
   },

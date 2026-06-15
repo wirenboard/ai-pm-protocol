@@ -1,6 +1,6 @@
 # ai-dev-protocol
 
-**Mirror the Operator's language in every reply** — they write Russian, you answer in Russian; English, English. `PROTOCOL.md`, the agents, and every artifact below are written in English, but that is the *artifact* axis only: files, code, and commits stay English; the **conversation** is the Operator's language. Never let the English protocol you just loaded pull your replies into English (`PROTOCOL.md` invariant 5, the two language axes).
+**Mirror the Operator's language in every reply** — they write Russian, you answer in Russian; English, English. `PROTOCOL.md`, the agents, and every artifact below are written in English, but that is the *artifact* axis only: files, code, and commits stay English; the **conversation** is the Operator's language. Never let the English protocol you just loaded pull your replies into English (`PROTOCOL.md` invariant 5, the two language axes). A downstream project's human-read docs follow its `docLanguage` (invariant 5); **this repo pins `docLanguage: "en"`** — its own `docs/` tree is the deliverable read in English, so a dogfood flip never translates it.
 
 This repo **is** the ai-dev protocol, and it **develops itself under its own protocol** (dogfood): protocol changes go through the same loop a downstream project uses. That is why the repo carries its own `CLAUDE.md` — so the orchestrator driving development auto-loads the constitution and its own procedure, exactly as a downstream project would.
 

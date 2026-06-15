@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.14.0] — 2026-06-16
+
+### Added
+
+- **`docLanguage`** — documentation can now follow the Operator's language instead of always English. Invariant 5 (`PROTOCOL.md`) is reworded in place into two audience axes: **machine-facing / cross-team** artifacts (code, comments, commit messages, CHANGELOG, config keys *and* values, IDs/enums, machine grammar embedded in docs) stay **English always**; **human-read documentation** (the `docs/` tree + project `README.md`) follows a new `docLanguage` config field (a language code string; default `"en"`; absent/empty/whitespace ⇒ `"en"`). Setup gains a doc-language question, and a *"делай документацию на X"* mid-stream switch flips the field and offers to translate the existing in-scope docs through the loop. This repo pins `docLanguage:"en"` (dogfood guard — its own `docs/` tree is an English deliverable); the protocol's own source is machine-facing core, never the `docs/` tree, so the field never reaches it. (`PROTOCOL.md` invariant 5 + `## Project config`; `src/agents/{orchestrator,builder,reviewer}.md`; `CLAUDE.md`.)
+
+---
+
 ## [5.13.0] — 2026-06-15
 
 ### Added
