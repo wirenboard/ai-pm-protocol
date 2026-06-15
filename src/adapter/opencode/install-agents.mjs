@@ -23,19 +23,21 @@ import { loadRegistry, composeBody } from "../modules.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const ROLES = ["orchestrator", "builder", "reviewer"];
 
-// Resolve a role's configured model to a CONCRETE OpenCode model id to bake into
-// the assembled frontmatter, or null when none should be baked. UNLIKE Claude
-// (where the orchestrator resolves the model and passes it at the spawn), OpenCode
-// has no per-spawn model arg for a subagent — the model is a frontmatter key, so
-// the install step is where a cross-model reviewer is realised. We bake ONLY a
-// concrete pin; `auto`/`session`/absent emit NO `model:` line, so the agent
-// inherits the session model — honest zero-config same-model review.
-export function resolveModelPin(model) {
-  if (!model) return null;                              // absent ⇒ session ⇒ no line
-  if (model === "auto" || model === "session") return null; // wishes the adapter can't pin to a second model here
-  if (typeof model === "string") return model;         // a bare `provider/model` pin
-  if (typeof model === "object" && typeof model.opencode === "string") return model.opencode; // per-platform pin
-  return null;
+// Resolve a role's configured model — on OpenCode this ALWAYS returns null: we
+// never bake a `model:` line. The OpenCode `task` runtime parses a subagent's
+// `model:` frontmatter but does NOT apply it at execution — a cluster of open
+// upstream bugs (#21632 / #17870 / #18615; fix PR #14961 closed unmerged), with no
+// fix shipped through our 1.17.7 (research: docs/decisions/opencode-task-capabilities.md
+// Q1). Baking a concrete pin would therefore claim a cross-model reviewer the
+// runtime silently swallows. So a concrete OpenCode pin is treated exactly like
+// `auto`/`session`/absent — no `model:` line, the subagent inherits the session
+// model, and the install log makes no false claim. The WHY a cross-model reviewer
+// is unavailable on OpenCode is documented for the Operator in three durable homes:
+// the orchestrator honesty note (`## Your seat`), tool-map.json `models.opencode._note`,
+// and the research doc above. (Claude is unaffected — there the orchestrator
+// resolves the model and passes it at the spawn; no bake path at all.)
+export function resolveModelPin() {
+  return null; // OpenCode `task` ignores subagent model: at runtime — never bake one
 }
 
 // Assemble every role agent file into outDir from the given config. Returns the
@@ -52,6 +54,9 @@ export function install(outDir, config) {
     // by the SHARED assembler (one home with the Claude shim; never copied here).
     const floor = fs.readFileSync(path.join(ROOT, "src", "agents", `${role}.md`), "utf8").trimStart();
     const body = composeBody(ROOT, floor, role, registry, config);
+    // OpenCode never bakes a model line (resolveModelPin always null — the runtime
+    // ignores subagent model: pins; see its comment). Kept as a call so the no-bake
+    // contract has one named home the test pins.
     const modelPin = resolveModelPin(config.roles?.[role]?.model);
     const modelLine = modelPin ? `model: ${modelPin}\n` : "";
     const out = `---\n${fm}\n${modelLine}---\n\n${body}`;

@@ -142,6 +142,6 @@ The session runs as `ai-dev` (the personality loads) and a write into `.ai-dev/t
 - It is a thin pointer — no copy of the dialog (single home, invariant 6).
 - Re-run it whenever the neutral body or the frontmatter changes.
 
-**Apply config** — the shared re-assemble-after-setup step is homed in `tool-map.json` `apply-config` + `docs/architecture.md`. OpenCode delta: there is no per-spawn model arg, so **`node src/adapter/opencode/install-agents.mjs`** *bakes* the reviewer `model:` line into the assembled frontmatter (re-run `install-commands.mjs` too if the command surface changed).
+**Apply config** — the shared re-assemble-after-setup step is homed in `tool-map.json` `apply-config` + `docs/architecture.md`. OpenCode delta: **`node src/adapter/opencode/install-agents.mjs`** assembles the role agents but bakes **no** reviewer `model:` line — the OpenCode `task` runtime ignores a subagent's `model:`, so no cross-model reviewer is realisable here (why: `tool-map.json` `models.opencode._note`). Re-run `install-commands.mjs` too if the command surface changed.
 
 > **Fallback (no dir guess needed):** if a future opencode stops loading the markdown command dir, define the command inline in `opencode.json` under the `command` key. The SDK `Config.command` schema (`{ template, description, agent, model, subtask }`, confirmed in `@opencode-ai/sdk`) takes the same body as `template` and `agent: ai-dev`. The markdown-dir form is preferred here because it shares the one neutral body file with Claude.

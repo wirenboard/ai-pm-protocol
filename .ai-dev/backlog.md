@@ -3,6 +3,16 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Adapter error handling — loadConfig + RegExp without try/catch — 2026-06-13 (audit v5.11.4, F1+F2)
+
+Two pre-existing defensive-coding gaps in the Claude adapter, low practical risk given the immutable tooling dir:
+
+**F1** (`src/adapter/engine.mjs:511`, `src/adapter/claude/shim.mjs:114`) — `loadConfig()` calls `JSON.parse(fs.readFileSync(...))` without try/catch; a malformed `deny-rules.json` crashes the hook with a non-zero exit instead of a clean allow/deny. Fix: wrap the call site in `shim.mjs:main()` with try/catch, exit 0 with a logged error (fail-open for usability, consistent with other paths).
+
+**F2** (`src/adapter/engine.mjs:484,492,503`) — `new RegExp(pat, "i")` where `pat` comes from `deny-rules.json` without try/catch; a bad pattern throws a `SyntaxError` that crashes the predicate. Trusted internal data, no external injection risk. Fix: try/catch around new RegExp, return `false` on error (fail-closed for inject/nudge rules).
+
+Both fixes are one PR.
+
 ## Producer/consumer format coupling: tolerant parser + producer-shaped test — 2026-06-13 (8D reviewer-stamp-heading-level, D7)
 
 **Class found:** a mechanical consumer parses an artifact an agent authors, and (a) pins one cosmetic form the producer may vary (heading level, surrounding whitespace, case), relying on the producer's prose discipline to match it; (b) no test feeds a *producer-shaped* artifact through the consumer — only hand-authored ideal inputs. A model authoring the artifact slips to an equivalent form (here: opening a fresh stamp file with an H1 `#` title instead of the documented `##`), the strict consumer rejects it, and the failure surfaces only on a live run. Sibling of the layout-coupling/fail-open class below — but here the gate failed CLOSED (a wasted re-review round, never a silent bypass).
@@ -133,6 +143,8 @@ The flagship unfelt-deficit prosthesis. Decided design (Operator, 2026-06-06): a
 
 The config supports per-seat models; the open part is a recommended DEFAULT matrix (spend thinking where errors propagate furthest). Operator caveat from a failed prior attempt: revisit deliberately; no weak models on generative seats.
 
+**OpenCode caveat (2026-06-15):** on OpenCode a per-seat model pin is **blocked at source** — the `task` runtime ignores subagent `model:` (RESOLVED entry below; research `docs/decisions/opencode-task-capabilities.md` Q1). A matrix's OpenCode column is inert until upstream fixes the cluster or a verified prosthesis exists. Claude is unaffected.
+
 **Multimodality note (resolved 2026-06-13):** originally suggested recommending vision for GUI projects in setup. Dropped — the verification ladder (5.9.6) already handles this: functional checks belong to rung 2 (UI driver), visual residuals to rung 3 (named human scenario). Vision would be an optimisation of rung 3, not a gap.
 
 ## Platform built-ins survey — safe orchestrator offload — 2026-06-08/09
@@ -141,15 +153,35 @@ Survey both platforms' built-in tools/agents and map which are safe for the orch
 
 ## OpenCode background/parallel spawn — research requested 2026-06-13 (Operator)
 
-The parallel-work value on OpenCode hinges on whether `task` spawns can run concurrently/in background (the tool-map records no background primitive — but that's our record, not a verified absence; the Operator suspects the docs may show one). Research the current OpenCode docs/SDK: concurrent task calls, background sessions, async child-session prompting. Outcome updates `tool-map.json` (+ the parallel-work decision doc's honest-bottleneck note) either way. Sibling of the continue-subagent entry below — one research pass can cover both.
+The parallel-work value on OpenCode hinges on whether `task` spawns can run concurrently/in background (the tool-map records no background primitive — but that's our record, not a verified absence; the Operator suspects the docs may show one). Research the current OpenCode docs/SDK: concurrent task calls, background sessions, async child-session prompting. Outcome updates `tool-map.json` (+ the parallel-work decision doc's honest-bottleneck note) either way. Sibling of the continue-subagent entry below AND the `task`-ignores-`model:` finding above — one research pass covers all three (concurrency, resume, per-spawn model).
 
 ## OpenCode continue-subagent prosthesis — researched 2026-06-12, parked (Operator decision)
 
 Research verdict on `continue-a-sub-agent: null` for OpenCode: the built-in `task` tool has no resume/session-id parameter (docs confirm — each call is a fresh child session), so the tool-map `null` + fresh-spawn fallback stays honest. BUT a prosthesis is feasible: the SDK exposes `client.session.prompt({id})`, plugins get `client` in context and can register custom tools — our adapter plugin could add `continue_subagent(session_id, message)`. Open questions: how the orchestrator learns the child session id from the `task` result; the deny rule "Builder only, never the Reviewer" (the plugin already resolves the actor). Parked because the vendor is moving in this zone — human prompting of child sessions broke on Desktop/Web in 1.4.0 (issue anomalyco/opencode#22830, open) and may return as a native primitive that obsoletes the prosthesis. Re-assess at the next release-audit (vendor-watch). Sources: opencode.ai/docs/agents, /docs/plugins, /docs/custom-tools, issue #22830.
 
+## OpenCode `task` spawn ignores the agent `model:` frontmatter — cross-model reviewer unrealised — RESOLVED 2026-06-15
+
+**Resolution (shipped):** confirmed a genuine OpenCode platform limitation (research: `docs/decisions/opencode-task-capabilities.md` Q1 — open upstream bugs #21632 / #17870 / #18615, fix PR #14961 closed unmerged, no fix through 1.17.7). The adapter now treats an OpenCode concrete pin like `auto`/`session`: `resolveModelPin` returns `null`, no `model:` line is baked, the reviewer honestly runs on the session model — the false silent claim of cross-model independence is gone. The WHY is documented in three durable homes: `src/agents/orchestrator.md` `## Your seat` honesty note (widened) + `## Setup` step-2 model question, and `src/adapter/tool-map.json` `models.opencode._note`. A recorded pin stays in config to auto-heal if upstream fixes the cluster. Re-check at each release-audit (vendor-watch on #21632 / #17870 / #6651). The (impossible) automated path may be replaced by a *manual* UI-model-switch prosthesis — see the candidate entry below.
+
+**Original downstream symptom report**
+
+**Downstream symptom report (ad-md-editor-class OpenCode session):** a reviewer pinned to a different model (`deepseek/deepseek-v4-flash`) via config was correctly baked into `.opencode/agents/dev-reviewer.md` frontmatter by `install-agents.mjs`, but the spawned reviewer ran on the **session model**. Reported: a test reviewer spawn returned the session model; proceeded honestly with same-model reviews (the honesty rule allows it). Cost: ~5 reviewer spawns lost cross-model independence. *This is a SYMPTOM by the failing model — not a confirmed diagnosis (could be an OpenCode version/format quirk).* 
+
+**Protocol-level finding (mapped):** if true, this falsifies the **core design assumption** documented in `src/adapter/opencode/install-agents.mjs:28-32` — "OpenCode has no per-spawn model arg for a subagent; the model is a frontmatter key, so the install step is where a cross-model reviewer is realised." The whole OpenCode realisation of a per-seat model pin would be non-functional for `task`-spawned sub-agents, and we advertise it (config + baked frontmatter) without warning the loss. Honesty class: a `[mechanical]`-looking realisation that silently doesn't deliver. Undercuts the *per-seat model matrix* and the *deepseek reviewer default* items below — both presuppose frontmatter pinning works.
+
+**Owning files (when fixed):** `src/adapter/opencode/install-agents.mjs` (the assumption + `resolveModelPin`), `src/adapter/tool-map.json` `models.opencode`, and the honesty note in `src/agents/orchestrator.md` `## Your seat` (today it only covers "no second model exists" — not "the pin is silently ignored").
+
+**Next step — RESEARCH FIRST, do not fix blind:** verify against current OpenCode docs/SDK whether `task` honours an agent's `model:` frontmatter, and if not, the real per-spawn model mechanism (SDK `session.prompt({model})`? a different frontmatter key? version-gated?). Fold into the standing OpenCode `task`-behaviour research below (background/parallel spawn + continue-subagent) — one pass covers all three. If confirmed: either wire the working mechanism, or make the adapter REFUSE to silently swallow a cross-model pin (fail loud at install, or honest "not realisable here" like `auto` does today).
+
+## OpenCode manual UI-model-switch as a cross-model-reviewer prosthesis — 2026-06-15 (candidate — think through, do not build)
+
+Subagents on OpenCode inherit the PRIMARY/session model (the root cause of the resolved `task`-ignores-`model:` finding above). That same mechanic is also a lever: if the Operator switches the active model/identity in the OpenCode UI to a non-session reviewer model *before* the reviewer spawn, the spawned reviewer would inherit THAT model — yielding genuine cross-model review through a **manual** step instead of the (impossible) automated frontmatter bake. Candidate idea: a procedure that, on an OpenCode reviewer spawn where the Operator wants cross-model independence, offers them this manual UI switch (switch model → spawn reviewer → switch back) as the realistic cross-model path while the automated one is blocked upstream. **Open questions to think through before building:** does the orchestrator's own session survive an Operator model-switch mid-turn (or does the switch reset context)? how to fit a manual human step into the spawn flow without breaking the loop's automation? is the friction worth it vs just accepting honest same-model review? where it would live (a `## Your seat` / Setup note, or a side-procedure). This may REPLACE the automated path entirely if upstream never fixes the cluster. Operator's idea, 2026-06-15. Do NOT build yet — capture and assess.
+
 ## deepseek-v4-flash as the OpenCode default cross-model reviewer — 2026-06-10 (idea)
 
 Cross-model independence needs the Reviewer on a *different* model, not a *weaker* one. If `deepseek-v4-flash` is review-grade, it could be the OpenCode reviewer default via the adapter's model policy. Validate review quality before defaulting; opt-in until then.
+
+**Blocked-at-source (2026-06-15):** an OpenCode reviewer pin does NOT currently run cross-model — the `task` runtime ignores subagent `model:` (RESOLVED entry above; research `docs/decisions/opencode-task-capabilities.md` Q1). A deepseek reviewer default is unrealisable on OpenCode until upstream fixes the cluster or a verified prosthesis (e.g. the manual UI-switch candidate below) lands.
 
 ## Flag-controlled mode: project-generated docs not committed to the product repo — 2026-06-05 (idea)
 

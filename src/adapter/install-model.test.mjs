@@ -1,13 +1,18 @@
-// OpenCode install-bake test — proves the reviewer-model bake and its honesty
-// contract (src/adapter/opencode/install-agents.mjs). UNLIKE Claude (the orchestrator
-// resolves the model and passes it at the spawn), OpenCode has no per-spawn model
-// arg for a subagent, so a cross-model reviewer is realised at install by baking a
-// `model:` line into the assembled frontmatter. The contract this locks:
-//   • a CONCRETE pin (a `provider/model` string, or the per-platform `{opencode: …}`
-//     form) ⇒ the assembled reviewer frontmatter carries exactly that `model:` line;
-//   • `auto` / `session` / absent ⇒ NO `model:` line — honest zero-config same-model
-//     review, no false claim of cross-model independence.
-// A regression in either direction fails loudly here.
+// OpenCode install-model honesty test — proves install NEVER bakes a reviewer
+// `model:` line (src/adapter/opencode/install-agents.mjs). The OpenCode `task`
+// runtime parses a subagent's `model:` frontmatter but does NOT apply it at
+// execution (open upstream bugs #21632 / #17870 / #18615, no fix through our
+// 1.17.7 — research: docs/decisions/opencode-task-capabilities.md Q1), so baking a
+// concrete pin would claim a cross-model reviewer the runtime silently swallows.
+// The contract this locks:
+//   • EVERY input — a concrete `provider/model` string, the per-platform
+//     `{opencode: …}` form, `auto`, `session`, or absent — resolves to NO `model:`
+//     line; the subagent inherits the session model, no false claim of cross-model
+//     independence. (The WHY a cross-model reviewer is unavailable on OpenCode is
+//     documented for the Operator in orchestrator.md `## Your seat`, tool-map.json
+//     `models.opencode._note`, and the research doc above — not in the install log.)
+// UNLIKE Claude, where the orchestrator resolves the model and passes it at the
+// spawn (no bake path at all). A regression that bakes a line fails loudly here.
 //
 // Run: node src/adapter/install-model.test.mjs
 
@@ -22,9 +27,10 @@ function check(name, cond) {
   else { fail++; console.log(`  FAIL ${name}`); }
 }
 
-// 1. resolveModelPin — the pure pin-resolution across every input shape.
-check("pin: bare provider/model string resolves", resolveModelPin("deepseek/deepseek-chat") === "deepseek/deepseek-chat");
-check("pin: per-platform {opencode} form resolves", resolveModelPin({ opencode: "deepseek/deepseek-chat" }) === "deepseek/deepseek-chat");
+// 1. resolveModelPin — on OpenCode ALWAYS null (the runtime ignores subagent
+//    model: pins), across every input shape.
+check("no-pin: a concrete bare provider/model string is dropped", resolveModelPin("deepseek/deepseek-chat") === null);
+check("no-pin: a per-platform {opencode} pin is dropped", resolveModelPin({ opencode: "deepseek/deepseek-chat" }) === null);
 check("no-pin: 'auto' resolves to null", resolveModelPin("auto") === null);
 check("no-pin: 'session' resolves to null", resolveModelPin("session") === null);
 check("no-pin: absent (undefined) resolves to null", resolveModelPin(undefined) === null);
@@ -46,18 +52,16 @@ function reviewerFrontmatter(reviewerModel) {
   return fm;
 }
 
-// 2. end-to-end: a concrete pin is baked into the assembled reviewer frontmatter.
-const pinned = reviewerFrontmatter({ opencode: "deepseek/deepseek-chat" });
-check("bake: concrete pin emits the exact model line", /^model: deepseek\/deepseek-chat$/m.test(pinned));
+// 2. end-to-end: a concrete pin emits NO model line — the runtime ignores it, so
+//    the install must not claim it (the honesty case this change locks).
+check("no-bake: a concrete {opencode} pin emits no model line", !/^model:/m.test(reviewerFrontmatter({ opencode: "deepseek/deepseek-chat" })));
+check("no-bake: a concrete bare-string pin emits no model line", !/^model:/m.test(reviewerFrontmatter("deepseek/deepseek-reasoner")));
 
-const pinnedBare = reviewerFrontmatter("deepseek/deepseek-reasoner");
-check("bake: bare-string pin emits the exact model line", /^model: deepseek\/deepseek-reasoner$/m.test(pinnedBare));
-
-// 3. end-to-end: auto / session / absent emit NO model line (the honesty case).
+// 3. end-to-end: auto / session / absent emit NO model line (already honest).
 check("no-bake: 'auto' emits no model line", !/^model:/m.test(reviewerFrontmatter("auto")));
 check("no-bake: 'session' emits no model line", !/^model:/m.test(reviewerFrontmatter("session")));
 check("no-bake: absent model emits no model line", !/^model:/m.test(reviewerFrontmatter(undefined)));
 
-console.log(`\nINSTALL-MODEL bake: ${pass} passed, ${fail} failed`);
+console.log(`\nINSTALL-MODEL honesty: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
-console.log("PASS — pin baked, auto/session/absent stay model-free");
+console.log("PASS — no model line ever baked on OpenCode (runtime ignores subagent model:)");

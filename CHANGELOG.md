@@ -12,6 +12,18 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.12.0] — 2026-06-15
+
+### Changed
+
+- OpenCode adapter no longer bakes a reviewer `model:` line into the assembled frontmatter: the OpenCode `task` runtime parses but does not apply a subagent's `model:` (open upstream bugs #21632 / #17870 / #18615, unfixed through 1.17.7), so a concrete OpenCode reviewer pin is now dropped like `auto`/`session` instead of being silently baked into dead frontmatter. `setup` no longer offers a cross-model reviewer on OpenCode. (`src/adapter/opencode/install-agents.mjs`, `src/agents/orchestrator.md` `## Setup`)
+
+### Fixed
+
+- Honesty: the orchestrator's `## Your seat` note, `src/adapter/tool-map.json` `models.opencode._note`, and `src/adapter/INSTALL.md` no longer claim an OpenCode reviewer can be cross-model — they now document why it cannot. New research decision `docs/decisions/opencode-task-capabilities.md` grounds the verdict (also: background subagent spawn confirmed present v1.16.2+; native `task` resume still absent).
+
+---
+
 ## [5.11.5] — 2026-06-13
 
 ### Fixed
