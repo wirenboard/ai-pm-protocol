@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.12.1] — 2026-06-15
+
+### Changed
+
+- `src/adapter/tool-map.json` — `spawn-a-sub-agent` now carries a `_doc` recording the OpenCode background-subagent capability (changelog v1.16.2+, present 1.17.x; multiple-concurrent task calls unverified), pointing at `docs/decisions/opencode-task-capabilities.md` Q2. Closes the research's Q2 record half.
+
+---
+
 ## [5.12.0] — 2026-06-15
 
 ### Changed
