@@ -3,6 +3,16 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Merge-gate deny over-matches the substring "merge" — blocks read-only git — 2026-06-16 (live false-positive)
+
+**Symptom (this session):** the merge-gate deny blocked `git merge-base --is-ancestor <branch> main` — a **read-only** command run to check whether a stale local branch was contained in main. The deny predicate is `/git\s+(merge|push)\b/` (`src/adapter/engine.mjs`); because `\b` treats the hyphen as a word boundary, `git merge` followed by `-base`/`-tree` matches — so the predicate catches not only a real `git merge <topic>` but also the read-only/plumbing `git merge-base` and `git merge-tree`. (It does NOT match `git branch --merged` or `git log main..x` — `git` must sit immediately before `merge`; those run fine.) None of the `git merge-*` plumbing family is the gated action (a real `git merge` / `gh pr merge` / push of a feature branch).
+
+**Class:** an enforcement pattern tuned for recall (never miss a real merge) that over-matches an adjacent command family, blocking legitimate read-only work. Honesty-relevant: this is a `[mechanical]` deny doing MORE than its stated intent ("block a git merge/push without a satisfied stamp"), the inverse of an over-claim — it is over-*enforcing*.
+
+**Fix direction (one home — `src/adapter/deny-rules.json` merge-gate rule + the predicate in `src/adapter/engine.mjs`):** require `merge` to be the standalone verb, not the prefix of a `merge-*` plumbing command — e.g. `git\s+merge(?![-\w])` (or an explicit `-base`/`-tree` exclusion). Add test cases asserting `git merge-base` / `git merge-tree` ⇒ ALLOW, alongside the existing `git merge <topic>` ⇒ DENY case. Verify the merge-topic-unresolvable ask-rule and the real merge-gate denies still fire (don't loosen the floor while tightening the match).
+
+**Workaround until fixed:** phrase containment checks without a `git merge-*` token (`git rev-list --count main..<branch>`, which this session fell back to).
+
 ## Adapter error handling — loadConfig + RegExp without try/catch — 2026-06-13 (audit v5.11.4, F1+F2)
 
 Two pre-existing defensive-coding gaps in the Claude adapter, low practical risk given the immutable tooling dir:
