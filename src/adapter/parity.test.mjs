@@ -253,6 +253,208 @@ check("configured:non-change-prompt-allows",
   claudeDecide({ hook_event_name: "UserPromptSubmit", prompt: "good morning" }, CFG, config).verdict, "allow");
 fs.rmSync(CFG, { recursive: true, force: true });
 
+// ── 1c. MULTI-REPO COMPONENTS: the boundary widens to the declared set ────────
+// The full Step-2 test matrix (`.ai-dev/plans/multi-repo-components.md` `## Test
+// matrix`), asserted through BOTH shims at the engine-verdict level. A valid
+// `.ai-dev/components.json` at the session root widens the project-boundary denies
+// to any declared sibling; everything else (no manifest / non-declared / malformed /
+// overbroad / nonexistent / symlink-escape) stays denied — fail closed. The tooling
+// deny stays unconditional even when a declared sibling contains a tooling dir.
+//
+// Each case builds a real workspace: a parent dir holding the session root `host/`
+// plus real sibling dirs and a real components.json — the boundary predicates
+// fs-check + realpath the declared roots, so real dirs are required.
+console.log("COMPONENTS MATRIX (boundary widens to the declared set; both shims, fail closed):");
+
+// realpath the parent so expected canonical paths match what realpathSync resolves.
+function compWorkspace(siblings = []) {
+  const parent = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-cmatrix-")));
+  const host = path.join(parent, "host");
+  fs.mkdirSync(path.join(host, ".ai-dev"), { recursive: true });
+  for (const s of siblings) fs.mkdirSync(path.join(parent, s), { recursive: true });
+  return { parent, host };
+}
+function writeComponents(host, body) {
+  fs.writeFileSync(path.join(host, ".ai-dev", "components.json"), body);
+}
+function cleanupComp(parent) { fs.rmSync(parent, { recursive: true, force: true }); }
+// Run one read/write through BOTH shims against a pinned root, assert the engine
+// verdict on each, and (no divergence here — boundary is mechanical on both) assert
+// the two shims agree.
+function bothExpect(name, root, claudePayload, ocTool, ocArgs, want) {
+  const cv = claudeDecide(claudePayload, root, config).verdict;
+  const ov = ocDecide(ocTool, ocArgs, root, false, config).verdict;
+  check(`claude:${name}`, cv, want);
+  check(`opencode:${name}`, ov, want);
+  check(`parity:${name}`, cv, ov);
+}
+
+// declared-sibling-read / declared-sibling-write ⇒ ALLOW (the widening).
+{
+  const { parent, host } = compWorkspace(["frontend"]);
+  writeComponents(host, JSON.stringify([{ root: "../frontend", role: "frontend", stack: "react" }]));
+  const target = path.join(parent, "frontend", "src.js");
+  bothExpect("declared-sibling-read", host,
+    { tool_name: "Read", tool_input: { file_path: target } }, "read", { filePath: target }, "allow");
+  bothExpect("declared-sibling-write", host,
+    { tool_name: "Write", tool_input: { file_path: target, content: "x" } }, "write", { filePath: target, content: "x" }, "allow");
+  // non-declared sibling (backend exists but is NOT in the manifest) ⇒ DENY.
+  fs.mkdirSync(path.join(parent, "backend"));
+  const undeclared = path.join(parent, "backend", "src.py");
+  bothExpect("non-declared-sibling", host,
+    { tool_name: "Read", tool_input: { file_path: undeclared } }, "read", { filePath: undeclared }, "deny");
+  // session-root-still-works ⇒ ALLOW (root always in the set).
+  fs.writeFileSync(path.join(host, "README.md"), "r");
+  const inRoot = path.join(host, "README.md");
+  bothExpect("session-root-still-works", host,
+    { tool_name: "Read", tool_input: { file_path: inRoot } }, "read", { filePath: inRoot }, "allow");
+  cleanupComp(parent);
+}
+
+// no-manifest-single-root ⇒ DENY (unchanged from today): the SAME sibling target,
+// but with no components.json, is outside the boundary.
+{
+  const { parent, host } = compWorkspace(["frontend"]); // no manifest written
+  const target = path.join(parent, "frontend", "src.js");
+  bothExpect("no-manifest-single-root", host,
+    { tool_name: "Read", tool_input: { file_path: target } }, "read", { filePath: target }, "deny");
+  cleanupComp(parent);
+}
+
+// malformed-json ⇒ DENY (fail closed): a declared sibling is denied when the
+// manifest cannot parse.
+{
+  const { parent, host } = compWorkspace(["frontend"]);
+  writeComponents(host, "{ not valid json ][");
+  const target = path.join(parent, "frontend", "src.js");
+  bothExpect("malformed-json", host,
+    { tool_name: "Read", tool_input: { file_path: target } }, "read", { filePath: target }, "deny");
+  cleanupComp(parent);
+}
+
+// overbroad-root ⇒ DENY (whole manifest rejected): one entry resolves to "/", so
+// the WHOLE manifest is rejected and even the otherwise-valid sibling is denied.
+{
+  const { parent, host } = compWorkspace(["frontend"]);
+  writeComponents(host, JSON.stringify([
+    { root: "../frontend", role: "frontend", stack: "x" },
+    { root: "/", role: "evil", stack: "y" },
+  ]));
+  const target = path.join(parent, "frontend", "src.js");
+  bothExpect("overbroad-root", host,
+    { tool_name: "Read", tool_input: { file_path: target } }, "read", { filePath: target }, "deny");
+  cleanupComp(parent);
+}
+
+// nonexistent-root ⇒ DENY (whole manifest rejected): a declared `../ghost` does not
+// exist, so the manifest is rejected and the real sibling is denied.
+{
+  const { parent, host } = compWorkspace(["frontend"]); // no `ghost`
+  writeComponents(host, JSON.stringify([
+    { root: "../frontend", role: "frontend", stack: "x" },
+    { root: "../ghost", role: "missing", stack: "y" },
+  ]));
+  const target = path.join(parent, "frontend", "src.js");
+  bothExpect("nonexistent-root", host,
+    { tool_name: "Read", tool_input: { file_path: target } }, "read", { filePath: target }, "deny");
+  cleanupComp(parent);
+}
+
+// empty-shape ⇒ DENY (fail closed): a valid-JSON but empty array is not a non-empty
+// array of root objects, so the manifest is rejected.
+{
+  const { parent, host } = compWorkspace(["frontend"]);
+  writeComponents(host, "[]");
+  const target = path.join(parent, "frontend", "src.js");
+  bothExpect("empty-shape", host,
+    { tool_name: "Read", tool_input: { file_path: target } }, "read", { filePath: target }, "deny");
+  cleanupComp(parent);
+}
+
+// symlink-escape ⇒ DENY: a declared root that is a symlink to a filesystem root
+// resolves (via realpath) to "/" and is rejected as overbroad — so a read in /etc
+// stays denied. Skipped where the sandbox forbids symlink creation.
+{
+  const { parent, host } = compWorkspace([]);
+  let symlinked = false;
+  try { fs.symlinkSync("/", path.join(parent, "escape")); symlinked = true; }
+  catch (e) { if (e.code !== "EPERM" && e.code !== "EACCES") throw e; }
+  if (symlinked) {
+    writeComponents(host, JSON.stringify([{ root: "../escape", role: "x", stack: "y" }]));
+    bothExpect("symlink-escape", host,
+      { tool_name: "Read", tool_input: { file_path: "/etc/passwd" } }, "read", { filePath: "/etc/passwd" }, "deny");
+  } else { console.log("  · symlink-escape: skipped (symlink not permitted here)"); }
+  cleanupComp(parent);
+}
+
+// sibling-tooling ⇒ DENY (unconditional, PER-ROOT): a DECLARED sibling whose own
+// subtree contains a `.ai-dev/tooling/` dir. The tooling carve-out (invariant 2)
+// must hold under EVERY declared root, not only the session's — so a read AND a
+// write of the SIBLING's tooling both stay denied even though the sibling root IS
+// in the validated set (the manifest must never widen into a sibling's enforcer
+// source). This is the threat F1 named: before the per-root fix the sibling was in
+// the set and its tooling was reachable. We build a REAL `frontend/.ai-dev/tooling/`
+// dir so realpath resolves, and assert deny on both read and write, both shims.
+{
+  const { parent, host } = compWorkspace(["frontend"]);
+  fs.mkdirSync(path.join(parent, "frontend", ".ai-dev", "tooling"), { recursive: true });
+  writeComponents(host, JSON.stringify([{ root: "../frontend", role: "frontend", stack: "x" }]));
+  const siblingTooling = path.join(parent, "frontend", ".ai-dev", "tooling", "engine.mjs");
+  bothExpect("sibling-tooling-write", host,
+    { tool_name: "Write", tool_input: { file_path: siblingTooling, content: "x" } },
+    "write", { filePath: siblingTooling, content: "x" }, "deny");
+  bothExpect("sibling-tooling-read", host,
+    { tool_name: "Read", tool_input: { file_path: siblingTooling } },
+    "read", { filePath: siblingTooling }, "deny");
+  // Sanity: a NON-tooling file in the SAME declared sibling stays ALLOWed — the
+  // carve-out denies only the tooling subtree, not the whole sibling.
+  const siblingNormal = path.join(parent, "frontend", "src.js");
+  bothExpect("sibling-nontooling-allow", host,
+    { tool_name: "Read", tool_input: { file_path: siblingNormal } },
+    "read", { filePath: siblingNormal }, "allow");
+  // And the SESSION root's own tooling stays denied exactly as before (unchanged).
+  const sessionTooling = path.join(host, ".ai-dev", "tooling", "engine.mjs");
+  bothExpect("session-tooling-write", host,
+    { tool_name: "Write", tool_input: { file_path: sessionTooling, content: "x" } },
+    "write", { filePath: sessionTooling, content: "x" }, "deny");
+  cleanupComp(parent);
+}
+
+// inside-root-unchanged ⇒ a normal in-root write reaches the IDENTICAL verdict with
+// and without a valid manifest present (the regression guard: the widening never
+// changes an in-root verdict). A truncating write over a non-empty in-root file is
+// denied in both states; a fresh in-root write is allowed in both.
+{
+  const { parent, host } = compWorkspace(["frontend"]);
+  fs.writeFileSync(path.join(host, "existing.txt"), "real content");
+  const fresh = path.join(host, "new.txt");
+  // without manifest
+  const noManFresh = claudeDecide({ tool_name: "Write", tool_input: { file_path: fresh, content: "x" } }, host, config).verdict;
+  // with valid manifest
+  writeComponents(host, JSON.stringify([{ root: "../frontend", role: "frontend", stack: "x" }]));
+  const manFresh = claudeDecide({ tool_name: "Write", tool_input: { file_path: fresh, content: "x" } }, host, config).verdict;
+  check("inside-root-unchanged:fresh-write", noManFresh, manFresh);
+  check("inside-root-unchanged:fresh-write-allow", manFresh, "allow");
+  cleanupComp(parent);
+}
+
+// Regression guard: the EXISTING boundary cases (read/find/write-outside-root) still
+// deny on a no-manifest root — re-run them on a fresh manifest-less root to prove the
+// default is byte-unchanged (they already run on ROOT above; this pins it explicitly
+// against a root that never had a components.json).
+{
+  const { parent, host } = compWorkspace([]); // no manifest
+  bothExpect("boundary-default:read-outside", host,
+    { tool_name: "Read", tool_input: { file_path: "/etc/passwd" } }, "read", { filePath: "/etc/passwd" }, "deny");
+  bothExpect("boundary-default:write-outside", host,
+    { tool_name: "Write", tool_input: { file_path: "/etc/foo", content: "x" } }, "write", { filePath: "/etc/foo", content: "x" }, "deny");
+  const cf = claudeDecide({ tool_name: "Bash", tool_input: { command: "find / -name secret" } }, host, config).verdict;
+  const of = ocDecide("bash", { command: "find / -name secret" }, host, false, config).verdict;
+  check("claude:boundary-default:find-outside", cf, "deny");
+  check("opencode:boundary-default:find-outside", of, "deny");
+  cleanupComp(parent);
+}
+
 // ── 2. SINGLE-ENGINE: no rule logic leaked into a shim ───────────────────────
 // Tokens that appear ONLY in rule data/predicates (deny-rules.json / engine.mjs),
 // never in legitimate normalise/verdict-map glue. If one shows up in a shim, a

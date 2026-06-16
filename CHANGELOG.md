@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.15.0] — 2026-06-16
+
+### Added
+
+- **Multi-component projects: the project boundary can span a declared component set (opt-in, fail-closed).** First PR of the multi-repo epic (Operator chose Option B; research at `docs/decisions/multi-repo-components.md`). A project that is several separate repos — e.g. a React frontend + Python backend + C firmware — can now declare its sibling roots in `.ai-dev/components.json`, and a single agent session may read/find/write across the declared set in one boundary (invariant 2 widened from one root to the declared set). The default is unchanged: **no manifest ⇒ behaviour byte-identical to before** (single root only); the capability is opt-in. The widening is `[mechanical]` on both platforms — only the project-boundary read/find/write denies consult the set; the truncation, self-patch, stamp-write, merge-gate, and orchestrator-content denies stay session-root-anchored. **Fail-CLOSED is load-bearing:** an absent / malformed / wrong-shape / non-existent-root / overbroad (filesystem-root or session-root ancestor) / symlink-escaping manifest collapses the permitted set back to the single session root — the boundary never widens on doubt, and a single bad entry rejects the whole manifest (no partial honour). The `.ai-dev/tooling/` enforcer-source carve-out is denied **per-root** (under every declared root, read+find+write), taking precedence over the component-set allow. (`src/adapter/engine.mjs` `componentRoots`/`isInsideAnyComponent`/`writesIntoAnyNever`; full both-platform parity matrix in `src/adapter/parity.test.mjs`; invariant 2 + `## Enforcement` in `PROTOCOL.md`; `docs/contracts/project-boundary.md`; `docs/architecture.md` `## Components`.)
+
+> Not yet shipped (next PR): the orchestrator coordination layer — how a session learns it is multi-component, drives one plan + one Reviewer over the unified multi-repo diff, and the per-repo git/ship model (N Operator merge words). The firmware flash-and-probe verification rung and a shared seam-contract transport are tracked separately in the backlog.
+
 ## [5.14.1] — 2026-06-16
 
 ### Changed

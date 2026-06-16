@@ -58,6 +58,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "components",
+      "checks": "multi-repo components — the fail-CLOSED manifest loader/validator (engine.mjs componentRoots) collapses to the single session root on absent/malformed/wrong-shape/non-existent/overbroad/partial-honour, canonicalises declared roots through realpath (defeats symlink escapes), and returns the validated multi-root set on a valid manifest. This is the validator unit-tested in isolation; the boundary wiring (the set consulted by the read/find/write project-boundary denies, with the per-root `.ai-dev/tooling/` carve-out) is covered by parity.test.mjs.",
+      "config": null,
+      "run": "node src/adapter/components.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "merge-gate",
       "checks": "the unstamped-review merge-gate parses commands correctly — the pushed/merged ref outranks .git/HEAD (cross-branch push reads the right stamp), any branch prefix strips (feature/, fix/, bare), non-shell heredoc bodies are data (no verb false positives; shell-heredoc and malformed bodies stay matched), the accepted stamp labels are exactly the documented two, and an UNRESOLVABLE topic asks, never passes",
       "config": null,

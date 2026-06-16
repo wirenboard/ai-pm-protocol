@@ -3,6 +3,25 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Multi-component / multi-repo project — the single-root assumption — 2026-06-16 (Operator)
+
+**Gap (Operator-raised):** the protocol assumes ONE project root. A project that is several parts — front + back in different languages, or an app + embedded firmware — is served unevenly:
+
+- **Polyglot inside one repo** — already works: the quality registry (`tools.json`) is language-agnostic, one row per tool, so a TS-frontend + Go-backend monorepo registers a linter/typechecker/test per language and the `build`/`review` beats run them all. No core gap here; `kind` (`code`/`docs`/`mixed`) is the machine-vs-human axis, NOT a component/language axis — it does not model "frontend" vs "backend" as entities.
+- **Embedded firmware in one repo** — partial: the toolchain registers like any stack, but real-layer verification (orchestrator `## Your seat`, the offered real-integration-layer run) is described only generically (CLI / IPC / socket / API); "flash the `.bin` to the device and check" has no first-class shape — it runs as a generic offer with no embedded-specific knowledge.
+- **Separate repos** (front-repo + back-repo + firmware-repo as siblings) — **blocked by design**: invariant 2 (`Stay inside the project`, `[mechanical]`) denies parent dirs and sibling repos. Each repo is its own root, own `.ai-dev/`, own session — there is **no cross-repo orchestration**: a feature spanning front+back is two independent loops, two PRs, and the cross-component coherence is the Operator's to hold, not the protocol's. `parallel-work.md` (worktree-per-feature) is intra-root parallelism, NOT multi-repo.
+
+**Class:** a structural assumption (single root) that the deny layer mechanically enforces (invariant 2) — so multi-repo is not a missing feature to bolt on, it is a boundary the core deliberately holds. Loosening it touches the security floor; any design must keep "an agent cannot wander into an arbitrary sibling repo" while permitting a declared, bounded set of sibling components.
+
+**Open design forks (scope via `research` before any plan):**
+- Is the served unit a monorepo (recommend it, document the polyglot quality-registry pattern, add an embedded verification rung) — or genuinely multiple repos?
+- For multiple repos: a declared component manifest (`.ai-dev/components.json`?) listing sibling roots, with the project-boundary deny widened from "the root" to "the declared component set" — vs. keeping each repo independent and adding only a cross-repo state/PR linkage at the Operator layer.
+- Per-component config/quality/kind, or one shared config governing all components?
+- Cross-component feature: one plan + one Reviewer over a multi-repo diff, or N coordinated loops with a join at ship?
+- Embedded as a first-class `kind`/verification rung (flash-and-probe) regardless of the repo-layout decision.
+
+**First step:** `research` to map how comparable tools (Nx/Turborepo for polyglot monorepos, multi-repo orchestration patterns) draw this line, then bring the Operator a recommendation on the monorepo-vs-multi-repo fork before designing the boundary change. Do NOT loosen invariant 2 ad hoc.
+
 ## Merge-gate deny over-matches the substring "merge" — blocks read-only git — 2026-06-16 (live false-positive)
 
 **Symptom (this session):** the merge-gate deny blocked `git merge-base --is-ancestor <branch> main` — a **read-only** command run to check whether a stale local branch was contained in main. The deny predicate is `/git\s+(merge|push)\b/` (`src/adapter/engine.mjs`); because `\b` treats the hyphen as a word boundary, `git merge` followed by `-base`/`-tree` matches — so the predicate catches not only a real `git merge <topic>` but also the read-only/plumbing `git merge-base` and `git merge-tree`. (It does NOT match `git branch --merged` or `git log main..x` — `git` must sit immediately before `merge`; those run fine.) None of the `git merge-*` plumbing family is the gated action (a real `git merge` / `gh pr merge` / push of a feature branch).
