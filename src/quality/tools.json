@@ -66,6 +66,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "multirepo-e2e",
+      "checks": "multi-repo boundary END-TO-END through the REAL entry — a real `node shim.mjs` subprocess resolves the session root from a real on-disk git-init'd multi-repo fixture (the resolveRoot seam parity.test.mjs bypasses) and enforces the widened boundary: declared-sibling allow, non-declared deny, the D6 seam-contract-as-transport allow, the per-root `.ai-dev/tooling/` carve-out deny, and the no-manifest single-root regression tripwire. Validates the MECHANISM the orchestrator's `[persona]` coordination relies on, not the coordination itself. OpenCode asymmetry recorded honestly (no subprocess entry; plugin-entry not source-loadable) — its real decide() driven against the same fixture.",
+      "config": null,
+      "run": "node src/adapter/multirepo-e2e.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18 + git, no install"
+    },
+    {
       "id": "merge-gate",
       "checks": "the unstamped-review merge-gate parses commands correctly — the pushed/merged ref outranks .git/HEAD (cross-branch push reads the right stamp), any branch prefix strips (feature/, fix/, bare), non-shell heredoc bodies are data (no verb false positives; shell-heredoc and malformed bodies stay matched), the accepted stamp labels are exactly the documented two, and an UNRESOLVABLE topic asks, never passes",
       "config": null,

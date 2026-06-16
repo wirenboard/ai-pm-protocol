@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.17.1] — 2026-06-16
+
+### Added
+
+- **End-to-end test: the multi-repo boundary is enforced through the real shim on a real layout.** The multi-repo epic (5.15.0–5.17.0) shipped its enforcement, but the suite tested the deny *engine* in-process (`decide()` with an explicit root, bypassing `resolveRoot`). This new `multirepo-e2e` test (`src/adapter/multirepo-e2e.test.mjs`) drives the full installed path — a real `node shim.mjs` subprocess reading a hook payload on stdin, resolving the hub root from a real **git toplevel**, enforcing the widened boundary — against an on-disk fixture of four git-init'd sibling repos. Proven through the real subprocess: declared-sibling read/write allow; undeclared sibling deny; the D6 seam-contract read from the hub session allow (the "widened boundary IS the transport" claim, end-to-end); a declared sibling's `.ai-dev/tooling/` deny (per-root carve-out); the no-manifest single-root tripwire. **No bug surfaced — the shipped mechanism works on a real layout.** OpenCode has no source-loadable subprocess entry, so it is exercised via `decide()` on the same fixture (the asymmetry stated honestly, no faked parity). Validates the deny mechanism, not the `[persona]` coordination prose.
+
 ## [5.17.0] — 2026-06-16
 
 ### Added
