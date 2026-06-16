@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.16.1] — 2026-06-16
+
+### Changed
+
+- **Ship cost relay reports token spend.** The orchestrator's one-line ship-time cost relay (`src/agents/orchestrator.md` `## Your seat`) now names **token spend** alongside spawns and wall time — the sum of the spawned roles' reported usage (each sub-agent result carries its own count), plus the session's own where the harness surfaces it. The wording is deliberately honest about what is measurable: report the sum and name what is not surfaced rather than invent a precise-looking total. (Operator-requested; `[persona]`.)
+
 ## [5.16.0] — 2026-06-16
 
 ### Added
