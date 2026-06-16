@@ -3,9 +3,39 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
-## Multi-component / multi-repo project — the single-root assumption — 2026-06-16 (Operator)
+## Reviewer floor does not gate test coverage of NEW code branches — 2026-06-16 (downstream intake)
 
-**Gap (Operator-raised):** the protocol assumes ONE project root. A project that is several parts — front + back in different languages, or an app + embedded firmware — is served unevenly:
+**Protocol-level signal** (mapped from a downstream retrospective; the downstream's own findings are its backlog, not ours). The Builder contract guarantees the `build`-beat quality tools are green and **existing tests are never weakened** — but nowhere does the floor require that a *newly added code branch* carry an isolated test, and the Reviewer checklist does not explicitly flag new, untested branches. Result: new logic can ship with the suite green (it only exercises pre-existing paths). In a rapid firefight (batch fixes → one cumulative Reviewer) this debt accumulates faster, surfacing only at the audit cadence — i.e. the **compensating control works, but with a lag**. Three separate downstream findings collapsed to this one class.
+
+**Honesty note:** this is a downstream SYMPTOM report, not a confirmed protocol defect — the downstream's own choices may explain part of it. What is genuinely ours: the floor's coverage gate is "tests green + existing not weakened", which is silent on new-branch coverage.
+
+**Design fork (settle when picked up):** (a) tighten the per-feature Reviewer — a new code branch with no isolated test is a named finding (raises per-feature rigor, costs Reviewer time); vs (b) keep the audit cadence as the safety net (current posture — proven to work, but lagged). Not a blind pick: (a) partially re-litigates the firefight lane's speed/coverage trade-off. Possible middle: the firefight announce already flags batching — the Reviewer over the cumulative diff could be asked specifically to enumerate new-branch coverage gaps as advisory, non-blocking on `solo`. Dedup: partially overlaps the META deficit row "Forgot half the scenarios → scenario↔path coverage", but that is about scenarios, not new-branch unit coverage — distinct.
+
+## Audit-lens candidate — two safeguards evolving independently, no test exercises them together — 2026-06-16 (downstream intake)
+
+**Class** (mapped from a downstream bug, abstracted — no downstream specifics). Two defensive mechanisms are added in separate changes, each correct in isolation and each tested in isolation; neither's test exercises the OTHER's effect on shared state, and one silently undoes or mis-handles what the other already did. A per-diff Reviewer sees each safeguard as locally sound; the interaction failure is invisible without a test that drives BOTH together. Sibling of the existing *Producer/consumer format coupling* entry below, but a distinct angle: that one is consumer-vs-producer cosmetic coupling; this is safeguard-vs-safeguard state coupling. **Audit-sweep candidate:** when two independent guards touch the same shared structure (history, a buffer, a queue), require a test that runs them in sequence — the second guard fed the first guard's output. Add to the auditor's whole-tree code-quality dimension.
+
+## Multi-repo epic follow-ups — deferred from the shipped epic — 2026-06-16
+
+The multi-repo-components epic shipped (boundary mechanism 5.15.0 + coordination workflow 5.16.0; research `docs/decisions/multi-repo-components.md`). Two items were consciously kept OUT and are their own future features:
+
+1. **Firmware flash-and-probe verification rung.** The real-layer verification offer (`src/agents/orchestrator.md` `## Your seat`) is described only generically (CLI / IPC / socket / API). An embedded firmware component needs a concrete "flash the artifact to the device and probe it" rung — with its blast-radius safety (a device that can be bricked). Needed in ANY layout, not just multi-component. Likely overlaps prior on-hardware-preflight thinking.
+
+2. **Seam-contract transport (epic decision D6).** A cross-component feature changes the contract at the seam (a UI↔service API; a service↔firmware wire protocol). The manifest can *name* a seam contract, but how a CONSUMING repo references a contract OWNED by the producing repo — without reading the producer's tree (project-boundary deny) and without copying it into every repo (invariant-6 violation) — is unsolved. Options sketched in the research: snapshot/copy vs URL vs hub-owned. Its own feature; scope with `research` first.
+
+## Process lessons — git/stamp friction caught live — 2026-06-16
+
+Two mechanical foot-guns hit during the multi-repo ship; both cost a push round, neither leaked:
+
+1. **Stamp filename must track the branch topic.** The merge-gate derives the topic from the branch name and looks for `.ai-dev/reviews/<branch-topic>_review.md`. A branch whose topic differs from the plan/epic name (e.g. an epic plan `multi-repo-components` shipped on a branch `feature/multi-repo-coordination`) gets a stamp at the wrong path and the gate blocks the push. **Fix direction:** the orchestrator derives the stamp filename from the branch topic (one source), or the merge-gate also accepts a stamp matching the active plan topic; document the "branch topic == stamp/plan topic" rule in `## Your seat`.
+
+2. **Never combine the version-bump `git commit` and `git push` in one shell block.** The merge-gate hook inspects the whole block; a block containing `git push` is denied wholesale, so a `git commit` earlier in the same block never runs. A version bump committed this way silently does not land, and a later bare push ships the prior commit at the stale version (this happened — corrected by a follow-up release-marker PR). **Fix direction:** an orchestrator operating note in `## Your seat` — bump+commit and push are always separate tool calls. Low severity (caught mechanically), but it cost a corrective PR.
+
+## RESOLVED (5.16.0) — Multi-component / multi-repo project — the single-root assumption — 2026-06-16 (Operator)
+
+**Resolved by the multi-repo-components epic** (Option B): boundary mechanism shipped 5.15.0 (`.ai-dev/components.json` + fail-closed validator widening invariant 2 to a declared component set), coordination workflow 5.16.0 (one plan / one Reviewer over the unified diff, per-repo git). Decision record: `docs/decisions/multi-repo-components.md`. The monorepo-vs-multi-repo fork was settled (multi-repo, declared-set boundary); the design forks D1–D7 below were all answered during the epic. Two items remain OPEN as their own features — see *Multi-repo epic follow-ups* above (firmware flash-and-probe rung; seam-contract transport D6). The pre-epic analysis is kept below as the historical record of *why*; it is no longer an open gap.
+
+**Original gap (Operator-raised):** the protocol assumes ONE project root. A project that is several parts — front + back in different languages, or an app + embedded firmware — is served unevenly:
 
 - **Polyglot inside one repo** — already works: the quality registry (`tools.json`) is language-agnostic, one row per tool, so a TS-frontend + Go-backend monorepo registers a linter/typechecker/test per language and the `build`/`review` beats run them all. No core gap here; `kind` (`code`/`docs`/`mixed`) is the machine-vs-human axis, NOT a component/language axis — it does not model "frontend" vs "backend" as entities.
 - **Embedded firmware in one repo** — partial: the toolchain registers like any stack, but real-layer verification (orchestrator `## Your seat`, the offered real-integration-layer run) is described only generically (CLI / IPC / socket / API); "flash the `.bin` to the device and check" has no first-class shape — it runs as a generic offer with no embedded-specific knowledge.
