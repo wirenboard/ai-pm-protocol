@@ -12,6 +12,16 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.17.3] — 2026-06-16
+
+### Changed
+
+- **Repeated-fix ceiling now counts the reported symptom, not the patch.** `src/agents/orchestrator.md` `## When something is off`: the repeated-failed-attempt ceiling keyed on "the same wall" and exempted a "succeeding fix-after-fix firefight" — but a patch can succeed *at its own layer* while the Operator-visible symptom persists, so symptom-chasing across N *distinct* fixes never tripped it. The discriminator now keys on the **user-visible / Operator-reported symptom**: N distinct fixes that each change something yet leave the same failure reported **is** the loop → stop, trace the chain, declinable 8D. The "succeeding firefight" exemption holds only when each fix closes a **distinct, Operator-confirmed** symptom.
+
+### Added
+
+- **Builder "Trace before patch" discipline.** `src/agents/builder.md` `## Build`: a defect spanning multiple layers — trace the whole chain `input → … → observable output`, locate the actual break, fix it once at the true cause; never patch the first plausible layer and re-run. The Orchestrator points at this when building directly on `solo`/`lite`. No `PROTOCOL.md` edit — both are procedure (thin core). `[persona]`. (From a downstream feedback intake: three sequential patches to one bug, no root-cause trace.)
+
 ## [5.17.2] — 2026-06-16
 
 ### Added
