@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.17.2] — 2026-06-16
+
+### Added
+
+- **The loop's terminal narration — a required completion line after merge.** The narration rule (`PROTOCOL.md` `## Talking to the Operator`) is *pre-act* ("before each significant act"), so it structurally cannot cover the loop's last act: nothing follows the merge to pre-announce, and the session would go quiet exactly at "is it done? can I test it?". `src/agents/orchestrator.md` `## Your seat` now requires, **after the merge is confirmed**, one plain line to the Operator — shipped version · one-line change summary · "ready to test" · how to test it by hand (the verification scenario/command the plan named). Distinct from the PR-open cost relay (that prices the work; this reports completion); no `PROTOCOL.md` edit — the core principle already exists, the concrete terminal requirement stays procedure (thin core). `[persona]`. (From a downstream feedback intake: a fixup's completion went silent.)
+
 ## [5.17.1] — 2026-06-16
 
 ### Added
