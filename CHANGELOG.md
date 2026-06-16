@@ -12,6 +12,17 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.16.0] — 2026-06-16
+
+### Added
+
+- **Multi-component coordination: the loop can drive one feature across a declared set of repos.** Second PR of the multi-repo epic, the workflow layer on top of 5.15.0's widened boundary (all `[persona]` prose — it shapes orchestrator reasoning, blocks nothing mechanically). A session now **recognises** a multi-component project from the committed `.ai-dev/components.json` (recognise-and-announce, anchored in the understand beat's enumeration — not a declinable offer, since the manifest is authoritative) and runs **one plan / one Builder / one fresh Reviewer over the unified cross-repo diff**, fanning out to a per-repo ship. The new `src/agents/orchestrator.md` `## Multi-component coordination` is the procedure's one home. (`PROTOCOL.md` beat 1; `src/agents/orchestrator.md`.)
+- **N-repo git flow.** A cross-component feature keeps git **per-repo**: per-repo branch / commit / PR, **no atomic cross-repo commit**, N Operator merge words, the Operator sets cross-repo merge order. One home in `PROTOCOL.md` `## Git flow`; beat 5 (Ship) and `orchestrator.md` `## Your seat` point at it (the state pointer now names every touched repo's per-repo PR/merge state for lossless N-repo resume).
+
+### Decisions recorded
+
+- The manifest is **committed / repo-owned** (relative paths, changes via git — invariant 4); the hub is the repo whose `.ai-dev/` holds it. The review-stamp and merge-gate stay **session-root-anchored** (one unified review gates all N pushes). The trust-posture residual is stated unsoftened in `docs/contracts/project-boundary.md`: a sibling repo's merge-gate is satisfied by the unified hub review, so its own CI / branch-protection is the only repo-local re-check. (`docs/contracts/project-boundary.md`; `docs/architecture.md` `## Components`.)
+
 ## [5.15.0] — 2026-06-16
 
 ### Added
