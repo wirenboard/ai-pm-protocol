@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.17.0] — 2026-06-16
+
+### Added
+
+- **Seam-contract transport (multi-repo epic, decision D6).** The last open multi-repo question — how a consuming repo references a seam contract (a frontend↔backend API, a backend↔firmware wire protocol) owned by a producing repo — without reading the producer's tree (project-boundary) or copying into every repo (invariant 6). The answer leans entirely on what already shipped: a seam contract has **one home** in its OWNING component's `docs/contracts/`, and **within a coordinated multi-component session the widened boundary (5.15.0) IS the transport** — the session reads the owner's contract directly, no copy, no new mechanism. A component may declare the seams it owns via an optional, additive `contracts` field on its manifest entry (`{ "path": "...", "consumers": [...] }`); the manifest stays a JSON array and the **security-critical validator ignores the field** (advisory metadata, pinned by characterisation tests so the fail-closed floor stays intact). Outside a coordinated session: reference by pointer, never copy — a drift-guarded snapshot only if a build needs the file present. Rejected (recorded): copy-into-every-repo and an external schema registry (BSR / Pact Broker — not thin, not platform-neutral). (`docs/decisions/seam-contract-transport.md`; schema in `docs/architecture.md` `## Components`; posture in `docs/contracts/project-boundary.md`; `src/agents/orchestrator.md` `## Multi-component coordination`.)
+
+> This completes the multi-repo epic's design. Still open as a separate, layout-independent feature: the firmware flash-and-probe verification rung (backlog).
+
 ## [5.16.3] — 2026-06-16
 
 ### Fixed

@@ -84,6 +84,54 @@ console.log("COMPONENTS — fail-closed manifest validator:");
   cleanup(parent);
 }
 
+// ── advisory `contracts` field (seam-contract transport, D6) ───────────────────
+// The optional `contracts` field is ADVISORY metadata the orchestrator reads; the
+// security validator (componentRoots) must IGNORE it — it reads only `root`. These
+// pin that the field is structurally inert: it neither breaks the happy path nor
+// opens a fail-closed seam. (`docs/decisions/seam-contract-transport.md`.)
+
+// A `contracts`-bearing entry STILL widens correctly — the advisory field is ignored,
+// never rejecting the entry as malformed.
+{
+  const { parent, host } = workspace(["backend", "frontend"]);
+  writeManifest(host, JSON.stringify([
+    { root: "../backend", role: "backend", stack: "python",
+      contracts: [{ path: "docs/contracts/api.md", consumers: ["frontend"] }] },
+    { root: "../frontend", role: "frontend", stack: "react" },
+  ]));
+  sameSet("advisory:contracts-still-widens", componentRoots(host), [
+    host, path.join(parent, "backend"), path.join(parent, "frontend"),
+  ]);
+  cleanup(parent);
+}
+
+// A `contracts`-bearing entry whose `root` is OVERBROAD still fails CLOSED to the
+// single session root — the advisory field does not smuggle a path past the floor,
+// and one bad root rejects the whole manifest (all-or-nothing) even with the field.
+{
+  const { parent, host } = workspace(["backend"]);
+  writeManifest(host, JSON.stringify([
+    { root: "/", role: "evil", stack: "x",
+      contracts: [{ path: "docs/contracts/api.md", consumers: ["frontend"] }] },
+  ]));
+  sameSet("advisory:contracts-with-bad-root-fails-closed", componentRoots(host), [host]);
+  cleanup(parent);
+}
+
+// A malformed `contracts` VALUE (a string, not an array) on an otherwise-valid entry
+// is inert — the validator never touches the field, so any junk value is ignored and
+// the valid `root` still widens. Proves no crash/reject from an unrecognised value.
+{
+  const { parent, host } = workspace(["backend"]);
+  writeManifest(host, JSON.stringify([
+    { root: "../backend", role: "backend", stack: "python", contracts: "not-an-array" },
+  ]));
+  sameSet("advisory:junk-contracts-value-ignored", componentRoots(host), [
+    host, path.join(parent, "backend"),
+  ]);
+  cleanup(parent);
+}
+
 // ── fail-closed: absent / unreadable ───────────────────────────────────────────
 {
   const { parent, host } = workspace([]); // no manifest written

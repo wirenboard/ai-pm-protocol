@@ -113,7 +113,8 @@ Retained from the analysis regardless of the layout choice:
   cross-repo commit (both reference tools refuse it); N repos = N Operator merge words
   (invariant 7 intact).
 - **The seam is a contract** — cross-component work hangs on `docs/contracts/`; the shared
-  seam contract's one home is an open plan question below.
+  seam contract's one home is settled by D6 (`docs/decisions/seam-contract-transport.md`):
+  it lives in the OWNER's `docs/contracts/`, read in-session via the widened boundary.
 - **The embedded verification rung** (flash-and-probe for the C firmware) is a separate
   small feature, needed in any layout.
 
@@ -121,8 +122,10 @@ Retained from the analysis regardless of the layout choice:
 
 - Where the manifest's hub lives when there is no natural umbrella repo (a tiny coord repo
   vs. designating the backend).
-- Where a *shared* seam contract's one home sits (the producing side's `docs/contracts/`,
-  or the hub) and how the consuming repo references it across the boundary without reading
-  it (a published/copied contract snapshot? a URL? — itself an invariant-6 question).
+- ~~Where a *shared* seam contract's one home sits and how the consuming repo references it
+  across the boundary without reading it.~~ **Answered (D6): `docs/decisions/seam-contract-transport.md`** —
+  one home in the OWNER's `docs/contracts/`; within a coordinated session the already-shipped
+  widened boundary IS the transport (read it directly); an optional additive `contracts` field
+  declares ownership; pointer-not-copy outside a session.
 - How the per-repo orchestrator learns "this feature is cross-component" and finds the
   manifest on the understand beat (a new lazy-offer trigger, like the existing ones).
