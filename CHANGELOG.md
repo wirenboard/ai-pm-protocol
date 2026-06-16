@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.16.2] — 2026-06-16
+
+### Changed
+
+- **Reviewer flags new code paths that ship without a test.** Closes a downstream-intake signal: the floor's coverage gate was "build tests green + existing not weakened" — silent on whether *new* logic is tested, so a new branch could ship green over only pre-existing paths. The Reviewer's `Tests` checklist item (`src/agents/reviewer.md`) now treats a new code path with no test exercising it as a finding — **blocking** when that path is security- or contract-bearing (deferring to the existing Security / Contracts gates), otherwise a named **advisory** finding (recorded, not blocking; the audit cadence backstops advisory passes; a recorded `deferred: <reason>` clears it). The Builder gains a proactive `New-path coverage` line (`src/agents/builder.md`) so the test is written up front where there is no firefight pressure. Design rationale (felt-vs-unfelt): under pressure the Builder feels the deadline, not the coverage gap, so the independent Reviewer is the load-bearing catch; tying the block to the already-block-worthy classes avoids a new absolute gate that would re-litigate the firefight lane. (`[persona]`.)
+
 ## [5.16.1] — 2026-06-16
 
 ### Changed
