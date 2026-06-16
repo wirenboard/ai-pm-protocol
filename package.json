@@ -1,6 +1,6 @@
 {
   "name": "ai-dev-protocol",
-  "version": "5.16.2",
+  "version": "5.16.3",
   "type": "module",
   "description": "The AI-Dev Protocol — its own source (this repo develops itself under its own protocol).",
   "license": "MIT",

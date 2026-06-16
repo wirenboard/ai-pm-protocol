@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.16.3] — 2026-06-16
+
+### Fixed
+
+- **Boundary docs now describe the per-root tooling deny accurately** (whole-tree audit findings). `docs/architecture.md` and `docs/contracts/project-boundary.md` had grouped the `.ai-dev/tooling/` self-patch deny with the session-root-anchored denies, but the per-root carve-out (5.15.0's F1 fix) makes it consult the component set to **narrow** — denying `.ai-dev/tooling/` under every declared root (`writesIntoAnyNever`). Corrected to the three-way truth: boundary denies consult the set to widen, the tooling deny to narrow, the rest ignore it. Also: `src/agents/orchestrator.md` no longer claims a sibling repo's push is gated by the one hub stamp (a sibling push resolves its own root where the hub stamp is absent — its own CI is the repo-local re-check, matching the contract residual); `docs/contracts/cross-session-enforcement.md` now names the declared component set rather than "the project root". Docs-only; no behaviour change.
+
 ## [5.16.2] — 2026-06-16
 
 ### Changed
