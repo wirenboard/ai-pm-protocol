@@ -216,7 +216,11 @@ function topicFromRefToken(token) {
 // URL — never a topic) and is skipped; merge's arguments are all candidates.
 function refTopicFromCommand(command) {
   const masked = maskQuotedSpans(command);
-  const inv = /\bgit\s+(push|merge)\b([^;&|\n]*)/g;
+  // `merge(?![-\w])` rejects `merge-base`/`merge-tree`/`merge-file`/`mergetool` — the
+  // hyphen/word-char after `merge` marks a plumbing subcommand, not a real merge whose
+  // ref we'd parse. `push\b` keeps its boundary (no `push-*` plumbing to confuse). A
+  // real merge always has whitespace after `merge`, so none is newly excluded.
+  const inv = /\bgit\s+(push\b|merge(?![-\w]))([^;&|\n]*)/g;
   let m;
   while ((m = inv.exec(masked)) !== null) {
     const args = m[2].split(/\s+/).filter((t) => t && !t.startsWith("-"));
@@ -266,6 +270,41 @@ function pushHasUnparsedExplicitRef(command) {
     }
   }
   return false;
+}
+// True when a `git push` command carries an EXPLICIT trunk ref (`main` or `master`)
+// as a pushed branch — the F1 case the merge-gate otherwise escaped: `git push origin
+// main` left the topic unresolvable (a bare `main` has no slash), so the gate fell
+// through to the ask rule, which degrades to a SILENT PASS on a platform with no
+// ask-return (OpenCode). In this protocol main moves ONLY via PR squash-merge on the
+// forge, never a direct push from a session (PROTOCOL.md `## Git flow`), so a direct
+// trunk push is already a violation — deny it mechanically on BOTH platforms.
+// Whole-token equality (NOT includes) so `maintenance`/`mainline` never match. Both
+// sides of a <src>:<dst> refspec are tested (`HEAD:main` is a trunk push too); the
+// `+` force marker is stripped. A tag token (`vN.N`, `refs/tags/…`) never equals a
+// bare `main`, so tag pushes are excluded by construction; isTagPush is the explicit
+// early-out at the call site for defense in depth.
+// Returns the trunk ref name (`main`/`master`) when found, else null. The found name
+// IS the stamp topic the gate checks — a project that legitimately reviewed a change
+// branched/named `main` would carry `main_review.md`, so a *stamped* trunk push still
+// passes; only the unstamped one denies (symmetry with the bare-push path).
+function pushExplicitTrunkRef(command) {
+  if (!/\bgit\s+push\b/.test(command || "")) return null;
+  const masked = maskQuotedSpans(command);
+  const inv = /\bgit\s+push\b([^;&|\n]*)/g;
+  const trunkOf = (side) => (side === "main" || side === "master" ? side : null);
+  let m;
+  while ((m = inv.exec(masked)) !== null) {
+    const args = m[1].split(/\s+/).filter((t) => t && !t.startsWith("-"));
+    // args[0] = remote (skip); args[1+] = explicit refs.
+    for (let token of args.slice(1)) {
+      if (token.startsWith("+")) token = token.slice(1); // refspec force marker
+      for (const side of token.split(":")) { // either side of <src>:<dst>
+        const t = trunkOf(side);
+        if (t) return t;
+      }
+    }
+  }
+  return null;
 }
 // Resolution stays SYNTACTIC — it returns the extracted topic as-is, even an
 // unclean one. Traversal validation lives downstream at the stamp boundary
@@ -340,6 +379,39 @@ function reviewStampSatisfied(root, topic) {
 function fileNonEmpty(p) {
   try { return fs.statSync(p).size > 0; } catch { return false; }
 }
+// The checkout's current branch name (the FULL name, prefix NOT stripped), read from
+// .git/HEAD — null on a detached HEAD or an unreadable/missing HEAD. Used by the
+// commit-to-trunk deny (commitOnUnstampedMain): a `git commit` names no branch, so the
+// branch is the checkout, exactly the signal resolveMergeTopic's HEAD fallback reads —
+// but here we need the WHOLE name (`main`, not a stripped topic) to compare against trunk.
+function headBranch(root) {
+  try {
+    const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
+    const hm = head.match(/^ref:\s*refs\/heads\/(.+)$/);
+    return hm ? hm[1].trim() : null;
+  } catch { return null; }
+}
+// Does the repo already have at least one commit? True iff a packed-ref or a loose ref
+// exists, or a reflog records history — i.e. NOT a freshly-`git init`'d repo with no
+// commit yet. This is the carve-out signal for the commit-to-main deny: the only
+// legitimate direct commit to main is the day-zero bootstrap (Setup step 0: `git init`
+// + initial commit of the existing tree), where there is no history to bypass. A repo
+// with ANY commit history is past that day-zero moment. Cheapest reliable check: a
+// HEAD ref pointing at a branch whose loose-ref file exists, OR any packed-refs, OR a
+// populated logs/HEAD. Fail toward "has commits" (deny-side) on doubt — a false
+// "no commits" would WIDEN the carve-out (allow a commit that should deny), the wrong
+// direction; so an unreadable .git makes this true (assume history ⇒ no carve-out).
+function repoHasCommits(root) {
+  const git = path.join(path.resolve(root), ".git");
+  try {
+    const branch = headBranch(root);
+    if (branch && fs.existsSync(path.join(git, "refs", "heads", branch))) return true;
+    if (fileNonEmpty(path.join(git, "packed-refs"))) return true;
+    if (fileNonEmpty(path.join(git, "logs", "HEAD"))) return true;
+    return false; // none of the history markers present ⇒ fresh init (carve-out applies)
+  } catch { return true; } // unreadable ⇒ assume history (deny-side: no carve-out)
+}
+const TRUNK_BRANCHES = new Set(["main", "master"]);
 // Is the project configured? True iff .ai-dev/config.json exists. Root-relative,
 // fs-checked — the lazy-setup predicate reads only this presence (it adds context,
 // never executes), within invariant 2.
@@ -471,6 +543,22 @@ function isInsideAnyComponent(root, resolved) {
   return componentRoots(root).some((r) => isInsideRoot(r, resolved));
 }
 
+// Compile a config-sourced pattern and test it, returning FALSE on a compile error.
+// SCOPED TO INJECT-CLASS PREDICATES ONLY (promptMatchesChangeVerb / promptNeedsSetup /
+// promptNeedsProductBrief): for an inject, false = "no nudge fires", the SAFE direction
+// (a missing nudge is a lost reminder, never a missing deny). A DENY-class predicate
+// must NOT reuse this — a deny needs fail-toward-deny (treat a bad pattern as a MATCH,
+// not a miss), so `return false` there would fail OPEN. No deny predicate compiles a
+// config pattern today (the floor predicates use literal inline regexes); this guard
+// prevents a later footgun. `pat` is trusted internal data (deny-rules.json), not
+// external injection — the try/catch handles a broken-install/malformed registry, not
+// an attack.
+function safeTest(pat, str) {
+  if (!pat) return false;
+  try { return new RegExp(pat, "i").test(str); }
+  catch { return false; } // malformed pattern ⇒ no inject (safe for inject class only)
+}
+
 // ── predicates: (input, config) => boolean ───────────────────────────────────
 // A predicate inspects only the neutral input + the rule data in config. The
 // `actor` signal (isOrchestrator) is supplied by the shim where the platform
@@ -560,9 +648,21 @@ const PREDICATES = {
     });
   },
   mergeWithUnstampedReview(input) {
-    if (!/git\s+(merge|push)\b/.test(input.command || "")) return false;
+    // `merge(?![-\w])` lets read-only `git merge-base`/`merge-tree`/`merge-file`/`mergetool`
+    // fall through (a hyphen/word-char after `merge` is plumbing, not a merge) while a real
+    // `git merge <topic>` (whitespace/EOL after `merge`) still matches. `push\b` unchanged.
+    if (!/git\s+(merge(?![-\w])|push\b)/.test(input.command || "")) return false;
     if (projectProfile(input.root) === "yolo") return false; // gate explicitly off — Operator's merge word is the only remaining check
     if (isTagPush(input.command)) return false; // tags never need a review stamp
+    // F1: an EXPLICIT unstamped trunk push (`git push origin main`/`master`) DENIES on
+    // both platforms — the bare `main` ref is unresolvable as a topic, so without this
+    // it fell through to the ask rule, which a no-ask-return platform (OpenCode) silently
+    // passed. Deny here (deny holds on both platforms; ask does not). The trunk ref IS
+    // the stamp topic, so a reviewed `main`-named change (carrying main_review.md) still
+    // ships; only the unstamped trunk push denies. Sits before the resolveMergeTopic null
+    // check so it is never shadowed by the unresolvable-topic ask.
+    const trunk = pushExplicitTrunkRef(input.command);
+    if (trunk) return !reviewStampSatisfied(input.root, trunk);
     const topic = resolveMergeTopic(input.command, input.root);
     if (!topic) return false; // unresolved topic ⇒ the sibling ask rule (mergeTopicUnresolvable), never a silent pass
     return !reviewStampSatisfied(input.root, topic);
@@ -571,8 +671,13 @@ const PREDICATES = {
   // resolved (detached HEAD and no branch ref in the command) leaves the stamp
   // uncheckable — escalate to the Operator instead of passing.
   mergeTopicUnresolvable(input) {
-    if (!/git\s+(merge|push)\b/.test(input.command || "")) return false;
+    // Same `merge(?![-\w])` tightening as mergeWithUnstampedReview — a `merge-*` plumbing
+    // command must not be routed to the unresolvable-topic ask either.
+    if (!/git\s+(merge(?![-\w])|push\b)/.test(input.command || "")) return false;
     if (isTagPush(input.command)) return false; // tags are fine — no topic, no ask
+    // An explicit trunk push is handled by the DENY rule (mergeWithUnstampedReview),
+    // never routed to ask — deny outranks ask regardless, this keeps the intent clean.
+    if (pushExplicitTrunkRef(input.command)) return false;
     return resolveMergeTopic(input.command, input.root) === null;
   },
   spawnTargetInDenySet(input, config) {
@@ -598,17 +703,62 @@ const PREDICATES = {
   gitCommitNoVerify(input) {
     return /git\s+commit(\s+[^\s]+)*\s+(--no-verify|--no-gpg-sign)([ =]|$)/.test(input.command || "");
   },
+  // F4a: `git add -A` / `git add .` / `git add --all` / `git add *` — a blind bulk-stage.
+  // The orchestrator rule (`## Your seat`: "Stage named paths only — never git add -A/.")
+  // makes this never legitimate: the tree holds untracked transients (plans, stamps) by
+  // design and a blind stage leaks them into durable history. DENY on both platforms
+  // (Operator decision — deny holds where ask degrades to persona on OpenCode; the
+  // day-zero bootstrap stages NAMED paths instead). Runs on the quote-masked command so a
+  // commit-message mention never trips it. Whole-token matching: `git add .gitignore` (a
+  // file literally named `.gitignore`) and `git add -p` (interactive patch) are NOT bulk
+  // stages and fall through.
+  gitAddAll(input) {
+    const masked = maskQuotedSpans(input.command || "");
+    // Each `git add` invocation's own argument span (to the next shell separator).
+    const inv = /\bgit\s+add\b([^;&|\n]*)/g;
+    let m;
+    while ((m = inv.exec(masked)) !== null) {
+      const toks = m[1].split(/\s+/).filter((t) => t.length > 0);
+      for (const tok of toks) {
+        if (tok === "-A" || tok === "--all" || tok === "." || tok === "*" || tok === "-all") return true;
+        // A combined short-flag bundle containing A (e.g. `-Av`) is also a bulk stage.
+        if (/^-[A-Za-z]*A[A-Za-z]*$/.test(tok)) return true;
+      }
+    }
+    return false;
+  },
+  // F4b: a `git commit` whose checkout HEAD is `main`/`master` and which carries no
+  // satisfied trunk stamp. "Never commit to main" is absolute (PROTOCOL.md `## Git flow`):
+  // main moves via PR squash-merge, never a direct commit — so this DENIES on both
+  // platforms (Operator decision; deny holds where ask degrades on OpenCode). Two
+  // carve-outs preserve the only legitimate cases:
+  //   • a STAMPED trunk change (main_review.md present) still commits (symmetric with the
+  //     trunk-push allow) — a reviewed change branched/named main is honoured;
+  //   • the day-zero bootstrap: an UNCONFIGURED project (no .ai-dev/config.json) OR a
+  //     fresh-init repo with no commit history yet (Setup step 0: `git init` + the
+  //     initial commit). A configured project with history committing to main is a
+  //     violation and denies.
+  // yolo turns the gate off (consistency with the merge-gate). Runs on the masked command.
+  commitOnUnstampedMain(input) {
+    if (!/\bgit\s+commit\b/.test(maskQuotedSpans(input.command || ""))) return false;
+    if (projectProfile(input.root) === "yolo") return false; // gate explicitly off
+    const branch = headBranch(input.root);
+    if (!branch || !TRUNK_BRANCHES.has(branch)) return false; // not on a trunk checkout
+    // Bootstrap carve-out: an unconfigured project, or a fresh-init repo with no commits.
+    if (!projectConfigured(input.root)) return false;
+    if (!repoHasCommits(input.root)) return false;
+    // A reviewed trunk-named change still commits (the stamp carve-out).
+    return !reviewStampSatisfied(input.root, branch);
+  },
   promptMatchesChangeVerb(input, config) {
-    const pat = config.change_verbs?.pattern;
-    return !!pat && new RegExp(pat, "i").test(input.prompt || "");
+    return safeTest(config.change_verbs?.pattern, input.prompt || "");
   },
   // Lazy-setup nudge: a work-request prompt (same change_verbs list — no second
   // verb list) to a project with NO .ai-dev/config.json. Reinforces the persona
   // act, never forces it. False once the config is present (a configured project
   // gets the change-route-reminder instead).
   promptNeedsSetup(input, config) {
-    const pat = config.change_verbs?.pattern;
-    if (!pat || !new RegExp(pat, "i").test(input.prompt || "")) return false;
+    if (!safeTest(config.change_verbs?.pattern, input.prompt || "")) return false;
     return !projectConfigured(input.root);
   },
   // Lazy product-discovery nudge: a work-request prompt (same change_verbs list)
@@ -618,8 +768,7 @@ const PREDICATES = {
   // change-route-reminder (a configured project WITH a filled brief gets the
   // route reminder). Reinforces the persona act, never forces it.
   promptNeedsProductBrief(input, config) {
-    const pat = config.change_verbs?.pattern;
-    if (!pat || !new RegExp(pat, "i").test(input.prompt || "")) return false;
+    if (!safeTest(config.change_verbs?.pattern, input.prompt || "")) return false;
     return projectConfigured(input.root) && !productBriefFilled(input.root);
   },
 };
@@ -652,4 +801,4 @@ export function evaluate(input, config) {
   return ask || { verdict: "allow", ruleId: null, reason: "" };
 }
 
-export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, componentRoots, PREDICATES };
+export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, componentRoots, pushExplicitTrunkRef, PREDICATES };

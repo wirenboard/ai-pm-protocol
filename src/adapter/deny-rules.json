@@ -83,7 +83,7 @@
     },
     {
       "id": "merge-while-unstamped",
-      "intent": "Block a git merge/push of any branch (prefix stripped — feature/, fix/, hotfix/, …) whose review file lacks a satisfied review stamp. Checks stamp PRESENCE, not authorship (fabrication stays persona). An unresolvable topic is escalated by the sibling ask rule (merge-topic-unresolvable), never silently passed.",
+      "intent": "Block a git merge/push of any branch (prefix stripped — feature/, fix/, hotfix/, …) whose review file lacks a satisfied review stamp. Also blocks an EXPLICIT unstamped trunk push (git push <remote> main/master, incl. HEAD:main and +main forms) — main moves only via PR squash-merge, never a direct session push (PROTOCOL.md `## Git flow`), so a direct trunk push is a violation denied mechanically on BOTH platforms (a reviewed main-named change carrying main_review.md still ships). Read-only merge-* plumbing (merge-base/-tree/-file, mergetool) is NOT a merge and is allowed. Checks stamp PRESENCE, not authorship (fabrication stays persona). An unresolvable topic is escalated by the sibling ask rule (merge-topic-unresolvable), never silently passed.",
       "class": "deny",
       "act": "bash",
       "predicate": "mergeWithUnstampedReview"
@@ -134,6 +134,20 @@
       "act": "bash",
       "predicate": "gitCommitNoVerify",
       "fallback": "persona on a platform with no ask-return"
+    },
+    {
+      "id": "git-add-all",
+      "intent": "Block a blind bulk-stage (git add -A / git add . / git add --all / git add *). Stage NAMED paths instead — the tree holds untracked transients (plans, stamps) by design and a blind stage leaks them into durable history (orchestrator `## Your seat`). The day-zero repo bootstrap stages named paths too. Mechanical on BOTH platforms (the command is visible to both shims, no actor resolution). git add .gitignore (a real file) and git add -p (interactive patch) are NOT bulk stages and are allowed.",
+      "class": "deny",
+      "act": "bash",
+      "predicate": "gitAddAll"
+    },
+    {
+      "id": "commit-on-unstamped-main",
+      "intent": "Block a git commit on a main/master checkout of a configured project with commit history and no satisfied trunk stamp. Never commit to main (PROTOCOL.md `## Git flow`): main moves via PR squash-merge, never a direct commit. Mechanical on BOTH platforms (the commit command + the checkout HEAD are visible to both shims, no actor resolution). Carve-outs: a reviewed main-named change (main_review.md present) still commits; the day-zero bootstrap (an unconfigured project, or a fresh-init repo with no commit history yet — Setup step 0 git init + initial commit) is allowed; yolo turns the gate off.",
+      "class": "deny",
+      "act": "bash",
+      "predicate": "commitOnUnstampedMain"
     },
     {
       "id": "no-config-run-setup",

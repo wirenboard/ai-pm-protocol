@@ -44,7 +44,18 @@ async function isOrchestrator(client, sessionID) {
 
 export const AiPmEnforcement = async (ctx) => {
   const root = (ctx && (ctx.directory || ctx.worktree)) || process.cwd();
-  const config = loadConfig(ADAPTER);
+  // Fail-OPEN on a config-load failure: a malformed deny-rules.json yields a NO-OP hook
+  // set (no enforcement) rather than crashing the session. Same rationale as the Claude
+  // shim's main() try/catch — the tooling dir is immutable and ships a valid registry, so
+  // a broken registry means a broken install, not an attack; a crash that kills the
+  // session is worse than a fail-open the Operator would otherwise route around by
+  // disabling the plugin. The immutable tooling dir is the compensating control.
+  let config;
+  try { config = loadConfig(ADAPTER); }
+  catch (e) {
+    console.error("[ai-dev] config load failed, enforcement off this session: " + (e && e.message ? e.message : String(e)));
+    return {};
+  }
   return {
     "tool.execute.before": async (input, output) => {
       const isOrch = await isOrchestrator(ctx && ctx.client, input && input.sessionID);

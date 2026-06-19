@@ -53,6 +53,16 @@ fs.mkdirSync(path.join(YOLO, ".ai-dev"), { recursive: true });
 fs.writeFileSync(path.join(YOLO, ".ai-dev", "config.json"), '{ "profile": "yolo" }');
 const ARCH = path.join(FULL, "docs", "architecture.md");           // canonical doc (not orch-writable)
 
+// A configured root checked out on `main` WITH commit history — for the F4
+// commit-on-unstamped-main deny. A loose ref under refs/heads/main is the history marker
+// repoHasCommits reads; .ai-dev/config.json makes it a configured (non-bootstrap) project.
+const MAINCFG = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-parity-main-"));
+fs.mkdirSync(path.join(MAINCFG, ".git", "refs", "heads"), { recursive: true });
+fs.writeFileSync(path.join(MAINCFG, ".git", "HEAD"), "ref: refs/heads/main\n");
+fs.writeFileSync(path.join(MAINCFG, ".git", "refs", "heads", "main"), "abc1234\n");
+fs.mkdirSync(path.join(MAINCFG, ".ai-dev"), { recursive: true });
+fs.writeFileSync(path.join(MAINCFG, ".ai-dev", "config.json"), "{}");
+
 // Each case carries BOTH platforms' native payloads + the expected ENGINE verdict
 // (pre platform-mapping). `claudeExpect` / `opencodeExpect` override `expect` only
 // where a platform's capability legitimately diverges — those are the documented
@@ -97,6 +107,14 @@ const FIXTURE = [
     claude: { tool_name: "Bash", tool_input: { command: "git push origin feature/foo" } },
     opencode: { tool: "bash", args: { command: "git push origin feature/foo" } } },
 
+  // F1: an explicit unstamped trunk push (`git push origin main`) DENIES on BOTH
+  // columns — the whole point of the fix. Before it, the bare `main` ref was
+  // unresolvable → routed to the ask rule → SILENT PASS on OpenCode (no ask-return).
+  // ROOT carries no main_review.md, so the gate denies; both shims must agree on deny.
+  { name: "explicit-trunk-push-denies", expect: "deny",
+    claude: { tool_name: "Bash", tool_input: { command: "git push origin main" } },
+    opencode: { tool: "bash", args: { command: "git push origin main" } } },
+
   // The merge-gate's no-silent-pass companion: an UNRESOLVABLE topic (ROOT has no
   // .git HEAD ref, and a bare push names no branch ref) leaves the stamp
   // uncheckable — ask, never pass.
@@ -133,6 +151,22 @@ const FIXTURE = [
   { name: "commit-no-verify", expect: "ask",
     claude: { tool_name: "Bash", tool_input: { command: "git commit --no-verify -m wip" } },
     opencode: { tool: "bash", args: { command: "git commit --no-verify -m wip" } } },
+
+  // F4a: a blind bulk-stage denies on BOTH platforms (no actor resolution — the command
+  // is visible to both shims). Runs on the shared ROOT (gitAddAll ignores branch/config).
+  { name: "git-add-all-denies", expect: "deny",
+    claude: { tool_name: "Bash", tool_input: { command: "git add -A" } },
+    opencode: { tool: "bash", args: { command: "git add -A" } } },
+
+  // F4a ALLOW: a named-path add is never a bulk stage — both shims allow.
+  { name: "git-add-named-allows", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "git add README.md" } },
+    opencode: { tool: "bash", args: { command: "git add README.md" } } },
+
+  // F4b: a git commit on a configured main checkout with history denies on BOTH platforms.
+  { name: "commit-on-main-denies", expect: "deny", root: MAINCFG,
+    claude: { tool_name: "Bash", tool_input: { command: "git commit -m x" } },
+    opencode: { tool: "bash", args: { command: "git commit -m x" } } },
 
   // inject is prompt-act: the engine DECIDES inject for both platforms (asserted here).
   // Claude REALISES it via UserPromptSubmit; OpenCode no longer realises it at all — the
@@ -492,5 +526,6 @@ console.log(`  node-per-call latency ≈ ${msPerCall.toFixed(0)} ms (cold spawn;
 fs.rmSync(ROOT, { recursive: true, force: true });
 fs.rmSync(FULL, { recursive: true, force: true });
 fs.rmSync(YOLO, { recursive: true, force: true });
+fs.rmSync(MAINCFG, { recursive: true, force: true });
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.18.0] — 2026-06-19
+
+### Added
+
+- **New mechanical-floor denies, holding on BOTH platforms (DENY, not ask — so they survive OpenCode where ask degrades to persona).** Three under-enforcement holes the persona layer alone could not hold are now `[mechanical]`: (1) **F1 — an explicit unreviewed trunk push** (`git push <remote> main`/`master`, `HEAD:main`, `+main`, `refs/heads/main`) with no satisfied review stamp is now DENIED on guarantee profiles — previously it resolved to no topic → the ask-class `merge-topic-unresolvable` → persona on OpenCode → a silent pass (the exact hole a downstream incident fell through); a bare `git push` from main was already denied, this closes the explicit-ref form. Tag pushes stay exempt; a stamped main and any feature-branch push are unaffected; `maintenance`/`mainline` are not mis-classified (whole-token match). (2) **F4a — blind staging** (`git add -A`/`.`/`--all`) is DENIED (stage named paths; a named-path `git add foo` is allowed). (3) **F4b — a direct `git commit` on a configured `main` with history** is DENIED, with a narrow carve-out for the very first commit of a freshly-init'd repo (no history ⇒ nothing to bypass; `setup` bootstrap needs it) and feature branches / `yolo` unaffected. All three read only the bash command + local git HEAD (no actor resolution) so they are mechanical on both Claude and OpenCode. Each ships with both should-DENY and should-ALLOW (false-positive) test coverage.
+
+### Fixed
+
+- **Merge-gate no longer over-blocks read-only `git merge-*` plumbing.** The predicate `/git\s+(merge|push)\b/` let `\b` match the hyphen, so read-only `git merge-base` / `merge-tree` / `merge-file` / `mergetool` were wrongly DENIED (a live false-positive hit during a containment check). The merge match now requires the standalone verb (`git\s+merge(?![-\w])`); a real `git merge <topic>` / `gh pr merge` still denies. ALLOW cases for the plumbing family are pinned in `merge-gate.test.mjs`.
+- **Enforcement hook no longer crashes on a malformed config or a bad pattern.** `loadConfig()` (`JSON.parse`) is now wrapped in the Claude shim's `main()` and fails OPEN (exit 0, logged to stderr) — a corrupt `deny-rules.json` lets work through rather than freezing the session (the immutable tooling dir is the compensating control); `new RegExp(pat, "i")` is guarded by `safeTest` and returns no-match on a `SyntaxError` (safe for the inject/nudge class only — a deny-class predicate must never reuse it, enforced by a guard comment). Both are defensive-coding gaps from the v5.11.4 audit (F1+F2).
+
+---
+
 ## [5.17.7] — 2026-06-19
 
 ### Fixed

@@ -27,7 +27,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const config = loadConfig(HERE);
-const { resolveMergeTopic, bashWriteTargets } = _internals;
+const { resolveMergeTopic, bashWriteTargets, pushExplicitTrunkRef } = _internals;
 
 let pass = 0, fail = 0;
 function check(name, got, want) {
@@ -209,11 +209,25 @@ function rootDetached() {
   fs.rmSync(root, { recursive: true, force: true });
 }
 
-// 4b. Detached HEAD + a refspec with no slash (HEAD:main) ⇒ still unresolvable ⇒ ASK.
+// 4b. Detached HEAD + a refspec to TRUNK (HEAD:main) ⇒ DENY (F1: an explicit trunk
+// push is denied, never asked — it was the silent-pass hole on OpenCode). The earlier
+// behaviour here was ASK; the F1 trunk-push deny now (correctly) outranks it.
 {
   const root = rootDetached();
   const v = evaluate({ act: "bash", root, command: "git push uni HEAD:main" }, config);
-  check("detached-refspec:asks", v.verdict, "ask");
+  check("detached-refspec-trunk:denies", v.verdict, "deny");
+  check("detached-refspec-trunk:ruleId", v.ruleId, "merge-while-unstamped");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 4b'. Detached HEAD + a refspec to a NON-trunk unresolvable ref (HEAD:release) ⇒ still
+// ASK — the genuinely-unresolvable detached case the ask rule is for (no slash, no
+// trunk, no HEAD branch ref).
+{
+  const root = rootDetached();
+  const v = evaluate({ act: "bash", root, command: "git push uni HEAD:release" }, config);
+  check("detached-refspec-nontrunk:asks", v.verdict, "ask");
+  check("detached-refspec-nontrunk:ruleId", v.ruleId, "merge-topic-unresolvable");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
@@ -453,6 +467,144 @@ console.log("PATH-TRAVERSAL (topic stays inside reviews/):");
 // 8f. The LOW: `tee file <<EOF` no longer extracts a phantom `<<EOF` write target
 // (the opener is an operator, never a target).
 check("heredoc-phantom-gone", JSON.stringify(bashWriteTargets("tee /tmp/out <<EOF")), JSON.stringify(["/tmp/out"]));
+
+// ── 9. MERGE-* PLUMBING IS NOT A MERGE ────────────────────────────────────────
+// Guards the live false positive (2026-06-16): the gate predicate matched
+// `git merge\b`, and `\b` treats the hyphen as a word boundary — so a read-only
+// `git merge-base`/`merge-tree`/`merge-file`/`mergetool` was DENIED as if it were a
+// real merge. The predicate now uses `merge(?![-\w])`: a hyphen/word-char immediately
+// after `merge` marks a plumbing subcommand and falls through; a REAL merge always has
+// whitespace/EOL after `merge`, so the floor is unchanged.
+console.log("MERGE-* PLUMBING (read-only merge-* is not a merge):");
+
+// ALLOW cases (the fix — were DENY). Run on an UNSTAMPED feature/x checkout: under
+// the old regex each resolved a topic and denied; now they fall through to allow.
+for (const [name, cmd] of [
+  ["merge-base", "git merge-base --is-ancestor feature/x main"],
+  ["merge-tree", "git merge-tree main feature/x"],
+  ["merge-file", "git merge-file a b c"],
+  ["mergetool", "git mergetool"],
+]) {
+  const root = rootOnBranch("feature/x");
+  const v = evaluate({ act: "bash", root, command: cmd }, config);
+  check(`plumbing-${name}:allows`, v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// DENY cases (the real merge floor MUST still hold under the new regex).
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git merge feature/alpha" }, config);
+  check("real-merge-space:denies", v.verdict, "deny");
+  check("real-merge-space:ruleId", v.ruleId, "merge-while-unstamped");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // Tab separator after `merge` — the negative lookahead allows whitespace, so a
+  // tab-separated real merge still matches and denies.
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git merge\tfeature/alpha" }, config);
+  check("real-merge-tab:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // The push alternation is untouched by the merge tightening.
+  const root = rootOnBranch("feature/foo");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/foo" }, config);
+  check("push-untouched-by-merge-fix:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// Resolver unit: a `merge-base` span must NOT resolve a bogus topic from the
+// `merge-base` arguments. On a feature/x checkout the HEAD topic `x` is fine;
+// the assertion is that it never yields `base`/`tree` parsed from the subcommand.
+{
+  const root = rootOnBranch("feature/x");
+  const topic = resolveMergeTopic("git merge-base x main", root);
+  check("merge-base-resolver:no-bogus-topic", topic === "x" || topic === null, true);
+  check("merge-base-resolver:not-base", topic === "base", false);
+  check("merge-base-resolver:not-tree", topic === "tree", false);
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// ── 10. EXPLICIT TRUNK PUSH DENIES, NOT ASKS (F1) ─────────────────────────────
+// Guards the F1 escape (backlog "Persona floor collapses…"): `git push origin main`
+// left the topic unresolvable (bare `main` has no slash) → fell through to the ask
+// rule → SILENT PASS on a no-ask platform (OpenCode). An explicit unstamped trunk push
+// now DENIES on both platforms (deny holds where ask degrades). The trunk ref IS the
+// stamp topic, so a reviewed main-named change still ships.
+console.log("EXPLICIT TRUNK PUSH (denies, not asks — F1):");
+
+// DENY cases (the fix — were ask/silent-pass). On a feature/x checkout with no stamp.
+for (const [name, cmd] of [
+  ["bare-main", "git push origin main"],
+  ["bare-master", "git push origin master"],
+  ["refspec-dst-main", "git push uni HEAD:main"],
+  ["force-marker-main", "git push origin +main"],
+]) {
+  const root = rootOnBranch("feature/x");
+  const v = evaluate({ act: "bash", root, command: cmd }, config);
+  check(`trunk-push-${name}:denies`, v.verdict, "deny");
+  check(`trunk-push-${name}:ruleId`, v.ruleId, "merge-while-unstamped");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// ALLOW cases (no real push newly blocked).
+{
+  // A reviewed trunk-named change (main_review.md present) still ships.
+  const root = rootOnBranch("feature/x");
+  stamp(root, "main");
+  const v = evaluate({ act: "bash", root, command: "git push origin main" }, config);
+  check("trunk-push-stamped:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // Tag push still wins the early-out (not read as a trunk push).
+  const root = rootOnBranch("feature/x");
+  const v = evaluate({ act: "bash", root, command: "git push origin v5.3.1" }, config);
+  check("trunk-push-tag:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // Feature push unaffected, when stamped.
+  const root = rootOnBranch("feature/foo");
+  stamp(root, "foo");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/foo" }, config);
+  check("trunk-fix-feature-push-stamped:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // `maintenance` must NOT be mis-classified as trunk (whole-token equality, not
+  // substring `main`): it resolves via the normal unparsed-ref path ⇒ ask, NOT the
+  // trunk deny. The helper returns null for it.
+  check("maintenance-not-trunk", pushExplicitTrunkRef("git push origin maintenance"), null);
+  check("mainline-not-trunk", pushExplicitTrunkRef("git push origin mainline"), null);
+  check("main-is-trunk", pushExplicitTrunkRef("git push origin main"), "main");
+  check("master-is-trunk", pushExplicitTrunkRef("git push origin master"), "master");
+  const root = rootOnBranch("feature/x");
+  const v = evaluate({ act: "bash", root, command: "git push origin maintenance" }, config);
+  check("maintenance-push:asks-not-trunk-deny", v.verdict, "ask");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // yolo profile turns the gate off — even a trunk push allows (gate-off consistency).
+  const root = rootOnBranch("feature/x");
+  fs.mkdirSync(path.join(root, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".ai-dev", "config.json"), '{ "profile": "yolo" }');
+  const v = evaluate({ act: "bash", root, command: "git push origin main" }, config);
+  check("trunk-push-yolo:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+{
+  // Quoted prose is masked before the trunk scan — a `-m` message mentioning a trunk
+  // push is never read as one. Asserted at the helper (mirrors block 5d's resolver-level
+  // quoted-prose assertion): a real `git push origin main` inside a quoted span yields no
+  // trunk ref. (NOTE: the full `git commit -m "git push origin main"` still trips the
+  // PRE-EXISTING merge-gate guard quirk — the raw guard regex sees `push` in the message
+  // and the checkout topic resolves; that is unchanged by this batch, verified against
+  // HEAD. The trunk predicate itself correctly masks.)
+  check("trunk-push-quoted-prose-helper", pushExplicitTrunkRef('git commit -m "git push origin main"'), null);
+}
 
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

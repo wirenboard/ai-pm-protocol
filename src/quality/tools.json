@@ -82,6 +82,22 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "f4-floor",
+      "checks": "F4 mechanical floor — a blind bulk-stage (git add -A/./--all/*) denies while a named-path / .gitignore / -p add allows; a git commit on a main/master checkout of a configured project WITH commit history and no satisfied trunk stamp denies, while the carve-outs allow (a reviewed main-named change, the day-zero bootstrap of an unconfigured or fresh-init repo, yolo). DENY-class on both platforms.",
+      "config": null,
+      "run": "node src/adapter/f4-floor.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "error-handling",
+      "checks": "adapter fail-direction under malformed input — a broken deny-rules.json makes the Claude shim subprocess fail OPEN (exit 0, allow, log to stderr, no crash); a bad regex in a config pattern makes the inject predicates return allow (no nudge), never throw; a valid config + pattern still injects (the happy path is unbroken)",
+      "config": null,
+      "run": "node src/adapter/error-handling.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "install",
       "checks": "the unified installer — installs into a temp target inside the root, vendors the adapter self-sufficiently (the vendored installer can re-run), wires both platforms (hooks/agents/commands/plugin), stamps .ai-dev/VERSION + writes the UPGRADING marker on a version change, lays the migration notes + the inactive-platform breadcrumb, replaces stale ai-dev hook groups, resolves the platform (flag/config/error), never clobbers a real doc or file, and a second run is byte-identical (idempotent)",
       "config": null,

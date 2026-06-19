@@ -110,11 +110,22 @@ function main() {
   process.stdin.on("end", () => {
     let payload;
     try { payload = JSON.parse(raw); } catch { process.exit(0); }
-    const root = resolveRoot(payload);
-    const config = loadConfig(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
-    const result = decide(payload, root, config);
-    const out = mapVerdict(result, payload.hook_event_name);
-    if (out) process.stdout.write(JSON.stringify(out));
+    // Fail-OPEN past this point: a malformed deny-rules.json (loadConfig throws) or any
+    // other decide-path error logs to stderr and exits 0 (allow), never crashes the hook.
+    // Rationale: the tooling dir is immutable (self-patch deny) and ships a valid registry,
+    // so a broken registry means a broken install, not an attack — and a fail-CLOSED crash
+    // that blocks EVERY tool call makes the harness unusable, which the Operator routes
+    // around by disabling the hook entirely (strictly worse than fail-open). The immutable
+    // tooling dir is the compensating control. Matches the JSON.parse(raw) fail-open above.
+    try {
+      const root = resolveRoot(payload);
+      const config = loadConfig(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
+      const result = decide(payload, root, config);
+      const out = mapVerdict(result, payload.hook_event_name);
+      if (out) process.stdout.write(JSON.stringify(out));
+    } catch (e) {
+      console.error("[ai-dev] config load / decide failed, allowing this call: " + (e && e.message ? e.message : String(e)));
+    }
     process.exit(0);
   });
 }
