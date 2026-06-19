@@ -29,7 +29,7 @@ Part of that adapter is a real **enforcement layer** — a deny layer that mecha
 One idempotent command, no checkout needed:
 
 ```sh
-npx github:aadegtyarev/ai-dev-protocol <target-dir> --platform claude|opencode
+npx github:wirenboard/ai-pm-protocol <target-dir> --platform claude|opencode
 ```
 
 (From a protocol checkout, the same installer runs directly: `node src/adapter/install.mjs <target-dir> --platform claude|opencode`.)
@@ -41,8 +41,8 @@ It vendors the adapter, lays down the core and doc templates (only where the tar
 Re-running the installer **is** the upgrade — it is idempotent and never clobbers your config or real docs. One catch makes an update silently do nothing, so clear the npx cache first:
 
 1. **Clear the npx cache** — `rm -rf "$(npm config get cache)/_npx"` — npx caches the GitHub checkout and will otherwise silently re-install the *stale* version (the upgrade appears to run, but nothing changes).
-2. **Reinstall** — `npx github:aadegtyarev/ai-dev-protocol . --platform claude|opencode` (re-runs the installer; the re-run is the upgrade).
-3. **Cache-proof alternative** (skips npx entirely) — `git clone --depth 1 https://github.com/aadegtyarev/ai-dev-protocol /tmp/aidp && node /tmp/aidp/src/adapter/install.mjs . --platform claude|opencode`.
+2. **Reinstall** — `npx github:wirenboard/ai-pm-protocol . --platform claude|opencode` (re-runs the installer; the re-run is the upgrade).
+3. **Cache-proof alternative** (skips npx entirely) — `git clone --depth 1 https://github.com/wirenboard/ai-pm-protocol /tmp/aidp && node /tmp/aidp/src/adapter/install.mjs . --platform claude|opencode`.
 4. **Verify it took** — the installer prints `→ Installing ai-dev-protocol vX.Y.Z` loudly and first; if that is the *old* version on a re-run, your npx cache is stale (the installer also warns when it spots this). `cat .ai-dev/VERSION` confirms the version that landed.
 5. **OpenCode** — the installer self-verifies the plugin loads, so a clean exit (exits 0) *is* the load confirmation; a broken deploy fails loudly.
 6. **Claude** — the installer likewise self-verifies the deny hook is wired and its shim loads, so a clean exit *is* the load confirmation; a broken settings/shim fails the install loudly. (A LOAD check, not a runtime-fires check — it proves the shim loads, not that Claude invokes it.)

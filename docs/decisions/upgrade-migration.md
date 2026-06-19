@@ -86,7 +86,7 @@ offer.
 
 ## Also answered — nearby gaps
 
-- **Rollback** — a version-pinned re-run: today `npx github:aadegtyarev/ai-dev-protocol#v5.8.1 <target>`
+- **Rollback** — a version-pinned re-run: today `npx github:wirenboard/ai-pm-protocol#v5.8.1 <target>`
   (tags exist, `git tag` confirms), after npm publish `npx ai-dev-protocol@5.8.1 <target>`.
   Overwrite-idempotence converges the vendored files back. Named residuals: the hook-merge
   never prunes a stale group (above); only-if-absent files stay (correct); downgrade notes

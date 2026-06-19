@@ -1,12 +1,12 @@
 {
   "name": "ai-dev-protocol",
-  "version": "5.19.1",
+  "version": "5.19.2",
   "type": "module",
   "description": "The AI-Dev Protocol — its own source (this repo develops itself under its own protocol).",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aadegtyarev/ai-dev-protocol.git"
+    "url": "git+https://github.com/wirenboard/ai-pm-protocol.git"
   },
   "bin": {
     "ai-dev-protocol": "src/adapter/install.mjs"

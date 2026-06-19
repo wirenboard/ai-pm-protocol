@@ -239,7 +239,7 @@ Today the loop is strictly serial: one session drives one feature, one branch pe
 
 ## npm registry publish — external half of npx distribution — 2026-06-12
 
-The packaging shipped 4.17.0 (`npx github:aadegtyarev/ai-dev-protocol <target>` — repo renamed at 5.0.0, old `-uni` slug redirects). What remains is external: the Operator's npm account, name-availability check (scoped fallback), `npm publish`, optionally publish-on-tag CI (NPM_TOKEN secret riding the existing auto-tag workflow). Then the README lead becomes `npx ai-dev-protocol@latest`.
+The packaging shipped 4.17.0 (`npx github:wirenboard/ai-pm-protocol <target>` — repo renamed at 5.0.0, old `-uni` slug redirects). What remains is external: the Operator's npm account, name-availability check (scoped fallback), `npm publish`, optionally publish-on-tag CI (NPM_TOKEN secret riding the existing auto-tag workflow). Then the README lead becomes `npx ai-dev-protocol@latest`.
 
 ## ad-md-editor rollout — first real downstream — 2026-06-11
 
