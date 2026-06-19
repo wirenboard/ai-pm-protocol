@@ -64,6 +64,24 @@
       }
     },
     {
+      "id": "semantic-correctness",
+      "for": "Behaviour-truth gates for a non-trivial subsystem — does it do what its name claims, is no failure silently swallowed, does a path parallel to an existing one inherit all its guards — deepening the Reviewer's Hygiene/Correctness/Honesty items and adding a plan-time real-or-marked claim discipline to the Builder.",
+      "toggle": { "depth": "rich | light" },
+      "defaults": {
+        "code": { "depth": "rich" },
+        "docs": false,
+        "mixed": { "depth": "light" }
+      },
+      "targets": [
+        { "role": "builder", "beat": "plan" },
+        { "role": "reviewer", "beat": "review" }
+      ],
+      "fragments": {
+        "builder": "src/modules/semantic-correctness/builder.md",
+        "reviewer": "src/modules/semantic-correctness/reviewer.md"
+      }
+    },
+    {
       "id": "ui-ux",
       "for": "Usability enumeration for a user-facing surface — adaptivity, accessibility, responsiveness, clarity, adverse states — deepening the Builder's plan-time product questions and the Reviewer's correctness check on the user's actual path.",
       "toggle": { "depth": "rich | light" },

@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.20.0] — 2026-06-20
+
+### Added
+
+- **New capability module `semantic-correctness` (epic F1/F3/F5) — the loop now has a class-specific gate for "does the code do what it claims", not just "does it run".** Deepens the Builder's plan and the Reviewer's pass with three facets the generic floor items were too generic to catch reliably: **F1** facade/inert subsystems (a named subsystem actually performs its function; state described as persisted is really written and read back; no declared level/tier/branch is a reached-but-inert stub — and a plan claim of *learns/adaptive/N-level/remembers* must carry a behaviour-exercising test or an explicit PLACEHOLDER mark); **F3** no silently swallowed failure (every `except` logs-with-context or re-raises; a defensive try that turns a broken call into a dead no-op blocks); **F5** parallel-path guard inheritance (a path parallel to an existing one — streaming↔blocking, batch↔single — inherits all the original's timeouts/circuit-breakers/cost-accounting/limits/cleanup). `[persona]` prompt depth (blocks nothing mechanically); per-kind default rich (code) / light (mixed) / off (docs). From the abstracted downstream intake (#259); deepens the floor's Hygiene/Correctness/Honesty items rather than restating them (invariant 6).
+
 ## [5.19.3] — 2026-06-20
 
 ### Fixed
