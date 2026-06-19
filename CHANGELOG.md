@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.17.6] — 2026-06-19
+
+### Added
+
+- **The installer now self-verifies the deployed OpenCode plugin actually loads — a silently-broken plugin is now a loud install failure, not a silent floor-off.** Durable D7 prevention for a 3-time recurring class (5.17.4 wrong `../` depth, 5.17.5 missing registration, and an npx-cached stale 5.17.3 deploy) where the OpenCode boundary-deny plugin shipped *deployed but not loading* and the installer still printed success — leaving the entire `[mechanical]` floor off without any signal. `src/adapter/opencode/install-plugin.mjs` `install()` is now async and, immediately after writing `.opencode/plugins/ai-dev.mjs`, dynamically `import()`s the just-written file in its real installed layout; on a load failure it throws (preserving the underlying error via `{ cause }`), naming the plugin path and the hint "the deployed plugin does not load — enforcement would be silently off", and the install exits non-zero with no success summary. Covers every invocation path (the unified installer's child spawn, the standalone CLI, the tests) because the check sits in the single funnel through which the plugin is ever written. A ratchet in `install.test.mjs` drives a deliberately-broken deploy and asserts the loud failure (RED without the self-verify), with a GOOD-install arm pinning the vendor-before-write ordering so a future reorder can't reintroduce a false-fail. **Honesty boundary (stated in `INSTALL.md`):** this proves the plugin *loads* (the path / ES-module-resolution class); it does NOT prove OpenCode *registers* the hook at runtime (the version-drift class — covered separately by the `opencode.json` `plugin`-key registration, its install-test assertion, and the audit-cadence plugin-load probe). A backlog item tracks extending the same self-verify to the Claude hook wiring.
+
+---
+
 ## [5.17.5] — 2026-06-19
 
 ### Fixed

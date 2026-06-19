@@ -28,7 +28,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const SOURCE = path.join(ROOT, "src", "adapter", "opencode", "plugin-entry.mjs");
@@ -103,13 +103,37 @@ export function generate(root = ROOT, layout) {
   return GENERATED_HEADER + retargeted;
 }
 
-// Write the generated plugin to outPath. Returns the path written so a test can
-// read the result without re-deriving it.
-export function install(outPath, root = ROOT, layout) {
+// Write the generated plugin to outPath, then SELF-VERIFY it actually loads from
+// its installed location. Returns the path written so a test can read the result
+// without re-deriving it.
+//
+// WHY the self-verify (D7 class-prevention for a 3-time recurring silent fail-open):
+// a plugin can deploy yet throw on load — a wrong `../` depth, an un-vendored
+// adapter, a stale cached layout — and OpenCode then registers NO hooks, leaving the
+// whole [mechanical] boundary floor silently OFF while the install prints success.
+// A real `import()` of the just-written file exercises its top-level imports against
+// the actual installed layout (the same resolution the live OpenCode loader does), so
+// it fails iff the deployed plugin cannot load. async because import() is a promise.
+//
+// Honesty scope: this proves the plugin LOADS (the path / ES-module-resolution class);
+// it does NOT prove OpenCode invokes the hook at runtime (the registration class —
+// covered by the opencode.json `plugin`-key wiring + install.test.mjs). Load check,
+// not a registration check.
+export async function install(outPath, root = ROOT, layout) {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   const out = generate(root, layout);
   fs.writeFileSync(outPath, out);
   console.log(`wrote ${path.relative(root, outPath)}  (generated from plugin-entry.mjs)`);
+  try {
+    await import(pathToFileURL(outPath).href);
+  } catch (e) {
+    const detail = e && e.message ? e.message : String(e);
+    throw new Error(
+      `install-plugin: the deployed plugin at ${outPath} does not load — ` +
+        `enforcement would be silently off. Underlying load error: ${detail}`,
+      { cause: e },
+    );
+  }
   return outPath;
 }
 
@@ -119,5 +143,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const root = rootIdx >= 0 ? path.resolve(args[rootIdx + 1]) : ROOT;
   const outArg = args.find((a, i) => !a.startsWith("--") && (rootIdx < 0 || i !== rootIdx + 1));
   const outPath = outArg ? path.resolve(outArg) : path.join(root, ".opencode", "plugins", "ai-dev.mjs");
-  install(outPath, root);
+  // A self-verify load failure rejects this promise; surface it as a non-zero exit
+  // (the unified installer spawns this CLI as a child — its non-zero exit propagates
+  // up through execFileSync and aborts the install with no success summary).
+  await install(outPath, root);
 }

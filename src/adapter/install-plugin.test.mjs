@@ -39,8 +39,15 @@ function check(name, cond) {
 
 // ── 1. ANTI-DRIFT: the committed deployed file IS the generator's output ──────
 // Generate to a temp path and compare byte-for-byte with the committed file.
+// install() now self-verifies the deployed plugin LOADS, so we lay a minimal dev
+// layout (.opencode/plugins/ 2 deep + a stub src/adapter beside it) so the dev-form
+// imports (../../src/adapter/...) resolve — the byte-comparison is unaffected.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-plugin-"));
-const outPath = install(path.join(tmp, "ai-dev.mjs"));
+const devAdapter = path.join(tmp, "src", "adapter");
+fs.mkdirSync(path.join(devAdapter, "opencode"), { recursive: true });
+fs.writeFileSync(path.join(devAdapter, "engine.mjs"), "export function loadConfig() { return {}; }\n");
+fs.writeFileSync(path.join(devAdapter, "opencode", "normalise.mjs"), "export function decide() {} export function decidePrompt() {}\n");
+const outPath = await install(path.join(tmp, ".opencode", "plugins", "ai-dev.mjs"));
 const generated = fs.readFileSync(outPath, "utf8");
 const committed = fs.readFileSync(DEPLOYED, "utf8");
 check("generated output is byte-identical to the committed deployed plugin", generated === committed);
@@ -71,10 +78,15 @@ const adapterDir = path.join(dtmp, ".ai-dev", "tooling", "src", "adapter");
 fs.mkdirSync(path.join(adapterDir, "opencode"), { recursive: true });
 fs.writeFileSync(path.join(adapterDir, "engine.mjs"), "export function loadConfig() { return {}; }\n");
 fs.writeFileSync(path.join(adapterDir, "opencode", "normalise.mjs"), "export function decide() {} export function decidePrompt() {}\n");
-const dPlugin = install(path.join(dtmp, ".opencode", "plugins", "ai-dev.mjs"), ROOT, "downstream");
+// install() now self-verifies the load itself; a load failure makes it throw the
+// path-naming, hint-bearing error. The explicit import below is kept as a redundant
+// direct assertion of the same property (and a no-op re-import on the cached module).
 let loaded = false, loadErr = "";
-try { await import(pathToFileURL(dPlugin).href); loaded = true; }
-catch (e) { loadErr = e && e.message ? e.message : String(e); }
+try {
+  const dPlugin = await install(path.join(dtmp, ".opencode", "plugins", "ai-dev.mjs"), ROOT, "downstream");
+  await import(pathToFileURL(dPlugin).href);
+  loaded = true;
+} catch (e) { loadErr = e && e.message ? e.message : String(e); }
 check("downstream plugin LOADS from its installed location (resolves its adapter imports)", loaded);
 if (!loaded) console.log(`       load error: ${loadErr}`);
 

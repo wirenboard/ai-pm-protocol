@@ -163,6 +163,60 @@ testPlatform("opencode", (target) => {
   check("[opencode] AGENTS.md imports the constitution once", agentsMd.split("@.ai-dev/PROTOCOL.md").length - 1 === 1);
 });
 
+// ── RATCHET (install-self-verify): the installer FAILS LOUDLY when the deployed ─
+// plugin cannot load, instead of printing success over a silently-off [mechanical]
+// floor. Three incidents shipped enforcement-off this way (5.17.4 import-depth,
+// 5.17.5 registration drop, the noos stale-cache) — common thread: the install
+// reported success while the plugin it just wrote could not import(). The plugin
+// install step (install-plugin.mjs install()) now import-verifies the just-written
+// file. RED without the self-verify (the install would pass over a broken plugin),
+// GREEN with it.
+//
+// Driven through the standalone plugin-install CLI (the same entry the unified
+// installer spawns as a child, so the child's non-zero exit propagation is exercised).
+// GOOD arm: an intact downstream tree → exit 0. BROKEN arm: the vendored adapter
+// removed after vendoring → the deployed plugin's top-level import throws →
+// the install exits non-zero with the path-naming, hint-bearing error.
+{
+  const pluginCli = path.join(ROOT, "src", "adapter", "opencode", "install-plugin.mjs");
+  const runPluginInstall = (target) =>
+    spawnSync(
+      "node",
+      [pluginCli, path.join(target, ".opencode", "plugins", "ai-dev.mjs"), "--root", target],
+      { encoding: "utf8" },
+    );
+
+  // GOOD arm (precondition — also catches a future vendor/wire reorder that would
+  // write the plugin before its adapter exists, turning a false-fail into a caught
+  // regression rather than a shipped one).
+  const good = freshTarget("selfverify-good");
+  try {
+    install(good, "opencode"); // vendors the adapter THEN wires (incl. the self-verify)
+    const r = runPluginInstall(good);
+    check("[selfverify] GOOD install: plugin re-install on an intact tree exits 0", r.status === 0);
+  } finally {
+    fs.rmSync(good, { recursive: true, force: true });
+  }
+
+  // BROKEN arm (the ratchet) — break the deployed plugin's load surface, then run
+  // the plugin install step and assert it fails loudly.
+  const broken = freshTarget("selfverify-broken");
+  try {
+    install(broken, "opencode");
+    // remove the vendored adapter the deployed plugin imports → its top-level
+    // import resolves to a missing module → import() throws on load.
+    fs.rmSync(path.join(broken, ".ai-dev", "tooling", "src", "adapter", "engine.mjs"), { force: true });
+    const r = runPluginInstall(broken);
+    const err = (r.stderr || "") + (r.stdout || "");
+    check("[selfverify] BROKEN plugin: install exits NON-ZERO (fail-closed)", r.status !== 0);
+    check("[selfverify] BROKEN plugin: error names the deployed plugin path", err.includes(path.join(broken, ".opencode", "plugins", "ai-dev.mjs")));
+    check("[selfverify] BROKEN plugin: error carries the enforcement-off hint", err.includes("enforcement would be silently off"));
+    check("[selfverify] BROKEN plugin: error names the underlying load error", err.includes("Underlying load error:"));
+  } finally {
+    fs.rmSync(broken, { recursive: true, force: true });
+  }
+}
+
 // ── opencode plugin registration: de-dupe, never-clobber, idempotent ─────────
 // The boundary-deny plugin is registered in opencode.json `plugin`. A downstream
 // project may carry its OWN plugin entries — the merge must preserve them (never
