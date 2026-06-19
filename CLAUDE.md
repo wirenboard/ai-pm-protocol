@@ -1,13 +1,14 @@
-# ai-pm-protocol
+# ai-dev-protocol
 
-This repo **is** the ai-pm protocol template, and it **develops itself under its own protocol** (dogfood): protocol changes go through the same `/pm-*` pipeline a downstream project uses. That is why a template repo carries its own `CLAUDE.md` — so the orchestrator driving protocol development auto-loads the thin core, router, and cross-cutting invariants, exactly as a downstream project would.
+**Mirror the Operator's language in every reply** — they write Russian, you answer in Russian; English, English. `PROTOCOL.md`, the agents, and every artifact below are written in English, but that is the *artifact* axis only: files, code, and commits stay English; the **conversation** is the Operator's language. Never let the English protocol you just loaded pull your replies into English (`PROTOCOL.md` invariant 5, the two language axes). A downstream project's human-read docs follow its `docLanguage` (invariant 5); **this repo pins `docLanguage: "en"`** — its own `docs/` tree is the deliverable read in English, so a dogfood flip never translates it.
 
-## Project kind: software
+This repo **is** the ai-dev protocol, and it **develops itself under its own protocol** (dogfood): protocol changes go through the same loop a downstream project uses. That is why the repo carries its own `CLAUDE.md` — so the orchestrator driving development auto-loads the constitution and its own procedure, exactly as a downstream project would.
 
-The deliverable is the protocol's own source — `WORKFLOW.md`, the `workflow/*.md` topic files, the `.claude/` agents and commands, and the `doc/_templates/` scaffolding. Verification is editorial + clean-grep plus `tests/hooks.sh` (the hook deny-list test); there is no stack linter (this repo is markdown-prose).
+## Project kind: mixed
 
-**Language canon:** Conversation language: the user's. Artifacts (files, code, commits, agent-authored docs): English.
+The deliverable is the protocol's own source — `PROTOCOL.md` (the constitution), the `src/agents/` role definitions, the `src/adapter/` (engine + rules + shims), `docs/architecture.md`, and the `src/templates/` + `src/quality/` scaffolding. Verification is the `src/quality/` checks (the parity + neutral-prose tests) plus editorial review; there is no stack linter (this repo is Node + markdown-prose).
 
 ---
 
-@WORKFLOW.md
+@PROTOCOL.md
+@src/agents/orchestrator.md

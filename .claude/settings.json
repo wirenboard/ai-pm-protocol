@@ -3,67 +3,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Read",
+        "matcher": "Read|Write|Edit|Bash|Task|Skill",
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -z \"$ROOT\" ] && exit 0; FILE=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); [ -z \"$FILE\" ] && exit 0; case \"$FILE\" in \"$ROOT\"|\"$ROOT\"/*) exit 0 ;; /*) echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"Path outside project root: $FILE\\\"}}\";; esac",
-            "statusMessage": "Checking path boundary..."
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "if": "Bash(find *)",
-            "command": "INPUT=$(cat); ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -z \"$ROOT\" ] && exit 0; CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; FPATH=$(echo \"$CMD\" | grep -oP 'find +\\K/[^ |;&\"\\x27]*' | head -1); [ -z \"$FPATH\" ] && exit 0; case \"$FPATH\" in \"$ROOT\"|\"$ROOT\"/*) exit 0 ;; /*) echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"find searches outside project root: $FPATH\\\"}}\";; esac",
-            "statusMessage": "Checking find boundary..."
-          },
-          {
-            "type": "command",
-            "if": "Bash(ssh *)",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; if echo \"$CMD\" | grep -qE '(^|[ ;&|`(])ssh([ ]|$)' && echo \"$CMD\" | grep -qP '(sed[ \\x22\\x27\\x60]+-i|[ \\x22\\x27\\x60]vi[ \\x22\\x27\\x60]|[ \\x22\\x27\\x60]vim[ \\x22\\x27\\x60]|[ \\x22\\x27\\x60]nano[ \\x22\\x27\\x60]|[ \\x22\\x27\\x60]tee[ \\x22\\x27\\x60]|>[ ]*[^ &|;>]+)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"ssh + direct content edit on a remote system (sed -i, vi/vim/nano, tee, > redirect). Repo-owned files (code, schemas, configs in git) must change via plan -> coder -> reviewer -> PR -> deployment, never via in-place edit. See WORKFLOW.md remote-system boundary rule.\"}}'; fi",
-            "statusMessage": "Checking ssh content-edit boundary..."
-          },
-          {
-            "type": "command",
-            "if": "Bash(ssh *)",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; if echo \"$CMD\" | grep -qE '(^|[ ;&|`(])ssh([ ]|$)' && echo \"$CMD\" | grep -qP '([ \\x22\\x27\\x60]systemctl[ \\x22\\x27\\x60]+(restart|reload|stop|start|enable|disable)|[ \\x22\\x27\\x60]docker[ \\x22\\x27\\x60]+(exec|compose[ \\x22\\x27\\x60]+(up|down|run|restart|exec))|[ \\x22\\x27\\x60]apt(-get)?[ \\x22\\x27\\x60]+(install|upgrade|remove|purge|autoremove)|[ \\x22\\x27\\x60]npm[ \\x22\\x27\\x60]+(install|update|uninstall)|[ \\x22\\x27\\x60]kubectl[ \\x22\\x27\\x60]+(edit|apply|patch|delete|create|replace)|[ \\x22\\x27\\x60]rm[ \\x22\\x27\\x60]|[ \\x22\\x27\\x60]cp[ \\x22\\x27\\x60]|[ \\x22\\x27\\x60]mv[ \\x22\\x27\\x60]|[ \\x22\\x27\\x60]mkdir[ \\x22\\x27\\x60]|[ \\x22\\x27\\x60]touch[ \\x22\\x27\\x60])'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"ssh + mutating action on remote system (service restart, container/package management, file ops). Legitimate when it is part of deployment, PM-initiated maintenance, or runtime-state operation that does not live in the repo. Confirm intent before proceeding. If you are editing a repo-owned file in place, stop and go through plan -> coder -> reviewer -> PR.\"}}'; fi",
-            "statusMessage": "Checking ssh mutating action..."
-          },
-          {
-            "type": "command",
-            "if": "Bash(git push *)",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; if echo \"$CMD\" | grep -qE 'git[ ]+push([ ]+[^ ]+)*[ ]+(--force|--force-with-lease|-f)([ =]|$)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"git push --force / -f rewrites remote history. Confirm with PM that this is intentional (e.g., rewriting a feature branch they own); never force-push to main.\"}}'; fi",
-            "statusMessage": "Checking force-push..."
-          },
-          {
-            "type": "command",
-            "if": "Bash(git commit *)",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); [ -z \"$CMD\" ] && exit 0; if echo \"$CMD\" | grep -qE 'git[ ]+commit([ ]+[^ ]+)*[ ]+(--no-verify|--no-gpg-sign)([ =]|$)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"git commit --no-verify / --no-gpg-sign skips pre-commit hooks or signing. Confirm with PM that this is intentional. If a pre-commit hook is failing, fix the underlying issue rather than bypassing the hook.\"}}'; fi",
-            "statusMessage": "Checking commit verification..."
-          }
-        ]
-      },
-      {
-        "matcher": "Task|Agent|Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "INPUT=$(cat); NAME=$(echo \"$INPUT\" | jq -r '.tool_input.subagent_type // .tool_input.skill // empty'); [ -z \"$NAME\" ] && exit 0; case \"$NAME\" in wb-development:coder|wb-development:code-reviewer|wb-development:design-review|wb-development:plan-feature|wb-development:pr-prep|wb-git:workflow|wb-git:pr-author) jq -nc --arg n \"$NAME\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:(\"\\($n) duplicates a protocol role in this ai-pm project. Use the pm-* equivalent (pm-coder / pm-plan-checker + code-review / pm-architect / /pm-plan / pm-pr-prep / WORKFLOW.md git rules), not a wb-* role agent. code-review, deep-research and wb-knowledge skills stay available.\")}}' ;; esac",
-            "statusMessage": "Checking agent/skill routing..."
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "INPUT=$(cat); FILE=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); [ -z \"$FILE\" ] && exit 0; CONTENT=$(echo \"$INPUT\" | jq -r '.tool_input.content // empty'); STRIPPED=$(printf '%s' \"$CONTENT\" | tr -d ' \\t\\n\\r\\f\\v'); [ -n \"$STRIPPED\" ] && exit 0; [ ! -s \"$FILE\" ] && exit 0; echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Empty/whitespace-only Write over an existing non-empty file would zero authored content (truncation guard, mirrors the code-scalpel SC6 invariant: write rejects empty content). This is never a legitimate need -- a genuine truncate should use a different tool, and additions should use Edit. Regression guard for the 2026-06-06 doc-loss incident.\"}}'",
-            "statusMessage": "Checking destructive Write..."
+            "command": "node \"$CLAUDE_PROJECT_DIR/src/adapter/claude/shim.mjs\""
           }
         ]
       }
@@ -73,8 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); P=$(echo \"$INPUT\" | jq -r '.prompt // empty'); printf '%s' \"$P\" | grep -qiE 'implement|refactor|feature|deploy|release|\\bfix\\b|\\badd\\b|\\bchange\\b|\\bbuild\\b|\\bcommit\\b|\\bmerge\\b|\\bbug\\b|\\bremove\\b|\\bdelete\\b|\\bdrop\\b|\\brename\\b|\\bextract\\b|\\bupdate\\b|сдела|делай|поправ|добав|исправ|реализ|почини|зарелиз|закоммит|смерж|внедри|перепиш|рефактор|фич|убери|убрать|удали|сними|вынеси|переименуй|обнови' || exit 0; jq -nc '{hookSpecificOutput:{hookEventName:\"UserPromptSubmit\",additionalContext:\"[ai-pm protocol] Repo-change request detected. Follow WORKFLOW.md: Step 0 git/branch check, then /pm-plan (or /pm-fixup if trivial) -> pm-coder -> review loop -> pm-pr-prep. The orchestrator does not edit content artifacts (code, schemas, docs/architecture, plans, contracts) directly -- spawn the owning pm-* agent. Do not load wb-* role skills (coder / plan-feature / design-review / code-reviewer / pr-author / workflow) for code/PR/commit work; use the pm-* equivalents. code-review, deep-research and wb knowledge skills (codestyle, packaging, platform) stay available and should be used when relevant. Exception: a PM-authorized diagnostic probe (runtime/local, to test a hypothesis) is a throwaway spike, not a feature -- do not route it through /pm-plan; propose it in plain language with before->after and get an explicit yes first (WORKFLOW.md Step A.5). Surface substantive PM decision-forks (scope, accept-vs-fix, which-of-N, prioritization) via the AskUserQuestion tool, not plain prose; simple yes/no proceed-gates may stay prose.\"}}'",
-            "statusMessage": "Asserting protocol route..."
+            "command": "node \"$CLAUDE_PROJECT_DIR/src/adapter/claude/shim.mjs\""
           }
         ]
       }

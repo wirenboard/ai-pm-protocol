@@ -1,0 +1,23 @@
+{
+  // Standard markdownlint — all default rules ON, docs brought to the standard.
+  // The three relaxations below are deliberate OPERATOR decisions, not author
+  // convenience; each is recorded with its reason. Everything else is fixed in
+  // the docs, never in the config. Scoping (not rule-relaxation) excludes
+  // generated trees (their source IS linted) and transient state.
+  "config": {
+    "default": true,
+    // Operator decision: line length. Long "one semantic unit per line"
+    // bullets/rules/table-rows are deliberate (renders identically; an 80-col
+    // wrap fragments dense bullets at arbitrary points and is unfixable on wide
+    // table rows). Prose readability is held by the Reviewer's doc-quality lens.
+    "MD013": false,
+    // Operator decision: duplicate headings allowed only under DIFFERENT parents.
+    // The Keep-a-Changelog format repeats "Added/Changed/Fixed" per version.
+    "MD024": { "siblings_only": true },
+    // Operator decision: first-line H1. Composed PARTIALS (command bodies, module
+    // fragments) are spliced into other files and legitimately have no H1.
+    "MD041": false
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules", ".claude", ".opencode", ".ai-dev"]
+}

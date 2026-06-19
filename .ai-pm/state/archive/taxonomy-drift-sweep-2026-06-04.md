@@ -1,6 +1,0 @@
-# Execution State
-
-- **Status:** PR open — awaiting human merge (STOP before merge honored)
-- **Active task:** `taxonomy-drift-sweep` — EPIC cross-doc auditor slice 2 ("drift catcher"). pm-auditor dim 5 gets a structural NOTE catching a taxonomy/enum value/identifier-grammar RESTATED in `docs/user-journeys.md` (step bodies / `**Invariants:**` blocks) instead of referencing `## Behavioral contract`: (1) exact-token match against a declared taxonomy (the precise "6-in-docs-7-in-code" catch); (2) wire-token SHAPES reused-by-reference from the existing structural-token note; (3) dangling Behavioral-contract reference. user-journeys.md ONLY (no overlap with the existing contract/product-map token note). Structural/shape-not-meaning, note-not-blocking, presence-conditional, additive, no migration. Ran AUTONOMOUS (per-feature override). Plan: `doc/features/taxonomy-drift-sweep_plan.md`. Branch `feature/taxonomy-drift-sweep`.
-- **Outcome:** plan-check approve; code-review found + fixed 2 spec-correctness defects in-pass (dimension-reference mis-cite, silent-condition vs sc3). pr-prep bumped v2.22.0, wrote CHANGELOG, opened PR #203. Released v2.22.0, PR #203 merged 2026-06-04 (auto-tag shipped `v2.22.0`).
-- **Last shipped before this:** `invariants-index` v2.21.0 (PR #201).

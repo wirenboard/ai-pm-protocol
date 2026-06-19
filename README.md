@@ -1,243 +1,101 @@
-# ai-pm-protocol
+# ai-dev-protocol
 
-Шаблон для тех, кто пилит свой продукт один или в паре с AI. PM описывает что хочет — агенты планируют, пишут код, проверяют. PM принимает решения по продукту и не читает код.
+A protocol for building software and documentation with AI. You are the operator: you say *what* to build and *why*, approve the plan, and decide what ships — in plain product language, no code reading required. A small set of AI roles plans the change, builds it, reviews it independently, and ships it.
 
-## Какие риски шаблон снижает
+It runs inside an AI coding harness — Claude Code and OpenCode, both live-verified — and **develops itself under its own protocol** — this repository is its own first project.
 
-> Самое важное на продуктовом уровне. Полный перечень дисциплин — в [`WORKFLOW.md`](WORKFLOW.md) и в `.claude/agents/*`.
+## How it works
 
-- **Код расходится с планом — реже.** pm-plan-checker проверяет каждый сценарий из плана: есть реализация, есть тест.
-- **Конкурентные баги проходят незамеченными — реже.** Фичи с разделяемым состоянием или async обязаны иметь interaction scenarios и тесты для них.
-- **Технические баги проходят через review — реже.** После plan compliance идёт code-review; баги, уязвимости и dead code возвращаются к pm-coder автоматически.
-- **Существующее поведение ломается — реже.** Product Contracts фиксируют что должно работать и что не должно сломаться; нарушение блокирует PR.
-- **Продукт остаётся недо-определённым — реже.** Перед кодом пользовательских фич независимый pm-product-advocate сверяет план с базовыми продуктовыми вопросами и блокирует передачу coder'у, пока пробелы не закрыты или осознанно не отложены.
-- **Тихие правки на проде — реже.** Hook блокирует `ssh ... sed/vi/tee` против repo-файлов; read-only диагностика и деплоймент не страдают.
-- **Решения по продукту — два режима.** По умолчанию interactive (PM отвечает на каждую развилку); опционально autonomous (пайплайн решает из bootstrap-мандата и канона, объявляя каждое решение и записывая его с обоснованием). Merge всегда за PM.
+The whole protocol is one short constitution you can read in one sitting: **[`PROTOCOL.md`](PROTOCOL.md)**. The essence:
 
-## Установка
+**Three roles.** A Builder plans and makes the change; a Reviewer independently checks it in a separate context; an Orchestrator drives the loop, talks to you, and owns git — the reviewer is never the builder, so a maker can't catch its own blind spots. The full role table: `PROTOCOL.md` `## The three roles`.
 
-По умолчанию — **через symlinks** (агенты, команды и `settings.json` ссылаются в submodule, поэтому обновляются автоматически вместе с ним):
+**Product-first.** Onboarding goes **install → setup → product discovery → loop**. Before any feature, a genuine discovery dialog records a short brief (`docs/product.md`): the idea, the customer, the problem in their words, the zero-to-working story, the competition, who runs and funds it — and, at the end, the honest case against. It gathers prejudice-free and concludes willing to say "we are building the wrong thing". Every feature then grounds in that brief, so you are building a product, not churning code.
 
-```bash
-git submodule add git@github.com:wirenboard/ai-pm-protocol.git .ai-pm/tooling
-mkdir -p .claude
-ln -s ../.ai-pm/tooling/.claude/agents .claude/agents
-ln -s ../.ai-pm/tooling/.claude/commands .claude/commands
-ln -s ../.ai-pm/tooling/.claude/settings.json .claude/settings.json
+**Five beats.** Every feature flows: **understand → plan → build → review → ship**. You approve the plan in plain language before any code; the review is a fresh, independent pass; **you authorize every merge** — nothing lands without your explicit go.
+
+**You decide product, not code.** The orchestrator leads with user impact, frames decisions as trade-offs, asks one question at a time, and never shows you code.
+
+**Speed↔quality dial.** One axis, set per project (`profile` in `.ai-dev/config.json`): `lite`/`solo` verify a hypothesis fast — lighter plan ceremony, the orchestrator may build directly; `full` trades speed for no-rewrites. The floor — working code or docs, an independent review by a fresh Reviewer, your explicit go on every merge — holds at every dial position on the guarantee profiles (`full`/`lite`/`solo`); the dial caps ceremony, never rigor. A fourth value, `yolo`, is an explicit off-guarantee escape hatch: no Reviewer, no merge-gate, maximum speed — your explicit merge word is the one floor that remains.
+
+## Platform-neutral by design
+
+The protocol is **one neutral core + one thin adapter per platform**. The core (`PROTOCOL.md`, the `src/agents/` roles, `docs/architecture.md`) names only abstract acts — *read a file*, *spawn a sub-agent*, *deny a write outside the project*. Each platform (Claude Code, OpenCode, the next one) is a thin **adapter** (`src/adapter/`) that maps those acts to its concrete tools. Adding a platform is its adapter and **zero edits to the core**.
+
+Part of that adapter is a real **enforcement layer** — a deny layer that mechanically blocks certain tool calls (reading or writing outside the project, spawning a look-alike role into a protocol seat, merging an unreviewed change). What is mechanically enforced versus held by the prose alone is labelled honestly throughout (`PROTOCOL.md` `## Enforcement`, `docs/architecture.md`).
+
+## Install
+
+One idempotent command, no checkout needed:
+
+```sh
+npx github:aadegtyarev/ai-dev-protocol <target-dir> --platform claude|opencode
 ```
 
-**После установки очисти контекст — `/clear`** (или перезапусти сессию). Агенты, команды и скиллы подхватываются при старте сессии; если submodule и symlinks появились уже в запущенной сессии, в текущем контексте они ещё не загружены, и Claude не сможет их использовать. `/clear` перечитывает `.claude/` и подтягивает их.
+(From a protocol checkout, the same installer runs directly: `node src/adapter/install.mjs <target-dir> --platform claude|opencode`.)
 
-### Альтернатива — установка копированием (shared folder / виртуалка по SFS)
+It vendors the adapter, lays down the core and doc templates (only where the target has none), and wires the chosen platform — hooks, role agents, the `PROTOCOL.md` load. It also installs a local **pre-push quality gate** (a git hook that runs your registered quality suite and blocks a push of failing code — never clobbering a hook you already have; `git push --no-verify` bypasses it, remove the hook file to opt out). Per-platform detail: **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)**. After wiring, start a fresh session so the harness loads the protocol.
 
-Если проект лежит на хосте и проброшен в виртуалку или контейнер через **shared-folder ФС** (vboxsf VirtualBox, VMware HGFS, 9p/virtiofs, иногда SSHFS), такая ФС часто **не отдаёт symlinks**. Тогда Claude Code не находит агентов в `.claude/agents/` и показывает только встроенных (`general-purpose`, `Explore`, `Plan`…), а кастомные `pm-*` агенты «not found». Симптом не в Claude и не в submodule — это ограничение самой ФС.
+## Updating an existing install
 
-В этом случае ставь **копированием вместо symlinks** — `.claude/*` становятся реальными файлами, которые читаются на любой ФС:
+Re-running the installer **is** the upgrade — it is idempotent and never clobbers your config or real docs. One catch makes an update silently do nothing, so clear the npx cache first:
 
-```bash
-git submodule add git@github.com:wirenboard/ai-pm-protocol.git .ai-pm/tooling
-mkdir -p .claude
-cp -R .ai-pm/tooling/.claude/agents   .claude/agents
-cp -R .ai-pm/tooling/.claude/commands .claude/commands
-cp    .ai-pm/tooling/.claude/settings.json .claude/settings.json
+1. **Clear the npx cache** — `rm -rf "$(npm config get cache)/_npx"` — npx caches the GitHub checkout and will otherwise silently re-install the *stale* version (the upgrade appears to run, but nothing changes).
+2. **Reinstall** — `npx github:aadegtyarev/ai-dev-protocol . --platform claude|opencode` (re-runs the installer; the re-run is the upgrade).
+3. **Cache-proof alternative** (skips npx entirely) — `git clone --depth 1 https://github.com/aadegtyarev/ai-dev-protocol /tmp/aidp && node /tmp/aidp/src/adapter/install.mjs . --platform claude|opencode`.
+4. **Verify it took** — the installer prints `→ Installing ai-dev-protocol vX.Y.Z` loudly and first; if that is the *old* version on a re-run, your npx cache is stale (the installer also warns when it spots this). `cat .ai-dev/VERSION` confirms the version that landed.
+5. **OpenCode** — the installer self-verifies the plugin loads, so a clean exit (exits 0) *is* the load confirmation; a broken deploy fails loudly.
+6. **Claude** — the installer likewise self-verifies the deny hook is wired and its shim loads, so a clean exit *is* the load confirmation; a broken settings/shim fails the install loudly. (A LOAD check, not a runtime-fires check — it proves the shim loads, not that Claude invokes it.)
+7. **Restart the session** afterward — the next session offers the migration check (the `.ai-dev/UPGRADING.md` marker the installer writes on a version change).
+8. **If hand-cleaning, do NOT delete** your project-owned files: `.ai-dev/config.json`, `.ai-dev/state/`, `.ai-dev/backlog.md`, `docs/`, and (OpenCode) `.opencode/opencode.json`.
+
+The full upgrade mechanics — what each version's migration renames and why downgrades are unsupported — live in **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)** `## Upgrade`.
+
+## Configure
+
+Once wired, run **`/dev-setup`** to configure the project — platform, mode, roles, models, and **kind** (`code` / `docs` / `mixed`). Kind sets the artifact consumer: machine-executed code, human-read documentation, or both — a protocol or process-doc project is `mixed`; a pure docs project is `docs`. It is a plain-language dialog: it discovers the models your environment actually offers and asks you to pick, then writes `.ai-dev/config.json`. You need not run it by hand — on a fresh, unconfigured project the orchestrator offers setup on your first work request (an offer you may decline to proceed on safe defaults).
+
+Re-run it anytime — the `/dev-setup` command, or just ask to reconfigure — when you change models or switch platform. It reads the current config, shows what changes, rewrites it, and re-applies so the new models take effect. The full procedure lives in **[`src/agents/orchestrator.md`](src/agents/orchestrator.md)** `## Setup` (`PROTOCOL.md` `## The loop` frames it; `src/adapter/INSTALL.md` has the per-platform command).
+
+## Define the product
+
+Right after setup, the orchestrator runs **genuine product discovery** — a dialog that gathers the product's real story (who it is for, the problem in their words, the concrete zero-to-working journey, the competition researched first, who runs and funds it) and concludes with the honest case against — able to end on "we built the wrong thing." It never invents an answer for you. You need not start it by hand: on a configured project with no brief, the orchestrator offers it on your first feature request (an offer you may decline). The brief lives in `docs/product.md` and every feature grounds in it; revisit it whenever the product shifts. The procedure is **[`src/agents/orchestrator.md`](src/agents/orchestrator.md)** `## Product discovery`.
+
+## Layout
+
+```text
+PROTOCOL.md        the constitution — the loop, the roles, the invariants, the honest enforcement map
+docs/              human-readable documentation:
+  architecture.md    the engineer's mental model — how the pieces fit
+  contracts/         the product promises, one compact file each
+  decisions/         the compacted decision-base — why the protocol is shaped this way
+src/               the machinery:
+  agents/            the three role definitions (neutral bodies)
+  adapter/           the only platform-specific code:
+    engine.mjs         the shared enforcement engine (one copy, every platform)
+    deny-rules.json    every guard, as data
+    tool-map.json      neutral act -> each platform's concrete tool
+    claude/            the Claude shim, hooks, and agent assembler
+    opencode/          the OpenCode shim, plugin entry, and agent assembler
+    INSTALL.md         where each file lands, per platform
+  modules/           the optional capability modules (e.g. threat-model)
+  quality/           what "green" means here (the parity + neutral-prose checks)
+  templates/         the lean scaffold a downstream project starts from
+.ai-dev/config.json  the project's choices — roles, mode, platform, kind
 ```
 
-Дальше так же — `/clear`, затем переходи к Quickstart.
+## Contributing
 
-**Цена варианта:** agents/commands/settings — теперь копии, а не symlinks, поэтому auto-update через submodule не работает. При обновлении шаблона их нужно перекопировать (см. «Обновление шаблона» ниже).
+This repo develops itself under its own protocol — the same loop, roles, and checks it ships. Start with `PROTOCOL.md` (the rules), `docs/architecture.md` (how it is built), and the `src/quality/` checks: `node src/adapter/parity.test.mjs` and `node src/quality/neutral-prose.test.mjs`.
 
-> Ещё проще, если возможно: склонировать проект **нативно внутри виртуалки** (не через shared folder) — тогда работает обычная установка через symlinks и auto-update сохраняется.
+## Acknowledgements
 
-Оркестратор работает с отключённой авто-памятью (`autoMemoryEnabled: false`) — всё состояние живёт в артефактах проекта (`.ai-pm/`, `doc/`, планы, ревью). Каталог для временных/диагностических скриптов — `.claude/tmp/` (git-ignored), а не `/tmp`.
+Ideas this protocol gratefully borrowed and reshaped:
 
-### Выбор движка ревью: `code-review-orchestrator` доступен
+- **[BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)** — the elicitation mechanic (a technique menu offered at decision points) and the browser-driven UX review, adopted in our shape as the `elicitation` capability module and the ui-ux reviewer's browser walkthrough (`docs/decisions/bmad-adoption.md` records what was taken and what consciously was not).
+- **The 8D problem-solving discipline** (Ford's Eight Disciplines) — the failure-analysis side-tool follows its eight steps.
+- **[Keep a Changelog](https://keepachangelog.com/) and [SemVer](https://semver.org/)** — the release record's format and versioning contract.
 
-Per-diff ревью каждого изменения (Pass-2) протокол выполняет встроенным скиллом `/code-review` — этого достаточно для одного диффа, и автоматический per-diff цикл не эскалирует на оркестратор (это правило маршрутизации протокола, а не запрет: вызвать оркестратор вручную можно в любой момент). Сквозную проверку качества всей кодовой базы (`/pm-audit`) протокол выполняет скиллом `wb-development:code-review-orchestrator`, **если он установлен** — это многоаспектный обзор всего проекта; при его отсутствии откатывается на встроенный `/code-review ultra`. Переменная окружения **`WB_REVIEW_ORCHESTRATOR=off`** заставляет sweep использовать встроенный движок, даже если оркестратор установлен (контроль стоимости).
+## License
 
-### Ревью и аудит на другой модели (cross-model)
-
-Ревью и аудит **по умолчанию** идут на **другой** модели, чем та, на которой идёт сессия (план и код), — у другой модели другие слепые зоны, и она ловит то, что модель-автор пропустила. Так что кросс-модель работает из коробки (`auto`); модель ревью при этом всегда называется в момент запуска, чтобы было видно, какой моделью идёт проверка. Если другая модель недоступна или совпала с сессией — ревью просто идёт на модели сессии, ничего не ломается. Отключить кросс-модель (вернуть ревью на модель сессии) — одной строкой `session`. Задать или сменить — через `.ai-pm/review-config.md` (настройки `review-diff-model` / `review-full-model` / `audit-model` / `review-scope`) или просто попросив Claude («ревью диффа на opus», «смени аудитора»). Полные правила — `### Cross-model review` в [`workflow/review-typology.md`](workflow/review-typology.md).
-
-## Quickstart
-
-Первый запуск — скажи Claude: **«начни проект»**. Дальше один из двух путей.
-
-### (a) Новый проект с нуля (greenfield)
-
-Скажи **«начни проект»** на пустом репозитории. Claude проводит короткий разговор-bootstrap (не анкету):
-
-- **Продукт** — что это, для кого, что пока сознательно вне scope.
-- **Стек** — язык, фреймворк, база и почему именно они.
-- **Вид проекта** — `software` (код) или `documentation` (SOP, runbook, гайды, спеки — без кода).
-- **Кто принимает продуктовые решения** — ты на каждой развилке (interactive) или пайплайн из bootstrap-мандата и канона проекта (autonomous).
-
-После этого Claude сам создаёт документацию (`docs/architecture.md`, `docs/product.md`, `docs/user-journeys.md`, `docs/stack-notes.md` и др.), `CLAUDE.md` и операционный каталог `.ai-pm/`. Проект готов к первой фиче — просто опиши её.
-
-### (b) Существующий / легаси проект
-
-Наведи Claude на существующую кодовую базу и скажи **«начни проект»**. Claude видит код без `CLAUDE.md` и предлагает два режима документирования (`/pm-bootstrap`):
-
-- **Быстрый старт** — читает минимум (точки входа, основные модули, конфиги), создаёт черновую документацию с пробелами `[?]`. Можно сразу работать — пробелы закрываются по ходу дела.
-- **Полное документирование** — Claude читает весь код сам и восстанавливает `docs/architecture.md` + `docs/user-journeys.md` целиком. PM только валидирует результат, а не заполняет пробелы. После этого систему можно **портировать на новый стек** — документация полная, в легаси-код больше заглядывать не нужно.
-
-Оба режима стек-агностичны: код читается как текст, языковой тулинг не нужен. После любого режима — обычная работа над фичами.
-
-## Как это работает
-
-> Краткий обзор для PM. Точные правила оркестрации и обязанности агентов — в [`WORKFLOW.md`](WORKFLOW.md) (canonical orchestration spec, на английском).
-
-**Новая фича:**
-
-```
-PM: "хочу добавить групповые чаты"
-        ↓
-Claude читает docs/ проекта. Если накопилось ≥5 фич с последнего
-аудита — предлагает сначала проверку. PM решает.
-        ↓
-Уточняющие вопросы. Новый стек-компонент → pm-stack-researcher читает
-канон стека. Разделяемое состояние или async → interaction scenarios.
-        ↓
-Фиксируется план: сценарии, контракты, правила стека, тест-план.
-Пользовательская фича → оформляется Product Contract (что должно
-работать, что не должно сломаться). Backend-only пропускает этот шаг.
-        ↓
-pm-architect решает структурный вопрос, если он есть.
-pm-coder реализует, запускает pipeline.
-        ↓
-Review loop (PM не видит итераций):
-  Pass 1 — pm-plan-checker: все сценарии реализованы? контракт? DoD?
-  Pass 2 — code-review: баги, безопасность, dead code
-  замечания → pm-coder правит → повтор до чистоты
-        ↓
-PM слышит: "готово — вот что изменилось, вот как попробовать"
-+ product notes (scope, видимое поведение) — PM решает: сейчас /
-backlog / игнорировать → "открывай PR" / "сначала проверю на проде"
-```
-
-**Не работает на проде:**
-
-```
-PM: "оплата корзины зависает на втором шаге"
-        ↓
-Claude диагностирует read-only: логи, статусы, конфиги
-(по умолчанию ничего не меняет — даже если фикс очевиден)
-        ↓
-Проверить гипотезу? Только с разрешения PM — диагностический зонд:
-правка только runtime-состояния (не repo-файлов), потом откат
-        ↓
-Объясняет находку на продуктовом языке, открывает hotfix-план
-через /pm-plan ("Incident facts" фиксирует симптомы и evidence)
-        ↓
-Дальше — обычный pipeline: pm-coder → review loop → PR → merge
-```
-
-**Проверка проекта:**
-
-```
-PM: "проверь проект" — или — автоматически после N фич
-        ↓
-Claude сам решает: быстрая проверка (протокол, diff) или
-полная (протокол + code-review) — по дате аудита и числу фич
-        ↓
-pm-auditor: артефакты есть? планы совпадают с реализацией?
-контракты актуальны? docs свежи?
-        ↓
-PM слышит: N нарушений — по каждому: исправить сейчас /
-в следующий спринт / принять
-```
-
-PM не знает про агентов, команды и пайплайн — только разговор и продуктовые решения.
-
-## Обновление шаблона
-
-```bash
-git submodule update --remote .ai-pm/tooling
-git add .ai-pm/tooling
-git commit -m "chore: bump ai-pm-protocol"
-```
-
-Агенты, команды, `settings.json` и `WORKFLOW.md` обновляются автоматически — они symlinks внутри submodule. `CLAUDE.md` и `docs/` проекта остаются нетронутыми.
-
-**Если ставил копированием** (вариант для shared folder / SFS выше) — symlinks нет, поэтому после бампа `.claude/*` нужно перекопировать (с `rm -rf`, чтобы убрать удалённые в новой версии агенты/команды):
-
-```bash
-git submodule update --remote .ai-pm/tooling
-rm -rf .claude/agents .claude/commands
-cp -R .ai-pm/tooling/.claude/agents   .claude/agents
-cp -R .ai-pm/tooling/.claude/commands .claude/commands
-cp    .ai-pm/tooling/.claude/settings.json .claude/settings.json
-git add .ai-pm/tooling .claude
-git commit -m "chore: bump ai-pm-protocol"
-```
-
-**Проще — просто скажи Claude: «обнови шаблон»** (или «обнови ai-pm-protocol до vX.Y»). Это обычная git-операция, не фича: оркестратор сам делает bump сабмодуля на ветке, коммитит как `chore:` и выполняет миграцию, если новая версия её требует. Каталог процедур миграции между версиями — в [`MIGRATIONS.md`](MIGRATIONS.md); вручную их разбирать не нужно.
-
-## Что остаётся за PM
-
-> Правила общения PM ↔ агенты — в [`WORKFLOW.md`](WORKFLOW.md).
-
-- Описать фичу или баг
-- Ответить на уточняющие вопросы при планировании
-- Принять архитектурное решение если есть развилка
-- Решить что делать с product notes: починить сейчас, в backlog, или игнорировать
-- Сказать «выпускай» когда фич накопилось на релиз
-
-Всё остальное — агенты.
-
-## Структура шаблона
-
-```
-WORKFLOW.md           — правила работы агентов (импортируется в CLAUDE.md проекта)
-.claude/agents/       — pm-architect, pm-coder, pm-plan-checker, pm-pr-prep,
-                        pm-codebase-reader, pm-stack-researcher, pm-auditor,
-                        pm-product-advocate
-.claude/commands/     — pm-bootstrap, pm-plan, pm-research, pm-audit, pm-fixup
-doc/_templates/       — шаблоны документов проекта
-```
-
-## Структура downstream-проекта
-
-**Документация проекта** — в git, редактируется агентами через plan:
-
-```
-README.md
-CLAUDE.md                          — импортирует @.ai-pm/tooling/WORKFLOW.md
-docs/
-  product.md                       — продуктовая визитка (для PM, авторская, ведёт pm-architect)
-  product-map.md                   — что система делает: контракт → фичи (для PM, авто-генерируется)
-  architecture.md
-  stack-notes.md
-  threat-model.md                  — модель угроз (опц., security-проекты, ведёт pm-architect)
-  user-journeys.md
-  features/
-    <topic>_plan.md
-```
-
-**Операционные артефакты** — в git, пишутся агентами автоматически:
-
-```
-.ai-pm/
-  tooling/                         ← сам шаблон (submodule, read-only)
-  state/
-    current.md                     ← снимок активной задачи
-    archive/<topic>-<date>.md      ← завершённые задачи
-  contracts/
-    <feature>.md                   ← Product Contract на каждую user-facing фичу
-  reviews/
-    <topic>_review.md              ← план compliance + code-review findings
-    fixup-<topic>_review.md        ← ревью тривиальных правок
-  arch/
-    <topic>_arch.md                ← архитектурный анализ по фиче
-  audits/
-    audit-<YYYY-MM-DD>.md          ← отчёт аудита протокола
-  research/
-    <topic>_research.md            ← исследования перед планированием
-    research.md                    ← project-level research (bootstrap)
-  backlog.md                       ← отложенные заметки (создаётся по первому use)
-```
-
-`.ai-pm/tooling/` — единственная часть `.ai-pm/`, которую PM не трогает и которая обновляется через `git submodule update`. Всё остальное в `.ai-pm/` — артефакты конкретного проекта.
-
-## Лицензия
-
-MIT. Свободное использование, включая коммерческое. Модификации можно оставлять закрытыми — copyleft нет, возвращать изменения в open source не требуется.
+MIT — free use, including commercial. Modifications may stay closed; there is no copyleft.

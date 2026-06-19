@@ -8,3 +8,14 @@
 # Claude Code worktree + throwaway scratch dirs
 .claude/worktrees/
 .claude/tmp/
+.ai-dev/tmp/
+
+# Session state — local-only pointer, never committed
+.ai-dev/state/
+
+# Self-report transients — raw pre-sweep failure context, never committed
+.ai-dev/feedback/
+.ai-dev/worktrees/
+
+# Node dependencies (the linters; package-lock.json IS committed)
+node_modules/

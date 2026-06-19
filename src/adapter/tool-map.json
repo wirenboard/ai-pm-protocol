@@ -1,0 +1,40 @@
+{
+  "_doc": "The neutral-noun → per-platform-concrete map. The core (PROTOCOL.md, the roles, the checklists) names every act with a neutral noun; this one table resolves each to its platform tool. A reader who needs the concrete consults this; the prose stays neutral. Single home — never copy this mapping elsewhere. Adding a platform = add a column.",
+  "map": {
+    "read-a-file":            { "claude": "Read",            "opencode": "read" },
+    "write-a-file":           { "claude": "Write",           "opencode": "write" },
+    "edit-a-file":            { "claude": "Edit",            "opencode": "edit" },
+    "run-a-shell-command":    { "claude": "Bash",            "opencode": "bash" },
+    "spawn-a-sub-agent":      { "claude": "Task",            "opencode": "task", "_doc": "Spawn a child role. Background/concurrency: OpenCode can send a RUNNING subagent to the background (changelog v1.16.2+, present in 1.17.x) — a real concurrency primitive, not the prior assumed gap; concurrency of MULTIPLE simultaneous task calls beyond one-backgrounded is unverified. Claude Task runs foreground per call — parallel fan-out is multiple Task calls in one turn. Research: docs/decisions/opencode-task-capabilities.md Q2." },
+    "explore-a-codebase":     { "claude": "Agent(subagent_type='Explore')", "opencode": "task (read-only framing — no built-in Explore primitive; frame the instruction as 'find and read, do not write')", "_doc": "A read-only exploration sub-agent. On Claude Code the Explore subagent type is native (fast, read-only enforced at the harness level); on OpenCode there is no built-in Explore equivalent — a task with explicit read-only instructions is the closest analog (the model infers the constraint from the framing, not from the harness)." },
+    "continue-a-sub-agent":   { "claude": "SendMessage",     "opencode": null, "_fallback": "spawn-a-sub-agent", "_doc": "Resume an existing sub-agent. Optional — absent or null ⇒ fall back to spawn-a-sub-agent (no loss of capability, only the re-read token cost). Never use to continue a gate role (Reviewer): invariant 3 non-gate carve-out only." },
+    "ask-a-structured-question": { "claude": "AskUserQuestion", "opencode": "question" },
+    "the-project-entry-file": { "claude": "CLAUDE.md",       "opencode": "AGENTS.md" },
+    "the-enforcement-layer":  { "claude": "settings.json PreToolUse + UserPromptSubmit hooks", "opencode": "tool.execute.before plugin (throw, deny) + chat.message plugin (push part, inject)" },
+    "load-instructions":      { "claude": "@-import in CLAUDE.md", "opencode": "instructions[] in opencode.json" }
+  },
+  "apply-config": {
+    "_doc": "How setup APPLIES .ai-dev/config.json after writing it — re-assemble the role agents (and commands) so chosen models/agents take effect (docs/architecture.md `## Extension points`, the orchestrator's `## Setup` step 4). Per platform: run install-agents (+ install-commands when the command surface changed). OpenCode also has install-plugin — it GENERATES the deployed plugin (.opencode/plugins/ai-dev.mjs) from the source entry so the two cannot drift; re-run it when the entry changes (src/adapter/INSTALL.md, the OpenCode 'Enforce deny + inject' note). PATH is environment-dependent — in THIS repo the installers live under `src/adapter/`; in a downstream they live under the tooling submodule `.ai-dev/tooling/src/adapter/`. The commands below name the in-repo path; a downstream rewrites the one prefix, exactly like every wiring step in src/adapter/INSTALL.md.",
+    "claude":   { "install-agents": "node src/adapter/claude/install-agents.mjs",   "install-commands": "node src/adapter/claude/install-commands.mjs" },
+    "opencode": { "install-agents": "node src/adapter/opencode/install-agents.mjs", "install-commands": "node src/adapter/opencode/install-commands.mjs", "install-plugin": "node src/adapter/opencode/install-plugin.mjs" }
+  },
+  "class_support": {
+    "_doc": "Which enforcement return classes each platform realises. A rule whose class is unsupported falls back to persona (recorded per-rule in deny-rules.json `fallback`). Claude realises all three (deny + ask via PreToolUse, inject via UserPromptSubmit). OpenCode realises deny (tool.execute.before, throw) and inject (chat.message — a per-turn part pushed before the LLM call, the analog of UserPromptSubmit); ask falls back to persona (no ask-return in the plugin hooks). Both OpenCode classes are live-verified on opencode 1.17.x: deny blocked a write into .ai-dev/tooling/, and inject fired on an unconfigured project — the no-config-run-setup nudge reached the model and the orchestrator offered setup.",
+    "claude":   { "deny": true, "ask": true,  "inject": true },
+    "opencode": { "deny": true, "ask": false, "inject": true }
+  },
+  "models": {
+    "_doc": "Per-platform model policy for the project config's role `model` field (.ai-dev/config.json). ZERO-CONFIG by default — works with no setup. `session` = the orchestrator's model. `auto` = a different model for independent blind spots IF the platform offers one out of the box, ELSE it falls back to `session` (never an error). Names are environment-dependent — that is why this lives in the adapter, not the neutral config. This block is also the home of the **list-available-models** contract point (docs/architecture.md `## Extension points`): per platform, HOW setup learns which models the environment offers — `discover` below.",
+    "claude": {
+      "allow": ["opus", "sonnet"],
+      "auto": "the allow-listed model opposite the session's (opus<->sonnet) — always available, so cross-model review works zero-config",
+      "discover": "the known fixed pair above (`allow`) — no enumeration call; the model space on Claude IS this pair, so the allowlist is meaningful and gates a pin."
+    },
+    "opencode": {
+      "allow": [],
+      "auto": "session",
+      "discover": "run-a-shell-command `opencode models` and parse the `provider/model` ids it prints (one per line). If the command is absent or errors (older opencode, sandbox), fall back to a guided dialog where the Operator types/confirms the id — never invent one.",
+      "_note": "On OpenCode the ENVIRONMENT is the authority, not a static list: what `opencode models` reports (or the pin names) is what is usable, so `allow: []` is NOT a hard gate — it is an explicit 'no baked-in environment ids in the shared core' marker (env ids live only in a project's own .ai-dev/config.json). NO cross-model reviewer is realisable on OpenCode TODAY, even with a concrete pin: the `task` runtime parses a subagent's `model:` frontmatter but does NOT apply it at execution — a cluster of open upstream bugs (#21632 / #17870 / #18615; fix PR #14961 closed unmerged) with no fix through 1.17.7 (research: docs/decisions/opencode-task-capabilities.md Q1). So `auto`/`session`/absent AND a concrete pin all run on the one session model — no cross-model independence. The install-agents step therefore bakes NO `model:` line for any of them (silently swallowing the pin would otherwise claim independence it can't deliver); a recorded pin is kept in config so it auto-heals the day upstream fixes the cluster or the project moves to Claude — state to the Operator that it is inert today. Re-check at each release-audit (vendor-watch)."
+    }
+  }
+}

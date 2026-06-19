@@ -1,0 +1,157 @@
+{
+  "_doc": "The quality-tools registry — the one home for 'what does GREEN mean in this project'. The template ships only this SHAPE plus the example rows below; a real project REPLACES the examples with its own stack's tools and drops each tool's native config beside this file (.eslintrc, ruff.toml, semgrep.yml, …). The Builder runs every `build`-beat tool and hands back only when they pass; the Reviewer confirms the `review`-beat tools ran and reads their output. No core edit is ever needed to add or change a tool — only a row here.",
+  "_row_shape": {
+    "id": "short stable name",
+    "checks": "one plain line: what this tool catches",
+    "config": "path to its native config beside this file, or null if none",
+    "run": "the command to run it (from the project root)",
+    "beat": "build | review | ship — which loop beat it runs in",
+    "init": "one line: how to install/enable it (the minimal init instruction)"
+  },
+  "tools": [
+    {
+      "id": "parity",
+      "checks": "adapter integrity — parity across both shims, single-engine (no rule logic leaked into a shim), the Claude node-spike",
+      "config": null,
+      "run": "node src/adapter/parity.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "install-model",
+      "checks": "OpenCode install bake — a concrete reviewer-model pin lands in the assembled frontmatter; auto/session/absent emit no model line",
+      "config": null,
+      "run": "node src/adapter/install-model.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "install-plugin",
+      "checks": "OpenCode plugin generation — the committed deployed plugin (.opencode/plugins/ai-dev.mjs) is byte-identical to the generator's output, so source and deployed cannot drift; the adapter-path rewrite is correct per layout",
+      "config": null,
+      "run": "node src/adapter/install-plugin.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "install-drift",
+      "checks": "assembled-artifact anti-drift — every committed generated markdown artifact (both platforms' agents + commands) is byte-identical to a fresh assembly under the tracked .ai-dev/config.json; no orphan file in a generated dir",
+      "config": null,
+      "run": "node src/adapter/install-drift.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "install-modules",
+      "checks": "capability-module assembly — the shared assembler composes an enabled module's fragment into the role agent, omits it when off, never drops the floor body, fails safe to ON (malformed/unknown toggle ⇒ on), throws on a missing fragment for an enabled module, and rejects a root-escaping fragment pointer",
+      "config": null,
+      "run": "node src/adapter/install-modules.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "rigor-profile",
+      "checks": "configurable rigor — the engine resolves the profile to solo by default (absent/unknown/malformed/unconfigured) and relaxes the orchestrator-content deny under lite/solo, denying only under an explicit full; the floor (tooling, boundary, truncation, merge-gate, stamp-write) never relaxes under any profile",
+      "config": null,
+      "run": "node src/adapter/rigor-profile.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "components",
+      "checks": "multi-repo components — the fail-CLOSED manifest loader/validator (engine.mjs componentRoots) collapses to the single session root on absent/malformed/wrong-shape/non-existent/overbroad/partial-honour, canonicalises declared roots through realpath (defeats symlink escapes), and returns the validated multi-root set on a valid manifest. This is the validator unit-tested in isolation; the boundary wiring (the set consulted by the read/find/write project-boundary denies, with the per-root `.ai-dev/tooling/` carve-out) is covered by parity.test.mjs.",
+      "config": null,
+      "run": "node src/adapter/components.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "multirepo-e2e",
+      "checks": "multi-repo boundary END-TO-END through the REAL entry — a real `node shim.mjs` subprocess resolves the session root from a real on-disk git-init'd multi-repo fixture (the resolveRoot seam parity.test.mjs bypasses) and enforces the widened boundary: declared-sibling allow, non-declared deny, the D6 seam-contract-as-transport allow, the per-root `.ai-dev/tooling/` carve-out deny, and the no-manifest single-root regression tripwire. Validates the MECHANISM the orchestrator's `[persona]` coordination relies on, not the coordination itself. OpenCode asymmetry recorded honestly (no subprocess entry; plugin-entry not source-loadable) — its real decide() driven against the same fixture.",
+      "config": null,
+      "run": "node src/adapter/multirepo-e2e.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18 + git, no install"
+    },
+    {
+      "id": "merge-gate",
+      "checks": "the unstamped-review merge-gate parses commands correctly — the pushed/merged ref outranks .git/HEAD (cross-branch push reads the right stamp), any branch prefix strips (feature/, fix/, bare), non-shell heredoc bodies are data (no verb false positives; shell-heredoc and malformed bodies stay matched), the accepted stamp labels are exactly the documented two, and an UNRESOLVABLE topic asks, never passes",
+      "config": null,
+      "run": "node src/adapter/merge-gate.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "f4-floor",
+      "checks": "F4 mechanical floor — a blind bulk-stage (git add -A/./--all/*) denies while a named-path / .gitignore / -p add allows; a git commit on a main/master checkout of a configured project WITH commit history and no satisfied trunk stamp denies, while the carve-outs allow (a reviewed main-named change, the day-zero bootstrap of an unconfigured or fresh-init repo, yolo). DENY-class on both platforms.",
+      "config": null,
+      "run": "node src/adapter/f4-floor.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "error-handling",
+      "checks": "adapter fail-direction under malformed input — a broken deny-rules.json makes the Claude shim subprocess fail OPEN (exit 0, allow, log to stderr, no crash); a bad regex in a config pattern makes the inject predicates return allow (no nudge), never throw; a valid config + pattern still injects (the happy path is unbroken)",
+      "config": null,
+      "run": "node src/adapter/error-handling.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "install",
+      "checks": "the unified installer — installs into a temp target inside the root, vendors the adapter self-sufficiently (the vendored installer can re-run), wires both platforms (hooks/agents/commands/plugin), stamps .ai-dev/VERSION + writes the UPGRADING marker on a version change, lays the migration notes + the inactive-platform breadcrumb, replaces stale ai-dev hook groups, resolves the platform (flag/config/error), never clobbers a real doc or file, and a second run is byte-identical (idempotent)",
+      "config": null,
+      "run": "node src/adapter/install.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "version-skew",
+      "checks": "installed VERSION stamp matches vendored tooling VERSION — a skew means npx updated the stamp without re-vendoring the tooling; no-op on a source checkout where .ai-dev/VERSION is absent",
+      "config": null,
+      "run": "node src/quality/version-skew.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "run-quality",
+      "checks": "the whole-set quality runner itself — filters by beat, fails closed on a malformed registry, no-op-safe when empty/absent",
+      "config": null,
+      "run": "node src/quality/run.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "neutral-prose",
+      "checks": "the core (PROTOCOL.md, agents, docs/architecture.md) names no bare platform primitive",
+      "config": null,
+      "run": "node src/quality/neutral-prose.test.mjs",
+      "beat": "review",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "eslint",
+      "checks": "JS lint (the engine, shims, install scripts, the runner, the tests) — unused bindings, accidental globals, loose equality, var. Standard recommended ruleset, made STRICTER not looser; code is brought to the standard, never the standard to the code.",
+      "config": "eslint.config.mjs",
+      "run": "npx eslint .",
+      "beat": "build",
+      "init": "npm install"
+    },
+    {
+      "id": "markdownlint",
+      "checks": "Markdown format for the docs — list/heading spacing, table column style, fenced-code language, emphasis-as-heading. Standard ruleset; the only relaxations (MD013 line-length, MD024 siblings-only, MD041 partials) are recorded Operator decisions in the config.",
+      "config": ".markdownlint-cli2.jsonc",
+      "run": "npx markdownlint-cli2",
+      "beat": "build",
+      "init": "npm install"
+    },
+    {
+      "id": "semgrep",
+      "checks": "security static analysis (SAST) over the JS — command injection, path traversal, unsafe patterns. Standard published rulesets (p/javascript + p/security-audit), no custom loosening.",
+      "config": null,
+      "run": "semgrep --config p/javascript --config p/security-audit --error --metrics off --exclude node_modules src/",
+      "beat": "review",
+      "init": "pip install semgrep (Python); the rulesets fetch from the public Semgrep registry on first run"
+    }
+  ]
+}

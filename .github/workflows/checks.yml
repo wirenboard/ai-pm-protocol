@@ -1,0 +1,28 @@
+name: Checks
+
+# Remote re-check of the registered quality suite — BOTH beats, via the runner.
+# The single home of "what green means" is src/quality/tools.json; this workflow
+# never lists an individual tool, so a new registry row is picked up with no
+# CI edit (docs/decisions/ci-suite-parity.md).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install semgrep (review-beat row; pipx avoids PEP 668 on Ubuntu 24)
+        run: pipx install semgrep
+      - name: Quality suite — build beat
+        run: node src/quality/run.mjs build
+      - name: Quality suite — review beat
+        run: node src/quality/run.mjs review

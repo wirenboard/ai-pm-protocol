@@ -1,0 +1,31 @@
+{
+  "name": "ai-dev-protocol",
+  "version": "5.19.1",
+  "type": "module",
+  "description": "The AI-Dev Protocol — its own source (this repo develops itself under its own protocol).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aadegtyarev/ai-dev-protocol.git"
+  },
+  "bin": {
+    "ai-dev-protocol": "src/adapter/install.mjs"
+  },
+  "files": [
+    "PROTOCOL.md",
+    "CHANGELOG.md",
+    "src/"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "quality": "node src/quality/run.mjs build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.1",
+    "globals": "^17.6.0",
+    "markdownlint-cli2": "^0.22.1"
+  }
+}
