@@ -98,6 +98,30 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "install-commands",
+      "checks": "command assembly — the /dev-setup command is generated into each platform's commands dir from the one source, identical in substance across platforms (invariant 6 one-home), with the platform's own front-matter",
+      "config": null,
+      "run": "node src/adapter/install-commands.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "opencode-inject",
+      "checks": "the OpenCode inject realisation — the plugin registers only the tool.execute.before deny hook and NOT the crashing chat.message hook (opencode 1.17.8 EventV2 crash), so inject-class rules fall back to persona on OpenCode; the canonical enforcement-realisation pattern reviewer.md points at",
+      "config": null,
+      "run": "node src/adapter/opencode-inject.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "registry-coverage",
+      "checks": "inverse orphan-guard — every committed src/**/*.test.mjs is referenced by a tools.json row, so a test file cannot be added then silently never run (the gap the 2026-06-20 audit found)",
+      "config": null,
+      "run": "node src/quality/registry-coverage.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "install",
       "checks": "the unified installer — installs into a temp target inside the root, vendors the adapter self-sufficiently (the vendored installer can re-run), wires both platforms (hooks/agents/commands/plugin), stamps .ai-dev/VERSION + writes the UPGRADING marker on a version change, lays the migration notes + the inactive-platform breadcrumb, replaces stale ai-dev hook groups, resolves the platform (flag/config/error), never clobbers a real doc or file, and a second run is byte-identical (idempotent)",
       "config": null,
