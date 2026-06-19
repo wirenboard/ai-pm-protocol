@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.19.3] — 2026-06-20
+
+### Fixed
+
+- **Two tracked, passing test files were orphaned from the quality registry — now wired, with an inverse orphan-guard so the class can't recur (audit H1).** The post-re-unification whole-tree audit found `src/adapter/install-commands.test.mjs` and `src/adapter/opencode-inject.test.mjs` git-tracked and green but in no `src/quality/tools.json` row — so neither ran in `run.mjs build`, CI, or audit step 1 (and `opencode-inject.test.mjs` is the exemplar `reviewer.md` names for the enforcement-realisation check). Added a registry row for each (build beat). Added `src/quality/registry-coverage.test.mjs`: an inverse guard asserting every committed `src/**/*.test.mjs` is referenced by a row (it reads the real registry — a membership check, not a run — and carries its own row). Build is now 19/19 (was 16/16). Non-tautological: neutralization confirms the guard flags an unwired test.
+
+---
+
 ## [5.19.2] — 2026-06-20
 
 ### Fixed

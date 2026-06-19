@@ -3,6 +3,15 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Post-re-unification audit (2026-06-20) — LOW/NIT housekeeping dispatch
+
+Whole-tree audit after the fork→canon squash re-unification: **HEALTHY** — 0 BLOCK, 1 HIGH (resolved this same session: H1 two orphaned tests wired into the registry + an inverse orphan-guard, 5.19.3), plus these non-blocking residuals to fold on a future touch (run-note: `.ai-dev/audit/post-reunification-2026-06-20.md`, deleted once dispatched):
+
+- **L1** — the "Multi-repo epic follow-ups" entry still lists *seam-contract transport* as open though it shipped in 5.17.0; fold to RESOLVED on the next backlog edit (Operator deferred folding it in the H1 PR — not worth its own PR).
+- **L2** — `backlog.md:242` references a future `npx ai-dev-protocol@latest` brand path not yet published; correct as a future item, skim-misread awareness only.
+- **N1** — `src/agents/orchestrator.md` grew to 312 lines (agent file, not bound by the docs ceiling); watch, consider extraction past ~330.
+- **N2** — `docs/decisions/persona-floor-external-substitute.md` is the heaviest decision doc (278 lines); justified epic rationale, watch accumulate-vs-supersede on revisit.
+
 ## z.ai support — GLM-the-model (done-by-existing-adapter) + ZCODE-the-harness (candidate adapter, probe-gated) — 2026-06-19
 
 Research landed: `docs/decisions/zai-glm-zcode-support.md`. Two unrelated questions.
