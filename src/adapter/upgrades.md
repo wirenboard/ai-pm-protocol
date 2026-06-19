@@ -2,7 +2,7 @@
 
 The one home of "what to do after the protocol version bumps". The installer lays this file down at `.ai-dev/upgrades.md` on **every** run (always the new version's copy); the session's upgrade check (`src/agents/orchestrator.md` `## Upgrade`) reads the sections in the `(old, new]` range and executes the applicable steps through the loop. A version with no section here needs nothing beyond the installer re-run itself — the re-run's idempotence and never-clobber guarantees are the whole upgrade (`INSTALL.md` `## Upgrade`).
 
-**Downgrades are unsupported.** A version-pinned re-run (`npx github:aadegtyarev/ai-dev-protocol#v<tag> <target>`) converges the vendored files back, but no downgrade notes exist — a MAJOR downgrade is the Operator's own risk.
+**Downgrades are unsupported.** A version-pinned re-run (`npx github:wirenboard/ai-pm-protocol#v<tag> <target>`) converges the vendored files back, but no downgrade notes exist — a MAJOR downgrade is the Operator's own risk.
 
 ## MINOR 5.10.0 — version stamp + upgrade channel introduced
 

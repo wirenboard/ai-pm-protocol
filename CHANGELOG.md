@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.19.2] — 2026-06-20
+
+### Fixed
+
+- **Install / issue / repository paths now point at the canonical repo `wirenboard/ai-pm-protocol`, not the fork.** After the fork line was re-unified into the parent as the new canon (a squash merge that regressed the parent's earlier post-transfer path fix), every non-historical reference still resolved to `aadegtyarev/ai-dev-protocol`. Reconciled three classes: (A) the user-facing install / npx paths (`README.md`, `src/adapter/INSTALL.md`, `src/adapter/upgrades.md`, `docs/decisions/upgrade-migration.md`), (B) the downstream-feedback issue-filing target (`src/agents/orchestrator.md` → the regenerated `.opencode/agents/ai-dev.md`), and (C) `package.json` `repository.url`. The project/package **brand** name `ai-dev-protocol` (the `name`/`bin` and doc titles) is unchanged by design; `CHANGELOG.md` history is left intact. The canonical repo name stays `ai-pm-protocol` (no rename).
+
+---
+
 ## [5.19.1] — 2026-06-19
 
 ### Changed
