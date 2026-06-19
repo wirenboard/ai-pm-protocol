@@ -12,6 +12,15 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.19.1] — 2026-06-19
+
+### Changed
+
+- **The forge branch-protection + required-CI setup is now a MANDATORY, recorded accept-or-decline step — and is named openly as the substitute for the ask-class OpenCode cannot realise (F2-1).** Closes direction B of the persona-floor epic. On OpenCode the plugin's `tool.execute.before` can only allow/deny — it has no "ask the Operator" return — so the whole ask-class (force-push, ssh-mutating-action, commit-`--no-verify`, unresolvable-merge) degrades to `[persona]`; the one protection that holds regardless of the model, or even a dead local plugin, is GitHub's own branch protection (`main` moves only through a green-CI PR). `## Setup` now requires an explicit decision (not a silent skip) and prints the ready `gh api … /branches/main/protection` recipe (the Operator runs it — the agent does not hold the admin-scoped call; that automation is the deferred F2-2 fast-follow), with graceful-degrade for no-`gh`/offline/no-admin. `## Your seat` points at it without restating. **Honesty:** this is `[persona]` orchestrator behaviour + an EXTERNAL forge mechanism — nothing in the protocol's deny layer enforces it, and the prose says so. Decision record: `docs/decisions/persona-floor-external-substitute.md`.
+- **The audit cadence is reframed as honestly `[persona]` (F5).** A runaway high-throughput session can skip the every-N-features offer; that is acknowledged plainly in `## Audit`, with branch protection + CI named as the real backstop — a missed cadence offer costs a delayed quality sweep, not an unsafe ship.
+
+---
+
 ## [5.19.0] — 2026-06-19
 
 ### Added
