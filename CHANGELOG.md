@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.19.0] — 2026-06-19
+
+### Added
+
+- **A default-ON local pre-push quality gate (F3).** The installer now drops a git `pre-push` hook that runs the project's build-beat quality suite wholesale (`node .ai-dev/quality/run.mjs build`) and blocks a push of red code — the LOCAL mechanical complement to the once-per-project CI offer, holding regardless of model discipline (the gap a non-compliant OpenCode orchestrator fell through). Never-clobbers an existing project `pre-push` hook (a foreign hook is detected and left untouched, the install warns instead), idempotent on re-run, executable. Honest limit (in `INSTALL.md`): `git push --no-verify` bypasses it — the merge-gate and CI are the other layers.
+- **The installer self-verifies the Claude hook wiring (the Fork-B twin of the 5.17.6 OpenCode plugin self-verify).** After wiring the Claude deny hook, the install confirms the merged `.claude/settings.json` parses and carries the expected PreToolUse entry pointing at `claude/shim.mjs`, AND that the shim itself loads — and **fails the install loudly** otherwise, so a broken Claude deny path can't go silently off at the first tool call. Honest boundary (in `INSTALL.md`): proves the shim LOADS, not that the harness FIRES it at runtime.
+
+### Changed
+
+- **The installer prints the version it is installing loudly, and warns on a likely stale-`npx`-cache re-run.** A prominent `→ Installing ai-dev-protocol vX.Y.Z` banner plus a heuristic caveat (with the `rm -rf "$(npm config get cache)/_npx"` cache-clear hint) when an existing `.ai-dev/VERSION` is unchanged after a re-vendor — the deterministic, offline signal for the multi-session "looks updated but isn't" confusion (a cached `npx github:…` silently re-installs a stale version). A heuristic warning, never a blocking failure, stated as such.
+
+---
+
 ## [5.18.0] — 2026-06-19
 
 ### Added

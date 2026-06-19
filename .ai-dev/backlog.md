@@ -12,6 +12,8 @@ Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 a
 
 **Direction set (Operator, 2026-06-19): BOTH** — (A) harden the mechanical floor so protection does not depend on model cooperation, AND (B) declare forge branch-protection + required-CI a *mandatory* substitute for the ask-class OpenCode cannot realise. Scope the combined work as its own epic via `research` (it touches the engine + the cross-platform honesty posture). Diagnostic still pending (see end) to tell apart a dead-plugin install bug from live-but-leaky enforcement.
 
+**PROGRESS — direction A partially shipped (5.18.0, #61):** **F1 RESOLVED** (explicit trunk push without stamp now DENIES, not ask → no OpenCode silent pass) and **F4 RESOLVED** (`git add -A` + commit-on-main with history now DENY mechanically on both platforms). **F3** (local pre-push quality-gate hook) is queued in batch B (next). **STILL OPEN:** **F2** (make the forge branch-protection + required-CI offer mandatory/loud on OpenCode as the named ask-class substitute — direction B) and **F5** (audit cadence is itself persona) — these two need design/research and are the remaining epic.
+
 **Downstream symptom** (OpenCode, `lite`, deepseek-class orchestrator model; long high-throughput session): the orchestrator drove the loop ignoring the persona floor wholesale — direct commits + pushes to `main`, force-push, `git add -A`, no local build, profile-run-as-`yolo` — and shipped broken code + an unrecoverable data deletion. **Honesty:** this is a SYMPTOM report by the failing model, possibly self-serving; the *second* report classified `[mechanical]` vs `[persona]` accurately (the first did not). The enforcer's active state in the downstream repo is UNCONFIRMED.
 
 **Mapped findings** (verified against `src/adapter/deny-rules.json` + `engine.mjs` this session):
@@ -90,7 +92,10 @@ Two mechanical foot-guns hit during the multi-repo ship; both cost a push round,
 
 **First step:** `research` to map how comparable tools (Nx/Turborepo for polyglot monorepos, multi-repo orchestration patterns) draw this line, then bring the Operator a recommendation on the monorepo-vs-multi-repo fork before designing the boundary change. Do NOT loosen invariant 2 ad hoc.
 
-## Merge-gate deny over-matches the substring "merge" — blocks read-only git — 2026-06-16 (live false-positive)
+## RESOLVED (5.18.0, #61) — Merge-gate deny over-matches the substring "merge" — blocks read-only git — 2026-06-16 (live false-positive)
+
+**Resolved:** the merge match now requires the standalone verb (`git\s+merge(?![-\w])`); `git merge-base`/`merge-tree`/`merge-file`/`mergetool` ALLOW, real `git merge <topic>` / `gh pr merge` still DENY (`merge-gate.test.mjs` block 9). Original analysis kept below.
+
 
 **Symptom (this session):** the merge-gate deny blocked `git merge-base --is-ancestor <branch> main` — a **read-only** command run to check whether a stale local branch was contained in main. The deny predicate is `/git\s+(merge|push)\b/` (`src/adapter/engine.mjs`); because `\b` treats the hyphen as a word boundary, `git merge` followed by `-base`/`-tree` matches — so the predicate catches not only a real `git merge <topic>` but also the read-only/plumbing `git merge-base` and `git merge-tree`. (It does NOT match `git branch --merged` or `git log main..x` — `git` must sit immediately before `merge`; those run fine.) None of the `git merge-*` plumbing family is the gated action (a real `git merge` / `gh pr merge` / push of a feature branch).
 
@@ -100,7 +105,10 @@ Two mechanical foot-guns hit during the multi-repo ship; both cost a push round,
 
 **Workaround until fixed:** phrase containment checks without a `git merge-*` token (`git rev-list --count main..<branch>`, which this session fell back to).
 
-## Adapter error handling — loadConfig + RegExp without try/catch — 2026-06-13 (audit v5.11.4, F1+F2)
+## RESOLVED (5.18.0, #61) — Adapter error handling — loadConfig + RegExp without try/catch — 2026-06-13 (audit v5.11.4, F1+F2)
+
+**Resolved:** `loadConfig` wrapped in the Claude shim `main()` → fail-OPEN (exit 0, logged); `new RegExp` guarded by `safeTest` → no-match on `SyntaxError` (inject-only, guard comment forbids deny-class reuse). `error-handling.test.mjs`. Original below.
+
 
 Two pre-existing defensive-coding gaps in the Claude adapter, low practical risk given the immutable tooling dir:
 

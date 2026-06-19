@@ -9,7 +9,7 @@
 //
 // Run: node src/adapter/install.test.mjs
 
-import { install, hasGitRepo } from "./install.mjs";
+import { install, hasGitRepo, verifyClaudeWiring, isStaleNpxReRun } from "./install.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -478,6 +478,236 @@ testPlatform("opencode", (target) => {
   check("[dogfood] downstream-mode install against the source repo throws (no silent churn)", threw2);
   // assert nothing leaked: the source repo's committed surfaces are untouched
   check("[dogfood] refused source-repo install left CLAUDE.md untouched", fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8").includes("@src/agents/orchestrator.md"));
+}
+
+// ── F3 pre-push quality hook: installs, never-clobbers, idempotent ───────────
+// The installer drops a git pre-push hook running the registry runner WHOLESALE
+// (`node .ai-dev/quality/run.mjs build`) so a push of build-beat-failing code is
+// blocked locally before it leaves the machine (the local complement to remote CI).
+// Default-ON; never-clobber a project's own pre-push hook (fail-safe); idempotent.
+// RED without installPrePushHook: no hook file is written ⇒ the existence/exec/
+// contents assertions fail; the never-clobber + idempotence arms pin the safety.
+{
+  // a target WITH a .git/ dir (the hook only writes where a repo exists)
+  const target = freshTarget("prepush");
+  try {
+    fs.mkdirSync(path.join(target, ".git"), { recursive: true });
+    install(target, "claude");
+    const hookPath = path.join(target, ".git", "hooks", "pre-push");
+    check("[prepush] pre-push hook written when .git exists", fs.existsSync(hookPath));
+    const body = fs.existsSync(hookPath) ? fs.readFileSync(hookPath, "utf8") : "";
+    check("[prepush] hook runs the registry runner WHOLESALE (not a tool subset)", body.includes("node .ai-dev/quality/run.mjs build"));
+    check("[prepush] hook carries the ai-dev marker (for self-recognition on re-run)", body.includes("# ai-dev:pre-push"));
+    // executable bit set (best-effort on platforms that honour it)
+    if (fs.existsSync(hookPath)) {
+      const mode = fs.statSync(hookPath).mode;
+      check("[prepush] hook is executable (owner +x)", (mode & 0o100) !== 0);
+    }
+
+    // idempotence: a second install leaves OUR marker hook byte-identical
+    const firstBytes = fs.readFileSync(hookPath, "utf8");
+    install(target, "claude");
+    check("[prepush] second install leaves our hook byte-identical (idempotent)", fs.readFileSync(hookPath, "utf8") === firstBytes);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// never-clobber arm: a project's OWN pre-push hook (no ai-dev marker) is left
+// UNTOUCHED and a warning is surfaced. Driven through the CLI so the warning on
+// stdout is observable (the install() return is the platform string, by contract).
+{
+  const target = freshTarget("prepush-foreign");
+  try {
+    const hooksDir = path.join(target, ".git", "hooks");
+    fs.mkdirSync(hooksDir, { recursive: true });
+    const foreign = path.join(hooksDir, "pre-push");
+    const foreignBody = "#!/bin/sh\n# my project's own pre-push hook\nmy-own-check --strict\n";
+    fs.writeFileSync(foreign, foreignBody, { mode: 0o755 });
+    const cli = path.join(ROOT, "src", "adapter", "install.mjs");
+    const r = spawnSync("node", [cli, target, "--platform", "claude"], { encoding: "utf8" });
+    const out = (r.stdout || "") + (r.stderr || "");
+    check("[prepush] foreign pre-push hook left UNTOUCHED (never-clobber)", fs.readFileSync(foreign, "utf8") === foreignBody);
+    check("[prepush] foreign hook collision surfaces a warning", out.includes("pre-push hook already exists") && out.includes("not ai-dev"));
+    check("[prepush] warning still leaves the install succeeding (exit 0)", r.status === 0);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// no-.git arm: a target without a repo gets NO hook and NO throw (the install
+// already warns about the missing repo; the hook step skips silently).
+{
+  const target = freshTarget("prepush-norepo");
+  try {
+    install(target, "claude");
+    check("[prepush] no hook written when .git is absent", !fs.existsSync(path.join(target, ".git", "hooks", "pre-push")));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
+
+// ── item 2: the loud version banner + the stale-npx-cache caveat ─────────────
+// The CLI prints the EXACT version being installed FIRST (so a stale-cache no-op is
+// visible). On a same-version re-run (prior === installed) AND an npx source path,
+// it adds the cache-clear caveat. RED without the banner: the version line is absent.
+{
+  const cli = path.join(ROOT, "src", "adapter", "install.mjs");
+  // fresh install ⇒ the loud version line appears unconditionally
+  const target = freshTarget("banner");
+  try {
+    const r = spawnSync("node", [cli, target, "--platform", "claude"], { encoding: "utf8" });
+    const out = (r.stdout || "") + (r.stderr || "");
+    check("[banner] fresh install prints the loud version line", out.includes(`Installing ai-dev-protocol v${PKG_VERSION}`));
+
+    // same-version re-run: the heuristic fires only with an _npx source segment.
+    // This run's SOURCE is the repo (no _npx), so the caveat must NOT appear — the
+    // no-false-alarm guarantee. The version line still appears (loud every time).
+    const r2 = spawnSync("node", [cli, target, "--platform", "claude"], { encoding: "utf8" });
+    const out2 = (r2.stdout || "") + (r2.stderr || "");
+    check("[banner] same-version re-run still prints the version line", out2.includes(`Installing ai-dev-protocol v${PKG_VERSION}`));
+    check("[banner] same-version re-run notes the prior version", out2.includes(`previously installed: v${PKG_VERSION}`));
+    check("[banner] no _npx source ⇒ NO stale-cache caveat (no false alarm)", !out2.includes("npx cache may be STALE"));
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+
+  // The stale-cache heuristic itself is unit-tested as a pure predicate — a full _npx
+  // tree on disk is unworkable in-test because ES-module resolution follows symlinks
+  // (node resolves import.meta.url through a symlink, so a symlinked `_npx` path
+  // collapses to the real repo path). The predicate carries the actual decision; the
+  // CLI banner-line integration above proves it is wired. Falsifiable, deterministic.
+  const v = PKG_VERSION;
+  check("[banner] heuristic: _npx source + same version ⇒ stale-cache caveat", isStaleNpxReRun(path.join("/home/u/.npm/_npx/abc123/src/adapter"), v, v) === true);
+  check("[banner] heuristic: non-_npx source (git clone) ⇒ no caveat (no false alarm)", isStaleNpxReRun(path.join("/home/u/dev/ai-dev-protocol/src/adapter"), v, v) === false);
+  check("[banner] heuristic: a version BUMP ⇒ no caveat (a real update, not a no-op)", isStaleNpxReRun(path.join("/home/u/.npm/_npx/abc/src"), "5.17.0", v) === false);
+  check("[banner] heuristic: a fresh install (no prior) ⇒ no caveat", isStaleNpxReRun(path.join("/home/u/.npm/_npx/abc/src"), null, v) === false);
+}
+
+// ── item 3: Claude hook wiring self-verify (GOOD / BROKEN-shim / BROKEN-settings) ─
+// After wiring Claude, the installer verifies settings.json parses + carries the
+// PreToolUse deny-shim entry AND the shim itself loads (syntax + import chain). A
+// broken Claude deny path FAILS THE INSTALL loudly (throw ⇒ non-zero, named cause)
+// instead of going silently off at the first tool call — the symmetric twin of the
+// opencode plugin self-verify.
+//
+// The broken arms drive verifyClaudeWiring DIRECTLY against a clean install whose
+// wiring is then corrupted — because a full re-install RE-VENDORS the adapter and
+// would repair any break before the verify runs (same reason the opencode broken arm
+// drives the standalone plugin-install step, not a full install). RED proof: without
+// the verifyClaudeWiring call wired into wireClaude, a broken-shim install would exit
+// 0; the unit here proves the gate that closes that.
+{
+  const cli = path.join(ROOT, "src", "adapter", "install.mjs");
+
+  // GOOD arm — an intact Claude install exits 0 (the self-verify, now wired into
+  // wireClaude, passes on intact wiring). This is the end-to-end half: the verify
+  // runs as part of a real CLI install and does NOT spuriously fail.
+  const good = freshTarget("claudeverify-good");
+  try {
+    const r = spawnSync("node", [cli, good, "--platform", "claude"], { encoding: "utf8" });
+    check("[claudeverify] GOOD install exits 0 (self-verify passes on intact wiring)", r.status === 0);
+    // and the verify is idempotently re-runnable on the intact tree (no throw)
+    let threw = false;
+    try { verifyClaudeWiring(good, path.join(good, ".claude", "settings.json")); } catch { threw = true; }
+    check("[claudeverify] verify on an intact tree does NOT throw", !threw);
+  } finally {
+    fs.rmSync(good, { recursive: true, force: true });
+  }
+
+  // WIRED-IN arm (proves verifyClaudeWiring is actually CALLED by wireClaude, not just
+  // correct in isolation): a full downstream install always vendors a HEALTHY shim, so
+  // to make the install itself produce a broken shim we install from a COPY of the
+  // source tree whose shim is corrupted — the installer vendors the broken shim, then
+  // its wired self-verify must FAIL the install loudly. RED proof: without the wired
+  // call, this install would exit 0 over a silently-off deny path.
+  const srcCopy = fs.mkdtempSync(path.join(ROOT, ".tmp-srccopy-"));
+  const copyMin = (rel) => {
+    const from = path.join(ROOT, rel), to = path.join(srcCopy, rel);
+    fs.cpSync(from, to, { recursive: true });
+  };
+  try {
+    // the minimal source surface the installer reads (vendor + lay-down + claude wire)
+    fs.mkdirSync(path.join(srcCopy, "src"), { recursive: true });
+    copyMin("PROTOCOL.md");
+    copyMin("package.json");
+    for (const d of ["adapter", "agents", "modules", "quality", "templates"]) copyMin(path.join("src", d));
+    // corrupt the shim the installer will vendor + wire
+    fs.writeFileSync(path.join(srcCopy, "src", "adapter", "claude", "shim.mjs"), "broken ( syntax {\n");
+    const target = freshTarget("claudeverify-wired");
+    try {
+      const r = spawnSync("node", [path.join(srcCopy, "src", "adapter", "install.mjs"), target, "--platform", "claude"], { encoding: "utf8" });
+      const err = (r.stderr || "") + (r.stdout || "");
+      check("[claudeverify] WIRED-IN: a full install with a broken shim EXITS NON-ZERO", r.status !== 0);
+      check("[claudeverify] WIRED-IN: the install error carries the enforcement-off hint", err.includes("silently off at the first tool call"));
+    } finally {
+      fs.rmSync(target, { recursive: true, force: true });
+    }
+  } finally {
+    fs.rmSync(srcCopy, { recursive: true, force: true });
+  }
+
+  // BROKEN-shim arm (the ratchet) — a clean install, then break the shim's import
+  // chain by removing engine.mjs (the shim's top-level import). verifyClaudeWiring
+  // MUST throw, naming the shim path + the enforcement-off hint.
+  const brokenShim = freshTarget("claudeverify-brokenshim");
+  try {
+    install(brokenShim, "claude");
+    const settingsPath = path.join(brokenShim, ".claude", "settings.json");
+    fs.rmSync(path.join(brokenShim, ".ai-dev", "tooling", "src", "adapter", "engine.mjs"), { force: true });
+    let threw = false, msg = "";
+    try { verifyClaudeWiring(brokenShim, settingsPath); } catch (e) { threw = true; msg = e.message; }
+    check("[claudeverify] BROKEN shim (import chain): verify THROWS (fail-closed)", threw);
+    check("[claudeverify] BROKEN shim: error names the shim path", msg.includes("shim.mjs"));
+    check("[claudeverify] BROKEN shim: error carries the enforcement-off hint", msg.includes("silently off at the first tool call"));
+  } finally {
+    fs.rmSync(brokenShim, { recursive: true, force: true });
+  }
+
+  // BROKEN-shim (syntax) arm — corrupt the shim file into a syntax error ⇒ the
+  // `node --check` probe catches it before any import.
+  const brokenSyntax = freshTarget("claudeverify-syntax");
+  try {
+    install(brokenSyntax, "claude");
+    const settingsPath = path.join(brokenSyntax, ".claude", "settings.json");
+    fs.writeFileSync(path.join(brokenSyntax, ".ai-dev", "tooling", "src", "adapter", "claude", "shim.mjs"), "this is ( not valid javascript {\n");
+    let threw = false, msg = "";
+    try { verifyClaudeWiring(brokenSyntax, settingsPath); } catch (e) { threw = true; msg = e.message; }
+    check("[claudeverify] BROKEN shim syntax: verify THROWS", threw);
+    check("[claudeverify] BROKEN shim syntax: error names the deny path going off", msg.includes("silently off at the first tool call"));
+  } finally {
+    fs.rmSync(brokenSyntax, { recursive: true, force: true });
+  }
+
+  // MISSING-ENTRY arm — settings.json parses but carries NO PreToolUse deny-shim
+  // entry (the hook silently dropped) ⇒ verify throws naming settings.json.
+  const missingEntry = freshTarget("claudeverify-noentry");
+  try {
+    install(missingEntry, "claude");
+    const settingsPath = path.join(missingEntry, ".claude", "settings.json");
+    fs.writeFileSync(settingsPath, JSON.stringify({ hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "other --tool" }] }] } }, null, 2) + "\n");
+    let threw = false, msg = "";
+    try { verifyClaudeWiring(missingEntry, settingsPath); } catch (e) { threw = true; msg = e.message; }
+    check("[claudeverify] MISSING deny-shim entry: verify THROWS", threw);
+    check("[claudeverify] missing-entry error names settings.json", msg.includes("settings.json"));
+  } finally {
+    fs.rmSync(missingEntry, { recursive: true, force: true });
+  }
+
+  // BROKEN-settings (malformed JSON) arm — settings.json is not valid JSON ⇒ verify
+  // throws naming settings.json (the parse-failure path).
+  const brokenSettings = freshTarget("claudeverify-settings");
+  try {
+    install(brokenSettings, "claude");
+    const settingsPath = path.join(brokenSettings, ".claude", "settings.json");
+    fs.writeFileSync(settingsPath, "{ this is not json\n");
+    let threw = false, msg = "";
+    try { verifyClaudeWiring(brokenSettings, settingsPath); } catch (e) { threw = true; msg = e.message; }
+    check("[claudeverify] malformed settings.json: verify THROWS (fail-closed)", threw);
+    check("[claudeverify] malformed-settings error names settings.json", msg.includes("settings.json"));
+  } finally {
+    fs.rmSync(brokenSettings, { recursive: true, force: true });
+  }
 }
 
 // ── hasGitRepo — the CLI's no-repo warning predicate ─────────────────────────

@@ -32,7 +32,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 
 // This script lives at <repo>/src/adapter/install.mjs — SOURCE is the protocol repo
@@ -287,6 +287,93 @@ function wireClaude(target, dogfood) {
   stripBreadcrumbFile(claudeMd);
   ensureLine(claudeMd, dogfood ? "@PROTOCOL.md" : "@.ai-dev/PROTOCOL.md");
   ensureLine(claudeMd, dogfood ? "@src/agents/orchestrator.md" : "@.ai-dev/tooling/src/agents/orchestrator.md");
+
+  // Self-verify the Claude wiring just written (item 3) — the symmetric twin of the
+  // opencode plugin self-verify. A broken Claude deny path otherwise goes SILENTLY
+  // off at the first tool call under a printed success; this FAILS THE INSTALL loudly.
+  verifyClaudeWiring(target, settingsPath);
+}
+
+// Verify the Claude deny wiring just written actually holds: settings.json parses and
+// carries the PreToolUse ai-dev hook entry, AND the shim it points at is loadable.
+// THROWS (⇒ install exits non-zero) on any failure, naming the cause + the
+// enforcement-off hint — mirroring the opencode plugin self-verify's message
+// discipline. Honest scope: this proves the shim LOADS (syntax + its import chain),
+// NOT that Claude invokes the hook at runtime (the registration class, the same
+// residual the opencode plugin self-verify carries).
+export function verifyClaudeWiring(target, settingsPath) {
+  // 1. settings.json parses + carries the expected PreToolUse ai-dev hook entry.
+  let settings;
+  try {
+    settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+  } catch (e) {
+    throw new Error(
+      `Claude wiring self-verify FAILED: ${settingsPath} is not valid JSON — ` +
+        "the deny path would be silently off at the first tool call. " +
+        `Underlying parse error: ${e && e.message ? e.message : String(e)}`,
+      { cause: e },
+    );
+  }
+  const preGroups = (settings.hooks && settings.hooks.PreToolUse) || [];
+  const shimCommand = preGroups
+    .flatMap((g) => (g.hooks || []).map((h) => (typeof h.command === "string" ? h.command : "")))
+    .find((c) => c.includes(HOOK_MARKER));
+  if (!shimCommand) {
+    throw new Error(
+      `Claude wiring self-verify FAILED: ${settingsPath} carries no PreToolUse hook ` +
+        `referencing the deny shim (${HOOK_MARKER}) — the deny path would be silently ` +
+        "off at the first tool call.",
+    );
+  }
+
+  // 2. the shim itself loads. Resolve its on-disk path from the WIRED command (so the
+  // check works in both downstream and dogfood layouts), substituting the harness's
+  // $CLAUDE_PROJECT_DIR for the real target root.
+  const shimPath = resolveShimPath(target, shimCommand);
+  if (!fs.existsSync(shimPath)) {
+    throw new Error(
+      `Claude wiring self-verify FAILED: the wired deny shim does not exist at ${shimPath} ` +
+        "— the deny path would be silently off at the first tool call.",
+    );
+  }
+  // `node --check` = a SYNTAX check that does NOT execute the shim (it reads stdin/argv
+  // when run, so executing it here would hang); a child import() then catches a broken
+  // dependency chain (the shim's top-level imports of engine.mjs / deny-rules.json).
+  // Both via execFileSync with an argv ARRAY (no shell) — consistent with runScript.
+  try {
+    execFileSync("node", ["--check", shimPath], { stdio: "pipe" });
+    execFileSync(
+      "node",
+      ["--input-type=module", "-e", `await import(${JSON.stringify(pathToFileURL(shimPath).href)})`],
+      { stdio: "pipe" },
+    );
+  } catch (e) {
+    const detail = e && e.stderr ? e.stderr.toString() : e && e.message ? e.message : String(e);
+    throw new Error(
+      `Claude wiring self-verify FAILED: the deny shim at ${shimPath} does not load — ` +
+        `the deny path would be silently off at the first tool call. Underlying load error: ${detail}`,
+      { cause: e },
+    );
+  }
+}
+
+// Resolve the shim's real on-disk path from the wired hook command. The command is
+// `node "$CLAUDE_PROJECT_DIR/<rel>/shim.mjs"` (downstream) or `node "src/.../shim.mjs"`
+// (dogfood, retargeted). Pull the token ending in the marker, strip the
+// $CLAUDE_PROJECT_DIR prefix to the real target root, and resolve.
+function resolveShimPath(target, command) {
+  // The marker (HOOK_MARKER) is the path tail; the wired path is everything from the
+  // start of the quoted/space-delimited shim token up to and including the marker.
+  const tokens = command.match(/\S+/g) || [];
+  const raw = tokens
+    .map((t) => t.replace(/^["']|["']$/g, ""))
+    .find((t) => t.includes(HOOK_MARKER));
+  if (!raw) return path.join(target, ".ai-dev", "tooling", "src", HOOK_MARKER);
+  const rel = raw
+    .replace(/^["']/, "")
+    .replace(/^\$CLAUDE_PROJECT_DIR\//, "")
+    .replace(/^\$\{CLAUDE_PROJECT_DIR\}\//, "");
+  return path.isAbsolute(rel) ? rel : path.join(target, rel);
 }
 
 // A hook group is OURS when any of its commands targets the protocol shim. The
@@ -446,6 +533,63 @@ function wireOpenCode(target, dogfood) {
   if (!dogfood) ensureLine(agentsMd, "@.ai-dev/PROTOCOL.md");
 }
 
+// The stale-npx-cache heuristic (item 2), as a pure predicate so it is unit-testable
+// without a heavyweight _npx tree on disk. A re-run that did NOT bump the version
+// (prior === version, both non-null) is the stale-no-op signature WHEN the source was
+// fetched via npx — detected by an `_npx` path SEGMENT in the installer's own source
+// root (npx extracts the GitHub checkout under <cache>/_npx/...). HEURISTIC, not
+// detection: the installer runs FROM the (possibly stale) source, so it cannot KNOW it
+// is stale; this surfaces the signal so the Operator can judge. Absent `_npx` ⇒ false
+// (no false alarm: a git-clone / repo run never trips it).
+export function isStaleNpxReRun(sourcePath, prior, version) {
+  if (!prior || !version || prior !== version) return false;
+  return String(sourcePath).split(path.sep).includes("_npx");
+}
+
+// 6. Lay down the LOCAL pre-push quality gate (F3): a git pre-push hook that runs
+// the registry runner WHOLESALE (`node .ai-dev/quality/run.mjs build`) and blocks a
+// push of build-beat-failing code before it leaves the machine — the local
+// complement to the once-per-project remote CI offer (orchestrator `## Your seat`).
+// Single-home discipline: it invokes the runner, never a re-listed tool subset (same
+// rule as the CI wiring). Default-ON downstream; never written in dogfood mode (the
+// source repo carries its own committed hooks). Returns one of:
+//   "written"     — a fresh hook was written (or our own prior hook refreshed)
+//   "foreign"     — a non-ai-dev pre-push hook exists; left UNTOUCHED, warning surfaced
+//   "no-repo"     — no <target>/.git ⇒ skipped silently (the install already warns)
+// The marker line lets a re-run recognise its own hook (overwrite ⇒ idempotent
+// refresh) while NEVER clobbering a project's own pre-push hook (fail-safe).
+const PREPUSH_MARKER = "# ai-dev:pre-push";
+const PREPUSH_BODY =
+  "#!/bin/sh\n" +
+  PREPUSH_MARKER + "\n" +
+  "# Local quality gate — blocks a push of build-beat-failing code (the registry\n" +
+  "# runner, WHOLESALE — never a re-listed tool subset). Bypass with --no-verify.\n" +
+  "# Remove this file to opt out. The merge-gate + remote CI are the other two layers.\n" +
+  "node .ai-dev/quality/run.mjs build\n";
+
+function installPrePushHook(target) {
+  const gitDir = path.join(target, ".git");
+  if (!fs.existsSync(gitDir)) return "no-repo"; // no repo ⇒ skip (install already warns)
+  const hooksDir = path.join(gitDir, "hooks");
+  const hookPath = path.join(hooksDir, "pre-push");
+  if (fs.existsSync(hookPath)) {
+    const existing = fs.readFileSync(hookPath, "utf8");
+    if (!existing.includes(PREPUSH_MARKER)) {
+      // A project's OWN pre-push hook — never clobber it (fail-safe). Warn + proceed.
+      console.log(
+        `\n⚠ A pre-push hook already exists at ${hookPath} and is not ai-dev's — left UNTOUCHED.`,
+      );
+      console.log("  To get the local quality gate, add this line to it:  node .ai-dev/quality/run.mjs build");
+      return "foreign";
+    }
+    // Our own prior hook ⇒ overwrite (idempotent refresh, converges to identical bytes).
+  }
+  fs.mkdirSync(hooksDir, { recursive: true });
+  fs.writeFileSync(hookPath, PREPUSH_BODY, { mode: 0o755 });
+  fs.chmodSync(hookPath, 0o755); // ensure executable even if the file pre-existed
+  return "written";
+}
+
 // ── orchestration ────────────────────────────────────────────────────────────
 
 // Resolve the active platform: --platform flag, else the target config's `platform`,
@@ -527,6 +671,7 @@ export function install(targetDir, platformFlag, opts = {}) {
   if (platform === "claude") wireClaude(target, false);
   else wireOpenCode(target, false);
   writeInactiveBreadcrumb(target, platform, false);
+  installPrePushHook(target); // F3 local quality gate (default-ON; never-clobber)
   stampVersion(target, version, prior);
 
   return platform;
@@ -557,6 +702,22 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
   }
 
   try {
+    // Loud version banner (item 2) — print the EXACT version being installed FIRST,
+    // before the per-step lines, so a stale-cache no-op is visible. Skipped in dogfood
+    // (the source repo's version is its live package.json, not an install stamp). The
+    // resolve is best-effort: a failure must not abort the install, so guard it.
+    let bannerVersion = null, priorBeforeInstall = null;
+    if (!dogfood) {
+      try {
+        bannerVersion = resolveSourceVersion();
+        priorBeforeInstall = readPriorVersion(path.resolve(targetDir));
+        console.log(`\n→ Installing ai-dev-protocol v${bannerVersion}`);
+        if (priorBeforeInstall && priorBeforeInstall !== "pre-5.10") {
+          console.log(`  (previously installed: v${priorBeforeInstall})`);
+        }
+      } catch { /* a version-resolve failure is non-fatal to the banner */ }
+    }
+
     const platform = install(targetDir, platformFlag, { dogfood });
     const rel = path.relative(process.cwd(), path.resolve(targetDir)) || ".";
     if (dogfood) {
@@ -577,6 +738,17 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
       console.log("\n⚠ No git repository found — the protocol's loop (branches, reviews, merges) requires one.");
       console.log("  Initialize before the first feature:  git init -b main && git add . && git commit -m 'init'");
       console.log("  (setup will also offer this; the remote — gh repo create / git remote add — is yours.)");
+    }
+    // Stale-npx-cache caveat (item 2, HEURISTIC) — a re-run that did NOT bump the
+    // version (prior === installed) is the stale-no-op signature WHEN the Operator
+    // believed they were updating. Fired only when the source was fetched via npx
+    // (an `_npx` segment in the installer's own source path) — absent ⇒ no caveat,
+    // no false alarm. The installer runs FROM the (possibly stale) source, so it
+    // CANNOT know it is stale; this makes the version loud so the Operator can judge.
+    if (isStaleNpxReRun(SOURCE, priorBeforeInstall, bannerVersion)) {
+      console.log(`\n⚠ Same version as before (v${bannerVersion}) — if you expected a newer one, the npx cache may be STALE.`);
+      console.log("  Clear it and re-run:  rm -rf \"$(npm config get cache)/_npx\"   (or use the git-clone path)");
+      console.log("  See README `## Updating an existing install`.");
     }
     console.log("\nNext: run /dev-setup to configure roles, models, mode, and the module kit.");
   } catch (e) {
