@@ -3,7 +3,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "../../src/adapter/engine.mjs";
-import { decide, decidePrompt } from "../../src/adapter/opencode/normalise.mjs";
+import { decide } from "../../src/adapter/opencode/normalise.mjs";
 
 const ADAPTER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "src", "adapter");
 
@@ -29,23 +29,7 @@ export const AiPmEnforcement = async (ctx) => {
       const r = decide(input && input.tool, (output && output.args) || {}, root, isOrch, config);
       if (r.verdict === "deny") throw new Error("[ai-dev] " + r.reason);
     },
-    // chat.message — OpenCode's analog of Claude's UserPromptSubmit: it fires once
-    // per user message before the LLM call, and output.parts is MUTABLE. This is
-    // how the inject class is REALISED on OpenCode: extract the user text, ask the
-    // SHARED engine to decide the prompt-class rules, and on an inject push a text
-    // part — one-shot context for THIS turn only. The plugin supplies ONLY the
-    // mechanism; the verb list and the predicate stay in deny-rules.json + the
-    // engine (single source, invariant 6). No-op for allow; ask is unsupported on
-    // OpenCode (falls back to persona) so it is left untouched here.
-    "chat.message": async (input, output) => {
-      const parts = (output && output.parts) || [];
-      const userText = parts
-        .filter((p) => p && p.type === "text" && typeof p.text === "string")
-        .map((p) => p.text)
-        .join("\n");
-      const isOrch = await isOrchestrator(ctx && ctx.client, input && input.sessionID);
-      const r = decidePrompt(userText, root, isOrch, config);
-      if (r.verdict === "inject") output.parts.push({ type: "text", text: r.reason });
-    },
+    // No `chat.message` hook: the inject class is persona-fallback on OpenCode (see
+    // the file header — the push crashed opencode 1.17.8 and rendered unreliably).
   };
 };

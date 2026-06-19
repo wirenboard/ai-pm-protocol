@@ -36,6 +36,20 @@ npx github:aadegtyarev/ai-dev-protocol <target-dir> --platform claude|opencode
 
 It vendors the adapter, lays down the core and doc templates (only where the target has none), and wires the chosen platform — hooks, role agents, the `PROTOCOL.md` load. Per-platform detail: **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)**. After wiring, start a fresh session so the harness loads the protocol.
 
+## Updating an existing install
+
+Re-running the installer **is** the upgrade — it is idempotent and never clobbers your config or real docs. One catch makes an update silently do nothing, so clear the npx cache first:
+
+1. **Clear the npx cache** — `rm -rf "$(npm config get cache)/_npx"` — npx caches the GitHub checkout and will otherwise silently re-install the *stale* version (the upgrade appears to run, but nothing changes).
+2. **Reinstall** — `npx github:aadegtyarev/ai-dev-protocol . --platform claude|opencode` (re-runs the installer; the re-run is the upgrade).
+3. **Cache-proof alternative** (skips npx entirely) — `git clone --depth 1 https://github.com/aadegtyarev/ai-dev-protocol /tmp/aidp && node /tmp/aidp/src/adapter/install.mjs . --platform claude|opencode`.
+4. **Verify it took** — `cat .ai-dev/VERSION` shows the expected new version.
+5. **OpenCode** — the installer self-verifies the plugin loads, so a clean exit (exits 0) *is* the load confirmation; a broken deploy fails loudly.
+6. **Restart the session** afterward — the next session offers the migration check (the `.ai-dev/UPGRADING.md` marker the installer writes on a version change).
+7. **If hand-cleaning, do NOT delete** your project-owned files: `.ai-dev/config.json`, `.ai-dev/state/`, `.ai-dev/backlog.md`, `docs/`, and (OpenCode) `.opencode/opencode.json`.
+
+The full upgrade mechanics — what each version's migration renames and why downgrades are unsupported — live in **[`src/adapter/INSTALL.md`](src/adapter/INSTALL.md)** `## Upgrade`.
+
 ## Configure
 
 Once wired, run **`/dev-setup`** to configure the project — platform, mode, roles, models, and **kind** (`code` / `docs` / `mixed`). Kind sets the artifact consumer: machine-executed code, human-read documentation, or both — a protocol or process-doc project is `mixed`; a pure docs project is `docs`. It is a plain-language dialog: it discovers the models your environment actually offers and asks you to pick, then writes `.ai-dev/config.json`. You need not run it by hand — on a fresh, unconfigured project the orchestrator offers setup on your first work request (an offer you may decline to proceed on safe defaults).

@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.17.7] — 2026-06-19
+
+### Fixed
+
+- **The OpenCode inject realisation crashed the host on opencode 1.17.8 — every change-verb message killed the session; inject is now persona-only on OpenCode.** The plugin's `chat.message` hook pushed a context part onto `output.parts` (the analog of Claude's `UserPromptSubmit`) to realise the inject class — the lazy-setup / no-brief / change-route nudges. On opencode 1.17.8 that push made `SessionPrompt.createUserMessage` throw `EventV2.InvalidSyncEvent: Expected string aggregate field sessionID` *after* the hook returned (uncatchable in-hook), crashing the session on the first change-verb prompt; injected parts also rendered unreliably upstream. Ground-truthed live on opencode 1.17.8 (a temporary early-return unblocked the session). Fix: the `chat.message` hook is **removed** — the OpenCode plugin now registers only `tool.execute.before` (the real `[mechanical]` deny floor, untouched). The three inject-class rules (`no-config-run-setup`, `no-product-brief-discover`, `change-route-reminder`) fall back to **persona on OpenCode**, recorded per-rule in `src/adapter/deny-rules.json` `fallback` and stated with its reason in `src/adapter/INSTALL.md` (no over-claim — the orchestrator's own loaded prose carries the loop / change-routing / setup-first discipline regardless, so no rigor is lost; the loss is one cosmetic in-prompt nudge). The neutral engine, `decidePrompt`, the Claude `UserPromptSubmit` inject realisation, and parity at the engine-decision level are all unchanged — only the OpenCode adapter stops *applying* the inject. `src/adapter/opencode-inject.test.mjs` is rewritten as the ratchet: it now asserts the `chat.message` hook is absent and the deny hook stays registered (RED against the old push-based plugin, GREEN after). Re-realising the nudge via a supported opencode hook (`experimental.chat.system.transform` / `chat.params`) is a deferred backlog candidate — `experimental.*` is version-brittle and re-introduces the unstable-surface dependence this fix removes.
+
+---
+
 ## [5.17.6] — 2026-06-19
 
 ### Added

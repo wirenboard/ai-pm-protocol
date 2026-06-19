@@ -141,7 +141,7 @@
       "class": "inject",
       "act": "prompt",
       "predicate": "promptNeedsSetup",
-      "fallback": "always-on instruction text on a platform with no prompt hook"
+      "fallback": "persona on OpenCode (no chat.message inject realisation — the push crashed opencode 1.17.8 in SessionPrompt.createUserMessage + rendered unreliably); always-on instruction text on any other platform with no prompt hook"
     },
     {
       "id": "no-product-brief-discover",
@@ -149,7 +149,7 @@
       "class": "inject",
       "act": "prompt",
       "predicate": "promptNeedsProductBrief",
-      "fallback": "always-on instruction text on a platform with no prompt hook"
+      "fallback": "persona on OpenCode (no chat.message inject realisation — the push crashed opencode 1.17.8 in SessionPrompt.createUserMessage + rendered unreliably); always-on instruction text on any other platform with no prompt hook"
     },
     {
       "id": "change-route-reminder",
@@ -157,7 +157,7 @@
       "class": "inject",
       "act": "prompt",
       "predicate": "promptMatchesChangeVerb",
-      "fallback": "always-on instruction text on a platform with no prompt hook"
+      "fallback": "persona on OpenCode (no chat.message inject realisation — the push crashed opencode 1.17.8 in SessionPrompt.createUserMessage + rendered unreliably); always-on instruction text on any other platform with no prompt hook"
     }
   ]
 }

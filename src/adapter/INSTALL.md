@@ -44,7 +44,7 @@ Convention used below: the adapter ships inside the protocol's tooling submodule
 
 A downstream upgrades by bumping the protocol source and re-running the same one command:
 
-1. Bump the protocol to the new version — re-fetch the release (`npx github:aadegtyarev/ai-dev-protocol <target>`), or bump the tooling submodule and re-run the **vendored** installer (`node .ai-dev/tooling/src/adapter/install.mjs . --platform <platform>` — the vendored tree is self-sufficient for this).
+1. Bump the protocol to the new version — re-fetch the release (`npx github:aadegtyarev/ai-dev-protocol <target>`), or bump the tooling submodule and re-run the **vendored** installer (`node .ai-dev/tooling/src/adapter/install.mjs . --platform <platform>` — the vendored tree is self-sufficient for this). **Clear the npx cache first** (`rm -rf "$(npm config get cache)/_npx"`) when re-fetching via `npx` — npx caches the GitHub checkout and otherwise silently re-installs the stale version; the cache-proof alternative is a fresh `git clone` + `node src/adapter/install.mjs` (README `## Updating an existing install` carries the operator quick-recipe).
 2. The re-run IS the upgrade — its idempotence and never-clobber guarantees mean the project's `.ai-dev/config.json` and real docs survive. It stamps `.ai-dev/VERSION`, refreshes `.ai-dev/upgrades.md`, and on a detected version change writes the `.ai-dev/UPGRADING.md` marker and asks for a session restart; the next session offers the migration check (`src/agents/orchestrator.md` `## Upgrade`).
 3. Read the CHANGELOG between the two versions (shipped in the package). The per-version migration steps — what a MAJOR bump renames, what survives, why downgrades are unsupported — live in **`upgrades.md`** (this directory; laid down at `.ai-dev/upgrades.md`), the single home. MINOR/PATCH versions without a section there need nothing beyond the re-run.
 
@@ -105,7 +105,7 @@ The orchestrator spawns each by that id, on the model `.ai-dev/config.json` reso
 
 **OpenCode loads agents from `.opencode/agents/` — PLURAL** (the singular `.opencode/agent/` is **not** loaded). A **plugin** is deployed to `.opencode/plugins/` but, as of OpenCode **1.17.8**, is loaded ONLY when registered in the `plugin` key of `opencode.json` — project-folder plugin auto-discovery was dropped in that release. The deploy dir is where the file lands; the `plugin` key is what makes OpenCode load it (see *Enforce deny* below).
 
-### Enforce deny + inject (the plugin)
+### Enforce deny (the plugin)
 
 **`node src/adapter/opencode/install-plugin.mjs`** generates the deployed plugin — `.opencode/plugins/ai-dev.mjs` — FROM the source entry `src/adapter/opencode/plugin-entry.mjs`. It retargets only the adapter location to where the target vendors it (downstream: `.ai-dev/tooling/src/adapter`, no rewrite; dev/this repo: `src/adapter`).
 
@@ -116,12 +116,13 @@ The orchestrator spawns each by that id, on the model `.ai-dev/config.json` reso
 - Re-run it whenever the entry changes.
 - **Registration is REQUIRED** (OpenCode 1.17.8 dropped project-folder plugin auto-discovery): the deployed plugin loads only when listed in the `plugin` key of `opencode.json`. The installer adds `"./plugins/ai-dev.mjs"` to that key (de-duped, never clobbering a project's own entries). The spec is **`.opencode/`-relative**, not project-root-relative — OpenCode resolves a relative plugin path against the dir of `opencode.json` (i.e. `.opencode/`), so `./plugins/ai-dev.mjs` is correct and `./.opencode/plugins/...` double-resolves and silently fails to load. Without this key the boundary deny never fires — the whole `[mechanical]` floor is absent.
 
-The entry registers **two** hooks — the two enforcement classes OpenCode realises:
+The entry registers **one** hook — the only enforcement class OpenCode realises mechanically:
 
 - **`tool.execute.before`** (deny) — resolve root, resolve the actor, call `decide`, **throw** on a deny verdict (the throw is OpenCode's block).
-- **`chat.message`** (inject) — OpenCode's analog of Claude's `UserPromptSubmit`: it fires once per user message before the LLM call, and `output.parts` is mutable. The entry joins the text parts into `userText`, calls `decidePrompt`, and on an inject verdict **pushes** `{ type: "text", text: reason }` onto `output.parts` — one-shot context for that turn. This is how the lazy-setup nudge (`no-config-run-setup`) and the `change-route-reminder` reach the model on OpenCode.
 
-`ask` has no plugin-hook realisation on OpenCode, so an `ask`-class rule falls back to persona (recorded per-rule in `deny-rules.json` `fallback`). The plugin supplies only the mechanism — the verb list and predicates stay in `deny-rules.json` + the engine.
+**`inject` is persona-only on OpenCode** — there is no `chat.message` hook. The former realisation (push `{ type: "text", text: reason }` onto `output.parts`, the analog of Claude's `UserPromptSubmit`) **crashed the host on opencode 1.17.8**: pushing a part made `SessionPrompt.createUserMessage` throw `EventV2.InvalidSyncEvent: Expected string aggregate field sessionID` *after* the hook returned (uncatchable in-hook), crashing the session on every change-verb message; injected parts were also unreliably rendered upstream. So the inject-class rules (`no-config-run-setup`, `no-product-brief-discover`, `change-route-reminder`) fall back to persona on OpenCode — the orchestrator's own loaded prose carries the loop / change-routing / setup-first discipline regardless. Recorded per-rule in `deny-rules.json` `fallback`; ground-truthed live on opencode 1.17.8 (2026-06-19). Do not re-add a `chat.message` push without a confirmed-stable opencode hook (a supported `experimental.chat.system.transform` / `chat.params` migration is a backlog candidate, deferred because `experimental.*` is version-brittle).
+
+`ask` likewise has no plugin-hook realisation on OpenCode, so an `ask`-class rule also falls back to persona (recorded per-rule in `deny-rules.json` `fallback`). The plugin supplies only the deny mechanism — the verb list and predicates stay in `deny-rules.json` + the engine.
 
 ### Load instructions + the orchestrator personality
 

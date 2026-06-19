@@ -134,12 +134,12 @@ const FIXTURE = [
     claude: { tool_name: "Bash", tool_input: { command: "git commit --no-verify -m wip" } },
     opencode: { tool: "bash", args: { command: "git commit --no-verify -m wip" } } },
 
-  // inject is prompt-act: Claude realises it via UserPromptSubmit, OpenCode via the
-  // chat.message hook. The engine DECISION is asserted here for both platforms; that
-  // the OpenCode plugin APPLIES the verdict (pushes a message part) is covered by
-  // opencode-inject.test.mjs (driving the chat.message hook directly). A change-verb
-  // prompt on the shared (UNconfigured) ROOT yields an inject; WHICH inject (setup vs
-  // route) is asserted by ruleId in block 1b below.
+  // inject is prompt-act: the engine DECIDES inject for both platforms (asserted here).
+  // Claude REALISES it via UserPromptSubmit; OpenCode no longer realises it at all — the
+  // former chat.message hook crashed the host (plugin-entry.mjs), so inject is
+  // persona-only on OpenCode. A change-verb prompt on the shared (UNconfigured) ROOT
+  // yields an inject DECISION; WHICH inject (setup vs route) is asserted by ruleId in
+  // block 1b below.
   { name: "change-verb-prompt-injects", expect: "inject",
     claude: { hook_event_name: "UserPromptSubmit", prompt: "please implement the new export feature" },
     opencodePrompt: "please implement the new export feature" },
