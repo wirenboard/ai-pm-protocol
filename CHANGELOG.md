@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.17.4] — 2026-06-19
+
+### Fixed
+
+- **OpenCode enforcement plugin never loaded on a downstream install — the entire `[mechanical]` deny layer was silently absent.** `src/adapter/opencode/install-plugin.mjs` `resolveRewrite` left the downstream import path un-rewritten (`return null`), keeping the source's `../../../.ai-dev/tooling/src/adapter`. That path is authored relative to the source file's depth (`src/adapter/opencode/`, 3 levels), but the deployed plugin sits at `.opencode/plugins/ai-dev.mjs` (2 levels) — so the three `../` overshot the project root by one, the plugin threw `ERR_MODULE_NOT_FOUND` on load, and OpenCode skipped it without registering any hook. The downstream branch now drops one `../` (and one `path.resolve` segment), matching the dev rewrite's depth. Confirmed against a live downstream where the strongest deny (a write into `.ai-dev/tooling/`) did not fire. The dev/dogfood layout was coincidentally correct (it rewrites to `../../src/adapter`), which is why this repo's own enforcement worked and every test passed — the downstream path was string-checked but never exercised by importing the generated plugin. `install-plugin.test.mjs` gains the missing guard: it now generates the downstream plugin into a real installed layout and **imports** it, asserting its adapter imports resolve.
+
+---
+
 ## [5.17.3] — 2026-06-16
 
 ### Changed

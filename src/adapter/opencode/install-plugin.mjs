@@ -7,12 +7,13 @@
 // hooks off a plugin function DEFINED INLINE in the loaded module (a bare
 // re-export of an imported function loads but its hooks NEVER fire — dogfood
 // finding, src/adapter/INSTALL.md). So the deployed file must inline the hook bodies;
-// it cannot `export { X } from "../source"`. The ONE thing that differs between
-// source and deployed is the ADAPTER LOCATION — the rule logic (engine +
-// decide/decidePrompt) is imported, and its path depends on where the adapter is
-// vendored in the target environment:
-//   • downstream: <root>/.ai-dev/tooling/src/adapter  (the source's own path → no rewrite)
-//   • this repo / dev: <root>/src/adapter             (rewrite .ai-dev/tooling/src/adapter → src/adapter)
+// it cannot `export { X } from "../source"`. The deployed file differs from the
+// source in TWO ways that both bear on the imported rule-logic path (engine +
+// decide/decidePrompt): the ADAPTER LOCATION, and the DEPTH — the deployed
+// .opencode/plugins/ai-dev.mjs is 2 levels deep, the source
+// src/adapter/opencode/plugin-entry.mjs is 3, so EVERY layout drops one `../`:
+//   • downstream: <root>/.ai-dev/tooling/src/adapter  (same target, one fewer `../` for the shallower deploy)
+//   • this repo / dev: <root>/src/adapter             (retarget .ai-dev/tooling/src/adapter → src/adapter, also 2 `../`)
 // Generating the deployed file mechanically — instead of hand-maintaining a second
 // copy — is what keeps the two from drifting (the manifesto's "two copies rot",
 // applied to the enforcement layer itself). install-plugin.test.mjs is the guard.
@@ -43,7 +44,10 @@ const GENERATED_HEADER =
 // Resolve which adapter layout the TARGET root uses by checking which dir actually
 // exists — the same filesystem-resolution idiom the other installers use to locate
 // their inputs. Returns the rewrite that retargets the source's adapter path to the
-// target, or null when the source path is already correct (downstream layout).
+// deployed location. BOTH layouts need a rewrite, because the deployed plugin is one
+// level shallower than the source (.opencode/plugins/ vs src/adapter/opencode/): dev
+// retargets to src/adapter and drops a `../`; downstream keeps the .ai-dev/tooling
+// target but still drops the one `../` the shallower deploy requires.
 //
 // `layout` lets a caller (a test) force a layout without touching the filesystem.
 //
@@ -59,7 +63,19 @@ function resolveRewrite(root, layout) {
       : fs.existsSync(path.join(root, ".ai-dev", "tooling", "src", "adapter"))
         ? "downstream"
         : null);
-  if (resolved === "downstream") return null; // source path already correct
+  if (resolved === "downstream") {
+    // Same .ai-dev/tooling target as the source, but the deployed plugin sits
+    // one level shallower (.opencode/plugins/, 2 deep) than the source
+    // (src/adapter/opencode/, 3 deep), so drop one `../` / one resolve segment —
+    // else the import overshoots the project root by one and the plugin throws
+    // on load, silently disabling enforcement on every downstream.
+    return (text) =>
+      text
+        .split(SOURCE_IMPORT_DIR)
+        .join("../../.ai-dev/tooling/src/adapter")
+        .split(SOURCE_RESOLVE_SEGS)
+        .join('"..", "..", ".ai-dev", "tooling", "src", "adapter"');
+  }
   if (resolved === "dev") {
     return (text) =>
       text

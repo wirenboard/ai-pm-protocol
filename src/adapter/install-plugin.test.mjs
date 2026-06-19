@@ -10,9 +10,13 @@
 //   • generating to a temp path yields output BYTE-IDENTICAL to the committed file;
 //     so a hand-edit to EITHER file, or a source change left un-regenerated, fails
 //     here — the two cannot silently drift.
-//   • the rewrite is correct per layout: the dev layout (this repo, adapter at
-//     <root>/src/adapter) retargets the source's .ai-dev/tooling/src/adapter path; the
-//     downstream layout (adapter at <root>/.ai-dev/tooling/src/adapter) leaves it as-is.
+//   • the rewrite is correct per layout AND the generated plugin actually LOADS
+//     from its installed location: dev (this repo, adapter at <root>/src/adapter)
+//     retargets the source path; downstream (adapter at <root>/.ai-dev/tooling/
+//     src/adapter) keeps that target but drops one `../` for the shallower deploy
+//     (.opencode/plugins/ is 2 deep, the source is 3). The load test guards the
+//     bug that shipped enforcement-off to every downstream: the downstream path
+//     was string-checked but never exercised by importing the generated file.
 // Mirrors the agent/command re-assembly discipline (install-model/install-commands).
 //
 // Run: node src/adapter/install-plugin.test.mjs
@@ -21,7 +25,7 @@ import { generate, install } from "./opencode/install-plugin.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..", "..");
@@ -50,12 +54,32 @@ check("output carries the generated-file header", generated.startsWith("// GENER
 check("dev layout: import resolves to ../../src/adapter", generated.includes('from "../../src/adapter/engine.mjs"'));
 check("dev layout: no leftover tooling-submodule path", !generated.includes(".ai-dev/tooling/src/adapter"));
 
-// A forced downstream layout leaves the source's tooling-submodule path intact.
+// A forced downstream layout keeps the .ai-dev/tooling target but drops one `../`
+// for the shallower deployed depth (.opencode/plugins/ is 2 deep, source is 3).
 const downstream = generate(ROOT, "downstream");
-check("downstream layout: keeps the tooling-submodule import path", downstream.includes('from "../../../.ai-dev/tooling/src/adapter/engine.mjs"'));
-check("downstream layout: keeps the tooling-submodule ADAPTER resolve", downstream.includes('".ai-dev", "tooling", "src", "adapter"'));
+check("downstream layout: import path is ../../.ai-dev/tooling (one `../` dropped)", downstream.includes('from "../../.ai-dev/tooling/src/adapter/engine.mjs"'));
+check("downstream layout: no triple-`../` (the off-by-one that overshot the root)", !downstream.includes('"../../../.ai-dev/tooling'));
+check("downstream layout: ADAPTER resolve has two `..` before .ai-dev", downstream.includes('"..", "..", ".ai-dev", "tooling", "src", "adapter"'));
+
+// ── 4. INSTALLED-LAYOUT LOAD: the generated downstream plugin actually imports ─
+// The guard the original lacked. Lay a real downstream out (deployed plugin at
+// .opencode/plugins/, adapter vendored at .ai-dev/tooling/src/adapter) and IMPORT
+// the generated file: if the relative path overshoots the root, its top-level
+// imports throw ERR_MODULE_NOT_FOUND and this fails — exactly the live symptom.
+const dtmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-plugin-ds-"));
+const adapterDir = path.join(dtmp, ".ai-dev", "tooling", "src", "adapter");
+fs.mkdirSync(path.join(adapterDir, "opencode"), { recursive: true });
+fs.writeFileSync(path.join(adapterDir, "engine.mjs"), "export function loadConfig() { return {}; }\n");
+fs.writeFileSync(path.join(adapterDir, "opencode", "normalise.mjs"), "export function decide() {} export function decidePrompt() {}\n");
+const dPlugin = install(path.join(dtmp, ".opencode", "plugins", "ai-dev.mjs"), ROOT, "downstream");
+let loaded = false, loadErr = "";
+try { await import(pathToFileURL(dPlugin).href); loaded = true; }
+catch (e) { loadErr = e && e.message ? e.message : String(e); }
+check("downstream plugin LOADS from its installed location (resolves its adapter imports)", loaded);
+if (!loaded) console.log(`       load error: ${loadErr}`);
 
 fs.rmSync(tmp, { recursive: true, force: true });
+fs.rmSync(dtmp, { recursive: true, force: true });
 
 console.log(`\nINSTALL-PLUGIN: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
