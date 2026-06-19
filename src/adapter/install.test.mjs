@@ -150,9 +150,47 @@ testPlatform("opencode", (target) => {
   const oc = JSON.parse(fs.readFileSync(path.join(target, ".opencode", "opencode.json"), "utf8"));
   check("[opencode] opencode.json wires the orchestrator primary + constitution", oc.default_agent === "ai-dev" && oc.instructions.includes(".ai-dev/PROTOCOL.md"));
   check("[opencode] generic build/plan primaries disabled", oc.agent.build.disable === true && oc.agent.plan.disable === true);
+  // RATCHET (opencode-plugin-registration): the boundary-deny plugin MUST be
+  // registered in the `plugin` key — without it OpenCode 1.17.8 never loads the
+  // plugin and the whole [mechanical] floor is silently absent. RED on pre-fix
+  // install.mjs (no plugin key emitted), GREEN after.
+  check("[opencode] opencode.json registers the boundary plugin in the plugin key", Array.isArray(oc.plugin) && oc.plugin.includes("./plugins/ai-dev.mjs"));
+  // the spec is .opencode/-relative (opencode resolves it against the dir of
+  // opencode.json), NOT project-root-relative — `./.opencode/plugins/...` would
+  // double-resolve and silently fail to load.
+  check("[opencode] plugin spec is .opencode/-relative, not project-root-relative", oc.plugin.includes("./plugins/ai-dev.mjs") && !oc.plugin.some((p) => p.includes(".opencode/plugins/")));
   const agentsMd = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
   check("[opencode] AGENTS.md imports the constitution once", agentsMd.split("@.ai-dev/PROTOCOL.md").length - 1 === 1);
 });
+
+// ── opencode plugin registration: de-dupe, never-clobber, idempotent ─────────
+// The boundary-deny plugin is registered in opencode.json `plugin`. A downstream
+// project may carry its OWN plugin entries — the merge must preserve them (never
+// clobber) AND never duplicate ours across re-runs (Set de-dupe). This guards the
+// exact regression: enforcement silently off because the plugin was never registered.
+{
+  const target = freshTarget("ocplugin");
+  try {
+    // seed a downstream opencode.json that already lists the project's own plugin
+    fs.mkdirSync(path.join(target, ".opencode"), { recursive: true });
+    fs.writeFileSync(
+      path.join(target, ".opencode", "opencode.json"),
+      JSON.stringify({ plugin: ["./plugins/my-own.mjs"] }, null, 2) + "\n",
+    );
+    install(target, "opencode");
+    const oc1 = JSON.parse(fs.readFileSync(path.join(target, ".opencode", "opencode.json"), "utf8"));
+    check("[ocplugin] project's own plugin entry preserved (never clobbered)", oc1.plugin.includes("./plugins/my-own.mjs"));
+    check("[ocplugin] our boundary plugin entry added alongside", oc1.plugin.includes("./plugins/ai-dev.mjs"));
+
+    // a second run must not duplicate ours (Set idempotency)
+    install(target, "opencode");
+    const oc2 = JSON.parse(fs.readFileSync(path.join(target, ".opencode", "opencode.json"), "utf8"));
+    check("[ocplugin] re-install does not duplicate our entry (idempotent)", oc2.plugin.filter((p) => p === "./plugins/ai-dev.mjs").length === 1);
+    check("[ocplugin] re-install keeps the project's own entry once", oc2.plugin.filter((p) => p === "./plugins/my-own.mjs").length === 1);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
 
 // ── platform resolution: a clear error when unresolvable, validation of the flag ─
 {

@@ -17,5 +17,8 @@
     "plan": {
       "disable": true
     }
-  }
+  },
+  "plugin": [
+    "./plugins/ai-dev.mjs"
+  ]
 }

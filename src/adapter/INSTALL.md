@@ -103,7 +103,7 @@ The orchestrator spawns each by that id, on the model `.ai-dev/config.json` reso
 
 ## OpenCode
 
-**OpenCode loads plugins from `.opencode/plugins/` and agents from `.opencode/agents/` — PLURAL.** The singular forms (`.opencode/plugin/`, `.opencode/agent/`) are **not** loaded.
+**OpenCode loads agents from `.opencode/agents/` — PLURAL** (the singular `.opencode/agent/` is **not** loaded). A **plugin** is deployed to `.opencode/plugins/` but, as of OpenCode **1.17.8**, is loaded ONLY when registered in the `plugin` key of `opencode.json` — project-folder plugin auto-discovery was dropped in that release. The deploy dir is where the file lands; the `plugin` key is what makes OpenCode load it (see *Enforce deny* below).
 
 ### Enforce deny + inject (the plugin)
 
@@ -112,7 +112,8 @@ The orchestrator spawns each by that id, on the model `.ai-dev/config.json` reso
 - It must **define** each hook function inline — a hook imported from another module and re-exported under the entry's own name is NOT registered by the loader (it loads but its hook never fires).
 - So the thin wrappers are **inline in the entry**; only the rule logic (`decide`/`decidePrompt` + the engine) is imported from the adapter tree, which sits outside the scanned plugin dir. The rules stay single-sourced.
 - The deployed file is **generated, not hand-copied** — so it cannot drift from the source (`src/adapter/install-plugin.test.mjs` guards byte-identity).
-- Re-run it whenever the entry changes. No registration in `opencode.json` is needed.
+- Re-run it whenever the entry changes.
+- **Registration is REQUIRED** (OpenCode 1.17.8 dropped project-folder plugin auto-discovery): the deployed plugin loads only when listed in the `plugin` key of `opencode.json`. The installer adds `"./plugins/ai-dev.mjs"` to that key (de-duped, never clobbering a project's own entries). The spec is **`.opencode/`-relative**, not project-root-relative — OpenCode resolves a relative plugin path against the dir of `opencode.json` (i.e. `.opencode/`), so `./plugins/ai-dev.mjs` is correct and `./.opencode/plugins/...` double-resolves and silently fails to load. Without this key the boundary deny never fires — the whole `[mechanical]` floor is absent.
 
 The entry registers **two** hooks — the two enforcement classes OpenCode realises:
 
@@ -130,7 +131,8 @@ UNLIKE Claude (where the orchestrator IS the session, held by `CLAUDE.md`), an O
   "default_agent": "ai-dev",
   "instructions": [".ai-dev/PROTOCOL.md"],
   "permission": { "edit": "allow", "bash": "allow", "webfetch": "allow", "question": "allow" },
-  "agent": { "build": { "disable": true }, "plan": { "disable": true } }
+  "agent": { "build": { "disable": true }, "plan": { "disable": true } },
+  "plugin": ["./plugins/ai-dev.mjs"]
 }
 ```
 

@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.17.5] — 2026-06-19
+
+### Fixed
+
+- **OpenCode 1.17.8 stopped auto-loading project-folder plugins — the `[mechanical]` floor was silently absent again, this time even with the plugin correctly deployed.** 5.17.4 fixed the import path so `.opencode/plugins/ai-dev.mjs` loads as a module; but OpenCode 1.17.8 dropped project-folder plugin auto-discovery entirely (it was present on 1.17.0, where the plugin was verified live). A project plugin now loads ONLY if listed in the `plugin` key of `opencode.json` — which the installer never wrote. Ground-truthed from OpenCode's own bundle: the resolved config listed only global plugins, and a folder-placed plugin (under either `plugins/` or `plugin/`) was ignored until registered in the config key. The installer's `opencode.json` merge (`src/adapter/install.mjs` `wireOpenCode`) now adds `plugin: ["./plugins/ai-dev.mjs"]` to both branches, de-duped so a project's own `plugin` array is never clobbered and re-runs stay idempotent. The path is `.opencode/`-relative (a relative spec resolves from the directory of `opencode.json`, not the project root). The engine, `normalise.mjs`, and the plugin-entry hook bodies were ground-truthed correct and are untouched — the hook arg shape (`input.tool`, `output.args`, `args.filePath`) is unchanged; only the load wiring was missing. `install.test.mjs` gains a ratchet (RED pre-fix) asserting the registration key, its `.opencode/`-relative form, never-clobber, and idempotency. Prevention (the recurring "the test proves the module imports, but the platform never loads it" class): the audit's verification-coverage dimension gains an OpenCode plugin-load probe (boot real opencode → denied write → confirm `[ai-dev] …`), with an opt-in real-opencode E2E backlogged.
+
+---
+
 ## [5.17.4] — 2026-06-19
 
 ### Fixed

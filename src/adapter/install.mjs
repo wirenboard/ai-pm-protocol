@@ -404,6 +404,17 @@ function wireOpenCode(target, dogfood) {
   // tool checks are exact; webfetch=allow because research needs it (exfil via
   // HTTP is a separate persona rule, not a filesystem-boundary concern).
   const instructionsEntry = dogfood ? "PROTOCOL.md" : ".ai-dev/PROTOCOL.md";
+  // The boundary-deny plugin MUST be registered in the `plugin` key — OpenCode
+  // 1.17.8 dropped project-folder plugin auto-discovery, so a plugin sitting at
+  // .opencode/plugins/ai-dev.mjs loads ONLY when listed here. Without this key the
+  // whole [mechanical] floor is silently absent on every downstream (the bug this
+  // restores). The spec is `.opencode/`-relative — opencode resolves a relative
+  // plugin path against the dir of opencode.json (i.e. .opencode/), NOT the project
+  // root — so it is `./plugins/ai-dev.mjs` (the plugin always deploys to
+  // .opencode/plugins/ai-dev.mjs in both dogfood and downstream layouts). De-duped
+  // via Set so a project's own `plugin` entries are preserved, never clobbered, and
+  // a re-install never doubles ours.
+  const PLUGIN_ENTRY = "./plugins/ai-dev.mjs";
   let oc;
   if (dogfood) {
     oc = {
@@ -412,6 +423,7 @@ function wireOpenCode(target, dogfood) {
       instructions: Array.from(new Set([...(existing.instructions || []), instructionsEntry])),
       permission: { ...(existing.permission || {}), question: "allow", edit: "allow", bash: "allow", webfetch: "allow" },
       agent: { ...(existing.agent || {}), build: { disable: true }, plan: { disable: true } },
+      plugin: Array.from(new Set([...(existing.plugin || []), PLUGIN_ENTRY])),
     };
   } else {
     oc = { ...existing };
@@ -419,6 +431,7 @@ function wireOpenCode(target, dogfood) {
     oc.instructions = Array.from(new Set([...(oc.instructions || []), instructionsEntry]));
     oc.permission = { ...(oc.permission || {}), edit: "allow", bash: "allow", webfetch: "allow", question: "allow" };
     oc.agent = { ...(oc.agent || {}), build: { disable: true }, plan: { disable: true } };
+    oc.plugin = Array.from(new Set([...(oc.plugin || []), PLUGIN_ENTRY]));
   }
   fs.mkdirSync(path.dirname(ocPath), { recursive: true });
   fs.writeFileSync(ocPath, JSON.stringify(oc, null, 2) + "\n");
