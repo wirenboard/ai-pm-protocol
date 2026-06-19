@@ -3,6 +3,13 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## z.ai support — GLM-the-model (done-by-existing-adapter) + ZCODE-the-harness (candidate adapter, probe-gated) — 2026-06-19
+
+Research landed: `docs/decisions/zai-glm-zcode-support.md`. Two unrelated questions.
+
+- **GLM-4.6 as a model** — ALREADY supported: it is an Anthropic-compatible endpoint (`https://api.z.ai/api/anthropic`) consumed by Claude Code / OpenCode (the adapters we already ship). No mechanical work; at most a short usage note when a downstream actually runs on GLM. Honesty caveat to record then: both Builder + Reviewer run on GLM (per-session endpoint) ⇒ no cross-model independence, same as OpenCode.
+- **ZCODE as a third adapter** — CANDIDATE, **gated on a live GO/NO-GO probe**, not started. ZCODE (`zcode.z.ai`) is z.ai's own CC-shaped CLI/Electron agent (Skills/Subagents/Hooks/MCP/Plugins). The two load-bearing contract points are unconfirmed by docs: (1) does a plugin hook *block* a tool call (mechanical deny)? (2) custom sub-agents — docs contradict themselves (one page: only built-in `Explore`; other: `~/.zcode/cli/agents/` markdown). **Do not build on docs** — same fail-open class as OpenCode 1.17.x (pin parsed-but-ignored, plugin registered-but-not-loaded). GO only if both probes pass on a real install (needs a subscription): a plugin/hook actually denies a forbidden write, AND a custom Reviewer sub-agent spawns on a fresh context. Vendor-watch: ZCODE is evolving (the subagent doc contradiction suggests docs trail the build). Probe checklist + secondary contract points: the decision doc.
+
 ## Two follow-ups from the 5.17.7 OpenCode-inject fix — 2026-06-19
 
 - **RESOLVED (5.19.0, #62) — Installer npx-cache stale no-op probe.** `npx github:…` caches the checkout and could silently re-install a STALE version (root of the multi-session false-"updated" confusion: a downstream sat on 5.17.3 while every "update" was a cache no-op). Shipped as the proportionate (b) — a loud version banner + the `isStaleNpxReRun` heuristic warning (offline, deterministic, never-blocking, points at the `~/.npm/_npx` cache-clear) — chosen over a flaky remote network check. The manual recipe is also in README `## Updating an existing install` + INSTALL.md `## Upgrade`.
