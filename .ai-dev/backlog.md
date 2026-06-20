@@ -3,6 +3,19 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Config-driven pre-approved remote-op allowlist — ask-class ⊥ unattended autonomy — 2026-06-20 (Operator-reported)
+
+**Symptom (Operator, working autonomously in a downstream):** the ask-class `ssh-mutating-action` rule (`ssh` + systemctl/docker/apt/npm/kubectl/rm/cp/mv/mkdir/touch) fired on a legitimate `ssh … 'sudo -n mkdir -p … && tar czf …'` backup, demanding per-command confirmation. **Correctly classified — NOT a false positive:** a `sudo` mkdir/tar write on a remote prod controller IS a remote mutation; the pattern must NOT be weakened (dropping mkdir/tar/sudo would pass genuinely dangerous remote mutations for every downstream).
+
+**The real gap:** ask-class ⊥ unattended autonomy. A legitimate, repetitive remote op (backup-before-risk, D3) asks every time; in a TRULY unattended autonomous session the ask has no one to answer and deadlocks. Autonomy deliberately does NOT lift the remote-mutation gate (invariant 7: the consequential/irreversible class stays human-gated — correct) — but there is no conscious-pre-approval escape.
+
+**Proposed feature (Operator chose: backlog, 2026-06-20):** a config-driven allowlist the engine consults BEFORE returning `ask` for the remote-mutation rule — mirroring how the boundary denies consult `components.json`:
+- The Operator declares pre-approved remote-op patterns in `.ai-dev/config.json` (host glob + command-class anchor), a repo-owned, git-tracked, recorded decision (invariant 4 — a conscious risk acceptance, not a model bypass).
+- Engine: a remote-mutation match → consult the allowlist → matched ⇒ allow silently; else ⇒ ask (today's path).
+- **Fail-safe:** absent / empty / malformed allowlist ⇒ ask everything (byte-identical to today; fail-safe to MORE rigor, the untrusted-config discipline every other field follows).
+- **Security posture (design carefully):** matching a shell command is injection-prone — a too-loose glob over-approves. Anchor on host + command PREFIX, not substring; reject `..`/wildcard-host-escapes; the floor (default ask) is unchanged for anyone who doesn't opt in. Document the threat in the threat-model template.
+- **Scope (not started):** engine change + config-schema field + validator + tests (the ask path, the fail-safe-to-ask, the allowlist matcher's over-approval guards) + the `## Setup` / config doc. Companion honesty note: on OpenCode the whole ask-class is already persona (no ask-return), so this allowlist is a Claude-relevant refinement; the OpenCode remote-mutation gate stays persona regardless (cross-link the persona-floor epic).
+
 ## RESOLVED (5.20.0–5.21.1) — EPIC Semantic-correctness gates: the loop ships claims it never checks — 2026-06-20 (downstream intake, abstracted)
 
 **ALL 7 FINDINGS SHIPPED** (autonomous batch, Operator grant): **F1/F3/F5 → 5.20.0 (#260)** new `semantic-correctness` capability module; **F4/F6 → 5.21.0 (#261)** `threat-model` module isolation/identity dimension + living-threat-model review check; **F2/F7 → 5.21.1 (#262)** `setup` toolkit proposal recommends failure-suppression lint-as-error + soft file-size warning + a Builder decomposition-offer. The lever held: F2/F7 are the mechanical complement (linter/tool guidance), F1/F3/F4/F5/F6 the class-specific Reviewer/Builder depth. Causal hypothesis (loop-blindness) stands unverified across the project boundary, as recorded; the gates now at least *exist*. Original triage kept below for provenance.
