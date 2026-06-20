@@ -16,6 +16,8 @@
   "docLanguage": "en",
   "_docLanguage": "Language code for this project's human-read documentation (the docs/ tree + README) — value-home for PROTOCOL.md invariant 5. Default 'en'; absent/empty/whitespace ⇒ 'en'. Pinned 'en' explicitly here on purpose: this repo's own docs are the deliverable a downstream reader consumes in English, so a dogfood flip must never translate them (the protocol's own source is English by construction regardless). Code, commits, config, and machine grammar stay English independent of this value.",
 
+  "_safeguards": "OPTIONAL { \"<rule-id>\": \"on\" | \"off\" } — the GENERAL per-guard toggle. Disables individual ASK/INJECT guards: only an explicit \"off\" on a TOGGLEABLE rule (deny-rules.json `toggleable: true`) suppresses that one guard; everything else (absent key, \"on\", an unknown value, a non-toggleable or unknown id) keeps the guard ON. ONLY ask/inject guards are toggleable — a deny-class id OR a merge-gate id (merge-while-unstamped, commit-on-unstamped-main, merge-topic-unresolvable) listed \"off\" is IGNORED: the mechanical floor is never config-disablable (else the model could disable its own enforcer). The six toggleable guards: ssh-mutating-action, force-push, git-commit-no-verify, no-config-run-setup, no-product-brief-discover, change-route-reminder. Each \"off\" is a RECORDED CONSCIOUS RISK ACCEPTANCE — repo-owned, git-tracked Operator data (invariant 4), not a model bypass; toggle it via the orchestrator's `## Safeguards` side-tool or set initial states at setup. Fail-safe: absent / malformed / non-object ⇒ ALL guards on (never silently disable a gate). See PROTOCOL.md `## Enforcement`.",
+
   "modules": {
     "threat-model": { "depth": "rich", "nonSecurity": true }
   },

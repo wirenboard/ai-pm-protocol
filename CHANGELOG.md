@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.22.0] — 2026-06-20
+
+### Added
+
+- **Configurable safeguards — the Operator can see, set, and individually toggle the ask/nudge guards (deny-class + merge-gate stay permanent).** A new optional `.ai-dev/config.json` `safeguards: {"<rule-id>": "on" | "off"}` object lets the Operator disable individual ASK/INJECT guards as a recorded, git-tracked conscious risk acceptance (invariant 4). Six guards become `toggleable` in `deny-rules.json` — `ssh-mutating-action`, `force-push`, `git-commit-no-verify`, `no-config-run-setup`, `no-product-brief-discover`, `change-route-reminder` — each also carrying a plain-language `label`. The engine gains a general evaluate-level skip (`disabledSafeguards` + a `rule.toggleable === true && disabled.has(rule.id)` guard in the rule loop) plus a `safeguardRegistry` helper; the predicates are unchanged. **Fail-CLOSED by construction:** a rule without `toggleable: true` is never skippable, so every deny-class rule and the merge-gate (`merge-while-unstamped`, `commit-on-unstamped-main`, `merge-topic-unresolvable`) are the permanent mechanical floor — a config "off" on any of them is ignored, and only an exact-string `"off"` disables (unknown value / malformed / non-object ⇒ all guards on). New orchestrator `## Safeguards` side-tool (query the guard states, toggle an ask/nudge guard, REFUSE a floor toggle — else the model could disable its own enforcer) and a setup step-2 question to set initial states (all default ON, never recommended off). `[persona]` surface over the `[mechanical]` engine floor.
+
+---
+
 ## [5.21.1] — 2026-06-20
 
 ### Changed

@@ -58,6 +58,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "safeguards",
+      "checks": "configurable safeguards — the engine's general evaluate-level skip honours .ai-dev/config.json `safeguards`: a toggleable ask/inject guard listed \"off\" is skipped, while a rule without `toggleable:true` (every deny + the merge-gate) is never skippable however config reads; only an exact-string \"off\" disables (unknown value / non-object / malformed ⇒ all guards on); disabledSafeguards returns the well-formed off-ids and safeguardRegistry lists exactly the six toggleable guards",
+      "config": null,
+      "run": "node --test src/adapter/safeguards.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "components",
       "checks": "multi-repo components — the fail-CLOSED manifest loader/validator (engine.mjs componentRoots) collapses to the single session root on absent/malformed/wrong-shape/non-existent/overbroad/partial-honour, canonicalises declared roots through realpath (defeats symlink escapes), and returns the validated multi-root set on a valid manifest. This is the validator unit-tested in isolation; the boundary wiring (the set consulted by the read/find/write project-boundary denies, with the per-root `.ai-dev/tooling/` carve-out) is covered by parity.test.mjs.",
       "config": null,

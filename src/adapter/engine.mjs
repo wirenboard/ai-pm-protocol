@@ -458,6 +458,42 @@ function projectProfile(root) {
   } catch { return "solo"; }
 }
 
+// The set of rule-ids the project has consciously disabled (.ai-dev/config.json
+// `safeguards`). The GENERAL toggle: an explicit `safeguards.<id>: "off"` opts that
+// one guard out — read once per evaluate and consulted in the rule loop, where the
+// skip is ALSO gated on `rule.toggleable === true` (a deny/merge-gate rule carries no
+// such flag, so it can never be skipped however config reads — the mechanical floor).
+// Same fixed root-relative read shape as projectProfile (never a write; within
+// invariant 2) and the SAME fail-safe discipline: ONLY the exact string "off" on a
+// well-formed object disables. Fail-CLOSED to the EMPTY set (every guard stays ON) on
+// any doubt — absent / unreadable / malformed JSON / a non-object `safeguards` / a
+// non-string value.
+function disabledSafeguards(root) {
+  const off = new Set();
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(path.resolve(root), ".ai-dev", "config.json"), "utf8"));
+    const sg = cfg.safeguards;
+    if (!sg || typeof sg !== "object" || Array.isArray(sg)) return off; // non-object ⇒ empty
+    for (const [id, val] of Object.entries(sg)) {
+      if (val === "off") off.add(id); // only an explicit "off" string disables
+    }
+  } catch { /* absent / unreadable / malformed ⇒ empty set (all guards on) */ }
+  return off;
+}
+
+// The plain-language guard registry — every rule's {id, class, label, toggleable},
+// for the orchestrator's `## Safeguards` query/toggle and the setup dialog. Reads the
+// loaded config (deny-rules.json); a rule with no `label` falls back to its id. Pure
+// data shaping, no fs read.
+function safeguardRegistry(config) {
+  return (config.rules || []).map((r) => ({
+    id: r.id,
+    class: r.class,
+    label: r.label || r.id,
+    toggleable: r.toggleable === true,
+  }));
+}
+
 // ── multi-repo components: the fail-CLOSED manifest loader/validator ──────────
 // Reads .ai-dev/components.json from the session root and returns the set of
 // canonical absolute roots an agent may touch — ALWAYS including the session root.
@@ -789,9 +825,14 @@ export function evaluate(input, config) {
     const prepared = stripHeredocBodies(input.command);
     if (prepared !== input.command) input = { ...input, command: prepared };
   }
+  // Consciously-disabled guards (.ai-dev/config.json `safeguards`), read ONCE.
+  // The skip below is gated on `rule.toggleable === true` too, so a deny/merge-gate
+  // rule (no such flag) is never skipped — the mechanical floor holds regardless.
+  const disabled = disabledSafeguards(input.root);
   let ask = null;
   for (const rule of config.rules) {
     if (!rule.act.split("|").includes(input.act)) continue;
+    if (rule.toggleable === true && disabled.has(rule.id)) continue; // opted-out guard
     const pred = PREDICATES[rule.predicate];
     if (!pred || !pred(input, config)) continue;
     if (rule.class === "deny") return { verdict: "deny", ruleId: rule.id, reason: rule.intent };
@@ -801,4 +842,4 @@ export function evaluate(input, config) {
   return ask || { verdict: "allow", ruleId: null, reason: "" };
 }
 
-export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, componentRoots, pushExplicitTrunkRef, PREDICATES };
+export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, disabledSafeguards, safeguardRegistry, componentRoots, pushExplicitTrunkRef, PREDICATES };

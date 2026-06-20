@@ -5,6 +5,7 @@
     "ask": "block and ask the Operator to confirm; a platform with no ask-return falls back to persona",
     "inject": "do not block; add a context note to the turn"
   },
+  "_safeguards": "A rule MAY carry `label` (a plain-language 'what it protects' string the safeguards query + setup show) and `toggleable: true` (ONLY ask/inject guards carry it — the Operator may disable that one guard via .ai-dev/config.json `safeguards.<id>: \"off\"`, a recorded conscious risk acceptance). A rule WITHOUT `toggleable: true` is NEVER skippable whatever config says — fail-CLOSED by construction: the engine skips a rule only when `rule.toggleable === true && safeguards[id] === \"off\"`. Every deny-class rule and the merge-gate (merge-while-unstamped, commit-on-unstamped-main, merge-topic-unresolvable) carry NO toggleable flag, so they are the permanent mechanical floor — a config 'off' on any of them is ignored.",
   "role_deny_set": {
     "_doc": "Single home for the role-duplicator + generic-builtin deny set. A spawn whose target is in this list never fills a protocol seat. code-review / deep-research and wb-* KNOWLEDGE skills are NOT here — they are designated engines/aids, not seat substitutes.",
     "role_duplicators": [
@@ -35,6 +36,7 @@
     {
       "id": "read-outside-root",
       "intent": "Block a read whose target resolves outside the project root.",
+      "label": "Block reads outside the project root",
       "class": "deny",
       "act": "read",
       "predicate": "pathOutsideRoot"
@@ -42,6 +44,7 @@
     {
       "id": "find-outside-root",
       "intent": "Block a `find` that searches outside the project root.",
+      "label": "Block file searches outside the project root",
       "class": "deny",
       "act": "bash",
       "predicate": "findTargetOutsideRoot"
@@ -49,6 +52,7 @@
     {
       "id": "write-outside-root",
       "intent": "Block any write whose target resolves outside the project root (write/edit and bash redirect, tee, sed -i, cp/mv dest, dd of=).",
+      "label": "Block writes outside the project root",
       "class": "deny",
       "act": "write|bash",
       "predicate": "writeTargetOutsideRoot"
@@ -56,6 +60,7 @@
     {
       "id": "truncating-write",
       "intent": "Block an empty/whitespace-only write over an existing non-empty file (truncation guard; 2026-06-06 doc-loss regression).",
+      "label": "Block truncating an existing file to empty",
       "class": "deny",
       "act": "write",
       "predicate": "emptyWriteOverNonEmpty"
@@ -63,6 +68,7 @@
     {
       "id": "orchestrator-authors-content",
       "intent": "Block the orchestrator session writing a source/canonical-doc path; sub-agents author content, the orchestrator routes. Allowed: its own state and a feature plan, and any source/doc when the project's `profile` is lite/solo (configurable rigor — the orchestrator builds directly; the floor denies below are never relaxed). Fails OPEN on an unknown actor (never a false denial).",
+      "label": "Keep the orchestrator from authoring source/doc content",
       "class": "deny",
       "act": "write",
       "predicate": "orchestratorWritingContent"
@@ -70,6 +76,7 @@
     {
       "id": "orchestrator-writes-review-stamp",
       "intent": "Block the orchestrator session writing into the review-stamp directory (.ai-dev/reviews/) — the stamp is the Reviewer's deliverable and the merge-gate reads its presence, so an orchestrator-authored stamp is a fabricated gate. Mechanical where the platform resolves the actor (OpenCode); persona on Claude (no actor signal — fails open). Never relaxed by profile.",
+      "label": "Keep the orchestrator from fabricating a review stamp",
       "class": "deny",
       "act": "write|bash",
       "predicate": "orchestratorWritesReviewStamp"
@@ -77,6 +84,7 @@
     {
       "id": "self-patch-enforcer",
       "intent": "Block any write into the tooling submodule — the enforcer's own source + the deployed adapter change only via a git submodule bump, never an in-place edit.",
+      "label": "Block self-patching the enforcer (.ai-dev/tooling/)",
       "class": "deny",
       "act": "write|bash",
       "predicate": "writesIntoTooling"
@@ -84,6 +92,7 @@
     {
       "id": "merge-while-unstamped",
       "intent": "Block a git merge/push of any branch (prefix stripped — feature/, fix/, hotfix/, …) whose review file lacks a satisfied review stamp. Also blocks an EXPLICIT unstamped trunk push (git push <remote> main/master, incl. HEAD:main and +main forms) — main moves only via PR squash-merge, never a direct session push (PROTOCOL.md `## Git flow`), so a direct trunk push is a violation denied mechanically on BOTH platforms (a reviewed main-named change carrying main_review.md still ships). Read-only merge-* plumbing (merge-base/-tree/-file, mergetool) is NOT a merge and is allowed. Checks stamp PRESENCE, not authorship (fabrication stays persona). An unresolvable topic is escalated by the sibling ask rule (merge-topic-unresolvable), never silently passed.",
+      "label": "Block merging/pushing an unreviewed branch (merge-gate floor)",
       "class": "deny",
       "act": "bash",
       "predicate": "mergeWithUnstampedReview"
@@ -91,6 +100,7 @@
     {
       "id": "merge-topic-unresolvable",
       "intent": "Confirm a git merge/push whose branch topic cannot be resolved (detached HEAD and no branch ref in the command) — the merge-gate cannot check the review stamp, so an unresolved topic means ask, never pass.",
+      "label": "Confirm a merge/push whose review stamp can't be checked (merge-gate floor)",
       "class": "ask",
       "act": "bash",
       "predicate": "mergeTopicUnresolvable",
@@ -99,6 +109,7 @@
     {
       "id": "role-duplicator-or-generic-in-seat",
       "intent": "Block spawning a role-duplicator or a generic built-in into a protocol seat (role_deny_set). The designated pm-* role / code-review / deep-research are never blocked.",
+      "label": "Block a look-alike or generic agent in a protocol seat",
       "class": "deny",
       "act": "spawn",
       "predicate": "spawnTargetInDenySet"
@@ -106,6 +117,7 @@
     {
       "id": "ssh-content-edit",
       "intent": "Block an in-place content edit on a remote system (ssh + sed -i / vi / vim / nano / tee / > redirect). Repo-owned files change via git, never a remote in-place edit.",
+      "label": "Block editing a repo-owned file directly on a remote box",
       "class": "deny",
       "act": "bash",
       "predicate": "sshContentEdit",
@@ -113,31 +125,38 @@
     },
     {
       "id": "ssh-mutating-action",
-      "intent": "Confirm before a mutating action on a remote system (ssh + systemctl/docker/apt/npm/kubectl/rm/cp/mv/mkdir/touch). Legitimate for deploy/maintenance/runtime-state; never for editing a repo-owned file.",
+      "intent": "Confirm before a mutating action on a remote system (ssh + systemctl/docker/apt/npm/kubectl/rm/cp/mv/mkdir/touch). Legitimate for deploy/maintenance/runtime-state; never for editing a repo-owned file. A project may set `safeguards.ssh-mutating-action: \"off\"` in .ai-dev/config.json to suppress this confirm (a conscious, recorded risk acceptance; the ssh-content-edit DENY is unaffected).",
+      "label": "Confirm remote mutations (deploy/restart/rm on a remote box)",
       "class": "ask",
       "act": "bash",
       "predicate": "sshMutatingAction",
+      "toggleable": true,
       "fallback": "persona on a platform with no ask-return (e.g. OpenCode)"
     },
     {
       "id": "force-push",
       "intent": "Confirm a git push --force / -f / --force-with-lease — it rewrites remote history; never force-push main.",
+      "label": "Confirm a force-push (rewrites remote history)",
       "class": "ask",
       "act": "bash",
       "predicate": "gitForcePush",
+      "toggleable": true,
       "fallback": "persona on a platform with no ask-return"
     },
     {
       "id": "git-commit-no-verify",
       "intent": "Confirm a git commit --no-verify / --no-gpg-sign — it skips pre-commit hooks or signing; fix the failing hook instead of bypassing it.",
+      "label": "Confirm a commit that skips hooks/signing (--no-verify)",
       "class": "ask",
       "act": "bash",
       "predicate": "gitCommitNoVerify",
+      "toggleable": true,
       "fallback": "persona on a platform with no ask-return"
     },
     {
       "id": "git-add-all",
       "intent": "Block a blind bulk-stage (git add -A / git add . / git add --all / git add *). Stage NAMED paths instead — the tree holds untracked transients (plans, stamps) by design and a blind stage leaks them into durable history (orchestrator `## Your seat`). The day-zero repo bootstrap stages named paths too. Mechanical on BOTH platforms (the command is visible to both shims, no actor resolution). git add .gitignore (a real file) and git add -p (interactive patch) are NOT bulk stages and are allowed.",
+      "label": "Block a blind bulk git-stage (git add -A / .)",
       "class": "deny",
       "act": "bash",
       "predicate": "gitAddAll"
@@ -145,6 +164,7 @@
     {
       "id": "commit-on-unstamped-main",
       "intent": "Block a git commit on a main/master checkout of a configured project with commit history and no satisfied trunk stamp. Never commit to main (PROTOCOL.md `## Git flow`): main moves via PR squash-merge, never a direct commit. Mechanical on BOTH platforms (the commit command + the checkout HEAD are visible to both shims, no actor resolution). Carve-outs: a reviewed main-named change (main_review.md present) still commits; the day-zero bootstrap (an unconfigured project, or a fresh-init repo with no commit history yet — Setup step 0 git init + initial commit) is allowed; yolo turns the gate off.",
+      "label": "Block a direct commit to main (merge-gate floor)",
       "class": "deny",
       "act": "bash",
       "predicate": "commitOnUnstampedMain"
@@ -152,25 +172,31 @@
     {
       "id": "no-config-run-setup",
       "intent": "This project is not configured (no .ai-dev/config.json). Before doing the task, offer the Operator exactly two choices — run `/dev-setup` now, or proceed on the safe defaults — then STOP and wait for their answer. Do not start the task, do not explore the repo, do not run git. Keep the offer short.",
+      "label": "Nudge to run setup on an unconfigured project",
       "class": "inject",
       "act": "prompt",
       "predicate": "promptNeedsSetup",
+      "toggleable": true,
       "fallback": "persona on OpenCode (no chat.message inject realisation — the push crashed opencode 1.17.8 in SessionPrompt.createUserMessage + rendered unreliably); always-on instruction text on any other platform with no prompt hook"
     },
     {
       "id": "no-product-brief-discover",
       "intent": "This project is configured but has no product brief (docs/product.md is absent or still the unfilled install template). On a change request, offer the Operator a short, declinable product-discovery pass — about five questions on who this is for and why — before building, so the feature grounds in the product. Keep the offer short; it is an offer, not a block. The Operator may decline and proceed.",
+      "label": "Nudge to run product discovery when no brief exists",
       "class": "inject",
       "act": "prompt",
       "predicate": "promptNeedsProductBrief",
+      "toggleable": true,
       "fallback": "persona on OpenCode (no chat.message inject realisation — the push crashed opencode 1.17.8 in SessionPrompt.createUserMessage + rendered unreliably); always-on instruction text on any other platform with no prompt hook"
     },
     {
       "id": "change-route-reminder",
       "intent": "On a repo-change request (change_verbs), inject a reminder to follow the loop (plan -> build -> review -> ship) and route work to the owning role, not the orchestrator. Fires once the project is configured AND has a product brief (an unconfigured one gets no-config-run-setup first; a configured one with no brief gets no-product-brief-discover first).",
+      "label": "Nudge to follow the loop on a change request",
       "class": "inject",
       "act": "prompt",
       "predicate": "promptMatchesChangeVerb",
+      "toggleable": true,
       "fallback": "persona on OpenCode (no chat.message inject realisation — the push crashed opencode 1.17.8 in SessionPrompt.createUserMessage + rendered unreliably); always-on instruction text on any other platform with no prompt hook"
     }
   ]
