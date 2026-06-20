@@ -20,7 +20,7 @@
 
 ## 4. Abuse cases — the system as designed, turned against the user
 
-`<how a real feature is used hostilely WITHOUT breaking anything: spam through invites, harassment through messaging, scraping through the public API, fraud through refunds. Features that move value or reach other users are the ones worth abusing. Genuinely none is answered "N/A — <why>" (a recorded answer), never silently skipped.>`
+`<how a real feature is used hostilely WITHOUT breaking anything: spam through invites, harassment through messaging, scraping through the public API, fraud through refunds. Features that move value or reach other users are the ones worth abusing. Genuinely none is answered "N/A — <why>" (a recorded answer), never silently skipped. Example (a configurable-guard product): disabling a safeguard removes its protection — mitigation: the un-disablable protections are the deny-class mechanical floor (never config-toggleable, default-on); each loosenable guard is a conscious, recorded opt-in, never a silent default.>`
 
 ## 5. Consciously out of scope
 

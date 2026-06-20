@@ -121,8 +121,10 @@ A platform's deny layer can **block a tool call** (and, on some platforms, **ask
 
 - A force-push.
 - A commit that skips verification.
-- A mutating action on a remote system (deploy, maintenance, runtime state).
+- A mutating action on a remote system (deploy, maintenance, runtime state). A project may disable this confirm (and other ask/inject guards) via `.ai-dev/config.json` `safeguards` — a recorded conscious risk acceptance; the deny-class floor and the merge-gate are never config-disablable, and the remote-edit DENY is unaffected.
 - A merge or push whose branch topic the merge-gate cannot resolve — the stamp is uncheckable, so the gate asks instead of passing.
+
+An ask/inject guard marked `toggleable` may be individually disabled via `.ai-dev/config.json` `safeguards` (a recorded conscious opt-out — orchestrator's `## Safeguards`); the deny-class floor and the merge-gate are never config-disablable.
 
 **Inject-class** (the platform adds a context note to the turn — it nudges, never blocks; only *reinforces* a `[persona]` act, the act itself stays the Orchestrator's; realised mechanically where a platform has a prompt hook, always-on instruction text where it does not):
 
