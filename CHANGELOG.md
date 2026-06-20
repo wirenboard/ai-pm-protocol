@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.21.1] — 2026-06-20
+
+### Changed
+
+- **The `setup` quality-toolkit proposal now recommends failure-suppression lint rules and a soft file-size warning (epic F2/F7).** Two stack-appropriate additions to `## Setup` step 5, framed as proposals "where the stack has one" (the core still hard-codes no tool): **F2** — the proposed linter should raise blind/bare-except and try-except-pass rules to ERRORS (e.g. Python ruff `BLE001` + bandit `S110`/`S112`), since a swallowed failure is the silent-dead-code class a linter CAN catch mechanically (the mechanical complement to the `semantic-correctness` Reviewer item); **F7** — a soft file-size warning (~800 lines, a signal not a block) that surfaces an oversized file to the architect. The Builder's Structural-choice item gains a matching line: on touching an over-threshold file, offer decomposition as an option, never a block (it points at the toolkit's threshold, doesn't restate it). From the abstracted downstream intake (#259).
+
+---
+
 ## [5.21.0] — 2026-06-20
 
 ### Added
