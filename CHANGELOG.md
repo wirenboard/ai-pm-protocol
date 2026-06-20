@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.21.0] — 2026-06-20
+
+### Added
+
+- **The `threat-model` capability module gains an isolation/identity dimension and a living-threat-model check (epic F4/F6).** Two `[rich]` items, trigger-conditioned on the relevant surface so they stay inert elsewhere: **F4** — on a per-user / visibility / identity surface, the Builder's plan records the isolation invariant as an explicit contract string, and the Reviewer checks that every new SQL/recall/read path filters by owner, a new table/store inherits the visibility column, and every mutating or identity-binding endpoint is authenticated or explicitly marked accepted-risk; **F6** — every new externally-reachable route the change adds must appear in `docs/threat-model.md`, else the review is incomplete. F6 is a review-beat module item, NOT a new ship-beat step (thin core). Deepens the floor's Security item + the module's AuthZ/AuthN rows, never restates them (invariant 6); the secret-value floor block is untouched. From the abstracted downstream intake (#259).
+
+---
+
 ## [5.20.0] — 2026-06-20
 
 ### Added

@@ -17,3 +17,4 @@ this sharpens the plan, denies nothing.
 - `[rich]` **Data & privacy exposure** — scope reads to what's needed; keep PII out of logs; don't widen a data flow.
 - `[rich]` **AuthZ / AuthN** — give each new surface its access check; match the strictest peer, don't leave a privileged path open.
 - `[rich]` **Supply chain** — name and justify any new dependency; confirm its source is trusted before adding it.
+- `[rich]` **Isolation / identity invariant** *(when the change touches a per-user, visibility, or identity surface)* — record the isolation invariant as an explicit contract string in the plan BEFORE build: who may see what (the owner-filter every read carries), and who may issue the identity-binding action (the auth every mutating endpoint demands). A per-user surface built without its invariant stated is built blind to the cross-user leak it must prevent.
