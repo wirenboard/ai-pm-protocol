@@ -3,7 +3,9 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
-## EPIC — Semantic-correctness gates: the loop ships claims it never checks — 2026-06-20 (downstream intake, abstracted)
+## RESOLVED (5.20.0–5.21.1) — EPIC Semantic-correctness gates: the loop ships claims it never checks — 2026-06-20 (downstream intake, abstracted)
+
+**ALL 7 FINDINGS SHIPPED** (autonomous batch, Operator grant): **F1/F3/F5 → 5.20.0 (#260)** new `semantic-correctness` capability module; **F4/F6 → 5.21.0 (#261)** `threat-model` module isolation/identity dimension + living-threat-model review check; **F2/F7 → 5.21.1 (#262)** `setup` toolkit proposal recommends failure-suppression lint-as-error + soft file-size warning + a Builder decomposition-offer. The lever held: F2/F7 are the mechanical complement (linter/tool guidance), F1/F3/F4/F5/F6 the class-specific Reviewer/Builder depth. Causal hypothesis (loop-blindness) stands unverified across the project boundary, as recorded; the gates now at least *exist*. Original triage kept below for provenance.
 
 **Source:** a read-only audit of a downstream developed under this protocol. **Privacy:** abstracted to protocol-level findings only — no downstream file/symbol/endpoint names committed (Operator decision: backlog-only, no public issue). **Honesty:** the defect *classes* are from real code; the causal claim "the loop missed it because gate X is blind" is the downstream reviewer's **hypothesis** — it could only be confirmed against those features' own plan/review stamps, which the project-boundary forbids us from reading. So: findings credible, protocol-causal link plausible-not-proven.
 
