@@ -116,7 +116,7 @@
     },
     {
       "id": "ssh-content-edit",
-      "intent": "Block an in-place content edit on a remote system (ssh + sed -i / vi / vim / nano / tee / > redirect). Repo-owned files change via git, never a remote in-place edit.",
+      "intent": "Block an in-place content edit on a remote system (ssh + sed -i / vi / vim / nano / tee / a `>` redirect to a real file). A stream redirect (2>/dev/null, > /dev/null, 2>&1) is read-only and allowed. Repo-owned files change via git, never a remote in-place edit.",
       "label": "Block editing a repo-owned file directly on a remote box",
       "class": "deny",
       "act": "bash",

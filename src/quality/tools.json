@@ -98,6 +98,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "ssh-content-edit",
+      "checks": "the remote-edit DENY floor (ssh-content-edit) distinguishes a remote WRITE from a redirect-using remote READ: a stream redirect (2>/dev/null, > /dev/null, 2>&1) ALLOWS while a `>`/`>>` redirect to a real file, sed -i, tee, and vi/vim/nano still DENY (floor unchanged); fail-closed — a stream-lookalike (/dev/null2, /dev/null/../etc/passwd) is treated as a write and denies; the predicate stays inert on a non-ssh local redirect.",
+      "config": null,
+      "run": "node src/adapter/ssh-content-edit.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "error-handling",
       "checks": "adapter fail-direction under malformed input — a broken deny-rules.json makes the Claude shim subprocess fail OPEN (exit 0, allow, log to stderr, no crash); a bad regex in a config pattern makes the inject predicates return allow (no nudge), never throw; a valid config + pattern still injects (the happy path is unbroken)",
       "config": null,
