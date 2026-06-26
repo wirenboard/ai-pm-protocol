@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.22.1] — 2026-06-26
+
+### Fixed
+
+- **The `ssh-content-edit` mechanical DENY no longer over-captures a remote read that merely uses a stream redirect.** A read-only remote command (`ssh host 'cmd 2>/dev/null'`, `ssh host 'cmd > /dev/null'`, `… 2>&1 | tail`) was wrongly denied because the predicate's `>`-redirect branch matched any target. The `isStream` helper is hoisted to a module-level `isStreamTarget` (one home for "what is a stream") and the predicate now allows a redirect to a stream target while a genuine remote edit (`> realfile`, `>>`, fd-prefixed `1>file`, `sed -i`, `tee realfile`, `vi`/`vim`/`nano`) still DENIES. Fail-closed: a stream-lookalike (`/dev/null/../etc/passwd`, `/dev/null2`) is treated as a write and denies. The floor is unchanged — only the false-positive is removed.
+
+### Added
+
+- **`setup` step 5 recommends the stack's commented-out-code lint rule raised to ERROR** (Python ruff `ERA001`/eradicate; JS an eslint plugin where the stack carries one), the sibling of the existing failure-suppression recommendation. Scope is stated openly: this catches only the one *syntactic* junk-comment subclass a linter can mechanically see (dead code left in source); the semantic what-restating comment stays the Reviewer's prose-quality call (invariant 6), never a linter's.
+- **The Claude installer self-verify now asserts the PreToolUse matcher covers `Bash` and `Task`.** The mechanical floor rides `Bash` (merge-gate + bash denies) and `Task` (seat spawn-deny); `verifyClaudeWiring` now reads our shim group's matcher and fails the install loudly (naming the missing tool) if either is absent, fail-closed on an empty matcher. This is a `hooks.json` source-regression guard plus fail-closed defense-in-depth — a between-run manual matcher edit still auto-heals on the next install (`mergeHooks` replaces our group).
+
+---
+
 ## [5.22.0] — 2026-06-20
 
 ### Added
