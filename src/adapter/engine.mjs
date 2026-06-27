@@ -139,6 +139,89 @@ function bashWriteTargets(command) {
   }
   return targets;
 }
+// The pure-file-arg read commands: every non-flag token in the invocation's arg
+// span is a file to read (cat/head/tail/… plus `dd if=`). Single home for the list.
+const READ_FILE_COMMANDS = [
+  "cat", "head", "tail", "less", "more", "nl", "tac", "rev",
+  "xxd", "od", "strings", "wc", "cut", "base64", "md5sum",
+  "sha1sum", "sha224sum", "sha256sum", "sha384sum", "sha512sum",
+];
+// The pattern-first read commands: skip leading flags, skip ONE pattern token,
+// the remaining non-flag tokens are files. `sed` only when NOT `-i` (an in-place
+// `sed -i` is a WRITE, owned by bashWriteTargets — excluded below).
+const READ_PATTERN_COMMANDS = ["grep", "egrep", "fgrep", "awk", "sed"];
+// Best-effort READ-target extraction from a bash command — symmetric to
+// bashWriteTargets, conservative-first (the high-value, low-false-positive
+// surface). Three families: an input redirect (`< file`), a pure-file read
+// command (cat/head/…), a pattern-first read command (grep/awk/sed-without-i).
+// NOT a shell parser — permissive on a parse miss (fail-OPEN; persona is the
+// backstop). Runs AFTER stripHeredocBodies (applied once in evaluate()). A `~`
+// token is returned verbatim so the predicate can treat it as outside-root
+// (path.resolve would forge a fake in-root path).
+//
+// Quoted spans are MASKED FIRST (maskQuotedSpans, the same helper gitAddAll uses):
+// a quoted argument body — a commit message, an echo string, a grep pattern —
+// must yield NO read target, else a `git commit -m "... < /etc/shadow"` or an
+// `echo "see /etc/passwd"` parses a PHANTOM out-of-root read and false-denies
+// (the live dogfood regression). The accepted consequence, consistent with the
+// conservative + fail-open-on-ambiguity posture: a genuinely quoted-path read
+// (`cat '/etc/passwd'`) is now MISSED (fail-open) — the role-scope persona rule
+// is its backstop. The unquoted real cases still deny.
+function bashReadTargets(command) {
+  if (typeof command !== "string" || !command) return [];
+  command = maskQuotedSpans(command);
+  const targets = [];
+  const strip = (t) => t.replace(/^["']|["']$/g, ""); // defensive no-op post-mask
+  // Family 1 — input redirect `< token`. The lookbehind/lookahead exclude `<<`
+  // heredoc and `<<<` herestring; the token charclass excludes `(` so a process
+  // substitution `< <(cmd)` yields no token (fail-open). Stream sinks are dropped.
+  const inred = /(?<!<)<(?!<)\s*("[^"]*"|'[^']*'|[^\s|;&<>()]+)/g;
+  let r;
+  while ((r = inred.exec(command)) !== null) {
+    const tok = strip(r[1]);
+    if (tok && !isStreamTarget(tok)) targets.push(tok);
+  }
+  // Family 2 — pure-file read commands: every non-flag token in the invocation
+  // span (to the next shell separator) is a file. A flag VALUE token (head -n 5
+  // → `5`) resolves in-root and is harmless (a safe false-token, never a false
+  // deny). `dd if=<token>` mirrors the write `of=` extractor.
+  for (const cmd of READ_FILE_COMMANDS) {
+    const inv = new RegExp(`(?:^|[\\s;&|(])${cmd}\\b([^|;&\\n]*)`, "g");
+    let m;
+    while ((m = inv.exec(command)) !== null) {
+      for (const tok of m[1].split(/\s+/)) {
+        if (!tok || tok.startsWith("-")) continue;
+        targets.push(strip(tok));
+      }
+    }
+  }
+  const dd = command.match(/(?:^|[\s;&|(])dd\b[^|;&\n]*?\bif=("[^"]*"|'[^']*'|[^\s|;&<>()]+)/);
+  if (dd) {
+    const tok = strip(dd[1]);
+    if (tok && !isStreamTarget(tok)) targets.push(tok);
+  }
+  // Family 3 — pattern-first read commands: drop leading flag tokens, skip ONE
+  // pattern token, treat the remaining non-flag tokens as files. Closes the live
+  // `grep -c . /out/of/root` case (flag -c → pattern . → file → deny) while
+  // letting `grep '/etc/passwd' infile` (pattern, then in-root file) through. The
+  // -e/-f multi-pattern forms are the documented highest false-deny risk
+  // (`grep -e /a -e /b file` mis-reads /b as a file); conservative by design.
+  for (const cmd of READ_PATTERN_COMMANDS) {
+    const inv = new RegExp(`(?:^|[\\s;&|(])${cmd}\\b([^|;&\\n]*)`, "g");
+    let m;
+    while ((m = inv.exec(command)) !== null) {
+      const span = m[1];
+      if (cmd === "sed" && /\s-i\b/.test(span)) continue; // an in-place sed is a WRITE
+      let patternSkipped = false;
+      for (const tok of span.split(/\s+/)) {
+        if (!tok || tok.startsWith("-")) continue;
+        if (!patternSkipped) { patternSkipped = true; continue; } // the one pattern token
+        targets.push(strip(tok));
+      }
+    }
+  }
+  return targets;
+}
 function isPureGitCommand(command) {
   if (typeof command !== "string" || !command) return false;
   let sawGit = false;
@@ -631,6 +714,24 @@ const PREDICATES = {
     if (writesIntoAnyNever(input.root, r, config?.orchestrator_writable)) return true;
     return !isInsideAnyComponent(input.root, r);
   },
+  // Bash READ boundary — best-effort, the read twin of findTargetOutsideRoot.
+  // For each extracted read target: a leading `~` is treated as outside-root (it
+  // is $HOME — path.resolve would forge a fake in-root path; this also covers
+  // `find ~/…` conceptually), then the same tooling carve-out (writesIntoAnyNever,
+  // per-root) and component-set allow (isInsideAnyComponent) the other two
+  // boundary read/find predicates use. A recognised+resolved out-of-root target
+  // ⇒ deny (fail-closed); an unparseable command or a statically unresolvable
+  // token ($VAR/$(…)/interpreter/unlisted) yields no target ⇒ allow (fail-open).
+  bashReadTargetOutsideRoot(input, config) {
+    for (const t of bashReadTargets(input.command)) {
+      if (t.startsWith("~")) return true; // $HOME — near-always outside a project root
+      const r = resolveTarget(input.root, t);
+      if (!r) continue;
+      if (writesIntoAnyNever(input.root, r, config?.orchestrator_writable)) return true;
+      if (!isInsideAnyComponent(input.root, r)) return true;
+    }
+    return false;
+  },
   // Write: tooling writes are owned by the dedicated self-patch deny (writesIntoTooling,
   // per-root), which reports `self-patch-enforcer` — so this boundary predicate stays a
   // pure in-set membership test; a sibling's tooling write falls through here (sibling IS
@@ -862,4 +963,4 @@ export function evaluate(input, config) {
   return ask || { verdict: "allow", ruleId: null, reason: "" };
 }
 
-export const _internals = { bashWriteTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, disabledSafeguards, safeguardRegistry, componentRoots, pushExplicitTrunkRef, PREDICATES };
+export const _internals = { bashWriteTargets, bashReadTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, disabledSafeguards, safeguardRegistry, componentRoots, pushExplicitTrunkRef, PREDICATES };

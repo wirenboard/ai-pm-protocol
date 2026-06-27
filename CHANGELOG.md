@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.23.1] — 2026-06-27
+
+### Fixed
+
+- **The project boundary (invariant 2) now denies Bash reads of a path outside the root.** Previously only the Read/Grep/Glob tools and the `find` command were checked, so an arbitrary Bash read — `cat /etc/passwd`, `grep -c . /tmp/<other-session>/transcript`, `head /other-project/secret`, `cmd < /etc/shadow` — slipped the boundary (observed live: a downstream Reviewer reading a sibling agent's out-of-root transcript). A new `bashReadTargets` extractor + `bashReadTargetOutsideRoot` predicate close it with a new non-toggleable `read-bash-outside-root` deny rule, reusing the existing tooling carve-out and component-set allow. **Conservative + honest:** quoted spans are masked first (a commit message or `echo` that merely mentions a read is not a phantom target; a genuinely quoted-path read is fail-open), a leading `~` is treated as outside-root, and parse misses (`$VAR`, interpreters, unlisted commands) fail open. Invariant 2 + `## Enforcement` are reworded to say plainly that Bash-read coverage is **best-effort, not airtight**, with a new persona **role-scope** rule (a role never mines another agent's out-of-root state) as the documented backstop. Design record: `docs/decisions/bash-read-boundary.md`.
+
+---
+
 ## [5.23.0] — 2026-06-27
 
 ### Added

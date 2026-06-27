@@ -76,6 +76,66 @@ const FIXTURE = [
     claude: { tool_name: "Bash", tool_input: { command: "find / -name secret" } },
     opencode: { tool: "bash", args: { command: "find / -name secret" } } },
 
+  // ── Bash-read boundary (read-bash-outside-root) — DENY: a recognised+resolved
+  // out-of-root read. Conservative extractor (input redirect / pure-file / pattern-first).
+  { name: "read-bash-cat-abs", expect: "deny",
+    claude: { tool_name: "Bash", tool_input: { command: "cat /etc/passwd" } },
+    opencode: { tool: "bash", args: { command: "cat /etc/passwd" } } },
+  { name: "read-bash-grep-pattern-first", expect: "deny", // the live observed case
+    claude: { tool_name: "Bash", tool_input: { command: "grep -c . /tmp/x/tasks/a.output" } },
+    opencode: { tool: "bash", args: { command: "grep -c . /tmp/x/tasks/a.output" } } },
+  { name: "read-bash-head-other-project", expect: "deny",
+    claude: { tool_name: "Bash", tool_input: { command: "head /other-project/secret" } },
+    opencode: { tool: "bash", args: { command: "head /other-project/secret" } } },
+  { name: "read-bash-tilde", expect: "deny", // ~ is $HOME — outside the project root
+    claude: { tool_name: "Bash", tool_input: { command: "cat ~/.ssh/id_rsa" } },
+    opencode: { tool: "bash", args: { command: "cat ~/.ssh/id_rsa" } } },
+  { name: "read-bash-input-redirect", expect: "deny",
+    claude: { tool_name: "Bash", tool_input: { command: "tr a b < /etc/shadow" } },
+    opencode: { tool: "bash", args: { command: "tr a b < /etc/shadow" } } },
+  { name: "read-bash-relative-traversal", expect: "deny", // ../ resolves outside ROOT
+    claude: { tool_name: "Bash", tool_input: { command: "tail ../../secret" } },
+    opencode: { tool: "bash", args: { command: "tail ../../secret" } } },
+  { name: "read-bash-tooling-carveout", expect: "deny", // a tooling read denies like find/write
+    claude: { tool_name: "Bash", tool_input: { command: `cat ${TOOLING}` } },
+    opencode: { tool: "bash", args: { command: `cat ${TOOLING}` } } },
+
+  // ── Bash-read boundary — ALLOW (no false positive / fail-open on a parse miss).
+  // Quoted-prose regressions (the live dogfood false-positive): a quoted argument
+  // body that merely MENTIONS an out-of-root read is masked first ⇒ NO target ⇒ allow.
+  { name: "read-bash-commit-msg-mentions-read", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: 'git commit -m "describes cat /etc/passwd and < /etc/shadow"' } },
+    opencode: { tool: "bash", args: { command: 'git commit -m "describes cat /etc/passwd and < /etc/shadow"' } } },
+  { name: "read-bash-echo-mentions-path", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: 'echo "see /etc/passwd"' } },
+    opencode: { tool: "bash", args: { command: 'echo "see /etc/passwd"' } } },
+  // A genuinely quoted-PATH read is the accepted fail-open consequence of masking.
+  { name: "read-bash-quoted-path-fail-open", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: 'cat "/etc/passwd"' } },
+    opencode: { tool: "bash", args: { command: 'cat "/etc/passwd"' } } },
+  // A quoted sed script that mentions an out-of-root path is masked ⇒ allow.
+  { name: "read-bash-sed-quoted-script", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "sed -e 's#/etc/x#y#' README.md" } },
+    opencode: { tool: "bash", args: { command: "sed -e 's#/etc/x#y#' README.md" } } },
+  { name: "read-bash-grep-pattern-not-file", expect: "allow", // '/etc/passwd' is the PATTERN
+    claude: { tool_name: "Bash", tool_input: { command: "grep '/etc/passwd' README.md" } },
+    opencode: { tool: "bash", args: { command: "grep '/etc/passwd' README.md" } } },
+  { name: "read-bash-relative-in-root", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "cat subdir/file" } },
+    opencode: { tool: "bash", args: { command: "cat subdir/file" } } },
+  { name: "read-bash-stream-redirect", expect: "allow", // < /dev/null is a stream, not a file
+    claude: { tool_name: "Bash", tool_input: { command: "cmd < /dev/null" } },
+    opencode: { tool: "bash", args: { command: "cmd < /dev/null" } } },
+  { name: "read-bash-dot-in-root", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: "cat ./README.md" } },
+    opencode: { tool: "bash", args: { command: "cat ./README.md" } } },
+  { name: "read-bash-var-fail-open", expect: "allow", // $VAR unresolvable ⇒ fail-open
+    claude: { tool_name: "Bash", tool_input: { command: "head $SECRET" } },
+    opencode: { tool: "bash", args: { command: "head $SECRET" } } },
+  { name: "read-bash-interpreter-fail-open", expect: "allow", // unlisted/interpreter ⇒ fail-open
+    claude: { tool_name: "Bash", tool_input: { command: "python3 -c \"open('/etc/passwd')\"" } },
+    opencode: { tool: "bash", args: { command: "python3 -c \"open('/etc/passwd')\"" } } },
+
   { name: "write-outside-root", expect: "deny",
     claude: { tool_name: "Write", tool_input: { file_path: "/etc/foo", content: "x" } },
     opencode: { tool: "write", args: { filePath: "/etc/foo", content: "x" } } },
@@ -337,6 +397,10 @@ function bothExpect(name, root, claudePayload, ocTool, ocArgs, want) {
     { tool_name: "Read", tool_input: { file_path: target } }, "read", { filePath: target }, "allow");
   bothExpect("declared-sibling-write", host,
     { tool_name: "Write", tool_input: { file_path: target, content: "x" } }, "write", { filePath: target, content: "x" }, "allow");
+  // A Bash READ of a declared sibling ⇒ ALLOW (read-bash-outside-root inherits the
+  // component-set allow via isInsideAnyComponent, like the Read-tool case above).
+  bothExpect("declared-sibling-bash-read", host,
+    { tool_name: "Bash", tool_input: { command: `cat ${target}` } }, "bash", { command: `cat ${target}` }, "allow");
   // non-declared sibling (backend exists but is NOT in the manifest) ⇒ DENY.
   fs.mkdirSync(path.join(parent, "backend"));
   const undeclared = path.join(parent, "backend", "src.py");

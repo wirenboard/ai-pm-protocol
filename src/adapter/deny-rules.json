@@ -50,6 +50,14 @@
       "predicate": "findTargetOutsideRoot"
     },
     {
+      "id": "read-bash-outside-root",
+      "intent": "Block a Bash read whose target resolves outside the project root — an input redirect (`< /abs`), a pure-file read command (cat/head/tail/xxd/od/dd if=…, absolute OR relative), or a pattern-first command (grep/awk/sed-without-i) whose post-pattern file token is out of root; a leading-~ target is treated as outside. BEST-EFFORT, not airtight: an interpreter-mediated, $VAR-resolved, or unlisted-command read can still slip (fail-open on a parse miss), with the role-scope persona rule as the documented backstop. Reuses the project-boundary plumbing (the per-root .ai-dev/tooling/ carve-out + the components-set allow), so it inherits multi-repo behaviour and denies a tooling read like find/write.",
+      "label": "Block Bash reads outside the project root",
+      "class": "deny",
+      "act": "bash",
+      "predicate": "bashReadTargetOutsideRoot"
+    },
+    {
       "id": "write-outside-root",
       "intent": "Block any write whose target resolves outside the project root (write/edit and bash redirect, tee, sed -i, cp/mv dest, dd of=).",
       "label": "Block writes outside the project root",

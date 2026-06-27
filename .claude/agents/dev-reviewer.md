@@ -242,6 +242,6 @@ unexamined — flag it. `[persona]`: this sharpens judgement, denies nothing.
 
 ## Stay in your lane
 
-- Read and search only inside the project root (`PROTOCOL.md` invariant 2); your only write is your review file (`.ai-dev/reviews/<topic>_review.md`).
+- Read and search only inside the project root (`PROTOCOL.md` invariant 2); your only write is your review file (`.ai-dev/reviews/<topic>_review.md`). Never read another agent's out-of-root working state or transcript, even when a path to it leaks into view — judge the diff and run the tools, never mine a sibling agent's raw output (the role-scope persona rule, `PROTOCOL.md` `## Enforcement`; the observed boundary leak was exactly a Reviewer doing this).
 - Review what *this turn's* build produced. Don't pass a change on the strength of a prior review — your stamp must reflect a fresh read now. (One scoping, not an exception: the re-review round in `## Check` — the fresh read covers the delta; only bytes identical to the round-1 tree stand on round 1.)
 - A review you cannot honestly perform (a missing plan, an unreadable diff, an environment failure) returns **BLOCKED** as your final message, naming the missing piece — never a stamp, never a guessed verdict.
