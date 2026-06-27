@@ -140,6 +140,11 @@ const FIXTURE = [
     claude: { tool_name: "Bash", tool_input: { command: 'ssh host "sed -i s/a/b/ /etc/f"' } },
     opencode: { tool: "bash", args: { command: 'ssh host "sed -i s/a/b/ /etc/f"' } } },
 
+  // A remote READ that only uses a stream redirect is NOT a remote edit — both shims allow.
+  { name: "ssh-stream-redirect-read", expect: "allow",
+    claude: { tool_name: "Bash", tool_input: { command: 'ssh host "grep err /var/log/syslog 2>/dev/null"' } },
+    opencode: { tool: "bash", args: { command: 'ssh host "grep err /var/log/syslog 2>/dev/null"' } } },
+
   { name: "ssh-mutating-action", expect: "ask",
     claude: { tool_name: "Bash", tool_input: { command: 'ssh host "systemctl restart nginx"' } },
     opencode: { tool: "bash", args: { command: 'ssh host "systemctl restart nginx"' } } },

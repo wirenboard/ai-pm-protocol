@@ -708,6 +708,97 @@ testPlatform("opencode", (target) => {
   } finally {
     fs.rmSync(brokenSettings, { recursive: true, force: true });
   }
+
+  // MATCHER-COVERAGE arms — the deny-shim entry is present AND the shim loads, but the
+  // PreToolUse matcher of OUR group has lost a floor tool. The mechanical floor RIDES
+  // specific tools: the merge-gate + remote-edit + git-add-all denies fire on `Bash`
+  // (push/commit/ssh are Bash ops), the role/seat spawn-deny on `Task` — a matcher that
+  // omits either silently disables that whole half of the deny layer. verifyClaudeWiring
+  // (step 1b) MUST throw, naming the missing tool + the enforcement-off hint; a reordered
+  // or extended SUPERSET still passes (membership is whole-token, never an exact-string
+  // compare). Honest scope: mergeHooks REPLACES our group on every install, so the durable
+  // catch is a hooks.json source-regression that dropped a floor tool (a downstream's
+  // between-run manual matcher edit auto-heals on the next install) + fail-closed
+  // defense-in-depth — which is exactly why these arms drive verifyClaudeWiring DIRECTLY
+  // against a tampered settings.json, mirroring the MISSING-ENTRY arm.
+  //
+  // Each crafted settings.json keeps a FOREIGN group whose matcher DOES carry `Bash` but
+  // routes elsewhere (my-own-linter, no shim marker): the check must scope to OUR group
+  // and must NOT be fooled into thinking Bash is covered by a foreign Bash matcher.
+  const SHIM_CMD = 'node "$CLAUDE_PROJECT_DIR/.ai-dev/tooling/src/adapter/claude/shim.mjs"';
+  const writeMatcher = (settingsPath, matcher) =>
+    fs.writeFileSync(
+      settingsPath,
+      JSON.stringify(
+        {
+          hooks: {
+            PreToolUse: [
+              { matcher, hooks: [{ type: "command", command: SHIM_CMD }] },
+              // foreign group: a Bash matcher that routes to a non-shim command — the
+              // check must ignore it (it does not protect the floor).
+              { matcher: "Bash", hooks: [{ type: "command", command: "my-own-linter --check" }] },
+            ],
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+
+  // missing Bash ⇒ THROWS, error names Bash + the enforcement-off hint
+  const noBash = freshTarget("claudeverify-nobash");
+  try {
+    install(noBash, "claude");
+    const settingsPath = path.join(noBash, ".claude", "settings.json");
+    writeMatcher(settingsPath, "Read|Write|Edit|Task|Skill");
+    let threw = false, msg = "";
+    try { verifyClaudeWiring(noBash, settingsPath); } catch (e) { threw = true; msg = e.message; }
+    check("[claudeverify] matcher MISSING Bash: verify THROWS (fail-closed)", threw);
+    check("[claudeverify] missing-Bash error names the missing tool (Bash)", msg.includes("Bash"));
+    check("[claudeverify] missing-Bash error carries the enforcement-off hint", msg.includes("silently off at the first tool call"));
+  } finally {
+    fs.rmSync(noBash, { recursive: true, force: true });
+  }
+
+  // missing Task ⇒ THROWS, error names Task
+  const noTask = freshTarget("claudeverify-notask");
+  try {
+    install(noTask, "claude");
+    const settingsPath = path.join(noTask, ".claude", "settings.json");
+    writeMatcher(settingsPath, "Read|Write|Edit|Bash|Skill");
+    let threw = false, msg = "";
+    try { verifyClaudeWiring(noTask, settingsPath); } catch (e) { threw = true; msg = e.message; }
+    check("[claudeverify] matcher MISSING Task: verify THROWS (fail-closed)", threw);
+    check("[claudeverify] missing-Task error names the missing tool (Task)", msg.includes("Task"));
+  } finally {
+    fs.rmSync(noTask, { recursive: true, force: true });
+  }
+
+  // reordered + extended SUPERSET ⇒ PASSES (whole-token membership, not exact compare)
+  const reordered = freshTarget("claudeverify-reordered");
+  try {
+    install(reordered, "claude");
+    const settingsPath = path.join(reordered, ".claude", "settings.json");
+    writeMatcher(settingsPath, "Task|Bash|Read|Write|Edit|Skill|NewTool");
+    let threw = false;
+    try { verifyClaudeWiring(reordered, settingsPath); } catch { threw = true; }
+    check("[claudeverify] reordered/extended matcher superset still PASSES (no brittle exact compare)", !threw);
+  } finally {
+    fs.rmSync(reordered, { recursive: true, force: true });
+  }
+
+  // empty matcher on OUR group ⇒ THROWS (fail-closed: coverage is not provable)
+  const emptyMatcher = freshTarget("claudeverify-emptymatcher");
+  try {
+    install(emptyMatcher, "claude");
+    const settingsPath = path.join(emptyMatcher, ".claude", "settings.json");
+    writeMatcher(settingsPath, "");
+    let threw = false;
+    try { verifyClaudeWiring(emptyMatcher, settingsPath); } catch { threw = true; }
+    check("[claudeverify] empty matcher on our group: verify THROWS (fail-closed)", threw);
+  } finally {
+    fs.rmSync(emptyMatcher, { recursive: true, force: true });
+  }
 }
 
 // ── hasGitRepo — the CLI's no-repo warning predicate ─────────────────────────

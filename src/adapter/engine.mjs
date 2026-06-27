@@ -90,6 +90,15 @@ function stripHeredocBodies(command) {
   }
   return out.join("\n");
 }
+// A redirect target that is a stream (a fd dup or a /dev sink), never a real-file
+// write. The single home for "what counts as a stream" — used by bashWriteTargets'
+// target extraction AND by sshContentEdit's read-vs-write distinction. Exact-match
+// allowlist: anything NOT exactly one of these is treated as a write (fail-closed —
+// `/dev/null/../etc/passwd` is not `/dev/null`, so it denies).
+function isStreamTarget(t) {
+  return t === "/dev/null" || t === "/dev/stdout" || t === "/dev/stderr" ||
+    t === "&1" || t === "&2" || t.startsWith("&");
+}
 // Best-effort write-target extraction from a bash command (redirect / tee /
 // sed -i / cp|mv dest / dd of=). Not a shell parser — permissive on miss (the
 // persona is the fail-safe). Runs on a quote-masked copy.
@@ -100,9 +109,7 @@ function bashWriteTargets(command) {
   // never a write target; left in, `tee file <<EOF` extracts a phantom `<<EOF`.
   command = command.replace(/<<-?[ \t]*[\w.-]*/g, " ");
   const targets = [];
-  const isStream = (t) =>
-    t === "/dev/null" || t === "/dev/stdout" || t === "/dev/stderr" ||
-    t === "&1" || t === "&2" || t.startsWith("&");
+  const isStream = isStreamTarget;
   const redir = /(?:^|\s)\d?>>?\s*("[^"]*"|'[^']*'|[^\s|;&<>()]+)/g;
   let r;
   while ((r = redir.exec(command)) !== null) {
@@ -725,8 +732,21 @@ const PREDICATES = {
   },
   sshContentEdit(input) {
     const c = input.command || "";
-    return /(^|[\s;&|`(])ssh(\s|$)/.test(c) &&
-      /(sed[\s"'`]+-i|[\s"'`]vi[\s"'`]|[\s"'`]vim[\s"'`]|[\s"'`]nano[\s"'`]|[\s"'`]tee[\s"'`]|>\s*[^\s&|;>]+)/.test(c);
+    if (!/(^|[\s;&|`(])ssh(\s|$)/.test(c)) return false;
+    // An in-place editor / tee always intends a real-file edit → deny.
+    if (/(sed[\s"'`]+-i|[\s"'`]vi[\s"'`]|[\s"'`]vim[\s"'`]|[\s"'`]nano[\s"'`]|[\s"'`]tee[\s"'`])/.test(c)) return true;
+    // A `>` / `>>` redirect denies ONLY when its target is a real file. A stream
+    // redirect (`2>/dev/null`, `> /dev/null`, `2>&1`) is read-only and must ALLOW —
+    // it is a diagnostic, not a remote edit. Scan every redirect target and fire on
+    // the first non-stream one (isStreamTarget is the single home for "what is a
+    // stream"; an `&N` fd-dup never matches the target group, so it never trips).
+    const redir = /\d?>>?\s*("[^"]*"|'[^']*'|[^\s&|;<>()]+)/g;
+    let m;
+    while ((m = redir.exec(c)) !== null) {
+      const tok = m[1].replace(/^["']|["']$/g, "");
+      if (tok && !isStreamTarget(tok)) return true;
+    }
+    return false;
   },
   sshMutatingAction(input) {
     const c = input.command || "";

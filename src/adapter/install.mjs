@@ -326,6 +326,32 @@ export function verifyClaudeWiring(target, settingsPath) {
     );
   }
 
+  // 1b. the matcher of OUR shim-routing group(s) still COVERS the floor's tools. The
+  // mechanical floor RIDES specific tools (FLOOR_TOOLS): the merge-gate, remote-edit, and
+  // git-add-all denies fire on `Bash` (push/commit/ssh are Bash ops); the role/seat
+  // spawn-deny fires on `Task`. A PreToolUse matcher that has dropped either routes those
+  // tool calls AROUND the shim, silently disabling that whole half of the deny layer — the
+  // entry-exists check above does NOT catch it. Assert each floor tool is a whole-token
+  // member of some shim-routing group's matcher; fail-closed (an absent/empty matcher
+  // covers nothing). Honest scope: mergeHooks REPLACES our group on every install, so this
+  // primarily guards a hooks.json source-regression that drops a floor tool (a downstream's
+  // between-run manual matcher edit auto-heals on the next install) plus fail-closed
+  // defense-in-depth. Persona sibling: the audit verification-coverage sweep
+  // (src/agents/orchestrator.md `## Audit`).
+  const shimMatchers = preGroups
+    .filter((g) => (g.hooks || []).some((h) => typeof h.command === "string" && h.command.includes(HOOK_MARKER)))
+    .map((g) => g.matcher);
+  for (const tool of FLOOR_TOOLS) {
+    if (!shimMatchers.some((m) => matcherCoversTool(m, tool))) {
+      throw new Error(
+        `Claude wiring self-verify FAILED: the PreToolUse deny-shim matcher in ${settingsPath} ` +
+          `does not cover \`${tool}\` — the mechanical floor that rides ${tool} ` +
+          `(${tool === "Bash" ? "the merge-gate, remote-edit, and git-add-all denies" : "the role/seat spawn-deny"}) ` +
+          "would be silently off at the first tool call.",
+      );
+    }
+  }
+
   // 2. the shim itself loads. Resolve its on-disk path from the WIRED command (so the
   // check works in both downstream and dogfood layouts), substituting the harness's
   // $CLAUDE_PROJECT_DIR for the real target root.
@@ -380,6 +406,27 @@ function resolveShimPath(target, command) {
 // marker is the shim's stable path tail — it survives a vendor-location change
 // (.ai-pm/tooling/ → .ai-dev/tooling/) where an exact-command compare would not.
 const HOOK_MARKER = "adapter/claude/shim.mjs";
+
+// The tools the mechanical floor RIDES — the PreToolUse matcher MUST route them to the
+// shim or that half of the deny layer goes silently off. `Bash`: the merge-gate, the
+// remote-edit deny, and the git-add-all guard (push/commit/ssh are Bash ops); `Task`:
+// the role/seat spawn-deny. verifyClaudeWiring step 1b asserts both stay covered.
+const FLOOR_TOOLS = ["Bash", "Task"];
+
+// True when `tool` is a WHOLE alternation member of the matcher string (a regex-ish
+// `A|B|C` Claude matches against the tool name). Whole-token membership via word
+// boundaries — never a brittle exact-string compare — so a reordered, extended, or
+// parenthesis-grouped (`(Read|Bash)`) matcher with the tool still present passes, while
+// a substring like `BashTool`/`Bashful` does NOT count as coverage. `\b` is chosen over
+// `|`-only anchors precisely because it also tolerates grouping (a trailing `)` defeats
+// a `($|\|)` anchor); Claude's tool namespace is alphanumeric with no sub-word collision
+// for `Bash`/`Task`, so `\b` carries no false positive here. Fail-closed: a non-string or
+// empty matcher covers nothing. `tool` is only ever a fixed FLOOR_TOOLS literal (no regex
+// metacharacters), so no escaping is required at this call site.
+function matcherCoversTool(matcher, tool) {
+  if (typeof matcher !== "string" || !matcher) return false;
+  return new RegExp(`\\b${tool}\\b`).test(matcher);
+}
 
 // Merge a hooks fragment into an existing hooks object: foreign groups are kept
 // untouched; every group recognised as ours (HOOK_MARKER) is REPLACED by the
