@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.23.2] — 2026-06-28
+
+### Added
+
+- **Research + design decisions for an opt-in multi-user (team) collaboration mode** (`docs/decisions/multi-user-mode.md`). Grounds a future feature, implements none of it. Headline finding: most of the requested team flow (pull → branch → PR → review → merge) **already exists** in `## Git flow` + the merge-gate, so multi-user is a few **additive** deltas (config + a backlog adapter point + a `team-collaboration` capability module), never a new loop beat. Records the Operator's four decisions: (1) **no AI-review-in-CI** — the AI Reviewer's verdict is surfaced on the PR (description + attached review file) for visibility & diagnostic reuse of the existing local stamp, explicitly **not** a tamper-proof remote gate; the mechanical remote floor stays quality-CI + the forge's own approval rules (`docs/decisions/persona-floor-external-substitute.md`); (2) **human approval is out of protocol scope** — whatever forge the team uses owns required-approvals, the protocol manages no count; (3) **backlog migration** `file → forge` — export open items to forge issues, then empty the local file to a marker; (4) ship as a **capability module**. Forge-agnostic across GitHub / GitLab / Gitea for the issue-CLI backlog adapter. **Honesty:** the research harness hit a transient server rate-limit during verification/synthesis, so claims are marked `[src]` (sourced & quoted in the run) vs `[kn]` (established domain fact, not re-verified); two branch-protection facts passed full 2-0 verification.
+
+---
+
 ## [5.23.1] — 2026-06-27
 
 ### Fixed
