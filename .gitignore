@@ -17,5 +17,9 @@
 .ai-dev/feedback/
 .ai-dev/worktrees/
 
+# Installer test temp targets (created inside the repo root by the boundary deny;
+# leaked dirs must never pollute git status or the eslint scandir walk)
+.tmp-install*
+
 # Node dependencies (the linters; package-lock.json IS committed)
 node_modules/

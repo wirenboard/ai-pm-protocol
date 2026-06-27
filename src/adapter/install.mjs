@@ -329,15 +329,16 @@ export function verifyClaudeWiring(target, settingsPath) {
   // 1b. the matcher of OUR shim-routing group(s) still COVERS the floor's tools. The
   // mechanical floor RIDES specific tools (FLOOR_TOOLS): the merge-gate, remote-edit, and
   // git-add-all denies fire on `Bash` (push/commit/ssh are Bash ops); the role/seat
-  // spawn-deny fires on `Task`. A PreToolUse matcher that has dropped either routes those
-  // tool calls AROUND the shim, silently disabling that whole half of the deny layer — the
-  // entry-exists check above does NOT catch it. Assert each floor tool is a whole-token
-  // member of some shim-routing group's matcher; fail-closed (an absent/empty matcher
-  // covers nothing). Honest scope: mergeHooks REPLACES our group on every install, so this
-  // primarily guards a hooks.json source-regression that drops a floor tool (a downstream's
-  // between-run manual matcher edit auto-heals on the next install) plus fail-closed
-  // defense-in-depth. Persona sibling: the audit verification-coverage sweep
-  // (src/agents/orchestrator.md `## Audit`).
+  // spawn-deny fires on `Task`; the boundary (read/find/write-outside-root), truncation,
+  // and orchestrator-authors-content denies fire on `Read`/`Write`/`Edit`. A PreToolUse
+  // matcher that has dropped ANY of these routes those tool calls AROUND the shim, silently
+  // disabling that part of the deny layer — the entry-exists check above does NOT catch it.
+  // Assert each floor tool is a whole-token member of some shim-routing group's matcher;
+  // fail-closed (an absent/empty matcher covers nothing). Honest scope: mergeHooks REPLACES
+  // our group on every install, so this primarily guards a hooks.json source-regression that
+  // drops a floor tool (a downstream's between-run manual matcher edit auto-heals on the next
+  // install) plus fail-closed defense-in-depth. Persona sibling: the audit
+  // verification-coverage sweep (src/agents/orchestrator.md `## Audit`).
   const shimMatchers = preGroups
     .filter((g) => (g.hooks || []).some((h) => typeof h.command === "string" && h.command.includes(HOOK_MARKER)))
     .map((g) => g.matcher);
@@ -346,7 +347,7 @@ export function verifyClaudeWiring(target, settingsPath) {
       throw new Error(
         `Claude wiring self-verify FAILED: the PreToolUse deny-shim matcher in ${settingsPath} ` +
           `does not cover \`${tool}\` — the mechanical floor that rides ${tool} ` +
-          `(${tool === "Bash" ? "the merge-gate, remote-edit, and git-add-all denies" : "the role/seat spawn-deny"}) ` +
+          `(${FLOOR_TOOL_DENIES[tool]}) ` +
           "would be silently off at the first tool call.",
       );
     }
@@ -408,10 +409,17 @@ function resolveShimPath(target, command) {
 const HOOK_MARKER = "adapter/claude/shim.mjs";
 
 // The tools the mechanical floor RIDES — the PreToolUse matcher MUST route them to the
-// shim or that half of the deny layer goes silently off. `Bash`: the merge-gate, the
-// remote-edit deny, and the git-add-all guard (push/commit/ssh are Bash ops); `Task`:
-// the role/seat spawn-deny. verifyClaudeWiring step 1b asserts both stay covered.
-const FLOOR_TOOLS = ["Bash", "Task"];
+// shim or that part of the deny layer goes silently off. verifyClaudeWiring step 1b
+// asserts every one stays covered. The map doubles as the per-tool failure description, so
+// a dropped-`Read` error names the boundary denies it disabled, not Bash's merge-gate.
+const FLOOR_TOOL_DENIES = {
+  Bash: "the merge-gate, remote-edit, and git-add-all denies", // push/commit/ssh are Bash ops
+  Task: "the role/seat spawn-deny",
+  Read: "the boundary read/find-outside-root deny",
+  Write: "the boundary write-outside-root, truncation, and orchestrator-authors-content denies",
+  Edit: "the boundary write-outside-root, truncation, and orchestrator-authors-content denies",
+};
+const FLOOR_TOOLS = Object.keys(FLOOR_TOOL_DENIES); // ["Bash","Task","Read","Write","Edit"]
 
 // True when `tool` is a WHOLE alternation member of the matcher string (a regex-ish
 // `A|B|C` Claude matches against the tool name). Whole-token membership via word

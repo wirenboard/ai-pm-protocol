@@ -12,6 +12,10 @@ export default [
     ignores: [
       "node_modules/**",
       ".opencode/plugins/**", // generated from src/adapter/opencode/plugin-entry.mjs
+      // install.test.mjs temp targets (inside the repo root by design); both forms so
+      // eslint neither lints nor SCANDIRS into a half-deleted leftover (the ENOENT flake).
+      ".tmp-install*",
+      ".tmp-install*/**",
     ],
   },
   js.configs.recommended,

@@ -46,6 +46,24 @@ function freshTarget(tag) {
   return dir;
 }
 
+// Catch-all hardening: even with every arm's `finally` cleanup, an arm that THROWS
+// before its `finally`, or a transient EPERM/EBUSY from a just-exited install child,
+// can leave a `.tmp-install-*` dir behind — which then flakes the eslint row (scandir
+// into a half-deleted subtree) and pollutes `git status`. The .gitignore + eslint
+// `ignores` entries neutralise both harms; this sweep keeps the tree physically clean
+// by removing any straggler at process exit, with retries for the transient-lock case.
+process.on("exit", () => {
+  for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name.startsWith(".tmp-install-")) {
+      try {
+        fs.rmSync(path.join(ROOT, entry.name), { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      } catch {
+        // best-effort: gitignore + eslint-ignore already neutralise a survivor.
+      }
+    }
+  }
+});
+
 // ── Claude install ────────────────────────────────────────────────────────────
 function testPlatform(platform, assertWiring) {
   const target = freshTarget(platform);
@@ -122,7 +140,7 @@ function testPlatform(platform, assertWiring) {
     check(`[${platform}] second run leaves every file byte-identical`, allIdentical);
     check(`[${platform}] same-version re-run writes no UPGRADING marker`, !fs.existsSync(path.join(target, ".ai-dev", "UPGRADING.md")));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -195,7 +213,7 @@ testPlatform("opencode", (target) => {
     const r = runPluginInstall(good);
     check("[selfverify] GOOD install: plugin re-install on an intact tree exits 0", r.status === 0);
   } finally {
-    fs.rmSync(good, { recursive: true, force: true });
+    fs.rmSync(good, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // BROKEN arm (the ratchet) — break the deployed plugin's load surface, then run
@@ -213,7 +231,7 @@ testPlatform("opencode", (target) => {
     check("[selfverify] BROKEN plugin: error carries the enforcement-off hint", err.includes("enforcement would be silently off"));
     check("[selfverify] BROKEN plugin: error names the underlying load error", err.includes("Underlying load error:"));
   } finally {
-    fs.rmSync(broken, { recursive: true, force: true });
+    fs.rmSync(broken, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -242,7 +260,7 @@ testPlatform("opencode", (target) => {
     check("[ocplugin] re-install does not duplicate our entry (idempotent)", oc2.plugin.filter((p) => p === "./plugins/ai-dev.mjs").length === 1);
     check("[ocplugin] re-install keeps the project's own entry once", oc2.plugin.filter((p) => p === "./plugins/my-own.mjs").length === 1);
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -258,7 +276,7 @@ testPlatform("opencode", (target) => {
     try { install(target, undefined); } catch { threw2 = true; }
     check("[resolve] no flag + no config platform is a hard error", threw2);
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -278,7 +296,7 @@ testPlatform("opencode", (target) => {
     check("[f4] .gitignore excludes .ai-dev/state/ after migration install", fs.readFileSync(path.join(target, ".gitignore"), "utf8").includes(".ai-dev/state/"));
     check("[f4] version stamped on a migration install", fs.readFileSync(path.join(target, ".ai-dev", "VERSION"), "utf8").trim() === PKG_VERSION);
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -302,7 +320,7 @@ testPlatform("opencode", (target) => {
     install(target, "claude");
     check("[upgrade] unconsumed marker keeps its origin across a chained bump", fs.readFileSync(markerPath, "utf8").includes("Upgraded 1.0.0 →"));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -316,7 +334,7 @@ testPlatform("opencode", (target) => {
     const marker = path.join(target, ".ai-dev", "UPGRADING.md");
     check("[prestamp] existing stampless .ai-dev/ tree detected as pre-5.10 upgrade", fs.existsSync(marker) && fs.readFileSync(marker, "utf8").includes("pre-5.10"));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -343,7 +361,7 @@ testPlatform("opencode", (target) => {
     check("[prune] exactly one ai-dev shim group remains", cmds.filter((c) => c.includes("adapter/claude/shim.mjs")).length === 1);
     check("[prune] foreign hook group preserved", cmds.includes("my-own-linter --check"));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -365,7 +383,7 @@ testPlatform("opencode", (target) => {
     const agentsMd = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
     check("[breadcrumb] no false breadcrumb on an already-wired surface", !agentsMd.includes("ai-dev:breadcrumb") && agentsMd.includes("@.ai-dev/PROTOCOL.md"));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -387,7 +405,7 @@ testPlatform("opencode", (target) => {
     check("[vendored] tooling not corrupted by the self-copy", fs.readFileSync(path.join(target, ".ai-dev", "tooling", "src", "adapter", "engine.mjs"), "utf8") === engineSrc);
     check("[vendored] same-version self-re-run leaves no upgrade marker", !fs.existsSync(path.join(target, ".ai-dev", "UPGRADING.md")));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -401,7 +419,7 @@ testPlatform("opencode", (target) => {
     install(target, "claude");
     check("[clobber] an existing real doc is never overwritten", fs.readFileSync(realDoc, "utf8").includes("keep me"));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -452,7 +470,7 @@ testPlatform("opencode", (target) => {
   } finally {
     // restore the committed bytes regardless of outcome (the test must never dirty the repo)
     for (const s of SURFACES) fs.writeFileSync(path.join(ROOT, s), before[s]);
-    if (!toolingExisted) fs.rmSync(path.join(ROOT, ".ai-dev", "tooling"), { recursive: true, force: true });
+    if (!toolingExisted) fs.rmSync(path.join(ROOT, ".ai-dev", "tooling"), { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     if (!versionExisted) {
       fs.rmSync(path.join(ROOT, ".ai-dev", "VERSION"), { force: true });
       fs.rmSync(path.join(ROOT, ".ai-dev", "UPGRADING.md"), { force: true });
@@ -470,7 +488,7 @@ testPlatform("opencode", (target) => {
     check("[dogfood] --dogfood against a non-source target throws (fail-closed)", threw);
     check("[dogfood] failed --dogfood wired nothing into the non-source target", !fs.existsSync(path.join(target, ".claude")) && !fs.existsSync(path.join(target, ".ai-dev")));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
   // (b) NO flag but the target IS the source repo → hard error (the footgun made loud)
   let threw2 = false;
@@ -509,7 +527,7 @@ testPlatform("opencode", (target) => {
     install(target, "claude");
     check("[prepush] second install leaves our hook byte-identical (idempotent)", fs.readFileSync(hookPath, "utf8") === firstBytes);
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -531,7 +549,7 @@ testPlatform("opencode", (target) => {
     check("[prepush] foreign hook collision surfaces a warning", out.includes("pre-push hook already exists") && out.includes("not ai-dev"));
     check("[prepush] warning still leaves the install succeeding (exit 0)", r.status === 0);
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -543,7 +561,7 @@ testPlatform("opencode", (target) => {
     install(target, "claude");
     check("[prepush] no hook written when .git is absent", !fs.existsSync(path.join(target, ".git", "hooks", "pre-push")));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -569,7 +587,7 @@ testPlatform("opencode", (target) => {
     check("[banner] same-version re-run notes the prior version", out2.includes(`previously installed: v${PKG_VERSION}`));
     check("[banner] no _npx source ⇒ NO stale-cache caveat (no false alarm)", !out2.includes("npx cache may be STALE"));
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // The stale-cache heuristic itself is unit-tested as a pure predicate — a full _npx
@@ -612,7 +630,7 @@ testPlatform("opencode", (target) => {
     try { verifyClaudeWiring(good, path.join(good, ".claude", "settings.json")); } catch { threw = true; }
     check("[claudeverify] verify on an intact tree does NOT throw", !threw);
   } finally {
-    fs.rmSync(good, { recursive: true, force: true });
+    fs.rmSync(good, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // WIRED-IN arm (proves verifyClaudeWiring is actually CALLED by wireClaude, not just
@@ -641,10 +659,10 @@ testPlatform("opencode", (target) => {
       check("[claudeverify] WIRED-IN: a full install with a broken shim EXITS NON-ZERO", r.status !== 0);
       check("[claudeverify] WIRED-IN: the install error carries the enforcement-off hint", err.includes("silently off at the first tool call"));
     } finally {
-      fs.rmSync(target, { recursive: true, force: true });
+      fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }
   } finally {
-    fs.rmSync(srcCopy, { recursive: true, force: true });
+    fs.rmSync(srcCopy, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // BROKEN-shim arm (the ratchet) — a clean install, then break the shim's import
@@ -661,7 +679,7 @@ testPlatform("opencode", (target) => {
     check("[claudeverify] BROKEN shim: error names the shim path", msg.includes("shim.mjs"));
     check("[claudeverify] BROKEN shim: error carries the enforcement-off hint", msg.includes("silently off at the first tool call"));
   } finally {
-    fs.rmSync(brokenShim, { recursive: true, force: true });
+    fs.rmSync(brokenShim, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // BROKEN-shim (syntax) arm — corrupt the shim file into a syntax error ⇒ the
@@ -676,7 +694,7 @@ testPlatform("opencode", (target) => {
     check("[claudeverify] BROKEN shim syntax: verify THROWS", threw);
     check("[claudeverify] BROKEN shim syntax: error names the deny path going off", msg.includes("silently off at the first tool call"));
   } finally {
-    fs.rmSync(brokenSyntax, { recursive: true, force: true });
+    fs.rmSync(brokenSyntax, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // MISSING-ENTRY arm — settings.json parses but carries NO PreToolUse deny-shim
@@ -691,7 +709,7 @@ testPlatform("opencode", (target) => {
     check("[claudeverify] MISSING deny-shim entry: verify THROWS", threw);
     check("[claudeverify] missing-entry error names settings.json", msg.includes("settings.json"));
   } finally {
-    fs.rmSync(missingEntry, { recursive: true, force: true });
+    fs.rmSync(missingEntry, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // BROKEN-settings (malformed JSON) arm — settings.json is not valid JSON ⇒ verify
@@ -706,7 +724,7 @@ testPlatform("opencode", (target) => {
     check("[claudeverify] malformed settings.json: verify THROWS (fail-closed)", threw);
     check("[claudeverify] malformed-settings error names settings.json", msg.includes("settings.json"));
   } finally {
-    fs.rmSync(brokenSettings, { recursive: true, force: true });
+    fs.rmSync(brokenSettings, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // MATCHER-COVERAGE arms — the deny-shim entry is present AND the shim loads, but the
@@ -757,7 +775,7 @@ testPlatform("opencode", (target) => {
     check("[claudeverify] missing-Bash error names the missing tool (Bash)", msg.includes("Bash"));
     check("[claudeverify] missing-Bash error carries the enforcement-off hint", msg.includes("silently off at the first tool call"));
   } finally {
-    fs.rmSync(noBash, { recursive: true, force: true });
+    fs.rmSync(noBash, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // missing Task ⇒ THROWS, error names Task
@@ -771,7 +789,29 @@ testPlatform("opencode", (target) => {
     check("[claudeverify] matcher MISSING Task: verify THROWS (fail-closed)", threw);
     check("[claudeverify] missing-Task error names the missing tool (Task)", msg.includes("Task"));
   } finally {
-    fs.rmSync(noTask, { recursive: true, force: true });
+    fs.rmSync(noTask, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
+
+  // missing Read/Write/Edit ⇒ THROWS, error names the dropped boundary-floor tool. These
+  // ride the boundary read/find/write-outside-root, truncation, and orchestrator-content
+  // denies — a matcher that drops one routes those AROUND the shim (LOW-1, audit 2026-06-27).
+  for (const [tool, matcher] of [
+    ["Read", "Write|Edit|Bash|Task|Skill"],
+    ["Write", "Read|Edit|Bash|Task|Skill"],
+    ["Edit", "Read|Write|Bash|Task|Skill"],
+  ]) {
+    const dropped = freshTarget(`claudeverify-no${tool.toLowerCase()}`);
+    try {
+      install(dropped, "claude");
+      const settingsPath = path.join(dropped, ".claude", "settings.json");
+      writeMatcher(settingsPath, matcher);
+      let threw = false, msg = "";
+      try { verifyClaudeWiring(dropped, settingsPath); } catch (e) { threw = true; msg = e.message; }
+      check(`[claudeverify] matcher MISSING ${tool}: verify THROWS (fail-closed)`, threw);
+      check(`[claudeverify] missing-${tool} error names the missing tool (${tool})`, msg.includes(tool));
+    } finally {
+      fs.rmSync(dropped, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    }
   }
 
   // reordered + extended SUPERSET ⇒ PASSES (whole-token membership, not exact compare)
@@ -784,7 +824,7 @@ testPlatform("opencode", (target) => {
     try { verifyClaudeWiring(reordered, settingsPath); } catch { threw = true; }
     check("[claudeverify] reordered/extended matcher superset still PASSES (no brittle exact compare)", !threw);
   } finally {
-    fs.rmSync(reordered, { recursive: true, force: true });
+    fs.rmSync(reordered, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 
   // empty matcher on OUR group ⇒ THROWS (fail-closed: coverage is not provable)
@@ -797,7 +837,7 @@ testPlatform("opencode", (target) => {
     try { verifyClaudeWiring(emptyMatcher, settingsPath); } catch { threw = true; }
     check("[claudeverify] empty matcher on our group: verify THROWS (fail-closed)", threw);
   } finally {
-    fs.rmSync(emptyMatcher, { recursive: true, force: true });
+    fs.rmSync(emptyMatcher, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
@@ -809,7 +849,7 @@ testPlatform("opencode", (target) => {
     fs.mkdirSync(path.join(target, ".git"), { recursive: true });
     check("[git] .git presence detected", hasGitRepo(target) === true);
   } finally {
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 

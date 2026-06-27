@@ -12,6 +12,23 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.22.2] — 2026-06-27
+
+### Fixed
+
+- **Test temp-dirs no longer flake the `quality` CI check.** `install.test.mjs` created `.tmp-install-*` targets in the repo root and could leave a half-deleted one behind, which crashed the eslint row (`ENOENT scandir`) and polluted `git status` — and because `quality` is the required status check behind branch protection, a spurious red could block a sound PR. `.tmp-install*` is now gitignored and eslint-ignored, and the test cleanup is hardened (`maxRetries`/`retryDelay` + a `process.on("exit")` sweep).
+
+### Added
+
+- **The Claude installer self-verify now covers all five floor-bearing tools.** `FLOOR_TOOLS` extended from `Bash`/`Task` to also include `Read`/`Write`/`Edit` (which carry the boundary, truncation, and orchestrator-content denies) via a `FLOOR_TOOL_DENIES` map, so a matcher dropping any of them fails the install loudly with a per-tool message (no longer mis-describing the missing tool).
+
+### Changed
+
+- **`PROTOCOL.md ## Enforcement` mechanical-deny map completed** — added the `git add -A` blind-bulk-stage deny and named the direct-commit-to-`main` (`commit-on-unstamped-main`) case, so the section's "covers every `[mechanical]` row" claim now holds (points at the rules, restates no predicate).
+- **`setup` step 5 toolkit enumeration decomposed into sub-bullets** — the run-on sentence (worsened by the 5.22.1 commented-out-code addition) restructured for readability, meaning preserved.
+
+---
+
 ## [5.22.1] — 2026-06-26
 
 ### Fixed
