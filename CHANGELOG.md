@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.23.0] — 2026-06-27
+
+### Added
+
+- **`decompose` — a side-tool to bring an oversized file back into order.** A behaviour-preserving refactor through the loop whose floor is **tests-first**: assess the target's coverage and, if thin, write characterization tests capturing current behaviour BEFORE any split (a decompose without a behaviour net is forbidden); for a non-unit-testable target, name the behaviour-preservation evidence. Then split by responsibility/seams into cohesive one-home modules (plan asserts no behaviour change), tests stay green, a fresh Reviewer confirms behaviour preserved + a cohesive (not arbitrary) split + no new duplication; a big file becomes a multi-PR worklist. Fires explicitly (`decompose <file>`), as an audit follow-up, or offered on a surfaced over-threshold file. Single home: orchestrator's `## Decompose`.
+
+### Changed
+
+- **The Reviewer now flags absolute file size, not just diff size.** A previously-invisible failure mode — a module growing 50–200 lines per feature across dozens of features (boiling-frog) — is now caught: the Reviewer flags an oversized file *touched* by the change regardless of the diff's size (advisory, pointing at `decompose`). The `## Audit` whole-tree sweep gains a maintainability / module-size dimension that emits a decomposition worklist, and `setup` step 5 strengthens the soft size-warning toward a recommended-default size/complexity linter — so oversized files become a finding by prevention (per-PR), detection (audit), and tooling, not only when a human notices.
+- **The audit cadence is now recoverable.** Features-since-audit is derivable from git tags / CHANGELOG versions rather than living solely in the gitignored resume pointer, and a lost or stale pointer fails safe to *offering* an audit — so a dropped offer self-heals instead of silently drifting to zero. (`[persona]`; no new committed state, no mechanism — a mechanical cadence backstop remains deferred research.)
+
+---
+
 ## [5.22.2] — 2026-06-27
 
 ### Fixed
