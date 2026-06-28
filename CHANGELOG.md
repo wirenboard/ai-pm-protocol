@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.27.3] — 2026-06-28
+
+### Added
+
+- **Durable-text hygiene — a re-grounding/cleanup discipline + an audit dimension that enforces it** (`docs/decisions/durable-text-hygiene.md`). Closes a gap surfaced by downstream feedback + Operator findings (and live in this repo): invariant 6 ("supersede, don't accumulate; one home") was persona-only with no mechanism, so durable text rots three ways — stale **phase-framing** (an "MVP" label kept past scale), the resume pointer growing into an **append-only journal**, and the backlog / forge-issues accumulating **RESOLVED cruft**. Now: a new `## Audit` step-2 **durable-text hygiene** dimension checks + dispatches all three (each durable doc's framing matches the current phase; `.ai-dev/state/current.md` is a compact pointer not a journal — the one home for that rule, which the deployment-doc-currency dimension now points at instead of restating; the backlog has no accumulated RESOLVED entries and forge issues for shipped work are closed). `## Backlog` gains a status-hygiene rule (OPEN/RESOLVED; prune RESOLVED at the next touch; close shipped issues in forge mode), and `## Your seat` extends the pointer-update + session-reset-hygiene bullets with pointer **compaction** (collapse superseded blocks — it points, it never journals). `[persona]` + the audit dimension as the periodic enforcement; no mechanical deny is claimed (detecting stale framing / a journal is a judgment read, not a byte pattern).
+
+---
+
 ## [5.27.2] — 2026-06-28
 
 ### Changed
