@@ -87,7 +87,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
    - **Core tools** — linter, formatter, type-checker, doc linter, security/SAST scanner, gitleaks-class secret scanner.
    - **Failure-suppression rules raised to ERROR** (within the linter) — a blind/bare-except and try-except-pass rule where the stack has one (e.g. Python ruff `BLE001` + bandit `S110`/`S112`), since a swallowed failure is the silent-dead-code class a linter CAN catch mechanically.
    - **Commented-out-code rule raised to ERROR** where the stack has one (Python ruff `ERA001`/eradicate; JS an eslint plugin where the stack carries one) — a dead code block left in source is the one *syntactic* junk-comment subclass a linter CAN catch; the semantic junk comment (a `// what` restating the code below it) stays the Reviewer's prose-quality call (invariant 6), never a linter's.
-   - **Size / complexity linter** — a **recommended default**: a per-file size/complexity rule at ~800 lines where the stack offers one (eslint `max-lines`/`complexity`, ruff `C901`, a comparable rule), so an oversized file becomes a mechanical finding, not a thing only a human notices. Tuned soft — it surfaces the file to the architect and points at `decompose` (`## Decompose`) for remediation, never a hard build block.
+   - **Size / complexity linter** — a **recommended default**: a per-file size/complexity rule at ~800 lines where the stack offers one (eslint `max-lines`/`complexity`, ruff `C901`, a comparable rule), so an oversized file becomes a mechanical finding, not a thing only a human notices. Tuned soft — it surfaces the file to the architect and points at `decompose` (`.ai-dev/procedures/decompose.md`) for remediation, never a hard build block.
    - **UI/E2E automation driver** for a GUI stack — Playwright for web, tauri-driver/WebDriver for native.
 
    Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `.ai-dev/quality/tools.json`, verify green via `node .ai-dev/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision.
@@ -168,7 +168,7 @@ A cross-component feature spans a **declared component set** — N sibling repos
 - Walk the user's zero-to-working story: who it is for · the problem in their words · how a new user finds out it exists · first steps from nothing to working · access across sessions/devices and what happens on lost access · who runs and funds it.
 - Customer is usually a spectrum — ask it openly; never force a pick-one fork on a range axis.
 - Research the competition first if unknown — use the `research` side-tool; draft what you found; let the Operator correct it.
-- After a section drafts, the `## Elicitation` offer may fire (depth choice first, light default, declinable) — it deepens the section without extending the question list.
+- After a section drafts, the elicitation offer may fire (`.ai-dev/procedures/elicitation.md`; depth choice first, light default, declinable) — it deepens the section without extending the question list.
 - When the Operator **declares the product unfamiliar** (adopting someone else's codebase), flip the whole brief to draft-first — the competition bullet's research-then-draft-then-correct pattern, extended from one question to every section: read the tree, draft each section as evidence-based hypotheses with confidence marks and the explicit provenance "reconstructed from the tree", then walk the Operator through it section by section to correct.
 - What the tree cannot show — the real users, their pain, who runs and funds it — stays `[?]` unless the Operator fills it; the conclude phase runs unchanged, still able to say "wrong product".
 
@@ -178,78 +178,6 @@ A cross-component feature spans a **declared component set** — N sibling repos
 - **Lazy** — on the first feature request to a configured project with no `docs/product.md`. Short, declinable offer — not a block.
 - **Explicit** — the Operator asks to define or revisit.
 
-## Doc bootstrap
-
-`doc bootstrap` fills the system canon of an **existing** project from its tree — `docs/architecture.md`, plus `docs/contracts.md` blocks where the code shows a visible user-facing promise. Discovery records the product (what, for whom); bootstrap records the system (how it is built). Not a side-tool: it runs through the normal loop as the project's first feature. `[persona]`.
-
-**When it fires:**
-
-- **At onboarding** — right after product discovery, the next link in the chain (install → setup → discovery → doc bootstrap → first feature).
-- **Lazy** — on a work request while `docs/architecture.md` is absent or still the unfilled install template (its `<placeholder>` lines unreplaced). Short, declinable offer — never a block.
-- **Explicit** — the Operator asks.
-- **Never on a greenfield** — no tree to read; that case is project inception's (`## Project inception`, the greenfield sibling).
-
-**One pass:**
-
-1. The plan names which docs get drafted.
-2. The Builder (codebase-reader fold) reads the tree and drafts into the installed templates under their own discipline: fill only what the tree shows, delete empty sections, `[?]` for any unmeasured bound, point at code rather than inventory it (invariant 6), secret *locations* never values.
-
-   **Old-protocol source mode** — when the project carries prior-protocol docs (a `WORKFLOW.md`, a legacy pm-* agent roster, docs written against an earlier protocol version): the Builder drafts FROM those docs as primary source, compressed into the new templates under the new size ceilings. The tree is the verification ground — an old-doc claim that contradicts the code surfaces as a named finding for the Operator, never migrates silently. Old docs are deleted once their truth moves (supersede, one home — invariant 6). After drafting, a comment de-water pass: wall comments duplicating what now lives in the new docs go; the local *why* stays (invariant 6 on code). Offer a whole-project audit on close.
-
-3. Ceiling: current state only, readable in one sitting — expect ~60–120 lines of normal prose (a wall-of-text line games nothing), past ~150 cut inventory. A bloated draft is a Reviewer doc-quality block.
-4. Where a product brief exists (`docs/product.md`), cross-check the draft against it: a **factual contradiction** between brief and tree (the brief claims a CLI, the tree shows none) is a named finding for the Operator, with resolution options offered — correct the brief / record as roadmap / investigate which truth holds — never silently smoothed. Intent the brief wants but the tree hasn't built yet is roadmap, not contradiction — only facts conflict.
-5. For a product with real users or data, the same short threat sketch as inception's lands at `docs/threat-model.md` — on a brownfield the actors, assets, and trust boundaries are already visible in the tree.
-6. Relay the draft's claims to the Operator in plain language; the Operator corrects the facts.
-7. The Reviewer checks the draft **against the tree** — a claimed component that doesn't exist or an invented bound blocks (honesty item). Ship like any feature.
-
-## Project inception
-
-`project inception` records a greenfield's **day-zero decisions** — stack, environment, ops, license — into the decision-base and a seeded `docs/architecture.md`. Doc bootstrap's greenfield mirror: bootstrap reads an existing tree; inception records the decisions a new project has no tree to show yet. Not a side-tool: it runs through the normal loop as the project's first feature. `[persona]`.
-
-**When it fires:**
-
-- **At onboarding** — right after product discovery on a greenfield (no meaningful tree), the next link in the chain.
-- **Lazy** — on a work request while the tree is essentially empty. Short, declinable offer — never a block.
-- **Explicit** — the Operator asks.
-- **Never on a brownfield** — an existing tree is doc bootstrap's case (`## Doc bootstrap`).
-
-**One pass:**
-
-1. Stack as a researched decision — the `research` side-tool drafts alternatives, trade-offs, and a recommendation; the Operator decides; lands at `docs/decisions/stack.md`.
-2. Environment constraints recorded — where it runs, the budget ceiling, the expected scale, offline needs.
-3. Day-zero ops answered — the deploy path, the secrets home, the backup owner (and whether restore was ever tested), how a production failure becomes visible. The repository itself is day-zero ops: init + remote + first commit recorded (created at setup's repo check, `## Setup` step 0 — by inception's time it must exist, the loop runs on it).
-4. License chosen day one — the Operator's call, recorded. For an OSS project, a README is a day-zero artifact alongside the architecture doc — cover at minimum: what it is, how to install, and where to get help.
-5. `docs/architecture.md` seeded FROM the decisions (the greenfield twist on bootstrap's fill-from-tree), same size ceiling (normal prose, never a wall-of-text line) and `[?]` discipline.
-6. First-feature recommendation: a walking skeleton — the thinnest end-to-end slice proving the deploy path before features pile up. CLI skeleton = one invocation with flags → result. GUI skeleton = a window where the user can complete the full cycle including configuration; for a GUI that depends on an external service, a configuration verification action (e.g. a "Test" button) is part of the minimal skeleton, not a deferred feature.
-7. For a product with real users or data, a short threat sketch — actors, assets, trust boundaries — lands at `docs/threat-model.md`, deepened later.
-
-## Threat discovery
-
-`threat discovery` records **who attacks this product and what they can take** into `docs/threat-model.md` — the standing threat model a security-relevant feature plan cites, the way every plan cites the brief. The short sketch from inception or doc bootstrap is the seed; this is the depth. Not a side-tool: it runs through the normal loop as a feature. `[persona]`.
-
-**When it fires:**
-
-- **Offered** — when an inception or doc-bootstrap threat sketch finds real users or data and the Operator wants depth beyond the sketch.
-- **Lazy** — on a security-relevant feature request while `docs/threat-model.md` is absent or still the sketch. Short, declinable offer — never a block.
-- **Explicit** — the Operator asks.
-- **Never without real users or data** — nothing worth modelling means no offer (the sketch step's own gate), not a thinner ritual.
-
-**One pass:**
-
-1. The Builder (its threat-model fold) drafts from the brief + the tree into the template's shape (`src/templates/threat-model.md`): on a brownfield the actors, assets, and boundaries are visible in the tree; on a greenfield they come from the inception decisions.
-2. The dialog walks one axis per round — actors, assets, trust boundaries, abuse cases — a different kind of inquiry each round (discovery's rule); never invent a threat: an axis nobody assessed stays `[?]`.
-3. The Operator corrects in plain language — they know the adversaries and what is worth taking better than the tree shows.
-4. Conclude — at the end, on top of everything gathered: the strongest unmitigated threat, named honestly. "This is currently exposed" is a legal verdict; a threat model that cannot reach it is theater (discovery's conclude-honesty pattern).
-5. The Reviewer checks the draft against the brief + the tree — an invented actor or asset, or a secret value copied in, blocks (honesty item). Ship like any feature.
-
-## Elicitation
-
-`elicitation` stress-tests a draft by changing the angle of inquiry — one technique from the catalog (`src/modules/elicitation/catalog.md`, the one home) applied to the draft at hand. Side-tool, not a beat. `[persona]`.
-
-**When it fires** — offered (declinable, never a block) at a decision point: a drafted brief section during discovery, a feature plan before approval, a non-trivial idea being captured to the backlog.
-
-**The entry rule — depth choice first, always:** every offer is one structured question — *light* (one technique, the default), *deeper* (2–3 rounds), or *skip* — with light pre-selected. One technique per round, the menu names 3–5 catalog rows that fit the content (never the whole catalog). Stop at the Operator's first "enough" — an elicitation that drags the dialog out has failed its own purpose. What a round surfaces lands in the draft (an amendment or a named `[?]`), never in a separate report.
-
 ## Fixup
 
 `fixup` is the loop's fast path for a **genuinely trivial** change — a typo, a one-line fix, nothing that raises a structural choice. Shortcut, not a beat (`PROTOCOL.md` `## The loop`).
@@ -257,46 +185,6 @@ A cross-component feature spans a **declared component set** — N sibling repos
 - **What collapses:** plan and build fold into one lightweight pass — on any profile you may do it directly; the plan file may be skipped (announce the fixup in chat instead).
 - **What never collapses (on guarantee profiles):** a fresh, separate Reviewer pass — **shortened, never skipped** — its stamp, and the Operator's explicit merge authorization. On `yolo`: even fixup-grade work has no Reviewer; the Operator's merge word is the only check.
 - **When in doubt, it is not a fixup** — run the full loop.
-
-## 8D
-
-`8D` works a **failure** (bug, production incident) past a quick patch to root cause and systemic prevention. Side-tool, not a beat — optional, on-demand. `[persona]`.
-
-**When it fires:**
-
-- **Offered** — on a bug or incident report, or a fix-loop ceiling hit (`## When something is off`): give a SHORT, declinable offer ("work this through as an 8D?").
-- **Explicit** — the Operator asks for 8D.
-
-**The eight disciplines — one pass, in order:**
-
-1. **D1 — Team.** Who works the failure (the loop's roles; no new seat).
-2. **D2 — Define.** What broke, where, the evidence.
-3. **D3 — Contain.** Stop-gap that limits damage now — explicitly *not* the fix.
-4. **D4 — Root cause.** Past the symptom to why it happened.
-5. **D5 — Fix.** The real fix that removes the root cause.
-6. **D6 — Validate.** The fix works; no regression introduced.
-7. **D7 — Prevent.** The class-level measure — a rule, check, or backlog item (`## Backlog` — file or forge).
-8. **D8 — Close.** Land every measure in its durable home; **delete the run-note**.
-
-**Run-note** at `.ai-dev/8d/<slug>.md` — transient, deleted at D8. Durable record = the mechanism produced (fix, rule, checklist item) + backlog + git/CHANGELOG. Never a stored report.
-
-## Research
-
-`research` answers a question with **evidence** — market, competitor, user, stack, feasibility — and lands the answer in the decision-base. A side-tool, not a beat; it *does* work, where a capability module only shapes thinking. `[persona]`.
-
-**When it fires:**
-
-- **Offered** — a plan or a discovery dialog hits an unknown the canon cannot answer (a competitor landscape, a stack constraint, a feasibility question).
-- **Explicit** — the Operator asks.
-
-**One pass:**
-
-1. Frame the question in one line; name what would settle it.
-2. Route it like building (`## Your seat`): `full` spawns the Builder (its stack-researcher fold); `lite`/`solo` may research directly. Use the platform's web/search facilities where offered; **never invent a source** — an unverifiable claim is recorded as unverified.
-3. Land the artifact at **`docs/decisions/<topic>.md`** — a compact decision-base entry: the question, the answer, the evidence (sourced), the decision it grounds. The answer, never the search log.
-4. Relay it to the Operator in plain language; the asking plan or brief cites the artifact.
-
-**Retention (invariant 6):** one file per topic; a revisit **rewrites** it — supersede, never accumulate. Research riding a feature ships with that feature's PR; standalone research is a fixup-grade change (on guarantee profiles: shortened review, never skipped; on `yolo`: no Reviewer pass).
 
 ## Audit
 
@@ -311,66 +199,35 @@ A cross-component feature spans a **declared component set** — N sibling repos
 **One pass:**
 
 1. Run the whole quality suite — `node .ai-dev/quality/run.mjs build` and `node .ai-dev/quality/run.mjs review`. A red tool is a finding.
-2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · security swept with the threat-model lens — committed secrets, injection-prone constructs, fail-open paths, missing access checks — plus a dependency known-CVE check where the quality registry carries the stack's tool · no drift — the byte-level half is mechanical (step 1 runs the registry's drift rows; the class rule: `docs/architecture.md`), so the auditor's residual is **completeness**: every committed generated artifact has a drift-guard row, and the CI workflow still invokes the quality runner wholesale (a re-listed hand-picked tool subset is a finding) · **verification coverage** — the registered quality suite checked against the actual stack: a GUI stack with no UI-automation row, or a runnable artifact with no test row, is a finding naming the concrete tools to wire; and — on the Operator's confirm, since it costs — **run the named verification scenario through the real integration layer** here (the expensive real-layer exercise deferred from per-change reviews lands at the audit cadence, where one run covers the batch). On an **OpenCode** project this real-layer exercise includes the **plugin-load probe**: boot a real `opencode` session, attempt a write the boundary should deny (e.g. into `.ai-dev/tooling/`), and confirm it is blocked with a `[ai-dev] …` message — the unit suite only proves the installer *registers* the plugin in `opencode.json`; that the platform actually *loads and fires* it is verifiable only here (the recurring fail-open class — a test proved import, the platform never loaded it: `src/adapter/install-plugin.test.mjs` header) · **version skew** — the installed stamp (`.ai-dev/VERSION`) vs the tooling's own (`.ai-dev/tooling/VERSION`; compare via a script or child-process read — the tooling dir is agent-read-denied): a mismatch is a tooling bump without an installer re-run ⇒ point at `## Upgrade` · **maintainability / module size** — sweep the tree for files past the stack's size threshold (the per-diff Reviewer sees only the diff, so an absolute-size sweep is the audit's to own): each oversized or incohesive module is a finding, and the dimension hands back a **decomposition worklist** (`## Decompose`) — the files to split, by cohesion not line count · no duplication or one-home break.
+2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · security swept with the threat-model lens — committed secrets, injection-prone constructs, fail-open paths, missing access checks — plus a dependency known-CVE check where the quality registry carries the stack's tool · no drift — the byte-level half is mechanical (step 1 runs the registry's drift rows; the class rule: `docs/architecture.md`), so the auditor's residual is **completeness**: every committed generated artifact has a drift-guard row, and the CI workflow still invokes the quality runner wholesale (a re-listed hand-picked tool subset is a finding) · **verification coverage** — the registered quality suite checked against the actual stack: a GUI stack with no UI-automation row, or a runnable artifact with no test row, is a finding naming the concrete tools to wire; and — on the Operator's confirm, since it costs — **run the named verification scenario through the real integration layer** here (the expensive real-layer exercise deferred from per-change reviews lands at the audit cadence, where one run covers the batch). On an **OpenCode** project this real-layer exercise includes the **plugin-load probe**: boot a real `opencode` session, attempt a write the boundary should deny (e.g. into `.ai-dev/tooling/`), and confirm it is blocked with a `[ai-dev] …` message — the unit suite only proves the installer *registers* the plugin in `opencode.json`; that the platform actually *loads and fires* it is verifiable only here (the recurring fail-open class — a test proved import, the platform never loaded it: `src/adapter/install-plugin.test.mjs` header) · **version skew** — the installed stamp (`.ai-dev/VERSION`) vs the tooling's own (`.ai-dev/tooling/VERSION`; compare via a script or child-process read — the tooling dir is agent-read-denied): a mismatch is a tooling bump without an installer re-run ⇒ point at `.ai-dev/procedures/upgrade.md` · **maintainability / module size** — sweep the tree for files past the stack's size threshold (the per-diff Reviewer sees only the diff, so an absolute-size sweep is the audit's to own): each oversized or incohesive module is a finding, and the dimension hands back a **decomposition worklist** (`.ai-dev/procedures/decompose.md`) — the files to split, by cohesion not line count · no duplication or one-home break.
 3. Dispatch every finding — each becomes a fix through the loop or a backlog item (`## Backlog` — file or forge); Operator sets priority. Never sit on a finding silently.
 
 **Run-note** at `.ai-dev/audit/<slug>.md` — transient, deleted once findings are dispatched.
 
-## Decompose
-
-`decompose` brings an oversized or incohesive file into order **without changing its behaviour** — it splits one file into cohesive single-home modules, never rewrites what it does. A side-tool, not a beat; like doc-bootstrap it frames work that itself runs through the normal loop (Builder, fresh Reviewer, Operator merge). `[persona]`.
-
-**When it fires:**
-
-- **Explicit** — the Operator asks to decompose a named file.
-- **Audit follow-up** — the audit's maintainability dimension (`## Audit` step 2) flags oversized modules and hands back a decomposition worklist; each entry is offered as a decompose.
-- **Offered** — when the Reviewer's per-file size finding or the Builder's architect-fold over-threshold offer surfaces a file past the stack's size threshold.
-
-**One pass:**
-
-1. **Net first** — a decompose is behaviour-preserving, so a behaviour net precedes any split. Assess the target's coverage: thin-covered **code** ⇒ the Builder writes **characterization tests capturing current behaviour FIRST**, before a line moves (a decompose with no behaviour net is forbidden). A target a unit test cannot reach (prose, a declarative artifact) ⇒ name in the plan the preservation evidence the Reviewer will check instead (a drift guard, a neutral-prose check, a semantic read-through) — the `deferred: <reason>` escape, never silence.
-2. **Seams** — identify the file's distinct responsibilities; the split follows them, never an arbitrary line count.
-3. **Split** — each responsibility moves to one cohesive module; the plan asserts **no behaviour change**, and the behaviour net stays green across the move.
-4. **Review** — a fresh Reviewer confirms behaviour preserved (the net ran green), the split is cohesive (responsibility-aligned, not line-cut), and no new duplication entered (each fact still one home).
-5. **Big file ⇒ multi-PR** — a large target decomposes as a worklist, each split its own behaviour-preserving PR through the loop, never one unreviewable mega-diff.
-
-**Run-note** at `.ai-dev/decompose/<slug>.md` — transient, deleted at close; the durable record is the split commits + CHANGELOG.
-
-## Upgrade
-
-`upgrade` executes the protocol's per-version migration notes after a tooling bump. The mechanical half is the installer's: it stamps `.ai-dev/VERSION` on every run and, on a version change, writes the transient marker `.ai-dev/UPGRADING.md` and lays the notes at `.ai-dev/upgrades.md`. Noticing, offering, executing, and deleting are `[persona]`. Side-tool, not a beat.
-
-**When it fires:** on the understand beat when `.ai-dev/UPGRADING.md` exists ⇒ a short declinable offer ("protocol upgraded X → Y — run the migration check?"); declined ⇒ the marker stays and the offer re-fires next session. Explicit on the Operator's ask.
-
-**One pass:** read the marker + the `(old, new]` sections of `.ai-dev/upgrades.md`; execute the applicable notes through the normal loop — a migration is a feature (fixup-grade for a mechanical rename, the full loop where docs need redrafting); nothing applicable ⇒ say so. Delete the marker **LAST**, after the migration ships; record the upgrade in the state pointer.
-
-## Downstream feedback
-
-`downstream feedback` is the protocol's two-way problem channel: a downstream session **emits** a self-report when the protocol itself fails it; the upstream session **intakes** and triages. Side-tool. `[persona]`. Design rationale: `docs/decisions/feedback-loop.md`.
-
-**Emitting — you are the downstream session and the protocol failed you** (fired from `## When something is off`: a deny blocking legitimate work, a gap, a gate you cannot satisfy honestly, instructions that contradict each other):
-
-1. Write `.ai-dev/feedback/<slug>.md` **immediately, while the failure context is still in view** — through your own eyes: what was asked (one line) · what the protocol/instruction told you to do (cite file/rule) · the exact step where it broke · **your context at that moment** — what you had read, what was missing, which two things contradicted, what you guessed · what you did instead (stopped / asked / worked around) · the cost (blocked work / wrong result / confusion). Honesty: this is a SYMPTOM report by the model that just failed — it may itself be confused; never present it as diagnosis.
-2. Tell the Operator it exists. Before any send: **leak-sweep the draft** — secrets and tokens, credentialed URLs, internal paths, project/product names, personal data, business content; strip or redact each, the issue carries the **protocol-level symptom only**. Then **show the Operator the exact title and body that will be published** (verbatim, with a translation relay where the chat language differs) and wait for their explicit OK on that shown text — never a paraphrase, never silent. Only then file it — **always with the explicit repo flag**: `gh issue create --repo wirenboard/ai-pm-protocol` (or whatever upstream the tooling came from): a bare `gh issue create` inside a downstream checkout defaults to the DOWNSTREAM's own tracker and publishes the report to the wrong, possibly public, place. An issue is public and effectively permanent. Anything swept out stays in the local file only. No `gh`, no network, or a declined OK ⇒ the Operator carries the file by hand.
-3. The local file is transient — delete once carried or filed.
-
-**Intake — you are the upstream session** (the Operator pastes a report, or points at a filed issue):
-
-1. Read it; do NOT echo it back verbatim. Map it to the protocol's structure: owning file, the invariant or rule it touches, the failure class (honesty over-claim, mechanical gap, unclear procedure, missing coverage).
-2. Dedup against the backlog (`## Backlog` — file or forge) — if the substance is already there, add the downstream signal as a note on the existing item (one home — invariant 6).
-3. If new: draft a compact backlog entry — the **protocol-level finding**, not raw downstream content — and record it through `## Backlog` (a `file`-backlog edit, or a forge issue under that section's outward-facing discipline). Confirm with the Operator before it lands — never silent.
-4. **Privacy:** what lands in the backlog or issue is the protocol-mapped finding; raw downstream content is not committed unless the Operator explicitly OKs it. The boundary holds both ways: this session never reads into a downstream repo (project-boundary deny).
-
 ## Backlog
 
-The **one home** for *where a backlog item lives and how I record/read it* — every backlog reference elsewhere (`## Your seat` "you author only", `## Audit` finding-dispatch, `## 8D` D7, `## Downstream feedback` dedup/intake) routes here, never restates the logic. The neutral act is *record / read a backlog item*; the realisation is the `collaboration.backlog` adapter point (`PROTOCOL.md` `## Project config`; the why: `docs/decisions/multi-user-mode.md` §2). `[persona]`.
+The **one home** for *where a backlog item lives and how I record/read it* — every backlog reference elsewhere (`## Your seat` "you author only", `## Audit` finding-dispatch, `.ai-dev/procedures/8d.md` D7, `.ai-dev/procedures/downstream-feedback.md` dedup/intake) routes here, never restates the logic. The neutral act is *record / read a backlog item*; the realisation is the `collaboration.backlog` adapter point (`PROTOCOL.md` `## Project config`; the why: `docs/decisions/multi-user-mode.md` §2). `[persona]`.
 
 - **Resolve once.** `collaboration.backlog` (absent/unrecognised ⇒ `file`):
   - `file` (default) ⇒ edit `.ai-dev/backlog.md` — today's behaviour, byte-for-byte. Done.
   - `forge` ⇒ items live as forge **issues**. Resolve `collaboration.forge` (`github|gitlab|gitea|auto`) and read the matching verb from `src/adapter/forge-map.json` (the one home for each forge's issue CLI — persona-read, no engine loads it). `auto` ⇒ detect from the `origin` host (github.com/gitlab.com); a self-hosted host is not auto-resolvable ⇒ confirm the forge with the Operator.
 - **Fail safe to `file`.** Anything unresolved — no forge detected, the forge CLI absent, no network — ⇒ stay on `.ai-dev/backlog.md` and say so; **never silently lose a backlog item** to a forge call that cannot land.
 - **`file → forge` migration** (Operator decision, one-time on a project flipping to `forge`): export the **open** `.ai-dev/backlog.md` items to forge issues (each through the create verb), then **empty the file to a short marker** pointing at the forge ("tickets now live in the forge — see issues"). No two-way sync; the forge becomes the single home (invariant 6).
-- **Creating a forge issue is outward-facing.** It crosses local → a possibly-public tracker, so it carries the **same discipline as `## Downstream feedback`**: announce + leak-sweep the title/body, show the Operator the exact text, file only on their OK, always with the explicit `--repo`/host target — point at that section's steps, do not restate them. **Pass the body via `--body-file -` (stdin), never an inline `--body` carrying interpolated content** — shell-metachar safety, and the form `forge-map.json` already names as the non-interactive path. Editing `.ai-dev/backlog.md` (the `file` case) is local and needs none of this.
+- **Creating a forge issue is outward-facing.** It crosses local → a possibly-public tracker, so it carries the **same discipline as `.ai-dev/procedures/downstream-feedback.md`**: announce + leak-sweep the title/body, show the Operator the exact text, file only on their OK, always with the explicit `--repo`/host target — point at that section's steps, do not restate them. **Pass the body via `--body-file -` (stdin), never an inline `--body` carrying interpolated content** — shell-metachar safety, and the form `forge-map.json` already names as the non-interactive path. Editing `.ai-dev/backlog.md` (the `file` case) is local and needs none of this.
+
+## Side-tools
+
+These situational tools fire occasionally — once per project, on a failure, or on the Operator's ask — not on every loop. Each keeps its full procedure in `.ai-dev/procedures/<name>.md`; the trigger lives here, the body is read on demand (mirroring the parallel-features pointer in `## Your seat`). Where a tool is "Not a side-tool — runs through the normal loop", its procedure file says so; the read-on-demand pointer is the same.
+
+- **doc bootstrap** — fills the system canon (`docs/architecture.md` + contracts) of an existing project from its tree; offered at onboarding, lazily while the architecture doc is absent or still the template, or on ask. Read `.ai-dev/procedures/doc-bootstrap.md`.
+- **project inception** — records a greenfield's day-zero decisions (stack, ops, license) into a seeded `docs/architecture.md`; offered at onboarding, lazily on an empty tree, or on ask. Read `.ai-dev/procedures/project-inception.md`.
+- **threat discovery** — deepens the threat sketch into `docs/threat-model.md`; offered when a sketch finds real users/data, lazily on a security-relevant feature, or on ask. Read `.ai-dev/procedures/threat-discovery.md`.
+- **research** — answers a question with sourced evidence into `docs/decisions/<topic>.md`; offered when a plan or dialog hits an unknown the canon cannot answer, or on ask. Read `.ai-dev/procedures/research.md`.
+- **elicitation** — stress-tests a draft by changing the angle of inquiry; offered (depth choice first, light default) at a decision point — a brief section, a feature plan, a captured idea. Read `.ai-dev/procedures/elicitation.md`.
+- **8D** — drives a failure past a quick patch to root cause and systemic prevention; offered on a bug/incident or a fix-loop ceiling, or on ask. Read `.ai-dev/procedures/8d.md`.
+- **decompose** — behaviour-preserving split of an oversized/incohesive file into one-home modules; offered on a size finding or an audit worklist, or on ask. Read `.ai-dev/procedures/decompose.md`.
+- **upgrade** — executes the per-version migration notes after a tooling bump; fires on the understand beat when `.ai-dev/UPGRADING.md` exists, or on ask. Read `.ai-dev/procedures/upgrade.md`.
+- **downstream feedback** — the two-way protocol-problem channel: emit a self-report when the protocol fails you; intake + triage an Operator-relayed one. Read `.ai-dev/procedures/downstream-feedback.md`.
 
 ## When something is off
 
@@ -378,4 +235,4 @@ The **one home** for *where a backlog item lives and how I record/read it* — e
 - A role returns **BLOCKED**, naming what it is missing → a failed gate's sibling: fix the named blocker when it is yours to fix (a wrong path, a missing file), else stop and report to the Operator. The retry and ceiling bounds here apply unchanged; never substitute the deliverable.
 - **Any repeated-failed-attempt loop** (a review finding, a debugging experiment, a deploy retry) → 2–3 attempts is the ceiling — on a live remote target, two failed experiments: stop, record where it stands (the plan's progress note + the state pointer), and **escalate to the Operator** with a declinable 8D offer (repeated failed fixes are the symptom-chasing signal). Never grind a fourth attempt at the same wall. The ceiling counts the **user-visible / Operator-reported symptom**, not per-patch local success: N distinct fixes that each change something yet leave the Operator reporting the **same** failure **is** this loop — stop, trace the full chain before the next patch, offer the declinable 8D — even when each patch "worked" locally. The **succeeding** fix-after-fix firefight that never reaches this ceiling is only the one where each fix closes a **distinct, Operator-confirmed** symptom (real forward progress) — for its compliant fast path (batch the fixes, one Reviewer over the cumulative diff, announce any cadence drop) see the route-first **firefight** rule above. On the symptom-repeat trip, the chain-trace before the next patch is the Builder's trace-before-patch discipline (`builder.md` `## Build`); building directly on `solo`/`lite`, you hold it yourself.
 - One finding **survives two Builder↔Reviewer rounds** → escalate it to the Operator as a **judgment call** — frame the trade-off, recommend one option. Never spin up a third round.
-- A deny **blocks legitimate work**, or the protocol itself has a **gap** → emit the self-report (`## Downstream feedback`, the emitting half) and stop. Never route around the enforcer, and never edit it in place.
+- A deny **blocks legitimate work**, or the protocol itself has a **gap** → emit the self-report (`.ai-dev/procedures/downstream-feedback.md`, the emitting half) and stop. Never route around the enforcer, and never edit it in place.

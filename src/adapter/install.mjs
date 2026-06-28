@@ -128,7 +128,7 @@ function readPriorVersion(target) {
 // the session can read it). On a detected version CHANGE additionally write the
 // transient handoff marker .ai-dev/UPGRADING.md and print the restart notice — an
 // installer cannot restart a session; the print is the whole ask. The marker is the
-// session's to consume and delete (orchestrator `## Upgrade`); a same-version re-run
+// session's to consume and delete (`.ai-dev/procedures/upgrade.md`); a same-version re-run
 // never touches it, so idempotence holds.
 function stampVersion(target, version, prior) {
   fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
@@ -147,7 +147,7 @@ function stampVersion(target, version, prior) {
     markerPath,
     `# Protocol upgrade pending\n\nUpgraded ${prior} → ${version} on ${date}.\n` +
       `Next session: read the \`(${prior}, ${version}]\` sections of \`.ai-dev/upgrades.md\` and run the upgrade check ` +
-      "(the orchestrator's `## Upgrade`); the check deletes this marker last.\n",
+      "(`.ai-dev/procedures/upgrade.md`); the check deletes this marker last.\n",
   );
   console.log(`\n⚠ Protocol upgraded ${prior} → ${version} — RESTART YOUR SESSION.`);
   console.log("  The next session will offer the migration check (.ai-dev/UPGRADING.md → .ai-dev/upgrades.md).");

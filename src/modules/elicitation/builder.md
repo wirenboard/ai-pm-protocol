@@ -5,7 +5,7 @@ direction-setting change carries one **angle-check round** before it goes to the
 Operator: pick 1–2 techniques from the catalog (`src/modules/elicitation/catalog.md`)
 that fit the draft, apply them, and fold what they surface into the plan as
 amendments or named gaps. This is the cheap version of the orchestrator's
-interactive `## Elicitation` offer — run inline when YOU draft the plan, so the
+interactive elicitation offer (`.ai-dev/procedures/elicitation.md`) — run inline when YOU draft the plan, so the
 Operator reviews a stress-tested draft, not a first take. Proportional: a
 fixup-grade change gets none. `[persona]`: sharpens the draft, denies nothing.
 

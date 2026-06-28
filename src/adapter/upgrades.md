@@ -1,6 +1,6 @@
 # Protocol upgrade notes — per-version migrations
 
-The one home of "what to do after the protocol version bumps". The installer lays this file down at `.ai-dev/upgrades.md` on **every** run (always the new version's copy); the session's upgrade check (`src/agents/orchestrator.md` `## Upgrade`) reads the sections in the `(old, new]` range and executes the applicable steps through the loop. A version with no section here needs nothing beyond the installer re-run itself — the re-run's idempotence and never-clobber guarantees are the whole upgrade (`INSTALL.md` `## Upgrade`).
+The one home of "what to do after the protocol version bumps". The installer lays this file down at `.ai-dev/upgrades.md` on **every** run (always the new version's copy); the session's upgrade check (`src/agents/procedures/upgrade.md`) reads the sections in the `(old, new]` range and executes the applicable steps through the loop. A version with no section here needs nothing beyond the installer re-run itself — the re-run's idempotence and never-clobber guarantees are the whole upgrade (`INSTALL.md` `## Upgrade`).
 
 **Downgrades are unsupported.** A version-pinned re-run (`npx github:wirenboard/ai-pm-protocol#v<tag> <target>`) converges the vendored files back, but no downgrade notes exist — a MAJOR downgrade is the Operator's own risk.
 
@@ -28,7 +28,7 @@ After the re-run, rename these in your project by hand (the installer cannot ren
 
 ## Old-protocol migration (pre-5.0)
 
-A downstream running a **prior protocol version** (pre-5.0, when the docs were `WORKFLOW.md`, agent roster `pm-*`, state dir `.ai-pm/`) migrates mechanically then runs doc bootstrap in old-protocol source mode (`src/agents/orchestrator.md` `## Doc bootstrap`).
+A downstream running a **prior protocol version** (pre-5.0, when the docs were `WORKFLOW.md`, agent roster `pm-*`, state dir `.ai-pm/`) migrates mechanically then runs doc bootstrap in old-protocol source mode (`src/agents/procedures/doc-bootstrap.md`).
 
 **Mechanical steps:**
 
