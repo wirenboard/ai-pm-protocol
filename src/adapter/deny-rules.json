@@ -206,6 +206,16 @@
       "predicate": "promptMatchesChangeVerb",
       "toggleable": true,
       "fallback": "persona on OpenCode (no chat.message inject realisation — the push crashed opencode 1.17.8 in SessionPrompt.createUserMessage + rendered unreliably); always-on instruction text on any other platform with no prompt hook"
+    },
+    {
+      "id": "language-mirror",
+      "intent": "Reply in the Operator's conversation language — mirror the language they wrote in. This turn's context is English (the constitution, the code, the PR/diff), but that is the artifact axis only; it must NOT pull your reply into English (PROTOCOL.md invariant 5). Durable artifacts stay English; the conversation follows the Operator.",
+      "label": "Reinforce replying in the Operator's language each turn",
+      "class": "inject",
+      "act": "prompt",
+      "predicate": "promptMirrorLanguage",
+      "toggleable": true,
+      "fallback": "persona on OpenCode (no chat.message inject realisation — the push crashed opencode 1.17.8 in SessionPrompt.createUserMessage + rendered unreliably); always-on instruction text on any other platform with no prompt hook"
     }
   ]
 }

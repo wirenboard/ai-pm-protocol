@@ -60,7 +60,7 @@ So every protection is either *mechanical* (a rule in the engine) or *persona* (
 
 The rules are **data**. Each row in `deny-rules.json` carries an intent, a class, which neutral act it watches, and the name of a **predicate** — a function in `engine.mjs` that decides. Classes: `deny` (block) · `ask` (confirm) · `inject` (add context, don't block).
 
-To see every rule, read `deny-rules.json`; to see how one decides, read its predicate in `engine.mjs`. The engine returns the first `deny`, else the first `ask`, else an `inject`, else `allow`.
+To see every rule, read `deny-rules.json`; to see how one decides, read its predicate in `engine.mjs`. The engine returns the first `deny`, else — for a prompt — every matching `inject`'s reason joined into one note (so an always-on nudge and a conditional one aggregate, never suppress each other), else the first `ask`, else `allow`.
 
 Two wrinkles are the only non-obvious part, and both are **platform-capability** divergences — recorded per rule, never silent:
 

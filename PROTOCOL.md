@@ -133,6 +133,7 @@ An ask/inject guard marked `toggleable` may be individually disabled via `.ai-de
 - On a repo-change request: a reminder to route the work to the owning role and follow the loop.
 - On a work request to an **unconfigured** project: a reminder to run `setup` first.
 - On a feature request to a configured project with **no product brief**: a short, declinable offer to run product discovery first.
+- On **every** submitted prompt: a reminder to reply in the Operator's conversation language (invariant 5) — the turn's English artifacts must not pull the reply into English. Several injects on one turn aggregate into one note; this always-on reminder never suppresses a conditional one.
 
 **Persona-only** (no deny is possible — these are reasoning acts):
 

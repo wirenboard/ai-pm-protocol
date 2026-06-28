@@ -89,7 +89,11 @@ console.log("BAD REGEX PATTERN (inject predicates fail toward no-inject, never t
   try { v = evaluate({ act: "prompt", root, prompt: "please implement the export feature" }, bad); }
   catch { threw = true; }
   check("bad-regex:no-throw", threw, false);
-  check("bad-regex:allows", v && v.verdict, "allow");
+  // The CONDITIONAL injects compile the bad pattern via safeTest ⇒ silenced (no setup/route
+  // nudge). The always-on language-mirror inject compiles NO pattern, so it still fires:
+  // verdict is inject with ruleId language-mirror, proving the bad regex was swallowed (no
+  // throw) AND the conditional nudge it would have driven is gone.
+  check("bad-regex:conditional-silenced", v && v.ruleId, "language-mirror");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
@@ -102,9 +106,11 @@ console.log("REGRESSION (valid pattern still injects):");
   const v = evaluate({ act: "prompt", root, prompt: "please implement the export feature" }, config);
   check("valid-pattern:injects", v.verdict, "inject");
   check("valid-pattern:ruleId", v.ruleId, "no-config-run-setup");
-  // A non-change prompt still does not inject.
+  // A non-change prompt no longer allows: the always-on language-mirror inject fires on
+  // EVERY prompt (the conditional setup nudge stays silent — "good morning" is no change verb).
   const n = evaluate({ act: "prompt", root, prompt: "good morning" }, config);
-  check("valid-pattern:non-change-allows", n.verdict, "allow");
+  check("valid-pattern:non-change-injects-mirror", n.verdict, "inject");
+  check("valid-pattern:non-change-ruleId", n.ruleId, "language-mirror");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
