@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.27.0] — 2026-06-28
+
+### Added
+
+- **Mandated deployment/ops doc + a strict deploy-per-doc discipline + an audit dimension that enforces it** (`docs/decisions/deployment-discipline.md`). Motivated by a real production incident: with no deployment doc mandated, the orchestrator improvised a deploy and took down prod, deploy knowledge having scattered into the transient resume pointer. Now: the **understand beat reads `docs/deployment.md`** where a project has a deploy/production surface (parallel to the threat model — conditional, a no-deploy library/docs project is not burdened); a new **`src/templates/deployment.md`** gives the shape (deploy procedure · environments · rollback · secret *locations* · failure visibility · post-deploy verification · ownership); the **strict discipline** (`src/agents/procedures/deployment.md`, on-demand) requires a deploy/release/ops action to follow `docs/deployment.md` step by step — **doc absent or stale ⇒ STOP and create/confirm with the Operator first, never improvise the deploy** — and deploy/ops knowledge lands in the doc, **never** the resume pointer; **project inception + doc bootstrap** seed/fill it; and a new **`## Audit` dimension** checks the deployment doc exists + is current AND that runbook knowledge isn't journaled into the pointer (the self-enforcing mechanism, per the Operator's ask). `[persona]` + the audit dimension — no mechanical deploy-gate is claimed (detecting "a deploy" across ssh / release / CI is not reliably mechanical; the decision doc says so). Thin core: `PROTOCOL.md` gains one beat-1 clause, no new section.
+
+---
+
 ## [5.26.5] — 2026-06-28
 
 ### Changed
