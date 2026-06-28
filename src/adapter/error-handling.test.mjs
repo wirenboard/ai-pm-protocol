@@ -46,8 +46,13 @@ console.log("MALFORMED REGISTRY (shim fails open — exit 0, allow, no crash):")
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-errh-"));
   const adapter = path.join(tmp, "adapter");
   fs.mkdirSync(path.join(adapter, "claude"), { recursive: true });
-  // Vendor the engine + shim verbatim; replace deny-rules.json with broken JSON.
-  fs.copyFileSync(path.join(HERE, "engine.mjs"), path.join(adapter, "engine.mjs"));
+  // Vendor the engine + its sibling modules + shim verbatim; replace deny-rules.json
+  // with broken JSON. The engine entry imports the engine-*.mjs helper modules, so
+  // every one must land in the temp adapter or the import chain breaks before the
+  // fail-open path under test is reached.
+  for (const f of ["engine.mjs", "engine-paths.mjs", "engine-bash.mjs", "engine-git.mjs", "engine-config.mjs", "engine-components.mjs"]) {
+    fs.copyFileSync(path.join(HERE, f), path.join(adapter, f));
+  }
   fs.copyFileSync(SHIM, path.join(adapter, "claude", "shim.mjs"));
   fs.writeFileSync(path.join(adapter, "deny-rules.json"), "{ this is : not valid json ][");
   const brokenShim = path.join(adapter, "claude", "shim.mjs");
