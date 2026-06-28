@@ -53,7 +53,7 @@ export function install(outDir, config) {
     // FLOOR body + the enabled capability modules' fragments, composed at the marker
     // by the SHARED assembler (one home with the Claude shim; never copied here).
     const floor = fs.readFileSync(path.join(ROOT, "src", "agents", `${role}.md`), "utf8").trimStart();
-    const body = composeBody(ROOT, floor, role, registry, config);
+    const body = composeBody(ROOT, floor, role, registry, config, "opencode");
     // OpenCode never bakes a model line (resolveModelPin always null — the runtime
     // ignores subagent model: pins; see its comment). Kept as a call so the no-bake
     // contract has one named home the test pins.

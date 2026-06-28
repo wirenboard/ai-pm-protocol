@@ -36,7 +36,7 @@ export function install(outDir, config) {
     if (!agentId) throw new Error(`.ai-dev/config.json roles.${role}.agent is missing`);
     const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "claude", "agents", `${role}.fm`), "utf8").trim();
     const floor = fs.readFileSync(path.join(ROOT, "src", "agents", `${role}.md`), "utf8").trimStart();
-    const body = composeBody(ROOT, floor, role, registry, config);
+    const body = composeBody(ROOT, floor, role, registry, config, "claude");
     const out = `---\nname: ${agentId}\n${fm}\n---\n\n${body}`;
     const outPath = path.join(outDir, `${agentId}.md`);
     fs.writeFileSync(outPath, out);

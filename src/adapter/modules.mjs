@@ -124,6 +124,44 @@ export function effectiveToggle(mod, config) {
   return { ...base };
 }
 
+// ── platform filtering ───────────────────────────────────────────────────────
+// A single-platform project re-injects the role bodies every turn; content that is
+// operating guidance for the OTHER adapter is pure noise there. The assembler strips
+// it at assembly: a block delimited by own-line markers
+//   <!-- platform:opencode -->  …OpenCode-only guidance…  <!-- /platform:opencode -->
+// (and `platform:claude`) is DROPPED when assembling for a different recognised
+// adapter, KEPT (markers stripped) for its own, and untagged/neutral content always
+// survives. One home for the syntax + rule; each shim passes its own platform literal.
+//
+// FAIL-SAFE (never a silent drop — the strict side is KEEP):
+//   • an unknown/missing assembling platform ⇒ NO filtering at all (text returned
+//     as-is) — we drop only on a CONFIDENT other-platform match;
+//   • a block whose tag is not a recognised adapter (a typo) ⇒ never dropped, kept
+//     everywhere. Both directions fail toward keeping content.
+export const PLATFORMS = new Set(["claude", "opencode"]);
+
+// Match a tagged block: own-line opening marker, lazy inner, matching own-line closing
+// marker (the \1 backreference pins open==close, so an unbalanced or foreign comment is
+// left untouched). Leading horizontal whitespace (indentation) on a marker line is
+// consumed; the inner content keeps its own newlines.
+const PLATFORM_BLOCK_RE =
+  /[^\S\n]*<!--\s*platform:([a-z0-9-]+)\s*-->[^\S\n]*\n([\s\S]*?)[^\S\n]*<!--\s*\/platform:\1\s*-->[^\S\n]*(?:\n|$)/g;
+
+export function filterPlatform(text, platform) {
+  // Unknown/missing assembling platform ⇒ no filtering (fail-safe keep-all, markers intact).
+  if (!PLATFORMS.has(platform)) return text;
+  let changed = false;
+  const out = text.replace(PLATFORM_BLOCK_RE, (_full, tag, inner) => {
+    changed = true;
+    // Drop ONLY on a confident other-platform match (both sides recognised, differ).
+    if (PLATFORMS.has(tag) && tag !== platform) return "";
+    // Own platform (or an unrecognised tag): keep content, strip the marker lines.
+    return inner;
+  });
+  // Collapse a blank-line run a dropped block may have left between two kept lines.
+  return changed ? out.replace(/\n{3,}/g, "\n\n") : out;
+}
+
 // ── compose ─────────────────────────────────────────────────────────────────
 export const MARKER = "<!-- ai-dev:modules -->";
 
@@ -169,22 +207,29 @@ function fragmentFor(root, mod, role, config) {
   return applyDepth(raw, effectiveToggle(mod, config).depth);
 }
 
-// Compose a role's FLOOR body with the enabled modules' fragments for that role.
+// Compose a role's FLOOR body with the enabled modules' fragments for that role,
+// then strip any block tagged for a DIFFERENT platform than `platform` (filterPlatform).
 // Replaces the single MARKER with the fragments (registry order, blank-line
 // separated). A floor body WITHOUT the marker takes no fragments — a role a
-// module does not target simply omits the marker and is returned unchanged.
-export function composeBody(root, floorBody, role, registry, config) {
+// module does not target simply omits the marker. `platform` is the ASSEMBLING
+// adapter's name, passed by each install-agents shim; missing/unknown ⇒ no platform
+// filtering (fail-safe keep-all — filterPlatform).
+export function composeBody(root, floorBody, role, registry, config, platform) {
   const fragments = [];
   for (const { mod } of enabledModules(registry, config)) {
     const text = fragmentFor(root, mod, role, config);
     if (text) fragments.push(text);
   }
-  if (!floorBody.includes(MARKER)) return floorBody; // no insertion point ⇒ no modules
-  const block = fragments.join("\n\n");
-  // Replace the marker AND its trailing newline. A non-empty block lands as its own
-  // section followed by a blank line, so the next floor heading does not collide with
-  // the fragment's last line; an empty block (no enabled module targets this role)
-  // collapses the marker to nothing, leaving the floor's own spacing intact.
-  const markerRe = new RegExp(MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\n?");
-  return floorBody.replace(markerRe, block ? block + "\n\n" : "");
+  let body = floorBody;
+  if (floorBody.includes(MARKER)) {
+    const block = fragments.join("\n\n");
+    // Replace the marker AND its trailing newline. A non-empty block lands as its own
+    // section followed by a blank line, so the next floor heading does not collide with
+    // the fragment's last line; an empty block (no enabled module targets this role)
+    // collapses the marker to nothing, leaving the floor's own spacing intact.
+    const markerRe = new RegExp(MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\n?");
+    body = floorBody.replace(markerRe, block ? block + "\n\n" : "");
+  }
+  // Strip inactive-platform blocks last, so it covers both floor and composed fragments.
+  return filterPlatform(body, platform);
 }

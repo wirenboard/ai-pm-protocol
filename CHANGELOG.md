@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.28.0] — 2026-06-28
+
+### Added
+
+- **Adapter-filtering of per-turn agent instructions — the mechanism + tag foundation (feature #3, from downstream feedback).** A single-platform project re-injects the role bodies every turn; content that is purely the INACTIVE platform's operating guidance is pure context noise. New: a `platform:<id>` block tag (`<!-- platform:opencode -->…<!-- /platform:opencode -->`) and a `filterPlatform` step in the shared assembler (`src/adapter/modules.mjs` `composeBody`, both install-agents shims thread their platform literal) that **drops a block tagged for a different recognised adapter, keeps the active platform's blocks (markers stripped), and always keeps neutral content**. **Fail-safe is KEEP** — an unknown/missing platform or a typo'd tag drops nothing (under-filter, never over-filter). Tagging is **conservative** — only the clearly pure-OpenCode `task`-runtime model-pin caveat is tagged so far. **Honesty / scope:** this filters the *assembled* agents (the OpenCode orchestrator + both platforms' builder/reviewer); the **Claude orchestrator loads raw via `CLAUDE.md @import`, so it is not filtered yet** — delivering the Claude-side noise reduction needs a follow-up (load a filtered Claude-orchestrator artifact + repoint the import), a structural change to the load realisation **surfaced for the Operator**, not taken silently. `docs/architecture.md` documents the syntax + rule + fail-safe + this scope honestly.
+
+---
+
 ## [5.27.3] — 2026-06-28
 
 ### Added
