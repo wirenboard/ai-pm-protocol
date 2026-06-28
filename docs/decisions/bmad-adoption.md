@@ -26,7 +26,7 @@ The three mechanics behind the Operator's experience:
 - **`elicitation` capability module** — a compact ~12-technique catalog
   (`src/modules/elicitation/catalog.md`, one home; the persona panel is a catalog
   row, not a separate mechanic) + a Builder plan-beat fragment; the interactive
-  offer is the orchestrator's `## Elicitation`. Hard rules from the Operator:
+  offer is `src/agents/procedures/elicitation.md`. Hard rules from the Operator:
   depth choice at entry (light default / deeper / skip), one technique per round,
   never drag the brief out, fires for features and idea capture — not only new
   products. This closes the "capture-time elicitation" backlog item.

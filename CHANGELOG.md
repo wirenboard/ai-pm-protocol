@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.26.5] — 2026-06-28
+
+### Changed
+
+- **`orchestrator.md` decomposed 367 → 223 lines (audit LOW-2) — behaviour-preserving.** The 9 situational side-tools (doc-bootstrap, project-inception, threat-discovery, upgrade, 8D, research, decompose, downstream-feedback, elicitation) moved **verbatim** out of the always-loaded orchestrator floor into on-demand `src/agents/procedures/<name>.md` bodies (deployed to readable `.ai-dev/procedures/` twins by the 5.26.4 mechanism, byte-identical + install-drift-guarded). The floor keeps a one-line trigger per tool in a new `## Side-tools` block and the 9 loop-central sections. Every cross-reference was repointed by audience — runtime agent bodies → the readable `.ai-dev/procedures/` path, structural/dev/data files → the `src/agents/procedures/` source — with a clean grep proving no dangling `## <tool>` pointer survives. A fresh Reviewer diffed all 9 procedures against their old bodies (pure cross-reference-qualifier deltas, nothing dropped/reworded). Cuts the per-turn orchestrator context for the common case where a rare side-tool isn't needed, and brings the floor back toward "readable in one sitting" (the manifesto). No behaviour change; both quality beats green.
+
+---
+
 ## [5.26.4] — 2026-06-28
 
 ### Fixed

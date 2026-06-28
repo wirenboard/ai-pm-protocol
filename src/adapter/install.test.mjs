@@ -328,7 +328,7 @@ testPlatform("opencode", (target) => {
     check("[upgrade] marker written on a version-change re-run", fs.existsSync(markerPath));
     const marker = fs.existsSync(markerPath) ? fs.readFileSync(markerPath, "utf8") : "";
     check("[upgrade] marker names old → new", marker.includes("1.0.0") && marker.includes(PKG_VERSION));
-    check("[upgrade] marker points at the notes + the upgrade check", marker.includes(".ai-dev/upgrades.md") && marker.includes("## Upgrade"));
+    check("[upgrade] marker points at the notes + the upgrade check", marker.includes(".ai-dev/upgrades.md") && marker.includes(".ai-dev/procedures/upgrade.md"));
     check("[upgrade] stamp updated to the new version", fs.readFileSync(path.join(target, ".ai-dev", "VERSION"), "utf8").trim() === PKG_VERSION);
 
     // a chained bump with the marker still unconsumed keeps the ORIGIN version —

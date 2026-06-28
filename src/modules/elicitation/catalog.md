@@ -1,7 +1,7 @@
 # Elicitation technique catalog
 
 The one home for the protocol's elicitation techniques — the angle-changing prompts
-the orchestrator's `## Elicitation` offer draws from (and the Builder's plan-beat
+the interactive elicitation offer (`src/agents/procedures/elicitation.md`) draws from (and the Builder's plan-beat
 fragment on a `full` profile). Each technique is a one-round act: applied to the
 draft at hand, producing amendments or a conscious "considered, keep as is".
 Offer 3–5 that fit the content — never the whole list (the menu, not the catalog,
@@ -24,5 +24,5 @@ is what the Operator sees).
 | **Assistive-tech walk** | Walk the primary path as a keyboard-only or screen-reader user — where does the idea silently assume a mouse, a screen, perfect vision? (The capture-time half of accessibility; the review-time half is the ui-ux module's.) |
 
 Retention: this catalog is data, not procedure — the *when* and the depth-choice
-entry live in the orchestrator's `## Elicitation` (one home each). Extend by adding
+entry live in `src/agents/procedures/elicitation.md` (one home each). Extend by adding
 a row; a technique nobody picks in practice is a row to delete, not a ritual to keep.

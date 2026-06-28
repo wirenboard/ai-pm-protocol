@@ -32,7 +32,7 @@ export default [
       eqeqeq: ["error", "smart"],
       // Soft size surface — a file past ~800 lines WARNS, never errors: it
       // surfaces the file to the architect and points at `decompose`
-      // (orchestrator `## Decompose`); it is NOT a hard build block (the runner
+      // (`src/agents/procedures/decompose.md`); it is NOT a hard build block (the runner
       // runs `npx eslint .` without `--max-warnings 0`, so a warning stays
       // green). This is `## Setup` step 5's recommended size default, now eaten
       // by the repo that recommends it; remediation is a behaviour-preserving

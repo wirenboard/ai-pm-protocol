@@ -1,6 +1,6 @@
 # Threat model
 
-> The one home for **who attacks this product and what they can take** — seeded as a short sketch at inception or doc bootstrap, deepened by threat discovery (the orchestrator's `## Threat discovery`), kept current; a security-relevant feature plan cites the named actor / boundary / asset it touches.
+> The one home for **who attacks this product and what they can take** — seeded as a short sketch at inception or doc bootstrap, deepened by threat discovery (`src/agents/procedures/threat-discovery.md`), kept current; a security-relevant feature plan cites the named actor / boundary / asset it touches.
 >
 > Filled gather-first, conclude-last: record what the brief, the tree, and the Operator give; an unassessed axis is `[?]` — never an invented threat, never a graded answer. Current state only — supersede a changed assessment, don't accumulate. ~40–80 lines of normal prose. Secret *locations*, never values. The conclusion (§6) comes at the end.
 >

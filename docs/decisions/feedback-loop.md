@@ -2,7 +2,7 @@
 
 **Question:** how does a downstream project's experience feed back into this repo's protocol?
 
-**Answer:** a two-way channel (Operator decision, 2026-06-12 — supersedes the original Operator-paste-only design). The downstream session **emits** a self-report the moment the protocol fails it — `.ai-dev/feedback/<slug>.md`, the failure through its own eyes while the context is still in view — and, on the Operator's explicit OK, files it directly as a GitHub issue against the upstream repo. The upstream session **intakes** (a pasted report or a filed issue) and maps it to the protocol's structure: a compact entry in `.ai-dev/backlog.md` or an issue — the protocol finding, never raw downstream content. The procedure lives in orchestrator `## Downstream feedback` (both halves).
+**Answer:** a two-way channel (Operator decision, 2026-06-12 — supersedes the original Operator-paste-only design). The downstream session **emits** a self-report the moment the protocol fails it — `.ai-dev/feedback/<slug>.md`, the failure through its own eyes while the context is still in view — and, on the Operator's explicit OK, files it directly as a GitHub issue against the upstream repo. The upstream session **intakes** (a pasted report or a filed issue) and maps it to the protocol's structure: a compact entry in `.ai-dev/backlog.md` or an issue — the protocol finding, never raw downstream content. The procedure lives in `src/agents/procedures/downstream-feedback.md` (both halves).
 
 ## Design constraints resolved
 

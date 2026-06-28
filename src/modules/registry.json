@@ -227,7 +227,7 @@
     },
     {
       "id": "elicitation",
-      "for": "Angle-changing inquiry at decision points — a draft brief section, a feature plan, a captured idea — via a compact technique catalog (pre-mortem, inversion, user role-play, persona panel…); entry always offers a depth choice (light default / deeper / skip), one technique per round, never a block. The catalog and the Builder's plan-beat round live here; the interactive offer is the orchestrator's `## Elicitation`.",
+      "for": "Angle-changing inquiry at decision points — a draft brief section, a feature plan, a captured idea — via a compact technique catalog (pre-mortem, inversion, user role-play, persona panel…); entry always offers a depth choice (light default / deeper / skip), one technique per round, never a block. The catalog and the Builder's plan-beat round live here; the interactive offer is `src/agents/procedures/elicitation.md`.",
       "toggle": { "depth": "rich | light" },
       "defaults": {
         "code": { "depth": "light" },
