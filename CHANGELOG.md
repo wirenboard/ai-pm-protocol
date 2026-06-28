@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.24.0] — 2026-06-28
+
+### Added
+
+- **`team-collaboration` capability module (PR2 of 4) — the multi-user behavioural posture** (`docs/decisions/multi-user-mode.md`). A new toggleable module (`src/modules/team-collaboration/{builder,reviewer}.md` + registry row), **per-kind default OFF for every kind** (team mode is an explicit opt-in — the one registry-authored default-OFF path). Its fragments are **self-gated** on `collaboration.team: true`, so they are inert prose for a single-user project even if composed. The Builder fragment deepens the plan beat with conflict-avoidance for concurrent multi-author work — small atomic disjoint-surface PRs, sync from `main` before push, and **never blind-auto-resolve a conflict** (re-cut from `main` / escalate; a trivial version/CHANGELOG line may be re-applied and noted). The Reviewer fragment checks the change is scoped for concurrent work and that no conflict markers / blind-resolve evidence slipped into the diff. A minimal team-gated **sync-before-push + conflict-escalation** floor delta lands in `orchestrator.md ## Your seat` (one home, pointing at `PROTOCOL.md ## Git flow`'s stale-branch rule, not restating it), and `## Setup` enables the module when the Operator chooses team mode. `[persona]` — composed prompt content, blocks nothing mechanically. **This repo stays single-user (`team:false`), so the module does not compose — assembled Builder/Reviewer agents are byte-identical (drift guard green).** Inert until a project opts in; the backlog adapter (PR3) and ship-time PR-attach (PR4) are still deferred.
+
+---
+
 ## [5.23.3] — 2026-06-28
 
 ### Added
