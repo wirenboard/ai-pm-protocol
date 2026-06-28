@@ -24,6 +24,7 @@ the committed tree (2026-06-13). No web sources needed; everything is in-repo.
 | `.opencode/plugins/ai-dev.mjs` | `src/adapter/opencode/install-plugin.mjs` | **Yes** — byte-compare vs generator output (`src/adapter/install-plugin.test.mjs:42`; registry row `install-plugin`, `src/quality/tools.json:29`) |
 | `.opencode/agents/ai-dev.md`, `dev-builder.md`, `dev-reviewer.md` | `src/adapter/opencode/install-agents.mjs` | **None** — the 5.4.0→5.6.0 incident |
 | `.claude/agents/dev-builder.md`, `dev-reviewer.md` | `src/adapter/claude/install-agents.mjs` | **None** |
+| `.claude/ai-dev.md` (the orchestrator load surface — platform:claude-filtered, `@imported` by `CLAUDE.md`, NOT a spawnable subagent; added after this doc, when the Claude orchestrator stopped loading raw) | `src/adapter/claude/install-agents.mjs` (written to the agents dir's parent) | **Yes** — byte-compare vs a fresh `platform:claude` assembly (`install-drift.test.mjs`) |
 | `.claude/commands/dev-setup.md` | `src/adapter/claude/install-commands.mjs` | **None** |
 | `.opencode/commands/dev-setup.md` | `src/adapter/opencode/install-commands.mjs` | **None** |
 | `.claude/settings.json` | partial — hand-maintained dev-layout mirror of `src/adapter/claude/hooks.json` (shim path intentionally `src/adapter/...`, not the fragment's `.ai-dev/tooling/...`) | **None** — different class, see below |

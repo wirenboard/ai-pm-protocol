@@ -163,6 +163,14 @@ function testPlatform(platform, assertWiring) {
 
 testPlatform("claude", (target) => {
   check("[claude] agents assembled", fs.existsSync(path.join(target, ".claude", "agents", "dev-builder.md")) && fs.existsSync(path.join(target, ".claude", "agents", "dev-reviewer.md")));
+  // the orchestrator load surface lands OUTSIDE .claude/agents/ (it is the session's
+  // @imported instructions, not a spawnable subagent — a file in agents/ would auto-register).
+  check("[claude] orchestrator load surface assembled at .claude/ai-dev.md", fs.existsSync(path.join(target, ".claude", "ai-dev.md")));
+  check("[claude] orchestrator is NOT registered as a spawnable subagent", !fs.existsSync(path.join(target, ".claude", "agents", "ai-dev.md")));
+  // the surface is the platform:claude-FILTERED body — the inactive opencode caveat is gone.
+  const orch = fs.readFileSync(path.join(target, ".claude", "ai-dev.md"), "utf8");
+  check("[claude] orchestrator surface drops the platform:opencode block", !orch.includes("no cross-model reviewer is realisable") && !orch.includes("platform:opencode"));
+  check("[claude] orchestrator surface keeps the neutral floor", orch.includes("Read `.ai-dev/config.json` `roles` for the seat"));
   check("[claude] /dev-setup command assembled", fs.existsSync(path.join(target, ".claude", "commands", "dev-setup.md")));
   const settings = JSON.parse(fs.readFileSync(path.join(target, ".claude", "settings.json"), "utf8"));
   const cmds = (settings.hooks.PreToolUse || []).flatMap((g) => g.hooks.map((h) => h.command));
@@ -170,7 +178,9 @@ testPlatform("claude", (target) => {
   // idempotence of the hook merge: exactly one PreToolUse + one UserPromptSubmit group
   check("[claude] hook merge did not duplicate (one PreToolUse group)", settings.hooks.PreToolUse.length === 1);
   const claudeMd = fs.readFileSync(path.join(target, "CLAUDE.md"), "utf8");
-  check("[claude] CLAUDE.md imports the constitution", claudeMd.includes("@.ai-dev/PROTOCOL.md") && claudeMd.includes("@.ai-dev/tooling/src/agents/orchestrator.md"));
+  check("[claude] CLAUDE.md imports the constitution + the filtered orchestrator surface", claudeMd.includes("@.ai-dev/PROTOCOL.md") && claudeMd.includes("@.claude/ai-dev.md"));
+  // the raw orchestrator import is REPLACED, never left dangling beside the new one.
+  check("[claude] CLAUDE.md carries no stale raw-orchestrator import", !claudeMd.includes("@.ai-dev/tooling/src/agents/orchestrator.md") && !claudeMd.includes("@src/agents/orchestrator.md"));
   // import appears exactly once (idempotent line append)
   check("[claude] constitution import appears once", claudeMd.split("@.ai-dev/PROTOCOL.md").length - 1 === 1);
 });
@@ -460,8 +470,11 @@ testPlatform("opencode", (target) => {
     // dogfood claude: the tracked surfaces stay at their committed (source-form) bytes
     install(ROOT, "claude", { dogfood: true });
     check("[dogfood] CLAUDE.md unchanged (already source-form)", fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8") === before["CLAUDE.md"]);
-    check("[dogfood] CLAUDE.md imports the SOURCE constitution", before["CLAUDE.md"].includes("@PROTOCOL.md") && before["CLAUDE.md"].includes("@src/agents/orchestrator.md"));
+    check("[dogfood] CLAUDE.md imports the SOURCE constitution + the unified orchestrator surface", before["CLAUDE.md"].includes("@PROTOCOL.md") && before["CLAUDE.md"].includes("@.claude/ai-dev.md"));
     check("[dogfood] CLAUDE.md does NOT import the vendored layout", !before["CLAUDE.md"].includes("@.ai-dev/PROTOCOL.md"));
+    check("[dogfood] CLAUDE.md carries no stale raw-orchestrator import", !before["CLAUDE.md"].includes("@src/agents/orchestrator.md") && !before["CLAUDE.md"].includes("@.ai-dev/tooling/src/agents/orchestrator.md"));
+    // the dogfood orchestrator surface converges to its committed bytes (drift-guarded separately)
+    check("[dogfood] .claude/ai-dev.md present after dogfood install", fs.existsSync(path.join(ROOT, ".claude", "ai-dev.md")));
     const settings = fs.readFileSync(path.join(ROOT, ".claude", "settings.json"), "utf8");
     check("[dogfood] settings.json unchanged", settings === before[".claude/settings.json"]);
     check("[dogfood] hook command points at src/adapter/claude/shim.mjs", settings.includes("src/adapter/claude/shim.mjs") && !settings.includes(".ai-dev/tooling/src/adapter/claude/shim.mjs"));
@@ -512,7 +525,7 @@ testPlatform("opencode", (target) => {
   try { install(ROOT, "claude"); } catch { threw2 = true; }
   check("[dogfood] downstream-mode install against the source repo throws (no silent churn)", threw2);
   // assert nothing leaked: the source repo's committed surfaces are untouched
-  check("[dogfood] refused source-repo install left CLAUDE.md untouched", fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8").includes("@src/agents/orchestrator.md"));
+  check("[dogfood] refused source-repo install left CLAUDE.md untouched", fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8").includes("@.claude/ai-dev.md"));
 }
 
 // ── F3 pre-push quality hook: installs, never-clobbers, idempotent ───────────
