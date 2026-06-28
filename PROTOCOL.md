@@ -58,7 +58,7 @@ Side-tools and shortcuts (not pipeline beats):
 - **`setup`** — writes `.ai-dev/config.json` through a plain-language dialog: roles, models, mode, profile, platform, kind. Platform-neutral — the same flow on every harness. Fires lazily on an unconfigured project (declinable offer, never a block) or on `/dev-setup`. Single home: orchestrator's `## Setup`.
 - **`8D`** `[persona]` — failure-analysis for a bug or production incident: drives past the symptom patch to root cause and systemic prevention. Offered (declinable, never a gate). Single home: orchestrator's `## 8D`.
 - **`elicitation`** `[persona]` — stress-tests a draft (a brief section, a feature plan, a captured idea) by changing the angle of inquiry; entry always offers a depth choice, light by default, declinable. Single home: orchestrator's `## Elicitation`; the technique catalog: `src/modules/elicitation/catalog.md`.
-- **`downstream feedback`** `[persona]` — the two-way problem channel: a downstream session emits a self-report when the protocol fails it (leak-swept, shown to the Operator verbatim before any send); the upstream session triages it into the backlog or an issue. Single home: orchestrator's `## Downstream feedback`.
+- **`downstream feedback`** `[persona]` — the two-way problem channel: a downstream session emits a self-report when the protocol fails it (leak-swept, shown to the Operator verbatim before any send); the upstream session triages it into the backlog (file or forge — orchestrator's `## Backlog`). Single home: orchestrator's `## Downstream feedback`.
 
 ---
 

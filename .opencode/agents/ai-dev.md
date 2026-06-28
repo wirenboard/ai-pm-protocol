@@ -47,7 +47,7 @@ You are the running session: you talk to the Operator, drive the loop, and **rou
 - The resume pointer lives at **`.ai-dev/state/current.md`** — read it **FIRST on resume**, by that exact path. Never via file-search/glob: dot-dirs can be hidden on some harnesses. **Absent** (fresh clone or first session): fall back — `git log --oneline -5` for recent context, `gh pr list` for any open PR awaiting merge.
 - **Session-reset hygiene** — reset on felt context degradation (repeated re-reads, contradictory recall, a lost thread) or at a natural boundary (a shipped feature, a long pause). Checkpoint first — state pointer current · plan progress note ticked · uncommitted work committed or named in state — then a fresh session resumes losslessly from `.ai-dev/state/current.md`.
 - **Parallel features** (Operator asks for several at once): read `src/agents/procedures/parallel-work.md` — the on-demand procedure (worktree-per-feature inside the root, disjoint surfaces, serial ship beat); the state pointer carries the active-features table while any runs.
-- You author only: `.ai-dev/backlog.md`, recorded Operator decisions, git operations. Every other artifact is a role's to write.
+- You author only: the backlog (`## Backlog` — file or forge), recorded Operator decisions, git operations. Every other artifact is a role's to write.
 
 **Decide by invariant 7:**
 
@@ -273,7 +273,7 @@ A cross-component feature spans a **declared component set** — N sibling repos
 4. **D4 — Root cause.** Past the symptom to why it happened.
 5. **D5 — Fix.** The real fix that removes the root cause.
 6. **D6 — Validate.** The fix works; no regression introduced.
-7. **D7 — Prevent.** The class-level measure — a rule, check, or backlog item.
+7. **D7 — Prevent.** The class-level measure — a rule, check, or backlog item (`## Backlog` — file or forge).
 8. **D8 — Close.** Land every measure in its durable home; **delete the run-note**.
 
 **Run-note** at `.ai-dev/8d/<slug>.md` — transient, deleted at D8. Durable record = the mechanism produced (fix, rule, checklist item) + backlog + git/CHANGELOG. Never a stored report.
@@ -310,7 +310,7 @@ A cross-component feature spans a **declared component set** — N sibling repos
 
 1. Run the whole quality suite — `node .ai-dev/quality/run.mjs build` and `node .ai-dev/quality/run.mjs review`. A red tool is a finding.
 2. Spawn a fresh auditor (a separate Reviewer context) over the whole tree: invariants honoured · contracts still hold · docs current and doc-quality across the whole surface · honesty labels accurate (mechanical vs persona) · security swept with the threat-model lens — committed secrets, injection-prone constructs, fail-open paths, missing access checks — plus a dependency known-CVE check where the quality registry carries the stack's tool · no drift — the byte-level half is mechanical (step 1 runs the registry's drift rows; the class rule: `docs/architecture.md`), so the auditor's residual is **completeness**: every committed generated artifact has a drift-guard row, and the CI workflow still invokes the quality runner wholesale (a re-listed hand-picked tool subset is a finding) · **verification coverage** — the registered quality suite checked against the actual stack: a GUI stack with no UI-automation row, or a runnable artifact with no test row, is a finding naming the concrete tools to wire; and — on the Operator's confirm, since it costs — **run the named verification scenario through the real integration layer** here (the expensive real-layer exercise deferred from per-change reviews lands at the audit cadence, where one run covers the batch). On an **OpenCode** project this real-layer exercise includes the **plugin-load probe**: boot a real `opencode` session, attempt a write the boundary should deny (e.g. into `.ai-dev/tooling/`), and confirm it is blocked with a `[ai-dev] …` message — the unit suite only proves the installer *registers* the plugin in `opencode.json`; that the platform actually *loads and fires* it is verifiable only here (the recurring fail-open class — a test proved import, the platform never loaded it: `src/adapter/install-plugin.test.mjs` header) · **version skew** — the installed stamp (`.ai-dev/VERSION`) vs the tooling's own (`.ai-dev/tooling/VERSION`; compare via a script or child-process read — the tooling dir is agent-read-denied): a mismatch is a tooling bump without an installer re-run ⇒ point at `## Upgrade` · **maintainability / module size** — sweep the tree for files past the stack's size threshold (the per-diff Reviewer sees only the diff, so an absolute-size sweep is the audit's to own): each oversized or incohesive module is a finding, and the dimension hands back a **decomposition worklist** (`## Decompose`) — the files to split, by cohesion not line count · no duplication or one-home break.
-3. Dispatch every finding — each becomes a fix through the loop or a `.ai-dev/backlog.md` item; Operator sets priority. Never sit on a finding silently.
+3. Dispatch every finding — each becomes a fix through the loop or a backlog item (`## Backlog` — file or forge); Operator sets priority. Never sit on a finding silently.
 
 **Run-note** at `.ai-dev/audit/<slug>.md` — transient, deleted once findings are dispatched.
 
@@ -355,9 +355,20 @@ A cross-component feature spans a **declared component set** — N sibling repos
 **Intake — you are the upstream session** (the Operator pastes a report, or points at a filed issue):
 
 1. Read it; do NOT echo it back verbatim. Map it to the protocol's structure: owning file, the invariant or rule it touches, the failure class (honesty over-claim, mechanical gap, unclear procedure, missing coverage).
-2. Dedup against `.ai-dev/backlog.md` — if the substance is already there, add the downstream signal as a note on the existing item (one home — invariant 6).
-3. If new: draft a compact backlog entry — the **protocol-level finding**, not raw downstream content. Confirm with the Operator before it lands; an Operator-side `gh issue create` for an actionable finding is authorized the same way — never silent.
+2. Dedup against the backlog (`## Backlog` — file or forge) — if the substance is already there, add the downstream signal as a note on the existing item (one home — invariant 6).
+3. If new: draft a compact backlog entry — the **protocol-level finding**, not raw downstream content — and record it through `## Backlog` (a `file`-backlog edit, or a forge issue under that section's outward-facing discipline). Confirm with the Operator before it lands — never silent.
 4. **Privacy:** what lands in the backlog or issue is the protocol-mapped finding; raw downstream content is not committed unless the Operator explicitly OKs it. The boundary holds both ways: this session never reads into a downstream repo (project-boundary deny).
+
+## Backlog
+
+The **one home** for *where a backlog item lives and how I record/read it* — every backlog reference elsewhere (`## Your seat` "you author only", `## Audit` finding-dispatch, `## 8D` D7, `## Downstream feedback` dedup/intake) routes here, never restates the logic. The neutral act is *record / read a backlog item*; the realisation is the `collaboration.backlog` adapter point (`PROTOCOL.md` `## Project config`; the why: `docs/decisions/multi-user-mode.md` §2). `[persona]`.
+
+- **Resolve once.** `collaboration.backlog` (absent/unrecognised ⇒ `file`):
+  - `file` (default) ⇒ edit `.ai-dev/backlog.md` — today's behaviour, byte-for-byte. Done.
+  - `forge` ⇒ items live as forge **issues**. Resolve `collaboration.forge` (`github|gitlab|gitea|auto`) and read the matching verb from `src/adapter/forge-map.json` (the one home for each forge's issue CLI — persona-read, no engine loads it). `auto` ⇒ detect from the `origin` host (github.com/gitlab.com); a self-hosted host is not auto-resolvable ⇒ confirm the forge with the Operator.
+- **Fail safe to `file`.** Anything unresolved — no forge detected, the forge CLI absent, no network — ⇒ stay on `.ai-dev/backlog.md` and say so; **never silently lose a backlog item** to a forge call that cannot land.
+- **`file → forge` migration** (Operator decision, one-time on a project flipping to `forge`): export the **open** `.ai-dev/backlog.md` items to forge issues (each through the create verb), then **empty the file to a short marker** pointing at the forge ("tickets now live in the forge — see issues"). No two-way sync; the forge becomes the single home (invariant 6).
+- **Creating a forge issue is outward-facing.** It crosses local → a possibly-public tracker, so it carries the **same discipline as `## Downstream feedback`**: announce + leak-sweep the title/body, show the Operator the exact text, file only on their OK, always with the explicit `--repo`/host target — point at that section's steps, do not restate them. Editing `.ai-dev/backlog.md` (the `file` case) is local and needs none of this.
 
 ## When something is off
 
