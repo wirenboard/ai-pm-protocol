@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.26.0] — 2026-06-28
+
+### Added
+
+- **Ship-time PR-attach of the AI-review verdict in team mode (PR4 of 4 — completes the opt-in multi-user mode)** (`docs/decisions/multi-user-mode.md`). In a `collaboration.team: true` project, at ship the Orchestrator copies the Reviewer's verdict onto the PR — its body and/or a comment carrying the stamp file (`gh pr comment <n> --body-file .ai-dev/reviews/<topic>_review.md`) — **before** the strictly-last stamp deletion, so colleagues and the human reviewer read the AI's findings and can pull the review for diagnosis. **Honesty: this is visibility, NOT a mechanical gate** — a PR body/comment is author-written, so it cannot count as a blocking check; the mechanical remote floor stays the `quality` required-status-check + the forge's own approval rules (`multi-user-mode.md` §4). **Human approval is the forge's** — the protocol manages no approval count; a team-mode merge the forge blocks for a missing approval is reported to the Operator, never worked around. `[persona]`, gated on `collaboration.team` — inert on a single-user project. Also retires the now-stale "inert/deferred" notes in the `_collaboration` config doc-key and the `PROTOCOL.md` config bullet (all three readers — the `team-collaboration` module, the forge-issue backlog adapter, this PR-attach — are now wired). **The 4-PR multi-user feature is complete** (5.23.3 config surface → 5.24.0 module → 5.25.0 backlog adapter → 5.26.0 PR-attach); it stays entirely opt-in and inert on a single-user repo like this one.
+
+---
+
 ## [5.25.0] — 2026-06-28
 
 ### Added
