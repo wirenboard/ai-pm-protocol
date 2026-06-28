@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.27.1] — 2026-06-28
+
+### Changed
+
+- **`install.mjs` decomposed 832 → 225 lines (audit LOW-1, behaviour-preserving).** Split by responsibility into six cohesive one-home sibling modules — `install-fs.mjs` (fs/process primitives + `SOURCE`), `install-version.mjs` (version/upgrade channel), `install-core.mjs` (downstream fs steps: vendor, lay-down, deploy-procedures, config, gitignore, pre-push hook), `install-breadcrumb.mjs` (the cross-platform inactive-load breadcrumb), `install-claude.mjs`, `install-opencode.mjs` — with `install.mjs` staying the entry point (unchanged CLI, the same four public exports `install`/`hasGitRepo`/`verifyClaudeWiring`/`isStaleNpxReRun`). No behaviour change: a normalized logic-line diff against the old single file is empty in both directions (verbatim move, not reimplementation); the net (install / install-drift / parity / multirepo-e2e + the dogfood self-re-run) stayed green and unweakened; deps are acyclic (entry → modules); no helper duplicated. Both quality beats green; install.mjs now under the soft size threshold.
+
+---
+
 ## [5.27.0] — 2026-06-28
 
 ### Added
