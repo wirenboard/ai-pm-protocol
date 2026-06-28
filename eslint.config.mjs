@@ -30,6 +30,14 @@ export default [
       "prefer-const": "error",
       "no-var": "error",
       eqeqeq: ["error", "smart"],
+      // Soft size surface — a file past ~800 lines WARNS, never errors: it
+      // surfaces the file to the architect and points at `decompose`
+      // (orchestrator `## Decompose`); it is NOT a hard build block (the runner
+      // runs `npx eslint .` without `--max-warnings 0`, so a warning stays
+      // green). This is `## Setup` step 5's recommended size default, now eaten
+      // by the repo that recommends it; remediation is a behaviour-preserving
+      // decompose, not a threshold bump.
+      "max-lines": ["warn", { max: 800, skipBlankLines: false, skipComments: false }],
     },
   },
 ];

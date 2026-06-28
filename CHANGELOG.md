@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.26.3] — 2026-06-28
+
+### Added
+
+- **The dogfood repo now eats its own size-linter recommendation (audit MED-2).** `eslint.config.mjs` gains a soft `max-lines` rule (`["warn", { max: 800 }]`) — the per-file size default `## Setup` step 5 recommends to downstream projects but the repo itself lacked. It is a **WARNING, never an error**: the runner runs `npx eslint .` without `--max-warnings 0`, so an oversized file surfaces (currently `engine.mjs` 966, `install.test.mjs` 858, `install.mjs` 813) and points at `decompose`, without blocking the build. Remediation is a behaviour-preserving decompose, not a threshold bump; those three files are the recorded decompose worklist (backlog LOW-1).
+
+---
+
 ## [5.26.2] — 2026-06-28
 
 ### Added
