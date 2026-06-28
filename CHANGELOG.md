@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.26.1] — 2026-06-28
+
+### Fixed
+
+- **Audit-dispatch fixes from the post-multi-user whole-tree sweep (HEALTHY, 0 BLOCK/HIGH).** (1) **Honesty (invariant 6)** — the `## Setup` collaboration paragraph in `orchestrator.md` still said the backlog adapter + ship-time PR-attach were "inert today / ship in later changes"; both shipped (5.25.0 / 5.26.0), so it now states current truth, agreeing with the already-corrected `PROTOCOL.md ## Project config` + `_collaboration` doc-key. (2) **Safety** — the `## Backlog` outward-facing-issue step now mandates passing the issue body via `--body-file -` (stdin), never an inline `--body` with interpolated content (shell-metachar safety; the form `forge-map.json` already names). (3) **Doc accuracy** — the `docs/decisions/multi-user-mode.md` design sketch showed the pre-rename `{ "mode": "solo|team" }`; corrected to the shipped `{ "team": true|false }`, and a stray zero-width space (U+200B, shipped in 5.23.2) stripped. Audit findings not fixed here are recorded in `.ai-dev/backlog.md` (a size/complexity linter for the dogfood repo, an `engine.mjs` decomposition seam, the `orchestrator.md` side-tool extraction, accepted dev-only transitive CVEs).
+
+---
+
 ## [5.26.0] — 2026-06-28
 
 ### Added
