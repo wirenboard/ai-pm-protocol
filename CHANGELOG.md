@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.26.4] — 2026-06-28
+
+### Fixed
+
+- **On-demand procedure bodies are now readable on a downstream — a latent boundary bug.** An on-demand procedure (`src/agents/procedures/*.md`, today `parallel-work.md`) is meant to be **read by the orchestrator when a trigger fires**, but the installer vendored it only into `.ai-dev/tooling/` — which is **read-denied** (invariant 2) — and a downstream gets no bare `src/agents/`. So the orchestrator could not read its own procedure on any real downstream (it worked only in this dogfood repo, where the source tree is present). Fix: the installer now **deploys procedures to a readable `.ai-dev/procedures/`** (outside tooling, both `--dogfood` and downstream modes) — a committed, drift-guarded copy (the `install-drift` guard byte-compares it to its `src/agents/procedures/` source of truth, the unchanged single home) — and the orchestrator's read-target reference points there. The `.ai-dev/tooling/` read-deny is **untouched** — the fix is a readable deploy *outside* tooling, never a carve-out into it. A new `install.test.mjs` ratchet (RED on the pre-fix installer) pins it on a real on-disk fixture. **Honesty:** verified in code + on a real install fixture; a live downstream orchestrator's Read resolving the path is the same registration-class residual the install self-verify carries. Also unblocks the deferred orchestrator side-tool extraction (backlog LOW-2), which is only safe once procedures are readable downstream.
+
+---
+
 ## [5.26.3] — 2026-06-28
 
 ### Added

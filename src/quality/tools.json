@@ -35,7 +35,7 @@
     },
     {
       "id": "install-drift",
-      "checks": "assembled-artifact anti-drift — every committed generated markdown artifact (both platforms' agents + commands) is byte-identical to a fresh assembly under the tracked .ai-dev/config.json; no orphan file in a generated dir",
+      "checks": "assembled-artifact anti-drift — every committed generated markdown artifact (both platforms' agents + commands) is byte-identical to a fresh assembly under the tracked .ai-dev/config.json, AND every committed deployed on-demand procedure (.ai-dev/procedures/) is byte-identical to its src/agents/procedures/ source; no orphan file in a generated/deployed dir",
       "config": null,
       "run": "node src/adapter/install-drift.test.mjs",
       "beat": "build",

@@ -203,6 +203,23 @@ function layDownCore(target) {
   fs.mkdirSync(path.join(target, ".ai-dev", "state"), { recursive: true });
 }
 
+// 2b. Deploy the on-demand procedure bodies (src/agents/procedures/) to a READABLE,
+// non-tooling home: .ai-dev/procedures/. The orchestrator reads a procedure when its
+// trigger fires (e.g. parallel-work) via the stable path .ai-dev/procedures/<x>.md —
+// the SAME path in dogfood and downstream. vendorTooling also copies them under
+// .ai-dev/tooling/src/agents/procedures/ (for the upgrade re-run), but that subtree is
+// read-denied unconditionally (invariant 2), so the AGENT cannot read them there; this
+// readable copy is the one the trigger resolves to. Source of truth stays
+// src/agents/procedures/ (one home); this is the deployed copy, committed + drift-guarded
+// (install-drift.test.mjs), like the assembled .opencode/.claude artifacts. Runs in BOTH
+// modes — in dogfood SOURCE===target so it converges to the committed bytes (git clean).
+function deployProcedures(target) {
+  copyTree(
+    path.join(SOURCE, "src", "agents", "procedures"),
+    path.join(target, ".ai-dev", "procedures"),
+  );
+}
+
 // 3. Ensure a config exists so the agent assembly has its `roles` bindings. A real
 // project configures via /dev-setup; pre-setup we write a minimal default carrying
 // the resolved platform + the standard seat ids. Written ONLY where absent — a
@@ -709,6 +726,7 @@ export function install(targetDir, platformFlag, opts = {}) {
     // gitignored session-state dir is created for write-readiness. This is the path
     // that converges to the committed bytes (git status clean).
     fs.mkdirSync(path.join(target, ".ai-dev", "state"), { recursive: true });
+    deployProcedures(target); // readable .ai-dev/procedures/ — converges to committed bytes
     ensureConfig(target, platform);
     ensureTransientsGitignore(target);
     if (platform === "claude") wireClaude(target, true);
@@ -721,6 +739,7 @@ export function install(targetDir, platformFlag, opts = {}) {
 
   vendorTooling(target, version);
   layDownCore(target);
+  deployProcedures(target); // readable .ai-dev/procedures/ (the tooling copy is read-denied)
   ensureConfig(target, platform);
   ensureTransientsGitignore(target);
   if (platform === "claude") wireClaude(target, false);

@@ -84,6 +84,23 @@ function testPlatform(platform, assertWiring) {
     check(`[${platform}] quality runner laid down at .ai-dev/quality/`, fs.existsSync(path.join(target, ".ai-dev", "quality", "run.mjs")));
     check(`[${platform}] src/agents/ NOT at project root`, !fs.existsSync(path.join(target, "src", "agents")));
     check(`[${platform}] docs/ NOT created by installer`, !fs.existsSync(path.join(target, "docs")));
+
+    // 2d. on-demand procedure bodies deployed to a READ-ALLOWED home. The latent bug
+    // this guards: a procedure vendored ONLY under .ai-dev/tooling/ (read-denied,
+    // invariant 2) is unreadable by the orchestrator whose own trigger names it. The
+    // fix deploys a readable copy at .ai-dev/procedures/<x>.md (the stable read path in
+    // both dogfood and downstream), byte-identical to its src/agents/procedures/ source.
+    const deployedProc = path.join(target, ".ai-dev", "procedures", "parallel-work.md");
+    check(`[${platform}] on-demand procedure deployed at the READABLE .ai-dev/procedures/`, fs.existsSync(deployedProc));
+    check(
+      `[${platform}] deployed procedure path is OUTSIDE the read-denied .ai-dev/tooling/`,
+      !path.relative(target, deployedProc).split(path.sep).includes("tooling"),
+    );
+    check(
+      `[${platform}] deployed procedure is byte-identical to its src/agents/procedures/ source`,
+      fs.existsSync(deployedProc)
+        && fs.readFileSync(deployedProc, "utf8") === fs.readFileSync(path.join(ROOT, "src", "agents", "procedures", "parallel-work.md"), "utf8"),
+    );
     // the quality SHAPE, not this repo's own tool rows
     const tools = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "quality", "tools.json"), "utf8"));
     check(`[${platform}] quality registry is the template shape, not this repo's rows`, tools.tools.length === 1 && tools.tools[0].id === "example-lint");
