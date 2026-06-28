@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.26.2] — 2026-06-28
+
+### Added
+
+- **Conversational "switch to team development" — a mid-stream collaboration switch** (`orchestrator.md ## Setup`). The Operator can move a project into (or out of) multi-developer/team mode by saying it **in their own words, any language** — "переключи в несколько разработчиков", "готовимся к командной разработке", "we're a team now"; back: "вернись к одиночной разработке", "solo again" — **without remembering the `team` keyword or hand-editing `.ai-dev/config.json`**. The orchestrator recognises the intent, flips `collaboration.team` (the field stays `team` — machine grammar, invariant 5 — but the Operator never has to say it), asks the backlog/forge follow-ups, enables the `team-collaboration` module, applies the config, and announces — a lightweight flip mirroring the existing Mode / Doc-language mid-stream switches, no full `/dev-setup` re-run. On `backlog:forge` it offers the `file→forge` migration (`## Backlog`); on disable it goes inert without deleting forge issues. Closes the asymmetry where `mode`/`profile`/`docLanguage` had a lightweight switch but `collaboration` did not. `[persona]`.
+
+---
+
 ## [5.26.1] — 2026-06-28
 
 ### Fixed
