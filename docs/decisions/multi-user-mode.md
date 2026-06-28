@@ -62,7 +62,7 @@ assignee · milestone · comments · cross-links**. Each exposes it via CLI:
   assigned to the agent (web / mobile / `gh`), confirming the issue-as-task model
   for AI agents. **[src]** (github.blog coding-agent post).
 
-**Trade-off (file backlog vs forge issues):** the file (`​.ai-dev/backlog.md`) is
+**Trade-off (file backlog vs forge issues):** the file (`.ai-dev/backlog.md`) is
 offline, single-home, git-versioned, but invisible to non-cloning teammates. Forge
 issues are **online, visible to the whole team, assignable, and the single source
 of truth across people** — at the cost of offline access and a network dependency.
@@ -183,8 +183,9 @@ every other setup field's "never silently flip rigor" discipline.
 All additive; no new loop beat; thin-core preserved.
 
 1. **Config (`.ai-dev/config.json`)** — one new block, e.g.
-   `"collaboration": { "mode": "solo|team", "backlog": "file|forge",
-   "forge": "github|gitlab|gitea|auto" }`. **No approval knob** — required-approvals
+   `"collaboration": { "team": true|false, "backlog": "file|forge",
+   "forge": "github|gitlab|gitea|auto" }` (shipped as `team` boolean, not a
+   `mode` enum — to avoid the `mode`/`profile` axis collision). **No approval knob** — required-approvals
    is the forge's setting, not ours (Operator decision). Absent ⇒ today's behaviour
    byte-for-byte (`mode:solo`, `backlog:file`) — fail-safe to the single-user
    default, like every existing field.
