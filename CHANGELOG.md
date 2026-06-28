@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.23.3] — 2026-06-28
+
+### Added
+
+- **Inert `collaboration` config surface — the foundation (PR1 of 4) for the opt-in multi-user (team) mode** (`docs/decisions/multi-user-mode.md`). Adds `.ai-dev/config.json` `"collaboration": { "team": false, "backlog": "file", "forge": "auto" }` with its value-home in `PROTOCOL.md ## Project config` and a setup-dialog question in `orchestrator.md ## Setup`. `team` (bool, default false) toggles multi-user mode; `backlog` (`file|forge`, default file) selects the file backlog vs forge issues; `forge` (`github|gitlab|gitea|auto`, default auto) names the issue-CLI forge. Named `team` (not `mode`) to avoid colliding with the `mode` (autonomous|interactive) and `profile` axes. **Fail-safe** like every other field: absent object / absent key / unrecognised value ⇒ the single-user/file default — a bad value can never silently enable team mode or forge backlog. Setup presents team mode as an explicit, never-recommended opt-in (mirrors `mode: autonomous` / `yolo`). **The field is inert this release** — no behavior reads it yet; PR2 (a `team-collaboration` capability module), PR3 (the backlog adapter point), and PR4 (ship-time PR-attach of the review verdict) wire the readers.
+
+---
+
 ## [5.23.2] — 2026-06-28
 
 ### Added
