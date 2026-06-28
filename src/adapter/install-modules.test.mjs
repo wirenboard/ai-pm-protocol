@@ -10,7 +10,7 @@
 
 import {
   loadRegistry, enabledModules, effectiveToggle,
-  resolveFragmentPath, composeBody, MARKER,
+  resolveFragmentPath, composeBody, filterPlatform, MARKER,
 } from "./modules.mjs";
 import { install as claudeInstall } from "./claude/install-agents.mjs";
 import fs from "node:fs";
@@ -329,6 +329,64 @@ check("unknown kind ⇒ strict side (code default, non-false) ⇒ enabled",
   enabledModules(koRegistry, { kind: "bogus" }).some((m) => m.id === "ko"));
 check("absent kind ⇒ strict side (code default, non-false) ⇒ enabled",
   enabledModules(koRegistry, {}).some((m) => m.id === "ko"));
+
+// ── 11. PLATFORM FILTER — strip the inactive adapter's blocks at assembly ──────
+//      A single-platform project must not carry the OTHER adapter's operating
+//      caveats. The shared assembler drops a block tagged for a DIFFERENT recognised
+//      adapter, keeps the active platform's (markers stripped), and never touches
+//      neutral content. Fail-safe is KEEP: unknown platform ⇒ no filtering; a typo'd
+//      tag ⇒ never dropped. Driven both on the REAL tagged orchestrator floor and on
+//      synthetic fixtures (so the neutral/fail-safe cases hold regardless of catalog).
+console.log("PLATFORM FILTER — drop the inactive adapter, keep the active + neutral:");
+
+// The real OpenCode-only caveat tagged in src/agents/orchestrator.md.
+const OC_CAVEAT = "no cross-model reviewer is realisable AT ALL";
+// A neutral line right before the tagged block — must survive on BOTH platforms.
+const OC_NEUTRAL = "where no second model exists";
+const orchClaude = composeBody(ROOT, orchFloor, "orchestrator", registry, {}, "claude");
+const orchOpencode = composeBody(ROOT, orchFloor, "orchestrator", registry, {}, "opencode");
+check("filter: assembling for claude DROPS the platform:opencode block", !orchClaude.includes(OC_CAVEAT));
+check("filter: assembling for opencode KEEPS the platform:opencode block", orchOpencode.includes(OC_CAVEAT));
+check("filter: a kept block has its markers stripped", !orchOpencode.includes("<!-- platform:opencode -->"));
+check("filter: a dropped block leaves no marker behind", !orchClaude.includes("platform:opencode"));
+check("filter: neutral line survives on claude", orchClaude.includes(OC_NEUTRAL));
+check("filter: neutral line survives on opencode", orchOpencode.includes(OC_NEUTRAL));
+check("filter: claude assembly stays platform-neutral around the drop (floor intact)",
+  orchClaude.includes("Read `.ai-dev/config.json` `roles` for the seat"));
+
+// Synthetic fixtures: both-platform blocks + neutral, exercised both directions and fail-safe.
+const fx = [
+  "Neutral lead.",
+  "<!-- platform:claude -->",
+  "CLAUDE-ONLY-LINE",
+  "<!-- /platform:claude -->",
+  "<!-- platform:opencode -->",
+  "OPENCODE-ONLY-LINE",
+  "<!-- /platform:opencode -->",
+  "Neutral tail.",
+].join("\n");
+const fxClaude = filterPlatform(fx, "claude");
+const fxOpencode = filterPlatform(fx, "opencode");
+check("synthetic claude: keeps claude block", fxClaude.includes("CLAUDE-ONLY-LINE"));
+check("synthetic claude: drops opencode block", !fxClaude.includes("OPENCODE-ONLY-LINE"));
+check("synthetic opencode: keeps opencode block", fxOpencode.includes("OPENCODE-ONLY-LINE"));
+check("synthetic opencode: drops claude block", !fxOpencode.includes("CLAUDE-ONLY-LINE"));
+check("synthetic: neutral survives both", fxClaude.includes("Neutral lead.") && fxClaude.includes("Neutral tail.")
+  && fxOpencode.includes("Neutral lead.") && fxOpencode.includes("Neutral tail."));
+check("synthetic: all markers stripped from kept output",
+  !fxClaude.includes("<!-- platform:") && !fxOpencode.includes("<!-- platform:"));
+
+// FAIL-SAFE: an unknown/missing assembling platform ⇒ NO filtering (everything kept, as-is).
+for (const p of [undefined, null, "", "bogus"]) {
+  const keptAll = filterPlatform(fx, p);
+  check(`fail-safe: platform ${JSON.stringify(p)} ⇒ both blocks kept`,
+    keptAll.includes("CLAUDE-ONLY-LINE") && keptAll.includes("OPENCODE-ONLY-LINE"));
+  check(`fail-safe: platform ${JSON.stringify(p)} ⇒ returned byte-identical (no-op)`, keptAll === fx);
+}
+// FAIL-SAFE: a typo'd tag (not a recognised adapter) is NEVER dropped, on any platform.
+const typo = "<!-- platform:opencod -->\nTYPO-LINE\n<!-- /platform:opencod -->";
+check("fail-safe: unrecognised tag kept on claude", filterPlatform(typo, "claude").includes("TYPO-LINE"));
+check("fail-safe: unrecognised tag kept on opencode", filterPlatform(typo, "opencode").includes("TYPO-LINE"));
 
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
