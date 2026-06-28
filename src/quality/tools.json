@@ -179,7 +179,7 @@
     },
     {
       "id": "eslint",
-      "checks": "JS lint (the engine, shims, install scripts, the runner, the tests) — unused bindings, accidental globals, loose equality, var. Standard recommended ruleset, made STRICTER not looser; code is brought to the standard, never the standard to the code.",
+      "checks": "JS lint (the engine, shims, install scripts, the runner, the tests) — unused bindings, accidental globals, loose equality, var. Standard recommended ruleset, made STRICTER not looser; code is brought to the standard, never the standard to the code. Plus a SOFT file-size surface (`max-lines` WARN at ~800; never an error — surfaces an oversized file to `decompose`, stays green since the run carries no `--max-warnings 0`).",
       "config": "eslint.config.mjs",
       "run": "npx eslint .",
       "beat": "build",
