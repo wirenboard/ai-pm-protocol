@@ -70,6 +70,36 @@ for (const t of TARGETS) {
   );
 }
 
+// On-demand procedure bodies: the committed deployed copy (.ai-dev/procedures/) MUST be
+// byte-identical to its source of truth (src/agents/procedures/). Unlike the agents above
+// the "generator" here is a plain COPY (install.mjs deployProcedures), but the class rule
+// is the same — every committed deployed artifact carries a mechanical drift guard
+// (docs/decisions/assembled-drift-guard.md). The readable .ai-dev/procedures/ copy is the
+// one the orchestrator's trigger resolves to (the .ai-dev/tooling/ vendored copy is
+// read-denied, invariant 2). Byte-compare each source file against its deployed twin, plus
+// an orphan check (a deployed file with no source — a renamed/removed procedure left behind).
+const procSrcDir = path.join(ROOT, "src", "agents", "procedures");
+const procDeployDir = path.join(ROOT, ".ai-dev", "procedures");
+const procSources = fs.readdirSync(procSrcDir).filter((f) => f.endsWith(".md")).sort();
+for (const f of procSources) {
+  const deployed = path.join(procDeployDir, f);
+  const same = fs.existsSync(deployed)
+    && fs.readFileSync(deployed, "utf8") === fs.readFileSync(path.join(procSrcDir, f), "utf8");
+  check(
+    `.ai-dev/procedures/${f} is byte-identical to src/agents/procedures/${f}`,
+    same,
+    "re-run `node src/adapter/install.mjs . --dogfood` (the deployed procedure copy drifted from its source)",
+  );
+}
+const procOrphans = fs.existsSync(procDeployDir)
+  ? fs.readdirSync(procDeployDir).filter((f) => !procSources.includes(f))
+  : [];
+check(
+  `.ai-dev/procedures/ holds no file without a source${procOrphans.length ? ` (orphans: ${procOrphans.join(", ")})` : ""}`,
+  procOrphans.length === 0,
+  "delete the leftover, or restore its src/agents/procedures/ source",
+);
+
 // The plugin dir's byte-compare lives in install-plugin.test.mjs (that row also locks
 // the layout rewrite); the ORPHAN check still belongs here — a `.gen` stray beside the
 // deployed plugin is the recorded incident this case exists for.
