@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.30.1] — 2026-06-28
+
+### Added
+
+- **A team-collaboration onboarding guide — `docs/team-collaboration.md`.** The HOW-TO for a team adopting the opt-in multi-user mode (the *why/design* stays in `docs/decisions/multi-user-mode.md`): prerequisites, install/upgrade, enabling team mode by plain-language intent, the **load-bearing manual step** (wire the forge branch-protection — without it colleague review is a convention, not a gate), the backlog file→forge migration, the per-developer loop, and the downstream-feedback channel. Carries an **Honest limits** section — the mode is **N=1, not yet battle-tested** with real concurrent developers; AI review is a **local gate + a visible PR artifact, not a remote mechanical gate**; some `glab`/`tea` issue flags are `[unverified]`. Linked from `README.md` (`## Team development`) and pointed at from the orchestrator's `## Setup` collaboration question so a team enabling the mode is sent to it.
+
+---
+
 ## [5.30.0] — 2026-06-28
 
 ### Added

@@ -61,6 +61,10 @@ Re-run it anytime — the `/dev-setup` command, or just ask to reconfigure — w
 
 Right after setup, the orchestrator runs **genuine product discovery** — a dialog that gathers the product's real story (who it is for, the problem in their words, the concrete zero-to-working journey, the competition researched first, who runs and funds it) and concludes with the honest case against — able to end on "we built the wrong thing." It never invents an answer for you. You need not start it by hand: on a configured project with no brief, the orchestrator offers it on your first feature request (an offer you may decline). The brief lives in `docs/product.md` and every feature grounds in it; revisit it whenever the product shifts. The procedure is **[`src/agents/orchestrator.md`](src/agents/orchestrator.md)** `## Product discovery`.
 
+## Team development
+
+Multi-user (team) mode is **opt-in and off by default** — single-user is the common case. When a team works one repo, the loop gains a colleague-approval step on the forge (on top of the AI Reviewer floor) and can move the backlog to forge issues. Turning it on and running it — prerequisites, the load-bearing branch-protection step, the per-developer loop, and the honest limits — is the **[team-collaboration guide](docs/team-collaboration.md)**. The design and trade-offs behind it live in `docs/decisions/multi-user-mode.md`.
+
 ## Layout
 
 ```text
