@@ -258,6 +258,24 @@
         "builder": "src/modules/plan-adversary/builder.md",
         "reviewer": "src/modules/plan-adversary/reviewer.md"
       }
+    },
+    {
+      "id": "team-collaboration",
+      "for": "Concurrent multi-author conflict-avoidance for a collaboration.team:true project — small atomic disjoint-surface PRs, sync-from-main before push, never a blind conflict auto-resolve (re-cut from main / escalate) — deepening the Builder's plan and the Reviewer's review; default OFF everywhere, inert on a single-user project.",
+      "toggle": { "depth": "rich | light" },
+      "defaults": {
+        "code": false,
+        "docs": false,
+        "mixed": false
+      },
+      "targets": [
+        { "role": "builder", "beat": "plan" },
+        { "role": "reviewer", "beat": "review" }
+      ],
+      "fragments": {
+        "builder": "src/modules/team-collaboration/builder.md",
+        "reviewer": "src/modules/team-collaboration/reviewer.md"
+      }
     }
   ]
 }
