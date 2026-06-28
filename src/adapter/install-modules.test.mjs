@@ -155,12 +155,18 @@ check("in-root pointer resolves", resolveFragmentPath(ROOT, "src/modules/threat-
 // ── 6. END-TO-END through a real shim (Claude) — the deployed agent gains/loses
 //      the section, floor intact. Proves the shared helper is wired into install().
 console.log("END-TO-END — Claude install composes the module:");
-const baseRoles = { builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer" } };
+// orchestrator included: claudeInstall now also assembles the orchestrator load surface
+// (.claude/ai-dev.md), so the fixture config must name every seat install() writes.
+const baseRoles = { orchestrator: { agent: "ai-dev" }, builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer" } };
 function reviewerAgentText(modulesCfg) {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-modtest-"));
+  // nest the agents dir under a temp BASE: claudeInstall writes the orchestrator surface
+  // to outDir's PARENT (.claude/ai-dev.md), so the parent must be inside a cleanable dir,
+  // not the bare tmpdir (else ai-dev.md would leak into os.tmpdir()).
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-modtest-"));
+  const outDir = path.join(base, "agents");
   const written = claudeInstall(outDir, { roles: baseRoles, kind: "code", ...modulesCfg });
   const text = fs.readFileSync(written["dev-reviewer"], "utf8");
-  fs.rmSync(outDir, { recursive: true, force: true });
+  fs.rmSync(base, { recursive: true, force: true });
   return text;
 }
 const e2eOn = reviewerAgentText({ modules: { "threat-model": { depth: "rich" } } });

@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.29.0] — 2026-06-28
+
+### Changed
+
+- **Adapter-filter Option B — the Claude orchestrator now loads a `platform:claude`-FILTERED artifact (completes feature #3).** 5.28.0 shipped the filter mechanism but the Claude orchestrator loaded RAW via `CLAUDE.md @import` so it was never filtered. Now the Claude install assembles the orchestrator body through the same `composeBody(…, "claude")` filter into a committed **`.claude/ai-dev.md`** (deliberately NOT under `.claude/agents/`, so Claude does not auto-register it as a spawnable subagent — verified + test-asserted), and `CLAUDE.md`'s import is repointed to it (a unified `@.claude/ai-dev.md` for both dogfood and downstream; the installer strips any stale raw/tooling orchestrator import). **Completeness (the load-bearing safety check):** `.claude/ai-dev.md` is byte-identical to `src/agents/orchestrator.md` minus ONLY the genuinely `platform:opencode`-tagged block(s) — the orchestrator keeps its full operating procedure; `filterPlatform` fails toward keep, so a filter bug can never silently strip it. A new `install-drift` row byte-compares the committed artifact against a fresh claude-filtered assembly. **Symmetric, not a support cut:** OpenCode still assembles its own `.opencode/agents/ai-dev.md` keeping the OpenCode content; the source keeps both platforms' blocks; parity 200/200. Net: each platform's orchestrator carries only its own adapter's content, no inactive-platform noise per turn.
+
+---
+
 ## [5.28.0] — 2026-06-28
 
 ### Added

@@ -71,12 +71,15 @@ export function wireClaude(target, dogfood) {
   // Load instructions: the orchestrator session loads the constitution + its
   // procedure via CLAUDE.md imports — appended only if not already present. A
   // breadcrumb left from when this platform was inactive is replaced by this
-  // full wiring. Dogfood wires to the SOURCE paths (the committed self-host form);
-  // downstream wires to the vendored layout.
+  // full wiring. The constitution path is layout-dependent (source root in dogfood,
+  // vendored downstream); the orchestrator import is UNIFIED — both modes @import the
+  // committed platform:claude-FILTERED artifact .claude/ai-dev.md that install-agents
+  // assembled above (so the session loads the filtered body, not the raw source that
+  // re-injects the inactive platform's caveats every turn).
   const claudeMd = path.join(target, "CLAUDE.md");
   stripBreadcrumbFile(claudeMd);
   ensureLine(claudeMd, dogfood ? "@PROTOCOL.md" : "@.ai-dev/PROTOCOL.md");
-  ensureLine(claudeMd, dogfood ? "@src/agents/orchestrator.md" : "@.ai-dev/tooling/src/agents/orchestrator.md");
+  repointOrchestratorImport(claudeMd);
 
   // Self-verify the Claude wiring just written (item 3) — the symmetric twin of the
   // opencode plugin self-verify. A broken Claude deny path otherwise goes SILENTLY
@@ -206,6 +209,29 @@ function resolveShimPath(target, command) {
 function matcherCoversTool(matcher, tool) {
   if (typeof matcher !== "string" || !matcher) return false;
   return new RegExp(`\\b${tool}\\b`).test(matcher);
+}
+
+// Repoint the orchestrator @import to the unified, platform-filtered load surface
+// (.claude/ai-dev.md). The surface USED to be the raw orchestrator source, wired by a
+// layout-dependent line: @src/agents/orchestrator.md (dogfood) or
+// @.ai-dev/tooling/src/agents/orchestrator.md (downstream). A downstream UPGRADE from a
+// pre-this-version install therefore carries the old vendored line — so we STRIP any stale
+// raw-orchestrator import first, then ensure the new unified line. Strip-then-ensure (not a
+// bare append) is what guarantees the old line is REPLACED, never left dangling beside the
+// new one. Idempotent: on a tree already at the new form, the strip is a no-op (the file is
+// not rewritten) and ensureLine no-ops — so a dogfood reinstall converges to committed bytes.
+const ORCHESTRATOR_IMPORT = "@.claude/ai-dev.md";
+const STALE_ORCHESTRATOR_IMPORTS = [
+  "@src/agents/orchestrator.md",
+  "@.ai-dev/tooling/src/agents/orchestrator.md",
+];
+function repointOrchestratorImport(claudeMd) {
+  if (fs.existsSync(claudeMd)) {
+    const lines = fs.readFileSync(claudeMd, "utf8").split("\n");
+    const kept = lines.filter((l) => !STALE_ORCHESTRATOR_IMPORTS.includes(l.trim()));
+    if (kept.length !== lines.length) fs.writeFileSync(claudeMd, kept.join("\n"));
+  }
+  ensureLine(claudeMd, ORCHESTRATOR_IMPORT);
 }
 
 // Merge a hooks fragment into an existing hooks object: foreign groups are kept

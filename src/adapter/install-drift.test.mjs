@@ -70,6 +70,25 @@ for (const t of TARGETS) {
   );
 }
 
+// The Claude orchestrator load surface (.claude/ai-dev.md) — the platform:claude-FILTERED
+// orchestrator body. It is assembled by the SAME install-agents run as .claude/agents/ but
+// written OUTSIDE that dir (it is the SESSION's @imported instructions, NOT a spawnable
+// subagent — a file under .claude/agents/ would wrongly auto-register). The .claude/agents
+// generate in the TARGETS loop above already wrote it to tmp/.claude/ai-dev.md (the shim
+// writes the orchestrator to outDir's parent), so byte-compare the committed twin here.
+{
+  const rel = path.join(".claude", "ai-dev.md");
+  const generated = path.join(tmp, rel);
+  const committed = path.join(ROOT, rel);
+  const same = fs.existsSync(committed) && fs.existsSync(generated)
+    && fs.readFileSync(committed, "utf8") === fs.readFileSync(generated, "utf8");
+  check(
+    `${rel} is byte-identical to a fresh platform:claude assembly`,
+    same,
+    "re-run `node src/adapter/claude/install-agents.mjs .claude/agents` (orchestrator source or config changed without re-assembly, or the committed file was hand-edited)",
+  );
+}
+
 // On-demand procedure bodies: the committed deployed copy (.ai-dev/procedures/) MUST be
 // byte-identical to its source of truth (src/agents/procedures/). Unlike the agents above
 // the "generator" here is a plain COPY (install.mjs deployProcedures), but the class rule

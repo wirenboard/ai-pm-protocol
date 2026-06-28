@@ -30,7 +30,7 @@ node src/adapter/install.mjs . --dogfood --platform claude     # or --platform o
 
 The protocol's own repo develops itself under its own protocol, so it must wire to its **own `src/` tree**, not to a vendored copy of itself. `--dogfood` is that self-host mode — use it **only** when installing into the protocol's own source repo. It:
 
-- wires the three tracked surfaces to the source tree — the Claude hook → `src/adapter/claude/shim.mjs`; `CLAUDE.md` imports → `@PROTOCOL.md` + `@src/agents/orchestrator.md`; OpenCode `opencode.json` `instructions` → `PROTOCOL.md` and the plugin → `src/adapter` (the existing dev-layout auto-detection);
+- wires the three tracked surfaces to the source tree — the Claude hook → `src/adapter/claude/shim.mjs`; `CLAUDE.md` imports → `@PROTOCOL.md` + `@.claude/ai-dev.md` (the assembled, platform-filtered orchestrator surface — same path downstream); OpenCode `opencode.json` `instructions` → `PROTOCOL.md` and the plugin → `src/adapter` (the existing dev-layout auto-detection);
 - **skips** vendoring `.ai-dev/tooling/` (the repo already carries its core at the root — a copy would be untracked debris) and **skips** the `.ai-dev/VERSION` stamp + `UPGRADING.md` marker (the repo's authoritative version is its own `package.json`, read live);
 - writes no inactive-platform breadcrumb (both load surfaces are real, hand-authored, committed files).
 
@@ -78,10 +78,10 @@ After writing `settings.json`, the installer **self-verifies the Claude deny wir
 
 ```text
 @.ai-dev/PROTOCOL.md
-@.ai-dev/tooling/src/agents/orchestrator.md
+@.claude/ai-dev.md
 ```
 
-The orchestrator **is** the session; the Builder and Reviewer are spawned (below).
+The orchestrator **is** the session, so it is NOT a spawnable subagent (Claude auto-registers those from `.claude/agents/`). Its procedure is loaded via `@.claude/ai-dev.md` — a committed, drift-guarded artifact the install-agents step assembles by running the **same** `composeBody` platform filter the spawnable agents get (dropping the inactive OpenCode caveats), written outside `.claude/agents/` so it is never registered as a spawnable. The same `@.claude/ai-dev.md` path is wired in both dogfood and downstream modes. The Builder and Reviewer are spawned (below).
 
 ### Spawn a sub-agent (the Builder and Reviewer)
 

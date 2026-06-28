@@ -11,4 +11,4 @@ The deliverable is the protocol's own source — `PROTOCOL.md` (the constitution
 ---
 
 @PROTOCOL.md
-@src/agents/orchestrator.md
+@.claude/ai-dev.md
