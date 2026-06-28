@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.27.2] — 2026-06-28
+
+### Changed
+
+- **`engine.mjs` (the deny ENGINE) decomposed 966 → 351 lines (audit LOW-1, behaviour-preserving) — completes the LOW-1 worklist.** The security enforcer split by responsibility into five cohesive sibling modules — `engine-paths.mjs` (path/root resolution), `engine-bash.mjs` (bash-command parsing), `engine-git.mjs` (merge-topic + stamp), `engine-config.mjs` (config/fs reads), `engine-components.mjs` (multi-repo boundary) — with `engine.mjs` keeping `writeTargetsOf`, `safeTest`, the `PREDICATES` verdict table, `loadConfig`, `evaluate`, and `_internals`. **Byte-exact behaviour preservation:** a normalized logic-line multiset comparison against the old single file shows zero logic lines changed (verbatim move, not reimplementation); the `PREDICATES` table is byte-identical; `parity.test.mjs` stays 200/200 (both shims reach the identical verdict through the decomposed engine — the strongest proof) and the whole deny suite (merge-gate, components, error-handling, safeguards, rigor-profile, ssh-content-edit, f4-floor, multirepo-e2e, opencode-inject) is green and unweakened. The `_internals` surface keeps its exact 12 symbols; both shims and every test import resolve unchanged; `loadConfig` stays in `engine.mjs` so `deny-rules.json` still resolves beside it. The one test edit (`error-handling.test.mjs`) is a fixture vendoring-loop extension (copy the new siblings), no assertion touched. Every file now under the soft size threshold.
+
+---
+
 ## [5.27.1] — 2026-06-28
 
 ### Changed
