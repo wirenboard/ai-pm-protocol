@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.25.0] — 2026-06-28
+
+### Added
+
+- **Forge-issue backlog — the backlog becomes a swappable `file | forge` adapter point (PR3 of 4)** (`docs/decisions/multi-user-mode.md`). When `collaboration.backlog: "forge"`, task & bug items live as **forge issues** instead of `.ai-dev/backlog.md` — forge-agnostic across GitHub / GitLab / Gitea. A new **`src/adapter/forge-map.json`** is the one structured home for each forge's issue-CLI verbs (create / list / view / close / comment) over the common vocabulary (title · body · label · assignee · milestone), with origin-host auto-detection; it is a **persona-read reference** (honestly labelled — no engine loads it, unlike `deny-rules.json` / `tool-map.json`), guarded by a new `forge-map` shape test in the quality registry. A new tight `orchestrator.md ## Backlog` section is the single home for the routing — resolve once (`file` ⇒ `.ai-dev/backlog.md`, `forge` ⇒ issues, `auto` ⇒ detect from origin), the **file→forge migration** (export open items to issues, then retire the local file to a marker — no two-way sync), and the **outward-facing-issue discipline** (announce + leak-sweep before creating an issue, reusing `## Downstream feedback`'s rule). **Fail-safe:** anything unresolved ⇒ stay on `file`, never lose a backlog item. The `## Audit` / `## 8D` / `## Downstream feedback` / `PROTOCOL.md` backlog references are repointed to `## Backlog` (one home, no duplicated routing). `[persona]` — no deny-engine change. **This repo stays `backlog:file`, so its behaviour is unchanged** (the section + forge-map are inert until a project opts in). Ship-time PR-attach of the AI-review verdict (PR4) is still deferred.
+
+---
+
 ## [5.24.0] — 2026-06-28
 
 ### Added
