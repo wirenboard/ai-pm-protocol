@@ -13,7 +13,7 @@
 //      asks/denies) — the floor is never config-disablable,
 //   4. unknown value / non-object / malformed config ⇒ all guards on (fail-safe),
 //   5. disabledSafeguards returns only well-formed "off" ids; safeguardRegistry lists
-//      exactly the six toggleable with toggleable:true and the rest false,
+//      exactly the seven toggleable with toggleable:true and the rest false,
 //   6. a DENY (ssh-content-edit) still denies even with EVERY toggleable guard off.
 //
 // The safeguards are read at evaluate-time from input.root, so each case writes a
@@ -32,7 +32,7 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const config = loadConfig(HERE);
 
-// The six guards the contract makes toggleable — pinned here so a stray
+// The seven guards the contract makes toggleable — pinned here so a stray
 // `toggleable` added elsewhere (a floor rule, say) is caught by the registry test.
 const TOGGLEABLE = [
   "ssh-mutating-action",
@@ -41,6 +41,7 @@ const TOGGLEABLE = [
   "no-config-run-setup",
   "no-product-brief-discover",
   "change-route-reminder",
+  "language-mirror",
 ];
 
 // A fresh temp root whose .ai-dev/config.json carries `body` verbatim (a JSON string,
@@ -177,11 +178,11 @@ test("5a. disabledSafeguards returns only well-formed \"off\" ids", () => {
   cleanup(nonObj);
 });
 
-test("5b. safeguardRegistry lists exactly the six toggleable; the rest false", () => {
+test("5b. safeguardRegistry lists exactly the seven toggleable; the rest false", () => {
   const reg = _internals.safeguardRegistry(config);
   assert.equal(reg.length, config.rules.length, "every rule appears in the registry");
   const flagged = reg.filter((r) => r.toggleable).map((r) => r.id).sort();
-  assert.deepEqual(flagged, [...TOGGLEABLE].sort(), "exactly the six contract guards are toggleable");
+  assert.deepEqual(flagged, [...TOGGLEABLE].sort(), "exactly the seven contract guards are toggleable");
   // every entry carries a non-empty label and a class.
   for (const r of reg) {
     assert.ok(typeof r.label === "string" && r.label.length > 0, `${r.id} has a label`);

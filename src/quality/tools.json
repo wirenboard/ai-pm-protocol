@@ -59,7 +59,7 @@
     },
     {
       "id": "safeguards",
-      "checks": "configurable safeguards — the engine's general evaluate-level skip honours .ai-dev/config.json `safeguards`: a toggleable ask/inject guard listed \"off\" is skipped, while a rule without `toggleable:true` (every deny + the merge-gate) is never skippable however config reads; only an exact-string \"off\" disables (unknown value / non-object / malformed ⇒ all guards on); disabledSafeguards returns the well-formed off-ids and safeguardRegistry lists exactly the six toggleable guards",
+      "checks": "configurable safeguards — the engine's general evaluate-level skip honours .ai-dev/config.json `safeguards`: a toggleable ask/inject guard listed \"off\" is skipped, while a rule without `toggleable:true` (every deny + the merge-gate) is never skippable however config reads; only an exact-string \"off\" disables (unknown value / non-object / malformed ⇒ all guards on); disabledSafeguards returns the well-formed off-ids and safeguardRegistry lists exactly the seven toggleable guards",
       "config": null,
       "run": "node --test src/adapter/safeguards.test.mjs",
       "beat": "build",

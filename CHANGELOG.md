@@ -12,6 +12,15 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.30.0] — 2026-06-28
+
+### Added
+
+- **Language-mirror reinforcement — a per-turn nudge against English drift** (Operator-reported: the orchestrator drifts into English though the conversation language is the Operator's, because invariant 5 is persona-only and the once-loaded reminder sinks under the turn's English artifact context). A new always-on `language-mirror` inject rule reinforces invariant 5 every turn — reply in the Operator's conversation language, do not let the English artifacts/protocol pull the reply into English. **`[mechanical]` on Claude** (the `UserPromptSubmit` context note), **`[persona]` on OpenCode** (the inject class is persona there since 5.17.7) — recorded, not over-claimed. **Toggleable** like the other nudges (`safeguards.language-mirror: "off"`).
+- **The engine now aggregates injects instead of returning only the first.** `evaluate` collects every matching inject's reason and joins them into one note, so an always-on nudge (language-mirror) neither suppresses nor is suppressed by a conditional one (setup / discovery / route) on the turns they co-fire — and the latent case where two conditional injects co-matched but only one showed is fixed too. **The deny floor is byte-untouched:** deny still short-circuits, the ask path is unchanged, inject and ask never co-occur (inject acts on `prompt`, ask on `bash`), so precedence stays deny > inject > ask > allow; parity is 212/212.
+
+---
+
 ## [5.29.1] — 2026-06-28
 
 ### Changed

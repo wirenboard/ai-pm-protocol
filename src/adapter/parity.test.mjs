@@ -344,13 +344,59 @@ fs.writeFileSync(path.join(CFG, "docs", "product.md"), "# Product brief\n\n`<one
 check("no-product-brief-discover:fires-on-legacy-placeholder", claudeDecide(changePrompt, CFG, config).ruleId, "no-product-brief-discover");
 
 // Stage 3 — configured AND docs/product.md present and FILLED (no template
-// marker) ⇒ both setup and brief predicates are false ⇒ change-route-reminder fires.
+// marker) ⇒ both setup and brief predicates are false ⇒ change-route-reminder fires
+// (as the LEADING inject), now joined with the always-on language-mirror reminder.
 fs.writeFileSync(path.join(CFG, "docs", "product.md"), "brief");
 check("change-route-reminder:fires-when-configured-with-brief", claudeDecide(changePrompt, CFG, config).ruleId, "change-route-reminder");
-// A non-change prompt on a configured root ⇒ no inject fires (allow).
-check("configured:non-change-prompt-allows",
-  claudeDecide({ hook_event_name: "UserPromptSubmit", prompt: "good morning" }, CFG, config).verdict, "allow");
+
+// ── 1d. LANGUAGE-MIRROR: an always-on inject, aggregated with any conditional one ──
+// The intent strings are read from the registry so the assertions track the rule
+// wording (one home — invariant 6), never a hand-copied paraphrase.
+const mirrorIntent = config.rules.find((r) => r.id === "language-mirror").intent;
+const routeIntent = config.rules.find((r) => r.id === "change-route-reminder").intent;
+const plainPrompt = { hook_event_name: "UserPromptSubmit", prompt: "good morning" };
+
+// fires-alone: a plain (non-change) prompt on a configured+brief root now INJECTS
+// via language-mirror alone — ruleId is language-mirror, reason is just its intent.
+{
+  const r = claudeDecide(plainPrompt, CFG, config);
+  check("language-mirror:fires-alone-verdict", r.verdict, "inject");
+  check("language-mirror:fires-alone-ruleId", r.ruleId, "language-mirror");
+  check("language-mirror:fires-alone-reason", r.reason, mirrorIntent);
+}
+
+// co-fires-joined: a change-verb prompt aggregates change-route-reminder (leading)
+// WITH language-mirror — ruleId is the leading conditional, reason carries BOTH
+// intents, change-route BEFORE language-mirror (registry/join order).
+{
+  const r = claudeDecide(changePrompt, CFG, config);
+  check("language-mirror:co-fires-verdict", r.verdict, "inject");
+  check("language-mirror:co-fires-ruleId-leads-with-conditional", r.ruleId, "change-route-reminder");
+  check("language-mirror:co-fires-reason-has-route", r.reason.includes(routeIntent), true);
+  check("language-mirror:co-fires-reason-has-mirror", r.reason.includes(mirrorIntent), true);
+  check("language-mirror:co-fires-join-order", r.reason.indexOf(routeIntent) < r.reason.indexOf(mirrorIntent), true);
+  // parity: both shims reach the IDENTICAL aggregated engine result (verdict + reason).
+  const oc = ocDecidePrompt(changePrompt.prompt, CFG, false, config);
+  check("language-mirror:co-fires-parity-verdict", r.verdict, oc.verdict);
+  check("language-mirror:co-fires-parity-reason", r.reason, oc.reason);
+}
 fs.rmSync(CFG, { recursive: true, force: true });
+
+// toggle-off: a configured+brief root with safeguards.language-mirror:"off" — the
+// always-on reminder is suppressed. A plain prompt ⇒ allow (nothing else fires); a
+// change-verb prompt ⇒ change-route-reminder alone, its reason WITHOUT the mirror intent.
+{
+  const OFF = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-mirror-off-"));
+  fs.mkdirSync(path.join(OFF, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(OFF, ".ai-dev", "config.json"), '{ "safeguards": { "language-mirror": "off" } }');
+  fs.mkdirSync(path.join(OFF, "docs"));
+  fs.writeFileSync(path.join(OFF, "docs", "product.md"), "brief");
+  check("language-mirror:toggle-off-plain-allows", claudeDecide(plainPrompt, OFF, config).verdict, "allow");
+  const r = claudeDecide(changePrompt, OFF, config);
+  check("language-mirror:toggle-off-change-still-routes", r.ruleId, "change-route-reminder");
+  check("language-mirror:toggle-off-no-mirror-in-reason", r.reason.includes(mirrorIntent), false);
+  fs.rmSync(OFF, { recursive: true, force: true });
+}
 
 // ── 1c. MULTI-REPO COMPONENTS: the boundary widens to the declared set ────────
 // The full Step-2 test matrix (`.ai-dev/plans/multi-repo-components.md` `## Test

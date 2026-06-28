@@ -295,6 +295,16 @@ const PREDICATES = {
   promptMatchesChangeVerb(input, config) {
     return safeTest(config.change_verbs?.pattern, input.prompt || "");
   },
+  // The always-on language-mirror nudge: fires on EVERY submitted prompt (the act
+  // filter in evaluate already gates this to prompt acts, so an unconditional true
+  // is correct). Reinforces invariant 5 per turn — the constitution/code/PR context
+  // in the turn is English, which without a per-turn prop drags the reply into
+  // English. Compiles NO config pattern (it names no language), so it never touches
+  // safeTest and carries no backtracking/injection surface. Aggregated with any
+  // conditional inject that co-fires (see evaluate's collect-and-join).
+  promptMirrorLanguage() {
+    return true;
+  },
   // Lazy-setup nudge: a work-request prompt (same change_verbs list — no second
   // verb list) to a project with NO .ai-dev/config.json. Reinforces the persona
   // act, never forces it. False once the config is present (a configured project
@@ -322,8 +332,13 @@ export function loadConfig(dir) {
 }
 
 // Evaluate one neutral input against the registry. Returns the first DENY hit
-// (deny outranks ask), else the first ASK hit, else an INJECT for a prompt, else
-// allow. `ruleId`/`reason` identify what fired.
+// (deny outranks ask), else — for a prompt — every matching INJECT's reason joined
+// into one note, else the first ASK hit, else allow. `ruleId`/`reason` identify
+// what fired. Inject is COLLECT-AND-JOIN (not return-first): an always-on nudge
+// (language-mirror) must not suppress, nor be suppressed by, a conditional one
+// (setup / discovery / route) on the turns those co-fire — they aggregate instead.
+// Inject and ask never co-occur (inject rules are act:"prompt", ask rules act:"bash"),
+// so the effective precedence is unchanged: deny > inject > ask > allow.
 export function evaluate(input, config) {
   // Prepare the command string ONCE for every rule: non-shell heredoc bodies are
   // data, not commands — stripped here so no predicate pattern-matches prose.
@@ -336,6 +351,8 @@ export function evaluate(input, config) {
   // rule (no such flag) is never skipped — the mechanical floor holds regardless.
   const disabled = disabledSafeguards(input.root);
   let ask = null;
+  let injectId = null; // the FIRST matched inject (registry order) — the leading ruleId
+  const injectReasons = [];
   for (const rule of config.rules) {
     if (!rule.act.split("|").includes(input.act)) continue;
     if (rule.toggleable === true && disabled.has(rule.id)) continue; // opted-out guard
@@ -343,8 +360,15 @@ export function evaluate(input, config) {
     if (!pred || !pred(input, config)) continue;
     if (rule.class === "deny") return { verdict: "deny", ruleId: rule.id, reason: rule.intent };
     if (rule.class === "ask" && !ask) ask = { verdict: "ask", ruleId: rule.id, reason: rule.intent };
-    if (rule.class === "inject") return { verdict: "inject", ruleId: rule.id, reason: rule.intent };
+    if (rule.class === "inject") {
+      if (injectId === null) injectId = rule.id; // leading inject keeps its identity
+      injectReasons.push(rule.intent);
+    }
   }
+  // Inject (collected) outranks ask, exactly as the prior return-first did — every
+  // matching inject's reason joined into one note (blank-line separated; the Claude
+  // shim renders it via additionalContext, OpenCode is persona).
+  if (injectReasons.length) return { verdict: "inject", ruleId: injectId, reason: injectReasons.join("\n\n") };
   return ask || { verdict: "allow", ruleId: null, reason: "" };
 }
 
