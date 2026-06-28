@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.29.1] — 2026-06-28
+
+### Changed
+
+- **The `## Setup` "Platform switch" procedure now names the orchestrator regeneration (post-Option-B).** Since adapter-filter Option B (5.29.0) the orchestrator is a per-platform assembled, platform-filtered artifact with a per-platform load mechanism — so a harness switch must **regenerate the orchestrator and rewire its load**, no longer just flip the config's `platform` field. Step 1 now states this explicitly: the install regenerates that platform's agents (the orchestrator included, platform-filtered) into its assembled-orchestrator artifact + load wiring (the adapter realises the concrete paths — `src/adapter/INSTALL.md`), rewires the load, and leaves the old platform's load line inert (harmless — the inactive harness never reads it). Kept neutral (the core names no bare platform primitive — the concrete artifact paths stay in the adapter); `[persona]`.
+
+---
+
 ## [5.29.0] — 2026-06-28
 
 ### Changed
