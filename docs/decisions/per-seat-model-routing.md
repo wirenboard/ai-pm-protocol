@@ -127,6 +127,50 @@ is later judged not worth the maintenance.
 
 ---
 
+## UX & scope — the governing constraints (added with the catalog + launcher)
+
+The 5.32.0 router shipped the mechanism; the provider catalog
+(`src/adapter/model-providers.json`) and the launcher (`src/adapter/router-launch.mjs`)
+make it usable. Three constraints govern the whole feature and were locked by the
+Operator — record them here so a later reader does not re-litigate a settled call:
+
+1. **Anthropic-format providers ONLY — no translator, EVER.** Every backend in the
+   catalog speaks the Messages API natively (Anthropic, DeepSeek's Anthropic endpoint,
+   z.ai GLM Coding Plan, OpenRouter's Anthropic skin). OpenAI-shaped providers are out
+   of scope **permanently** — they cannot speak Anthropic, and adding a translator is
+   the heavy, drift-prone part this design exists to avoid (fact 1 above). The router
+   stays a pure passthrough.
+
+2. **Proxy OFF by default — opt-in.** Out of the box the loop runs **directly, no
+   router**. The launcher only starts the router when the seats' models touch **≥2
+   distinct endpoints**; all-Anthropic role models (even different Anthropic models per
+   seat) run `claude` straight through. A project that never configures a cross-endpoint
+   seat is byte-unchanged. The opt-in is the routes config + the cross-endpoint pick,
+   not a separate switch.
+
+3. **Claude Code only — inert on OpenCode.** This is a *harness-capability* gate, not a
+   router limitation (the router is neutral plumbing). The feature needs the harness to
+   forward distinct per-subagent `model:` ids to the endpoint; **OpenCode's `task`
+   runtime ignores a subagent's `model:`** (the honesty note in `orchestrator.md`
+   `## Your seat` — point, don't restate), so every seat collapses to the session model
+   and there is nothing to route per seat. On OpenCode the whole provider/router/launcher
+   surface is offered not at all and stays inert; it breaks nothing.
+
+**Subscription/OAuth sessions need no Anthropic key.** The catalog's Anthropic entry
+supports `auth: "passthrough"` — a route may forward the client's incoming auth header
+unchanged, so a Claude Code subscription/OAuth session reaches Anthropic with no API
+key while a cross-endpoint seat (DeepSeek/GLM/OpenRouter) authenticates with its own
+keyed backend.
+
+**Path-prefix note (live-verify pending — G).** Each catalog `base_url` is the backend
+origin **plus the path prefix that precedes `/v1/messages`** (the router appends the
+client's `/v1/messages`). DeepSeek (`/anthropic`) and GLM (`/api/anthropic`) verified;
+OpenRouter's real endpoint is `/api/v1/messages`, so its `base_url` ends at `/api` — the
+path-prefix behaviour of the GLM and OpenRouter routes is what the deferred real-call
+live-verify (G) confirms.
+
+---
+
 ## Sources
 
 - DeepSeek Anthropic-compatible endpoint + Claude Code env config:

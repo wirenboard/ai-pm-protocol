@@ -12,6 +12,23 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.33.0] — 2026-06-30
+
+### Added
+
+- **A provider catalog + a launcher for the per-seat model router — `src/adapter/model-providers.json` and `src/adapter/router-launch.mjs`** (the plumbing layer on the 5.32.0 router; the whole feature: `docs/decisions/per-seat-model-routing.md`, now carrying the governing UX/scope constraints). The **catalog** is a built-in, data-only map of the known **Anthropic-format** backends, so a routes config names a provider by `id` instead of restating its endpoint: per provider `id`, `base_url` (origin + the path prefix before `/v1/messages`, overridable), the `models` globs that select it, and `auth { header, scheme?, keyEnv }` (key by env-var **name** only, never inline). Four verified entries (2026-06-30 against each provider's official Anthropic-compatible docs): **anthropic** (`x-api-key`, `supports_passthrough`), **deepseek** (`https://api.deepseek.com/anthropic`, `x-api-key`), **glm** (z.ai **GLM Coding Plan** — `https://api.z.ai/api/anthropic`, `Authorization: Bearer`, models `GLM-*`), **openrouter** (`https://openrouter.ai/api`, `Authorization: Bearer`). The **launcher** runs the wired pipeline **direct by default**: it reads the seats' `roles.*.model` pins + a routes config (resolved via the catalog), and if the seats touch **fewer than 2 distinct endpoints** execs `claude` straight through with **no router** (a project that never opts in is byte-unchanged); if **≥2 endpoints** are in play it starts the router on a free localhost port, points the child at it (`ANTHROPIC_BASE_URL`), **guarantees `CLAUDE_CODE_SUBAGENT_MODEL` is unset**, execs `claude`, and tears the router down on exit. **Fail-closed:** a route in play whose backend key env var is unset is an error **before** launch — never a silent wrong-backend. The decision logic is factored into pure, unit-tested functions (`router-launch-test`); the real `claude` exec is the one untestable rung (offered real-layer, not in the suite).
+- **`auth: "passthrough"` mode in the router — `src/adapter/model-router.mjs`.** A route whose `auth` is the string `"passthrough"` forwards the client's incoming auth header **unchanged** (no strip, no backend-key swap), so a Claude Code **subscription/OAuth** session reaches Anthropic with **no API key** while a cross-endpoint seat authenticates with its own keyed backend. Non-passthrough routes keep the 5.32.0 strip-and-swap. Tested both ways (`model-router-test`).
+
+### Fixed
+
+- **Router error-path robustness (carries the 5.32.0 Reviewer advisory A1) — `src/adapter/model-router.mjs`.** An oversize request body now returns a clean **413** instead of resetting the connection (the prior `req.destroy()` tore down the response socket before the 413 could be read — replaced with a bounded-ignore guard + `connection: close` on error replies); a **mid-stream** upstream socket-drop after headers no longer risks an uncaught error (an `error`/`aborted` handler on the upstream response tears the client connection down via the `headersSent` branch); the connection-refused **502** path is now covered by a test. All three are exercised through the real http path against stub upstreams (`model-router-test`).
+
+### Governing constraints recorded (`docs/decisions/per-seat-model-routing.md`)
+
+- **Anthropic-format providers only, no translator ever** (OpenAI-shaped providers out of scope permanently); **proxy off by default / opt-in**; **Claude Code only** — OpenCode's `task` runtime ignores per-subagent `model:` (the `orchestrator.md ## Your seat` honesty note), so the feature is inert there and breaks nothing.
+
+---
+
 ## [5.32.0] — 2026-06-30
 
 ### Added
