@@ -154,6 +154,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "model-router-test",
+      "checks": "the per-seat cross-endpoint model router (src/adapter/model-router.mjs) through its REAL http path against two STUB upstreams (no network, no real keys): a request routes to the backend its model matches and reaches no other; the per-backend auth header is swapped to the right scheme AND value (x-api-key vs Authorization: Bearer, the backend key not the client front-key, the incoming client auth stripped); the request body + a chunked/streamed response pass through intact; an unknown model, a missing model, an unparseable body, and a route whose key env is unset all FAIL CLOSED (4xx/5xx, never a silent default backend); and the opt-in routing log leaks no key, no body, no header (only model -> host)",
+      "config": null,
+      "run": "node src/adapter/model-router.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "version-skew",
       "checks": "installed VERSION stamp matches vendored tooling VERSION — a skew means npx updated the stamp without re-vendoring the tooling; no-op on a source checkout where .ai-dev/VERSION is absent",
       "config": null,
