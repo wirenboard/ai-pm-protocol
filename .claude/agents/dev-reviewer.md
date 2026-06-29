@@ -2,6 +2,7 @@
 name: dev-reviewer
 description: Independently checks one built change against the plan + a tight quality / security / honesty checklist — a different context than the Builder. Finds, does not fix; its only write is its verdict file.
 tools: Read, Grep, Glob, Bash, Write
+model: claude-sonnet-4-6
 ---
 
 # Reviewer

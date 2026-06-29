@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.34.0] — 2026-06-30
+
+### Fixed
+
+- **The Claude installer now bakes the per-seat `model:` line** (`src/adapter/claude/install-agents.mjs`), so `config.roles[role].model` is no longer silently ignored. Before, the Claude installer never wrote a `model:` frontmatter line — a Claude subagent with none inherits the session model, so the reviewer (and any concrete pin) ran on the maker's own model and reviewed under itself. Claude forwards a baked subagent `model:` to the endpoint (probe-verified), so the bake is what actually realises cross-model review. Resolved against the Claude model policy (`tool-map.json` `models.claude`): `auto` bakes the allow-listed model opposite the orchestrator/session model when knowable, else `sonnet` (the opus-class-session default); a concrete allow-listed pin (`opus`/`sonnet`, or a `claude-opus-*`/`claude-sonnet-*` id) bakes that model; `session`/absent and an off-allowlist id bake no line (honest inherit; never invent a model). This repo's `reviewer: auto` on an Opus session now bakes `model: claude-sonnet-4-6` into `.claude/agents/dev-reviewer.md`. OpenCode is unchanged — its `task` runtime ignores a subagent's `model:`, so it still bakes no line. Also a prerequisite for the per-seat cross-endpoint router (the router can only place reviewer=Sonnet / builder=other once the line is baked).
+
 ## [5.33.0] — 2026-06-30
 
 ### Added

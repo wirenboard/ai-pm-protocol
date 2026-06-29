@@ -27,8 +27,9 @@
     "_doc": "Per-platform model policy for the project config's role `model` field (.ai-dev/config.json). ZERO-CONFIG by default — works with no setup. `session` = the orchestrator's model. `auto` = a different model for independent blind spots IF the platform offers one out of the box, ELSE it falls back to `session` (never an error). Names are environment-dependent — that is why this lives in the adapter, not the neutral config. This block is also the home of the **list-available-models** contract point (docs/architecture.md `## Extension points`): per platform, HOW setup learns which models the environment offers — `discover` below.",
     "claude": {
       "allow": ["opus", "sonnet"],
-      "auto": "the allow-listed model opposite the session's (opus<->sonnet) — always available, so cross-model review works zero-config",
-      "discover": "the known fixed pair above (`allow`) — no enumeration call; the model space on Claude IS this pair, so the allowlist is meaningful and gates a pin."
+      "ids": { "opus": "claude-opus-4-8", "sonnet": "claude-sonnet-4-6" },
+      "auto": "BAKED as a `model:` frontmatter line by claude/install-agents.mjs (Claude forwards a subagent's baked `model:` to the endpoint, so the line is what actually makes review cross-model — without it the subagent inherits the session model and reviews under itself): the allow-listed model OPPOSITE the orchestrator/session model when that is knowable from config (a concrete orchestrator pin), ELSE `sonnet` — the conventional review model on an opus-class session. Both are always allow-listed, so `auto` always has a model to bake.",
+      "discover": "the known fixed pair above (`allow`) — no enumeration call; the model space on Claude IS this pair, so the allowlist is meaningful and gates a pin. `ids` maps each allow-listed alias to the canonical model id the installer bakes: an alias pin (`opus`/`sonnet`) bakes its id, a concrete `claude-opus-*`/`claude-sonnet-*` id bakes verbatim, and an off-allowlist id bakes no line (never invent a model)."
     },
     "opencode": {
       "allow": [],

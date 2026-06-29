@@ -34,8 +34,9 @@ const ROLES = ["orchestrator", "builder", "reviewer"];
 // model, and the install log makes no false claim. The WHY a cross-model reviewer
 // is unavailable on OpenCode is documented for the Operator in three durable homes:
 // the orchestrator honesty note (`## Your seat`), tool-map.json `models.opencode._note`,
-// and the research doc above. (Claude is unaffected — there the orchestrator
-// resolves the model and passes it at the spawn; no bake path at all.)
+// and the research doc above. (Claude DOES bake a `model:` line — its `task` runtime
+// honours a baked subagent model: — so its resolveModelPin returns a real pin; the two
+// same-named exports differ precisely because the platforms differ.)
 export function resolveModelPin() {
   return null; // OpenCode `task` ignores subagent model: at runtime — never bake one
 }

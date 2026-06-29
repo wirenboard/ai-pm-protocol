@@ -10,6 +10,18 @@
 // module-compose logic is the ONE home shared with the OpenCode shim — never copied
 // here (mirrors how engine.mjs is shared by both deny shims).
 //
+// PER-SEAT MODEL BAKE (Claude only): each spawnable role's `config.roles[role].model`
+// wish is resolved against the Claude model policy (tool-map.json `models.claude`) and,
+// when it yields a model, baked as a `model:` frontmatter line. Claude forwards a baked
+// subagent `model:` to the endpoint, so this line is what actually makes the reviewer
+// run on a model different from the session (without it a Claude subagent inherits the
+// session model — the bug this path fixes: the reviewer reviewed under itself). The
+// resolution lives in resolveModelPin below (the Claude-side mirror of OpenCode's
+// same-named export — intentionally per-platform: OpenCode ALWAYS returns null because
+// its `task` runtime ignores a subagent's model:, Claude resolves a real pin because it
+// honours one). `session`/absent and an off-allowlist id bake no line (honest inherit;
+// never invent a model). The orchestrator is never baked — it IS the session.
+//
 // The ORCHESTRATOR is special on Claude: it IS the session (held by CLAUDE.md), NOT a
 // spawnable subagent. Claude auto-registers subagents from `.claude/agents/` ONLY — so a
 // file there would wrongly surface the orchestrator as a spawnable `ai-dev` agent. We
@@ -32,11 +44,58 @@ import { loadRegistry, composeBody } from "../modules.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const SPAWNABLE = ["builder", "reviewer"];
+const TOOL_MAP = path.join(ROOT, "src", "adapter", "tool-map.json");
 // The orchestrator load-surface filename is FIXED (not keyed on the configurable agent id):
 // CLAUDE.md @imports it by a stable string in both dogfood and downstream modes. Unlike the
 // OpenCode default_agent (a real registered agent keyed on its id), the Claude orchestrator
 // is the SESSION, so a stable load-surface name is what the import must point at.
 const ORCHESTRATOR_FILE = "ai-dev.md";
+
+// The Claude model policy from tool-map.json `models.claude` — the single data home for
+// the allow-listed model space (`allow`) and the alias→canonical-id map (`ids`) the
+// installer bakes. Read here, never re-listed: a new Claude model is added to that data,
+// not to this code.
+export function loadClaudeModelPolicy() {
+  return JSON.parse(fs.readFileSync(TOOL_MAP, "utf8")).models.claude;
+}
+
+// Map a model WISH to its allow-listed Claude alias, or null when not knowable / not
+// allow-listed. An alias (`opus`/`sonnet`) maps to itself; a concrete `claude-opus-*` /
+// `claude-sonnet-*` id maps to the alias of its family; everything else (`session`,
+// `auto`, absent, or an off-allowlist id) is null.
+function aliasOf(wish, policy) {
+  if (typeof wish !== "string") return null;
+  if (policy.allow.includes(wish)) return wish;
+  for (const alias of policy.allow) {
+    if (wish.startsWith(`claude-${alias}-`)) return alias;
+  }
+  return null;
+}
+
+// Resolve a role's `model` wish to the model id to BAKE as a `model:` line, or null for
+// no line. Per the Claude model policy (tool-map.json `models.claude`):
+//   • `session` / absent      → null  (honest explicit inherit = the session model)
+//   • a concrete allow-listed pin (`opus`/`sonnet`, or a `claude-opus-*`/`claude-sonnet-*`
+//     id) → that model (an alias maps to its canonical id; a full id bakes verbatim)
+//   • `auto`                  → the cross-model: the allow-listed model OPPOSITE the
+//     orchestrator/session wish when knowable from config, ELSE `sonnet` (the documented
+//     opus-class-session default — PR-2's dialog refines this from the dialog-known session)
+//   • off-allowlist / unknown → null  (never invent a model)
+// `sessionWish` is the orchestrator's `model` wish; the orchestrator IS the session, so a
+// `session`/`auto`/absent orchestrator wish is "session model not knowable from config".
+export function resolveModelPin(wish, sessionWish, policy = loadClaudeModelPolicy()) {
+  if (wish === undefined || wish === null || wish === "session") return null;
+  if (wish === "auto") {
+    const session = aliasOf(sessionWish, policy);
+    const opposite = session === "opus" ? "sonnet"
+      : session === "sonnet" ? "opus"
+      : "sonnet"; // session not knowable from config → documented opus-class default
+    return policy.ids[opposite];
+  }
+  const alias = aliasOf(wish, policy);
+  if (!alias) return null; // off-allowlist / unknown → no line, never invent
+  return wish.startsWith("claude-") ? wish : policy.ids[alias];
+}
 
 // Assemble the spawnable role agent files into outDir, PLUS the orchestrator's
 // platform-filtered load surface into outDir's parent (`.claude/ai-dev.md`). Returns the
@@ -45,6 +104,8 @@ const ORCHESTRATOR_FILE = "ai-dev.md";
 export function install(outDir, config) {
   fs.mkdirSync(outDir, { recursive: true });
   const registry = loadRegistry(ROOT);
+  const policy = loadClaudeModelPolicy();
+  const sessionWish = config.roles?.orchestrator?.model; // the session model wish (for `auto`)
   const written = {};
   for (const role of SPAWNABLE) {
     const agentId = config.roles?.[role]?.agent;
@@ -52,11 +113,17 @@ export function install(outDir, config) {
     const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "claude", "agents", `${role}.fm`), "utf8").trim();
     const floor = fs.readFileSync(path.join(ROOT, "src", "agents", `${role}.md`), "utf8").trimStart();
     const body = composeBody(ROOT, floor, role, registry, config, "claude");
-    const out = `---\nname: ${agentId}\n${fm}\n---\n\n${body}`;
+    const wish = config.roles?.[role]?.model;
+    const pin = resolveModelPin(wish, sessionWish, policy);
+    const modelLine = pin ? `model: ${pin}\n` : "";
+    if (!pin && typeof wish === "string" && wish !== "session" && wish !== "auto") {
+      console.log(`note: model '${wish}' for ${role} is off the Claude allowlist (${policy.allow.join("/")}) — no model: line baked; the subagent inherits the session model`);
+    }
+    const out = `---\nname: ${agentId}\n${fm}\n${modelLine}---\n\n${body}`;
     const outPath = path.join(outDir, `${agentId}.md`);
     fs.writeFileSync(outPath, out);
     written[agentId] = outPath;
-    console.log(`wrote ${path.relative(ROOT, outPath)}  (role ${role} -> ${agentId})`);
+    console.log(`wrote ${path.relative(ROOT, outPath)}  (role ${role} -> ${agentId}${pin ? `, model ${pin}` : ""})`);
   }
   writeOrchestrator(outDir, config, registry, written);
   return written;
