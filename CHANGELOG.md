@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.32.0] — 2026-06-30
+
+### Added
+
+- **A first-party per-seat cross-endpoint model router — `src/adapter/model-router.mjs`** (realises option C of `docs/decisions/per-seat-model-routing.md`, which ships with it). Lets the loop's seats run on models behind **different endpoints** (Opus/Sonnet on Anthropic, the Builder on DeepSeek's Anthropic-compatible endpoint) under **one** Claude Code instance — closing the gap that a single instance takes one `ANTHROPIC_BASE_URL`. A pure localhost reverse-proxy: it reads each request body's `model`, matches it against a config route table (`model-router.example.json` — `{ match, base_url, auth: { header, keyEnv } }`, keys named by env var, **never inline**), swaps in the backend's auth header, and **streams the response through** (SSE/chunked passthrough — no format translation; both ends speak the Messages API). **Security posture (the surface it owns):** keys from env only and never logged; the incoming client auth header **stripped** before forwarding (a seat's front-key never reaches a backend); **fail-closed** — an unknown/missing model, an unparseable body, or a route whose key env is unset is a 4xx/5xx, **never a silent default backend**; localhost-bound by default; at most an opt-in (`MODEL_ROUTER_LOG=1`) `model -> host` line to stderr (no key, body, or header). The constraint is documented in `src/adapter/README.md`: **`CLAUDE_CODE_SUBAGENT_MODEL` must stay UNSET**, else it collapses every seat to one model and the route key can no longer tell the seats apart. Tested through the real http path against stub upstreams (no network, no real keys): routing, the auth-header+value swap, body + streamed-response passthrough, every fail-closed path, and log-leak safety (`model-router-test` row in `src/quality/tools.json`). **Honesty / verified fact:** the official DeepSeek docs (checked 2026-06-30) document its Anthropic-compatible endpoint (`https://api.deepseek.com/anthropic`) authenticating with **`x-api-key`**, the same scheme as Anthropic — **not** `Authorization: Bearer` as the decision doc and the original plan asserted; the router still supports a per-backend `auth.scheme` (Bearer-style) for backends that need it.
+
+---
+
 ## [5.31.0] — 2026-06-29
 
 ### Added

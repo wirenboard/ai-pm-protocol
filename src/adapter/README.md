@@ -39,3 +39,24 @@ Here there is **no second copy to drift**: the patterns live once in `deny-rules
 - **Single-engine** — a shim must contain no rule logic of its own (only input-normalising + verdict-mapping); the test greps each shim for inline patterns/role-lists and fails if a rule leaked out of the registry or the engine.
 
 Install glue is in `INSTALL.md` (where each file lands, the Claude hook fragment, the OpenCode plugin entry). The OpenCode entry defines its hook functions inline and imports only the rule logic — a hook imported and re-exported is not registered by the loader. Per-class support is in `tool-map.json`.
+
+## Model router — per-seat cross-endpoint routing
+
+A second, independent adapter-layer tool (`model-router.mjs`), unrelated to the deny-engine above. It lets the loop's seats run on models behind **different endpoints** — Opus/Sonnet on Anthropic, the Builder on DeepSeek's Anthropic-compatible endpoint — under **one** Claude Code instance, which itself takes a single `ANTHROPIC_BASE_URL`. The *why*, the alternatives, and the empirical routing probe live in `docs/decisions/per-seat-model-routing.md` — read it; this section is the HOW-TO only.
+
+It is a pure reverse-proxy: it reads each request body's `model`, matches it against a config route table, swaps in that backend's auth header (key from an env var, never inline, never logged), and streams the response through. An unroutable request fails closed (a 4xx/5xx error, never a silent default backend) — sending a seat's traffic to the wrong provider is the worst outcome it must prevent.
+
+**Run it:**
+
+```sh
+cp src/adapter/model-router.example.json router.json   # then edit the routes
+export ANTHROPIC_API_KEY=sk-ant-…                       # the keys the routes name
+export DEEPSEEK_API_KEY=sk-…
+node src/adapter/model-router.mjs router.json           # listens on 127.0.0.1:8787
+```
+
+Then point Claude Code at it: `export ANTHROPIC_BASE_URL=http://127.0.0.1:8787`. Set `MODEL_ROUTER_LOG=1` for an opt-in `model -> host` line per request on stderr (never a key, body, or header).
+
+**The route config** (`model-router.example.json`) is a list of `{ match, base_url, auth: { header, keyEnv } }`: `match` is a glob over the model id (`claude-*`, `deepseek-*`); `base_url` is the backend origin (with an optional base path the request path is appended to); `auth.keyEnv` names the env var holding that backend's key — **never a key value in the file** (it is committed). An optional `auth.scheme` (e.g. `"Bearer"`) prepends a prefix to the key for backends that want `Authorization: Bearer <key>` rather than a raw `x-api-key`. Verified per the official DeepSeek docs (2026-06-30): its Anthropic-compatible endpoint is `https://api.deepseek.com/anthropic` and authenticates with `x-api-key`, the same scheme as Anthropic.
+
+**Load-bearing constraint — `CLAUDE_CODE_SUBAGENT_MODEL` must stay UNSET.** It has the highest precedence in Claude Code's per-subagent model resolution and **collapses every seat to one model** when set — which defeats the router (every request would arrive carrying the same model id, so the route table can no longer tell the Builder seat from the Reviewer seat). The per-seat `model:` pins are the routing key; this env var overrides them. See `docs/decisions/per-seat-model-routing.md` (fact 2) for the empirical proof.
