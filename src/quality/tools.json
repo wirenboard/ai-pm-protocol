@@ -162,6 +162,22 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "transient-hygiene",
+      "checks": "ADVISORY (never red, always exit 0) — surfaces stale loop transients: a .ai-dev/plans|reviews|audit file whose topic matches no open local branch (already shipped, the ship-beat delete skipped). Silent when clean; emits a GitHub Actions ::warning:: per stale file under CI so the nudge reaches the Operator on the PR. Fail-safe no-op on no-git/absent-dir",
+      "config": null,
+      "run": "node src/quality/transient-hygiene.mjs",
+      "beat": "build",
+      "init": "Node >= 18 + git, no install"
+    },
+    {
+      "id": "transient-hygiene-test",
+      "checks": "the transient-hygiene advisory's own logic against a real git fixture — a live-branch topic is kept, an orphaned plan / _review stamp / audit run flags, a main-only checkout flags all, and absent-dir/non-git fail-safe to no finding; the script stays exit-0 (advisory) in every case",
+      "config": null,
+      "run": "node src/quality/transient-hygiene.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18 + git, no install"
+    },
+    {
       "id": "run-quality",
       "checks": "the whole-set quality runner itself — filters by beat, fails closed on a malformed registry, no-op-safe when empty/absent",
       "config": null,
