@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.31.0] — 2026-06-29
+
+### Added
+
+- **A mechanical catch for orphaned loop transients — the `transient-hygiene` advisory** (downstream-reported: a project carried 40+ stale `.ai-dev/plans/*` and 3 lingering `.ai-dev/reviews/*` stamps for already-shipped features, incl. a merged-PR stamp). The ship-beat delete of a feature's plan / review stamp / audit run is `[persona]`; a skipped one (reset between build and ship, a batch shipped at once) **accumulated** with nothing to catch it. New `src/quality/transient-hygiene.mjs` — a project-agnostic `build`-beat row (the `version-skew` pattern, shipped to every downstream via the runner) that lists `.ai-dev/plans|reviews|audit` files whose topic matches **no open local branch** (the `feature/`/`fix/` prefix and a stamp's `_review` suffix stripped before matching). **ADVISORY — always exits 0**, silent when clean, fail-safe to a no-op on no-git/absent-dir; under CI it emits a GitHub Actions `::warning::` per stale file so the nudge reaches the **Operator on the PR**. The audit's `durable-text hygiene` dimension gains clause **(d) transient hygiene**: the runner row surfaces candidates mechanically, the auditor's residual is confirming each is genuinely shipped and pruning it. **Honesty (load-bearing):** this makes orphaned-transient detection **mechanically SURFACED, never ENFORCED** — an inject-class nudge, never a build-red or a merge-gate; claiming otherwise would be a review-blocking over-claim. Rationale: `docs/decisions/transient-hygiene-catch.md` (mirrors `audit-cadence-backstop.md`).
+
+---
+
 ## [5.30.1] — 2026-06-28
 
 ### Added
