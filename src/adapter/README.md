@@ -60,3 +60,21 @@ Then point Claude Code at it: `export ANTHROPIC_BASE_URL=http://127.0.0.1:8787`.
 **The route config** (`model-router.example.json`) is a list of `{ match, base_url, auth: { header, keyEnv } }`: `match` is a glob over the model id (`claude-*`, `deepseek-*`); `base_url` is the backend origin (with an optional base path the request path is appended to); `auth.keyEnv` names the env var holding that backend's key — **never a key value in the file** (it is committed). An optional `auth.scheme` (e.g. `"Bearer"`) prepends a prefix to the key for backends that want `Authorization: Bearer <key>` rather than a raw `x-api-key`. Verified per the official DeepSeek docs (2026-06-30): its Anthropic-compatible endpoint is `https://api.deepseek.com/anthropic` and authenticates with `x-api-key`, the same scheme as Anthropic.
 
 **Load-bearing constraint — `CLAUDE_CODE_SUBAGENT_MODEL` must stay UNSET.** It has the highest precedence in Claude Code's per-subagent model resolution and **collapses every seat to one model** when set — which defeats the router (every request would arrive carrying the same model id, so the route table can no longer tell the Builder seat from the Reviewer seat). The per-seat `model:` pins are the routing key; this env var overrides them. See `docs/decisions/per-seat-model-routing.md` (fact 2) for the empirical proof.
+
+### The provider catalog — `model-providers.json`
+
+A built-in, data-only map of the known Anthropic-format backends, so a routes config can name a provider by `id` instead of restating its endpoint. Each entry carries `id`, `base_url` (the origin **plus the path prefix before `/v1/messages`** — the router appends the client's request path), the `models` globs that select it, and `auth { header, scheme?, keyEnv }` (key by env-var **name** only). The four verified providers (2026-06-30): **anthropic** (`x-api-key`, also `supports_passthrough`), **deepseek** (`x-api-key`), **glm** (z.ai GLM Coding Plan — `Authorization: Bearer`, models `GLM-*`), **openrouter** (`Authorization: Bearer`). **Governing constraint: Anthropic-format only, no translator ever** — OpenAI-shaped providers are out of scope permanently (`docs/decisions/per-seat-model-routing.md`).
+
+A route in a routes config references one: `{ "provider": "deepseek" }` (base_url + auth + match patterns pulled from the catalog), with any field overridable inline — e.g. `{ "provider": "anthropic", "auth": "passthrough" }` to forward a subscription/OAuth session's own auth (no API key), or a `base_url` override for a regional GLM host.
+
+### The launcher — `router-launch.mjs`
+
+One command to run the wired pipeline, **direct by default**:
+
+```sh
+node src/adapter/router-launch.mjs [claude args…]
+#   AI_DEV_CONFIG        config path   (default .ai-dev/config.json)
+#   MODEL_ROUTER_ROUTES  routes path   (default .ai-dev/model-routes.json)
+```
+
+It reads the seats' `roles.*.model` pins and the routes config (resolved against the catalog), then decides: if the seats touch **fewer than 2 distinct endpoints** (e.g. all-Anthropic), it execs `claude` **directly, no router** — a project that never opts in is unchanged. If **≥2 endpoints** are in play, it starts `model-router.mjs` on a free localhost port, points the child at it (`ANTHROPIC_BASE_URL`), **guarantees `CLAUDE_CODE_SUBAGENT_MODEL` is unset** in the child env, execs `claude`, and tears the router down on exit. **Fail-closed:** if a route in play names a backend key env var that is unset, the launcher errors **before launching anything** — never a silent wrong-backend.

@@ -40,10 +40,15 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULT_MAX_BODY_BYTES = 25 * 1024 * 1024; // 25 MB — bound the per-request buffer
 
-// Headers the router never forwards verbatim: the client's own auth (stripped so
-// it can't leak to a backend / reach the wrong provider), and the hop-specific
-// host/length the router recomputes for the upstream.
-const STRIPPED_HEADERS = new Set(["x-api-key", "authorization", "host", "content-length"]);
+// Hop-specific headers the router always recomputes for the upstream — never
+// forwarded verbatim.
+const HOP_HEADERS = new Set(["host", "content-length"]);
+
+// The client's own auth headers. STRIPPED on a normal (key-swap) route so a seat's
+// front-key can't leak to a backend or reach the wrong provider; KEPT verbatim on a
+// passthrough route (auth: "passthrough"), where forwarding the client's auth
+// unchanged is the whole point (a subscription/OAuth session with no backend key).
+const CLIENT_AUTH_HEADERS = new Set(["x-api-key", "authorization"]);
 
 // A routing failure carrying the HTTP status the client should see.
 class RouterError extends Error {
@@ -83,11 +88,19 @@ export function modelFromBody(body) {
   }
 }
 
+// True when a route forwards the client's incoming auth header unchanged instead of
+// swapping in a backend key (auth: "passthrough"). Lets a subscription/OAuth Claude
+// Code session use the Anthropic/default route with NO backend API key.
+export function isPassthrough(route) {
+  return route && route.auth === "passthrough";
+}
+
 // Resolve a route's backend auth header from the environment. Returns
 // { name, value }; throws a 500 RouterError when the named env var is unset/empty
 // — fail-closed: the router never forwards a request without the backend's own key.
 // `scheme` (optional, e.g. "Bearer") is prepended: `Authorization: Bearer <key>`;
 // absent ⇒ the raw key is the value (e.g. `x-api-key: <key>`).
+// Not called for a passthrough route (which carries no backend key) — see isPassthrough.
 export function resolveAuthHeader(route, env = process.env) {
   const { header, keyEnv, scheme } = route.auth;
   const key = env[keyEnv];
@@ -114,7 +127,10 @@ export function validateConfig(config) {
     } catch {
       throw new Error(`${at}.base_url: not a valid URL`);
     }
-    if (!route.auth || typeof route.auth !== "object") throw new Error(`${at}.auth: missing`);
+    // auth is EITHER the string "passthrough" (forward the client's auth unchanged)
+    // OR a key-swap object { header, keyEnv, scheme? }.
+    if (route.auth === "passthrough") continue;
+    if (!route.auth || typeof route.auth !== "object") throw new Error(`${at}.auth: missing (object or "passthrough")`);
     if (typeof route.auth.header !== "string" || route.auth.header.length === 0) throw new Error(`${at}.auth.header: missing`);
     if (typeof route.auth.keyEnv !== "string" || route.auth.keyEnv.length === 0) throw new Error(`${at}.auth.keyEnv: missing`);
   }
@@ -143,11 +159,15 @@ function joinPath(basePath, requestUrl) {
   return basePath.replace(/\/+$/, "") + requestUrl;
 }
 
-// Copy the client's headers minus the stripped set, and point `host` at the backend.
-function sanitizeHeaders(incoming, upstreamHost) {
+// Copy the client's headers minus the hop set, and point `host` at the backend.
+// keepClientAuth=false (the key-swap default) also drops the client's auth headers;
+// keepClientAuth=true (passthrough) forwards them unchanged.
+function sanitizeHeaders(incoming, upstreamHost, { keepClientAuth = false } = {}) {
   const out = {};
   for (const [k, v] of Object.entries(incoming)) {
-    if (STRIPPED_HEADERS.has(k.toLowerCase())) continue;
+    const lower = k.toLowerCase();
+    if (HOP_HEADERS.has(lower)) continue;
+    if (!keepClientAuth && CLIENT_AUTH_HEADERS.has(lower)) continue;
     out[k] = v;
   }
   out.host = upstreamHost;
@@ -162,26 +182,35 @@ function sendError(res, status, message) {
   }
   const type = status >= 500 ? "api_error" : "invalid_request_error";
   const payload = JSON.stringify({ type: "error", error: { type, message } });
-  res.writeHead(status, { "content-type": "application/json" });
+  // `connection: close` so an error reply mid-upload (e.g. a 413 with the client
+  // still sending body) is delivered cleanly and the socket is not reused with an
+  // unconsumed request body.
+  res.writeHead(status, { "content-type": "application/json", connection: "close" });
   res.end(payload);
 }
 
 // Read the full request body into a buffer, bounded by maxBytes (over ⇒ 413).
+// On overflow it rejects but does NOT destroy the socket: the caller's catch sends
+// a clean 413 (sendError closes the connection). Destroying here would tear down the
+// response socket too, turning the 413 into a connection reset the client can't read.
+// Further data after overflow is ignored (the `aborted` guard) so memory stays bounded.
 function readBody(req, maxBytes) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    let aborted = false;
     req.on("data", (chunk) => {
+      if (aborted) return;
       size += chunk.length;
       if (size > maxBytes) {
-        req.destroy();
+        aborted = true;
         reject(new RouterError(413, "request body too large"));
         return;
       }
       chunks.push(chunk);
     });
-    req.on("end", () => resolve(Buffer.concat(chunks)));
-    req.on("error", reject);
+    req.on("end", () => { if (!aborted) resolve(Buffer.concat(chunks)); });
+    req.on("error", (err) => { if (!aborted) reject(err); });
   });
 }
 
@@ -194,20 +223,28 @@ function forward(config, req, res, body, log) {
     return;
   }
 
-  let auth;
-  try {
-    auth = resolveAuthHeader(route);
-  } catch (err) {
-    sendError(res, err.status || 500, err.message);
-    return;
+  const passthrough = isPassthrough(route);
+  let auth = null;
+  if (!passthrough) {
+    try {
+      auth = resolveAuthHeader(route);
+    } catch (err) {
+      sendError(res, err.status || 500, err.message);
+      return;
+    }
   }
 
   const upstream = new URL(route.base_url);
   log(`${model} -> ${upstream.host}`); // safe: model + hostname only, never key/body/header
 
-  const headers = sanitizeHeaders(req.headers, upstream.host);
-  headers[auth.name] = auth.value;
+  // Passthrough keeps the client's auth header; key-swap drops it and sets the backend's.
+  const headers = sanitizeHeaders(req.headers, upstream.host, { keepClientAuth: passthrough });
+  if (auth) headers[auth.name] = auth.value;
   if (body.length) headers["content-length"] = String(body.length);
+
+  // A dropped/aborted client connection must not crash the process or leave the
+  // upstream hanging.
+  res.on("error", () => {});
 
   const client = upstream.protocol === "http:" ? http : https;
   const upstreamReq = client.request(
@@ -220,6 +257,15 @@ function forward(config, req, res, body, log) {
       headers,
     },
     (upstreamRes) => {
+      // Mid-stream upstream failure (the backend drops the socket after we began
+      // streaming): the response headers are already sent, so sendError can only
+      // tear the client connection down — never a write-after-headers crash.
+      const onUpstreamFail = () => {
+        if (res.headersSent) res.destroy();
+        else sendError(res, 502, "upstream response error");
+      };
+      upstreamRes.on("error", onUpstreamFail);
+      upstreamRes.on("aborted", onUpstreamFail);
       // Stream the upstream response straight back — SSE/chunked passthrough.
       res.writeHead(upstreamRes.statusCode || 502, upstreamRes.headers);
       upstreamRes.pipe(res);

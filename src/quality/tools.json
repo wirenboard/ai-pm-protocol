@@ -155,9 +155,17 @@
     },
     {
       "id": "model-router-test",
-      "checks": "the per-seat cross-endpoint model router (src/adapter/model-router.mjs) through its REAL http path against two STUB upstreams (no network, no real keys): a request routes to the backend its model matches and reaches no other; the per-backend auth header is swapped to the right scheme AND value (x-api-key vs Authorization: Bearer, the backend key not the client front-key, the incoming client auth stripped); the request body + a chunked/streamed response pass through intact; an unknown model, a missing model, an unparseable body, and a route whose key env is unset all FAIL CLOSED (4xx/5xx, never a silent default backend); and the opt-in routing log leaks no key, no body, no header (only model -> host)",
+      "checks": "the per-seat cross-endpoint model router (src/adapter/model-router.mjs) through its REAL http path against STUB upstreams (no network, no real keys): a request routes to the backend its model matches and reaches no other; the per-backend auth header is swapped to the right scheme AND value (x-api-key vs Authorization: Bearer, the backend key not the client front-key, the incoming client auth stripped); a passthrough route (auth:\"passthrough\") forwards the client's auth VERBATIM with no swap while a key-swap route still strips+swaps; the request body + a chunked/streamed response pass through intact; the error paths fail cleanly — an oversize body ⇒ 413, an unreachable upstream ⇒ 502, a mid-stream upstream socket-drop after headers does not crash the router and the partial reaches the client; an unknown model, a missing model, an unparseable body, and a route whose key env is unset all FAIL CLOSED (4xx/5xx, never a silent default backend); and the opt-in routing log leaks no key, no body, no header (only model -> host)",
       "config": null,
       "run": "node src/adapter/model-router.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "router-launch-test",
+      "checks": "the model-router launcher's PURE decision functions (src/adapter/router-launch.mjs), no network / no `claude` exec: a routes config's { provider: <id> } entry resolves base_url + auth from the built-in catalog (src/adapter/model-providers.json) with inline match/base_url/auth overrides and provider-pattern fan-out; an unknown provider and an unsupported passthrough both throw; distinct-endpoint counting drives the launch mode — all-Anthropic seats run claude DIRECT (proxy off by default), cross-endpoint seats start the router; the key-env presence check fails closed (an unset backend key for a route in play is surfaced BEFORE launch, passthrough routes skipped); seatModels keeps concrete role pins and drops auto/session; buildChildEnv sets ANTHROPIC_BASE_URL and UNSETS CLAUDE_CODE_SUBAGENT_MODEL; and the REAL shipped catalog pins the four verified providers (anthropic passthrough + x-api-key, deepseek x-api-key, glm z.ai Coding-Plan Bearer + GLM-*, openrouter Bearer)",
+      "config": null,
+      "run": "node src/adapter/router-launch.test.mjs",
       "beat": "build",
       "init": "Node >= 18, no install"
     },
