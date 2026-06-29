@@ -1,22 +1,36 @@
-// OpenCode install-model honesty test — proves install NEVER bakes a reviewer
-// `model:` line (src/adapter/opencode/install-agents.mjs). The OpenCode `task`
-// runtime parses a subagent's `model:` frontmatter but does NOT apply it at
-// execution (open upstream bugs #21632 / #17870 / #18615, no fix through our
-// 1.17.7 — research: docs/decisions/opencode-task-capabilities.md Q1), so baking a
-// concrete pin would claim a cross-model reviewer the runtime silently swallows.
-// The contract this locks:
-//   • EVERY input — a concrete `provider/model` string, the per-platform
-//     `{opencode: …}` form, `auto`, `session`, or absent — resolves to NO `model:`
-//     line; the subagent inherits the session model, no false claim of cross-model
-//     independence. (The WHY a cross-model reviewer is unavailable on OpenCode is
-//     documented for the Operator in orchestrator.md `## Your seat`, tool-map.json
-//     `models.opencode._note`, and the research doc above — not in the install log.)
-// UNLIKE Claude, where the orchestrator resolves the model and passes it at the
-// spawn (no bake path at all). A regression that bakes a line fails loudly here.
+// install-model bake test — the per-platform model-line bake contract, covering BOTH
+// platforms because the two install-agents.mjs export a same-named resolveModelPin that
+// differs precisely because the platforms differ:
+//
+// OPENCODE — NEVER bakes a reviewer `model:` line. The `task` runtime parses a subagent's
+// `model:` frontmatter but does NOT apply it at execution (open upstream bugs #21632 /
+// #17870 / #18615, no fix through our 1.17.7 — research:
+// docs/decisions/opencode-task-capabilities.md Q1), so baking a concrete pin would claim a
+// cross-model reviewer the runtime silently swallows. EVERY input — a concrete
+// `provider/model` string, the per-platform `{opencode: …}` form, `auto`, `session`, or
+// absent — resolves to NO `model:` line; the subagent inherits the session model, no false
+// claim of cross-model independence.
+//
+// CLAUDE — DOES bake, because its `task` runtime honours a baked subagent `model:` (probe-
+// verified; without the line a Claude subagent inherits the session model and the reviewer
+// reviews under itself — the bug this path fixes). Resolved against the Claude model policy
+// (tool-map.json `models.claude`): `auto` bakes the allow-listed model OPPOSITE the session
+// (else `sonnet`); a concrete allow-listed pin (`opus`/`sonnet` or a `claude-opus-*`/
+// `claude-sonnet-*` id) bakes that model; `session`/absent and an off-allowlist id bake NO
+// line (honest inherit; never invent a model).
+//
+// (The WHY a cross-model reviewer is unavailable on OpenCode is documented for the Operator
+// in orchestrator.md `## Your seat`, tool-map.json `models.opencode._note`, and the research
+// doc above — not in the install log.) A regression that bakes on OpenCode, or stops baking
+// on Claude, fails loudly here.
 //
 // Run: node src/adapter/install-model.test.mjs
 
 import { install, resolveModelPin } from "./opencode/install-agents.mjs";
+import {
+  install as installClaude,
+  resolveModelPin as resolveClaudePin,
+} from "./claude/install-agents.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -62,6 +76,52 @@ check("no-bake: 'auto' emits no model line", !/^model:/m.test(reviewerFrontmatte
 check("no-bake: 'session' emits no model line", !/^model:/m.test(reviewerFrontmatter("session")));
 check("no-bake: absent model emits no model line", !/^model:/m.test(reviewerFrontmatter(undefined)));
 
-console.log(`\nINSTALL-MODEL honesty: ${pass} passed, ${fail} failed`);
+// ───────────────────────── Claude — DOES bake (additive) ─────────────────────────
+// 4. resolveModelPin (Claude) — the real resolution against the live tool-map policy.
+//    `auto` with a not-knowable session (orchestrator absent) → the opus-class default sonnet.
+check("claude-pin: 'auto' (session not knowable) → claude-sonnet-4-6", resolveClaudePin("auto", undefined) === "claude-sonnet-4-6");
+check("claude-pin: 'auto' opposite an opus session → claude-sonnet-4-6", resolveClaudePin("auto", "opus") === "claude-sonnet-4-6");
+check("claude-pin: 'auto' opposite a sonnet session → claude-opus-4-8", resolveClaudePin("auto", "sonnet") === "claude-opus-4-8");
+check("claude-pin: 'auto' opposite a claude-opus-* session id → claude-sonnet-4-6", resolveClaudePin("auto", "claude-opus-4-8") === "claude-sonnet-4-6");
+check("claude-pin: alias 'sonnet' → canonical id claude-sonnet-4-6", resolveClaudePin("sonnet", undefined) === "claude-sonnet-4-6");
+check("claude-pin: alias 'opus' → canonical id claude-opus-4-8", resolveClaudePin("opus", undefined) === "claude-opus-4-8");
+check("claude-pin: a concrete claude-* id bakes verbatim", resolveClaudePin("claude-opus-4-8", undefined) === "claude-opus-4-8");
+check("claude-pin: 'session' → null (honest inherit)", resolveClaudePin("session", undefined) === null);
+check("claude-pin: absent (undefined) → null", resolveClaudePin(undefined, undefined) === null);
+check("claude-pin: off-allowlist id → null (never invent)", resolveClaudePin("claude-haiku-4-5", undefined) === null);
+check("claude-pin: a non-claude pin → null", resolveClaudePin("deepseek/deepseek-chat", undefined) === null);
+
+// 5. end-to-end: assert the REAL assembled Claude reviewer frontmatter carries (or omits)
+//    the right `model:` line. Claude's install() also writes the orchestrator load surface
+//    to outDir's PARENT, so a tmp dir keeps it isolated. `sessionModel` sets the
+//    orchestrator's wish so the `auto` opposite is exercised.
+function claudeReviewerFrontmatter(reviewerModel, sessionModel) {
+  // outDir nested under a tmp parent: Claude's install writes the orchestrator surface to
+  // dirname(outDir), so the parent (not /tmp) is what gets cleaned up.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-claude-bake-"));
+  const outDir = path.join(tmp, "agents");
+  const config = {
+    roles: {
+      orchestrator: { agent: "ai-dev", ...(sessionModel !== undefined ? { model: sessionModel } : {}) },
+      builder: { agent: "dev-builder" },
+      reviewer: { agent: "dev-reviewer", ...(reviewerModel !== undefined ? { model: reviewerModel } : {}) },
+    },
+  };
+  const written = installClaude(outDir, config);
+  const text = fs.readFileSync(written["dev-reviewer"], "utf8");
+  const fm = text.split("\n---")[0]; // the frontmatter block, before the body
+  fs.rmSync(tmp, { recursive: true, force: true });
+  return fm;
+}
+
+check("claude-bake: 'auto' (opus-class session) bakes model: claude-sonnet-4-6", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", undefined)));
+check("claude-bake: 'auto' opposite a sonnet session bakes model: claude-opus-4-8", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("auto", "sonnet")));
+check("claude-bake: a concrete allow-listed pin (sonnet) bakes model: claude-sonnet-4-6", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("sonnet", undefined)));
+check("claude-bake: a concrete claude-* id bakes that line verbatim", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("claude-opus-4-8", undefined)));
+check("claude-bake: 'session' bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("session", undefined)));
+check("claude-bake: absent model bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter(undefined, undefined)));
+check("claude-bake: an off-allowlist id bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("claude-haiku-4-5", undefined)));
+
+console.log(`\nINSTALL-MODEL bake: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
-console.log("PASS — no model line ever baked on OpenCode (runtime ignores subagent model:)");
+console.log("PASS — OpenCode bakes no line (runtime ignores subagent model:); Claude bakes the resolved per-seat model");

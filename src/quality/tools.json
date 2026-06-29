@@ -19,7 +19,7 @@
     },
     {
       "id": "install-model",
-      "checks": "OpenCode install bake — a concrete reviewer-model pin lands in the assembled frontmatter; auto/session/absent emit no model line",
+      "checks": "per-platform install model bake — OpenCode bakes NO model line for any input (runtime ignores subagent model:); Claude bakes the resolved per-seat model into the assembled reviewer frontmatter (auto → the allow-listed model opposite the session else sonnet; a concrete allow-listed pin → that model; session/absent and off-allowlist → no line)",
       "config": null,
       "run": "node src/adapter/install-model.test.mjs",
       "beat": "build",
