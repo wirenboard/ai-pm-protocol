@@ -21,6 +21,9 @@ import {
   launchModelEnv,
   buildChildEnv,
   planLaunch,
+  probeCandidates,
+  parseModelsResponse,
+  DEFAULT_PROXY_PORT,
 } from "./router-launch.mjs";
 
 let pass = 0;
@@ -246,6 +249,43 @@ function main() {
   const planBlankProxy = planLaunch({ config: {}, routesConfig: { proxyUrl: "   ", routes: [] }, providers: PROVIDERS, env: {} });
   check("blank proxyUrl ⇒ ignored (falls through to normal)", planBlankProxy.mode, "direct");
   check("blank proxyUrl ⇒ no error", planBlankProxy.error, null);
+
+  // ── probeCandidates (setup-dialog discovery: ordered, deduped, validated) ──
+  // Explicit url arg first, then routes-config proxyUrl, then the conventional default.
+  const cand1 = probeCandidates({
+    argUrl: "http://localhost:9000",
+    routesConfig: { proxyUrl: "http://127.0.0.1:8800" },
+  });
+  check("probeCandidates: arg url first", cand1[0], "http://localhost:9000");
+  check("probeCandidates: proxyUrl second", cand1[1], "http://127.0.0.1:8800");
+  check("probeCandidates: conventional default last", cand1[cand1.length - 1], `http://127.0.0.1:${DEFAULT_PROXY_PORT}`);
+  // No arg, no proxyUrl ⇒ just the conventional default.
+  const cand2 = probeCandidates({});
+  check("probeCandidates: empty ⇒ only the default", cand2.length, 1);
+  check("probeCandidates: default origin", cand2[0], `http://127.0.0.1:${DEFAULT_PROXY_PORT}`);
+  // Origin-normalised (path/trailing slash dropped) and de-duplicated against the default.
+  const cand3 = probeCandidates({ argUrl: `http://127.0.0.1:${DEFAULT_PROXY_PORT}/v1/` });
+  check("probeCandidates: normalises to origin + dedupes the default", cand3.length, 1);
+  check("probeCandidates: normalised origin", cand3[0], `http://127.0.0.1:${DEFAULT_PROXY_PORT}`);
+  // Invalid / non-http entries are dropped, never thrown.
+  const cand4 = probeCandidates({ argUrl: "not a url", routesConfig: { proxyUrl: "file:///etc/passwd" } });
+  check("probeCandidates: drops invalid arg + non-http proxyUrl", cand4.length, 1);
+  check("probeCandidates: falls back to the default", cand4[0], `http://127.0.0.1:${DEFAULT_PROXY_PORT}`);
+
+  // ── parseModelsResponse (OpenAI/modelpipe shape + bare array, fail-safe) ───
+  const pm1 = parseModelsResponse(JSON.stringify({ object: "list", data: [{ id: "deepseek-chat" }, { id: "claude-*" }] }));
+  check("parseModelsResponse: OpenAI shape ok", pm1.ok, true);
+  check("parseModelsResponse: extracts data[].id", pm1.models.join(","), "deepseek-chat,claude-*");
+  const pm2 = parseModelsResponse(JSON.stringify(["a", "b", "a"]));
+  check("parseModelsResponse: bare string array", pm2.models.join(","), "a,b");
+  check("parseModelsResponse: dedupes ids", pm2.models.length, 2);
+  const pm3 = parseModelsResponse("not json");
+  check("parseModelsResponse: unparseable ⇒ ok:false", pm3.ok, false);
+  check("parseModelsResponse: unparseable ⇒ empty models", pm3.models.length, 0);
+  const pm4 = parseModelsResponse(JSON.stringify({ foo: 1 }));
+  check("parseModelsResponse: unexpected shape ⇒ ok:false", pm4.ok, false);
+  const pm5 = parseModelsResponse(JSON.stringify({ data: [{ id: "x" }, { noid: 1 }, "y", ""] }));
+  check("parseModelsResponse: skips entries with no string id (and blanks)", pm5.models.join(","), "x,y");
 
   // ── the REAL shipped catalog (pins the verified facts) ─────────────────────
   const real = loadProviders();

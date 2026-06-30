@@ -35,24 +35,35 @@
 //   WITHOUT exec'ing claude — for "don't touch my launch": point your own claude/wrapper
 //   at the printed URL. Errors if there is no local router to start (external/direct plan).
 //
+// PROBE (--probe [url]): best-effort discovery of an ALREADY-RUNNING proxy for the setup
+//   dialog. Tries candidate origins (an explicit url arg, the routes-config proxyUrl, the
+//   conventional localhost default 8787) at /v1/models, prints ONE JSON line
+//   { alive, url, models } to stdout, exits 0 (alive) / 1 (none). Lets the dialog skip
+//   asking for a URL when a proxy is up. A launcher-SPAWNED proxy needs no probe (we hold
+//   its routes config + use a random free port); this is purely for an external proxy.
+//
 // FAIL-CLOSED: if a route the launch would use names a key env var that is unset, the
 //   launcher errors BEFORE starting anything — never a silent wrong-backend (a seat's
 //   traffic reaching the wrong provider, or a request forwarded with no credential).
 //
 // TESTABILITY: the decisions are PURE exported functions (resolveRoutes,
 //   distinctEndpoints, missingKeyEnvs, seatModels, mergeLocalLaunch, launchModelEnv,
-//   buildChildEnv, planLaunch) unit-tested in router-launch.test.mjs. The real `claude`
-//   exec is the one untestable rung (a live process) — offered as a real-layer check,
-//   not run in the suite.
+//   buildChildEnv, planLaunch, probeCandidates, parseModelsResponse) unit-tested in
+//   router-launch.test.mjs. The real `claude` exec and the live probe HTTP are the two
+//   untestable rungs — offered as a real-layer check, not run in the suite.
 //
-// Run:  node src/adapter/router-launch.mjs [--proxy] [claude args…]
+// Run:  node src/adapter/router-launch.mjs [--proxy | --probe [url]] [claude args…]
 //   --proxy             foreground-only: start the router, print its URL, do NOT exec claude
+//   --probe [url]       discovery-only: print { alive, url, models } JSON for a running
+//                       proxy, then exit (0 alive / 1 none); never execs claude
 //   AI_DEV_CONFIG       override the config path   (default .ai-dev/config.json;
 //                       its .local.json sibling is the gitignored personal override)
 //   MODEL_ROUTER_ROUTES override the routes path   (default .ai-dev/model-routes.json)
 //   The routes config may carry a top-level `proxyUrl` to opt into EXTERNAL mode above.
 
 import fs from "node:fs";
+import http from "node:http";
+import https from "node:https";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -264,7 +275,121 @@ export function planLaunch({ config, routesConfig, providers, env }) {
   return { mode, routes, exercisedRoutes, endpoints, missingKeyEnvs: missing, error: null };
 }
 
+// ── proxy probe (setup-dialog model discovery) ───────────────────────────────
+
+// The conventional localhost port a STANDALONE modelpipe listens on (model-router.mjs
+// main() default). The launcher-spawned proxy uses a RANDOM free port and never needs
+// probing — we hold its routes config — so the probe targets an ALREADY-RUNNING proxy:
+// a standalone modelpipe on this port, or any third-party proxy (LiteLLM-class) the
+// Operator runs. The discovery the setup dialog uses to skip asking for a URL.
+export const DEFAULT_PROXY_PORT = 8787;
+
+// The ordered, de-duplicated probe candidates: an explicit URL arg first (highest
+// intent), then the routes-config `proxyUrl` (the Operator's recorded external proxy),
+// then the conventional localhost default. Each is validated http(s) and normalised to
+// origin (scheme://host); blank/invalid entries are dropped — the probe is best-effort
+// and never throws on a bad input.
+export function probeCandidates({ argUrl, routesConfig, defaultPort = DEFAULT_PROXY_PORT } = {}) {
+  const raw = [
+    typeof argUrl === "string" ? argUrl : "",
+    routesConfig && typeof routesConfig.proxyUrl === "string" ? routesConfig.proxyUrl : "",
+    `http://127.0.0.1:${defaultPort}`,
+  ];
+  const out = [];
+  for (const r of raw) {
+    if (typeof r !== "string" || !r.trim()) continue;
+    let u;
+    try { u = new URL(r.trim()); } catch { continue; }
+    if (u.protocol !== "http:" && u.protocol !== "https:") continue;
+    const origin = `${u.protocol}//${u.host}`;
+    if (!out.includes(origin)) out.push(origin);
+  }
+  return out;
+}
+
+// Parse a /v1/models response body into a concrete model-id list. Accepts the OpenAI /
+// modelpipe shape ({ data: [{ id }] }) and a bare array (of strings or { id }). Returns
+// { ok, models }: ok=false on unparseable/unexpected JSON (the probe treats it as "not a
+// usable list"); models is always an array of non-empty string ids (deduped, order-kept).
+export function parseModelsResponse(text) {
+  let parsed;
+  try { parsed = JSON.parse(text); } catch { return { ok: false, models: [] }; }
+  const arr = Array.isArray(parsed)
+    ? parsed
+    : parsed && Array.isArray(parsed.data)
+      ? parsed.data
+      : null;
+  if (!arr) return { ok: false, models: [] };
+  const seen = new Set();
+  const models = [];
+  for (const item of arr) {
+    const id = typeof item === "string" ? item : item && typeof item.id === "string" ? item.id : "";
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      models.push(id);
+    }
+  }
+  return { ok: true, models };
+}
+
 // ── impure wiring (the untestable exec rung) ─────────────────────────────────
+
+// Best-effort GET of a JSON endpoint, bounded by a short timeout and a small body cap.
+// Resolves { status, body } on any HTTP response, or null on connect/timeout/error — a
+// dead candidate is "not alive", never a throw. The live-HTTP rung of the probe (the
+// candidate list + parse are the pure, unit-tested half above).
+function httpGetJson(urlStr, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    let u;
+    try {
+      u = new URL(urlStr);
+    } catch {
+      resolve(null);
+      return;
+    }
+    const client = u.protocol === "http:" ? http : https;
+    const req = client.request(
+      {
+        protocol: u.protocol,
+        hostname: u.hostname,
+        port: u.port || (u.protocol === "http:" ? 80 : 443),
+        path: u.pathname,
+        method: "GET",
+      },
+      (res) => {
+        const chunks = [];
+        let size = 0;
+        res.on("data", (c) => {
+          size += c.length;
+          if (size <= 256 * 1024) chunks.push(c); // bound a pathological body
+        });
+        res.on("end", () => resolve({ status: res.statusCode || 0, body: Buffer.concat(chunks).toString("utf8") }));
+        res.on("error", () => resolve(null));
+      },
+    );
+    req.on("error", () => resolve(null));
+    req.setTimeout(timeoutMs, () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
+}
+
+// Try each candidate origin's /v1/models (then /models), first 200-with-a-usable-list
+// wins. Returns { alive, url, models } — the single JSON line --probe prints.
+async function runProbe(candidates) {
+  for (const base of candidates) {
+    for (const p of ["/v1/models", "/models"]) {
+      const r = await httpGetJson(`${base}${p}`);
+      if (r && r.status === 200) {
+        const { ok, models } = parseModelsResponse(r.body);
+        if (ok) return { alive: true, url: base, models };
+      }
+    }
+  }
+  return { alive: false, url: null, models: [] };
+}
 
 function readJsonIfPresent(p) {
   if (!p || !fs.existsSync(p)) return null;
@@ -295,6 +420,29 @@ function localConfigPath(configPath) {
 
 function main() {
   const args = process.argv.slice(2);
+  // --probe [url]: best-effort discovery of an ALREADY-RUNNING proxy for the setup
+  // dialog. Tries the candidate origins (an explicit url arg, the routes-config
+  // proxyUrl, the conventional localhost default) at /v1/models, prints ONE JSON line
+  // { alive, url, models } to STDOUT (scriptable), and exits 0 (alive) / 1 (nothing
+  // answered). Consumed here, never forwarded to claude. Never throws — a refused/
+  // timed-out candidate is simply "not alive".
+  const probeIdx = args.indexOf("--probe");
+  if (probeIdx !== -1) {
+    const next = args[probeIdx + 1];
+    const argUrl = next && !next.startsWith("-") ? next : "";
+    const routesPath = process.env.MODEL_ROUTER_ROUTES || ".ai-dev/model-routes.json";
+    let routesConfig = null;
+    try {
+      routesConfig = readJsonIfPresent(routesPath);
+    } catch {
+      // a malformed routes file never breaks discovery — routesConfig stays null
+    }
+    runProbe(probeCandidates({ argUrl, routesConfig })).then((result) => {
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+      process.exit(result.alive ? 0 : 1);
+    });
+    return;
+  }
   // --proxy: foreground-only proxy mode. Start the router, print its URL, do NOT exec
   // claude — for "don't touch my launch": point your own claude/wrapper at the printed
   // URL (or wire it as the routes config `proxyUrl`). The flag is consumed here, never

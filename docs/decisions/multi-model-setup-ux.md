@@ -233,6 +233,36 @@ can read it; until then, the dialog falls back to asking (no hard dependency).
 
 ---
 
+### Papercut 10 — cross-endpoint is undiscoverable; "impossible from the session" overclaim (a `/dev-setup` dogfood run, 2026-07-01)
+
+A live `/dev-setup` surfaced three setup-UX defects, fixed together:
+
+- **Undiscoverable cross-endpoint.** The per-seat model question buried the non-Anthropic
+  choice behind the structured-question "Other" free-text escape — a feature you can only
+  reach if you already know it exists. **Removed by:** a **visible `another provider
+  (non-Anthropic)` option** in every seat's option set (a NAMED choice that opens the
+  routing sub-flow), and a **uniform per-seat option set** so no seat silently omits a model
+  (the live slip that started this: `haiku` offered for builder/guard but not reviewer).
+- **Probe-first discovery.** The dialog never checked for a proxy the Operator already runs.
+  **Removed by:** `./.ai-dev/launch --probe` — a best-effort `GET /v1/models` over the
+  candidate origins (an explicit url, the routes-config `proxyUrl`, the conventional
+  localhost `8787`) printing `{ alive, url, models }`. A live hit offers its ids per seat and
+  **skips the URL question**; nothing answering falls through to the explicit **external
+  (proxyUrl) vs built-in (spawn, random free port)** fork. This is the **consume** half of
+  papercut 8's "read-only localhost endpoint": the probe targets exactly that endpoint, and
+  the modelpipe side of it (the `/v1/models` route) is the upstream change papercut 8 names.
+  Against an older modelpipe the probe simply finds nothing — honest, no false promise.
+- **"Proxy can't be configured from a session" overclaim.** The launcher README's "No true
+  in-harness autostart … cannot be wired from inside a running session" read as *impossible*.
+  **Corrected to** the honest framing (`src/adapter/README.md` `### The launcher`): the
+  *configuration* is fully written from the session; only the *running process* cannot rebind
+  its own env, so the accurate statement is **"set it from the session → restart to apply"**.
+
+The probe's candidate-list + response parse are pure, unit-tested (`probeCandidates` /
+`parseModelsResponse`, `router-launch.test.mjs`); the live HTTP is the one untestable rung.
+
+---
+
 ## The fork: where do the launch-time models live? (requirement, conceptual split)
 
 The session and guard models are launch-time env, never baked. There must be **no dead

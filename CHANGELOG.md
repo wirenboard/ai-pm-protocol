@@ -12,6 +12,20 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.45.0] — 2026-07-01
+
+### Added
+
+- **`./.ai-dev/launch --probe [url]`** — best-effort discovery of an already-running proxy for the setup dialog. Tries candidate origins (an explicit url, the routes-config `proxyUrl`, the conventional localhost `8787`) at `GET /v1/models`, prints one JSON line `{ alive, url, models }`, exits `0`/`1`. Lets setup **skip asking for a proxy URL** when one is up; never throws. Pure helpers (`probeCandidates`, `parseModelsResponse`) are unit-tested; the live HTTP is the one untestable rung. Home: `src/adapter/README.md` `### The launcher`.
+- **Probe-first proxy setup** — the cross-endpoint model choice is now a **visible** `another provider (non-Anthropic)` option (no longer buried behind a free-text "other"), the per-seat option set is **uniform** across roles, and the routing sub-flow **probes first**, then presents an explicit **external (`proxyUrl`) vs built-in (spawn, random free port)** fork (`src/agents/procedures/setup.md`).
+
+### Changed
+
+- **modelpipe `0.5.0`** (vendored mirror re-synced; pin `MODELPIPE_REF` → `9bd3779`) — adds a secret-free `GET /v1/models` route listing (match glob, backend host, auth mode, vision flags — never a key value or env-var name), the endpoint `--probe` consumes against our own built-in proxy. The safe-surface boundary: `docs/decisions/multi-model-setup-ux.md` papercut 8 + 10.
+- **Launcher autostart docs corrected** — the README overclaim "cannot be wired from inside a running session" is replaced with the honest framing: the configuration **is** written from the session; only the running process can't rebind its own env, so a launch-time change is **set from the session → applied on restart** (`src/adapter/README.md` `### The launcher`).
+
+---
+
 ## [5.44.0] — 2026-07-01
 
 ### Added
