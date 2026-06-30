@@ -135,6 +135,33 @@ function main() {
   const planErr = planLaunch({ config: {}, routesConfig: { routes: [{ provider: "ghost" }] }, providers: PROVIDERS, env: {} });
   check("unknown provider in routes ⇒ error surfaced", typeof planErr.error === "string" && planErr.error.includes("ghost"), true);
 
+  // ── external proxy (opt-in proxyUrl) ───────────────────────────────────────
+  // A valid proxyUrl ⇒ external mode, carried through; takes precedence over the
+  // endpoint-count decision (cross-endpoint seats would otherwise be "router").
+  const planExternal = planLaunch({
+    config: { roles: { builder: { model: "deepseek-chat" }, reviewer: { model: "claude-sonnet-4-6" } } },
+    routesConfig: { proxyUrl: "http://127.0.0.1:8800", routes: [{ provider: "anthropic" }, { provider: "deepseek" }] },
+    providers: PROVIDERS, env: {}, // NO keys — external proxy owns auth
+  });
+  check("proxyUrl ⇒ external mode", planExternal.mode, "external");
+  check("external mode carries the proxyUrl", planExternal.proxyUrl, "http://127.0.0.1:8800");
+  check("external mode does not fail-closed on missing keys", planExternal.missingKeyEnvs.length, 0);
+  check("external mode takes precedence over router", planExternal.error, null);
+
+  // A present-but-malformed proxyUrl ⇒ hard error (fail-closed), never a silent spawn.
+  const planBadProxy = planLaunch({ config: {}, routesConfig: { proxyUrl: "not a url" }, providers: PROVIDERS, env: {} });
+  check("malformed proxyUrl ⇒ error surfaced", typeof planBadProxy.error === "string" && planBadProxy.error.includes("proxyUrl"), true);
+  check("malformed proxyUrl ⇒ not external mode", planBadProxy.mode !== "external", true);
+
+  // A non-http scheme is rejected too (only http/https proxies).
+  const planFileProxy = planLaunch({ config: {}, routesConfig: { proxyUrl: "file:///etc/passwd" }, providers: PROVIDERS, env: {} });
+  check("non-http proxyUrl ⇒ error", typeof planFileProxy.error === "string", true);
+
+  // Empty/whitespace proxyUrl ⇒ ignored, normal decision proceeds (here: no routes ⇒ direct).
+  const planBlankProxy = planLaunch({ config: {}, routesConfig: { proxyUrl: "   ", routes: [] }, providers: PROVIDERS, env: {} });
+  check("blank proxyUrl ⇒ ignored (falls through to normal)", planBlankProxy.mode, "direct");
+  check("blank proxyUrl ⇒ no error", planBlankProxy.error, null);
+
   // ── the REAL shipped catalog (pins the verified facts) ─────────────────────
   const real = loadProviders();
   const byId = Object.fromEntries(real.map((p) => [p.id, p]));

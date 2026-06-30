@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.38.0] — 2026-06-30
+
+### Added
+
+- **Launcher: opt-in external proxy URL** (`src/adapter/router-launch.mjs`) — a top-level `proxyUrl` in the routes config (`.ai-dev/model-routes.json`) points the loop at an **already-running** proxy (a self-hosted/shared modelpipe, or one under a debugger) instead of spawning `model-router.mjs`. `planLaunch` gains a third mode `"external"`: a valid http(s) `proxyUrl` short-circuits the direct-vs-router decision and the launcher just sets `ANTHROPIC_BASE_URL` (still unsetting `CLAUDE_CODE_SUBAGENT_MODEL`). The fail-closed key check is **skipped** in external mode — auth/keys live in that proxy's own env, invisible to the launcher. **Fail-closed honesty:** a present-but-malformed `proxyUrl` is a hard error, never a silent fall-through to a local spawn; absent/blank ⇒ the launcher decides as before (a project that never sets it is byte-unchanged). Documented in the top `README.md` (`## Multi-model routing`), `src/adapter/README.md` (`### The launcher`), and the `_proxyUrl` key in `model-router.example.json`.
+
+---
+
 ## [5.37.0] — 2026-06-30
 
 ### Fixed
