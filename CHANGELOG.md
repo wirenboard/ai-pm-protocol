@@ -12,6 +12,18 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.40.0] — 2026-06-30
+
+### Added
+
+- **Multi-model setup UX — per-seat model selection + launch-time models** (`src/agents/orchestrator.md` `## Setup`, `.ai-dev/config.json`, `src/adapter/router-launch.mjs`, `src/adapter/README.md`; design ratified in `docs/decisions/multi-model-setup-ux.md`). The models-per-role setup step now asks **three independent seat questions** — `builder` / `reviewer` / `guard` (the harness background/small-fast model) — each `session`/`auto`/typed-id, current-value default, zero-config led, with a one-line alias-vs-concrete-id rule (for a cross-endpoint seat, write the concrete provider id). The **orchestrator model question is removed**: the orchestrator IS the running session, so `roles.orchestrator` carries an `agent` only — a model pin there was dead cosmetics. A new **`launch: { sessionModel, guardModel }`** config section is the one home for the launch-time models (session + guard); `router-launch.mjs` reads it and exports the matching env before starting the session, and a hand-rolled wrapper reads the same values (config is the source every launch path consumes — ratified option c + source-of-truth refinement; absent/empty ⇒ byte-unchanged). A **model-switch-mid-stream** handler (mirroring *Mode switch mid-stream*) flips a seat pin and, for a baked `builder`/`reviewer` change, re-applies with the **context-correct** re-bake command (dogfood vs downstream); a `guard`/session change is launch-time, no re-bake. The full `config/env → Claude alias resolution → body.model → modelpipe literal first-match` chain is documented in `src/adapter/README.md`.
+
+### Fixed
+
+- **Installer log honesty** (`src/adapter/install-core.mjs`, `src/adapter/install.mjs`) — `ensureConfig` reports whether it actually wrote; the install summary prints `wrote .ai-dev/config.json (minimal default)` ONLY on a real write, else `kept existing .ai-dev/config.json` — a re-install on a configured project no longer falsely claims it wrote the config (which read as a config-clobber scare; the early-return never clobbered, only the log lied).
+
+---
+
 ## [5.39.0] — 2026-06-30
 
 ### Added

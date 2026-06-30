@@ -1,0 +1,388 @@
+# Multi-model setup UX — one coherent flow from "I have a proxy" to "my seats run on my models"
+
+**Status: RATIFIED by the Operator (2026-06-30).** The launch-time-models fork is settled
+as **option (c) hybrid, with a source-of-truth refinement** (see `## The fork`): the
+session + guard models live in `.ai-dev/config.json` as the ONE home, and **every launch
+path reads them** — `router-launch.mjs` exports them as env automatically, and a wrapper
+launcher reads the same config values (a documented one-liner / mirror). This keeps (c)'s
+con — a "sometimes-dead" field for wrapper users — from materialising: the field is the
+documented SOURCE that the launch path consumes, never a value nothing applies, so it
+honours the no-dead-cosmetic bar requirements 1+2 set. The concrete build
+(`## The build worklist`) is a single follow-up feature through the loop, NOT built here.
+
+**Question.** Setting up multi-model routing — running the loop's seats on different
+model providers via an external Anthropic-format proxy (`modelpipe`) — is today a
+fragmented, papercut-ridden flow. The Operator wants the transition and setup to be
+**simple and coherently designed**, not patched piecemeal. This doc maps the full
+journey and proposes one flow that removes every papercut at once.
+
+This consolidates six 2026-06-30 backlog entries into one UX (referenced, not restated):
+the coarse models-per-role dialog, the re-bake-awareness gap, the false installer log,
+the guard-model seat, modelpipe expose-configured-models, and Claude-native autostart.
+
+---
+
+## The conceptual split the whole design rests on
+
+The Operator's requirements 1+2 force one distinction that the current flow blurs and
+that every later decision follows from. There are **two kinds of "model choice"**, set
+in two different places by two different mechanisms:
+
+| | **Baked subagent seats** | **Launch-time models** |
+| --- | --- | --- |
+| Seats | `builder`, `reviewer` | session/orchestrator, `guard` |
+| Home | `roles.{builder,reviewer}.model` in `.ai-dev/config.json` | session env, set BEFORE `claude` starts |
+| Mechanism | baked into the assembled agent at install (Claude forwards a subagent's baked `model:` to the endpoint — `docs/decisions/per-seat-model-routing.md` fact 2) | `ANTHROPIC_MODEL` (session) / `ANTHROPIC_SMALL_FAST_MODEL` (guard) |
+| Change needs | a re-bake (re-run the installer) | nothing baked — re-exported next launch |
+
+- The **orchestrator IS the running session** — its model is the launch model. A config
+  pin for it is dead cosmetics: nothing reads it, nothing applies it. Requirement 2
+  removes it from the selection entirely (see `## Papercut 2`).
+- The **guard** is the harness background/small-fast model
+  (`ANTHROPIC_SMALL_FAST_MODEL`) — a launch-time env, never baked, now a first-class
+  configurable seat (requirement 1).
+
+So the **only two true config-model pins are `builder` and `reviewer`.** Everything else
+is launch-time env. The current setup dialog (`src/agents/orchestrator.md` `## Setup`
+step 2, models-per-role) gets this wrong on both ends: it offers an orchestrator pin
+(dead cosmetics) and it has no guard seat at all.
+
+---
+
+## The chain: what a model string actually does (requirement 5)
+
+A user setting up routing needs to know **whether to write an alias or a concrete id**.
+The answer is the resolution chain a model string travels, end to end:
+
+```text
+config pin (roles.{builder,reviewer}.model)  or  launch env (ANTHROPIC_MODEL / _SMALL_FAST_MODEL)
+        │
+        ▼  Claude Code alias resolution
+   an alias ("sonnet"/"haiku"/"opus")  →  ANTHROPIC_DEFAULT_{SONNET,HAIKU,OPUS}_MODEL  (if set)
+   a concrete id ("deepseek-chat")      →  passthrough, used verbatim
+        │
+        ▼  the string lands in the request body's `model` field
+        │
+        ▼  modelpipe routing (src/adapter/model-router.mjs `pickRoute`)
+   matched against each route's `match` glob, LITERAL FIRST-MATCH; modelpipe does NOT
+   alias and does NOT translate — it routes by `body.model` alone and forwards.
+```
+
+**The practical rule for the user, stated crisply:**
+
+- modelpipe matches the **exact string that arrives in `body.model`**. It never resolves
+  an alias — that is Claude Code's job, upstream, via `ANTHROPIC_DEFAULT_*_MODEL`.
+- So a route's `match` glob must target **what actually arrives**:
+  - If a seat pins a **concrete provider id** (e.g. `deepseek-chat`), that id passes
+    through verbatim → the route matches `deepseek-*`. **Write the concrete id.**
+  - If a seat pins a Claude **alias** (`sonnet`), it resolves to whatever
+    `ANTHROPIC_DEFAULT_SONNET_MODEL` says (or the default `claude-sonnet-*`) → the route
+    matches that. **An alias only works if the proxy has a route for the resolved id.**
+- **For a cross-endpoint seat, write the concrete provider id**, not an alias — it is the
+  string modelpipe sees, no indirection to reason about. Aliases stay useful for the
+  all-Anthropic case where the default `claude-*` route catches them.
+
+This chain belongs in the setup dialog's one-line explanation and in the routes-config
+doc, so a user is never guessing which to write. (Provider catalog + `match` globs:
+`src/adapter/model-providers.json`; the routing code: `model-router.mjs` `pickRoute`.)
+
+---
+
+## The journey: zero → working (the proposed flow)
+
+The numbered steps a real user takes, from "I have a project + a running proxy" to "my
+seats run on my models". The flow assumes `platform: claude` (the whole router surface is
+inert on OpenCode — `docs/decisions/per-seat-model-routing.md` constraint 3).
+
+1. **Start the proxy** (or have it running). The proxy exposes its route table — model
+   ids, capabilities, host — on a safe-surface introspection (requirement 8, built in
+   modelpipe; see `## Papercut 8`).
+2. **Run `/dev-setup` (or the model-switch handler).** The dialog:
+   - **reads the running proxy's exposed route table** and offers the configured model
+     ids per seat instead of re-asking from scratch (requirement 8);
+   - asks **three independent seat questions** — `builder`, `reviewer`, `guard` — each
+     `session` / `auto` / a typed concrete id, defaulting to the current value
+     (requirement 1). **No orchestrator question** (requirement 2);
+   - states the alias-vs-concrete-id rule in one line (`## The chain` above);
+   - confirms the external proxy URL (`proxyUrl`, already shipped — requirement 6).
+3. **Setup writes the config** — `roles.{builder,reviewer}.model` (baked seats) and the
+   launch-time section for session+guard (see `## The fork` for where that lives).
+4. **Setup re-bakes automatically** and, if it cannot, **prints the context-correct
+   install command** (requirement 4 — dogfood vs downstream, see `## Papercut 4`).
+5. **Launch through the wrapper** so `ANTHROPIC_BASE_URL` (→ the proxy) and the launch-time
+   models are exported BEFORE `claude` starts (requirement 7 — the honest constraint, see
+   `## Papercut 7`). The launcher (`router-launch.mjs`) already handles the proxy URL via
+   `proxyUrl` external mode.
+6. **Done.** Builder and reviewer subagents carry their baked `model:` → it arrives in
+   `body.model` → modelpipe routes each to its provider.
+
+The transition from a non-routing project is the same flow minus step 1's "have a proxy":
+a project that never sets a cross-endpoint seat is byte-unchanged (the opt-in is the
+routes config + a cross-endpoint pin, never a switch — `per-seat-model-routing.md`
+constraint 2).
+
+---
+
+## The papercuts, and how the flow removes each
+
+Each maps to a 2026-06-30 backlog entry; the flow above removes it.
+
+### Papercut 1 — the models-per-role dialog is too coarse
+
+**Today:** the dialog bundles orchestrator+builder into one choice and offers presets, so
+a user cannot set `builder ≠ orchestrator` or pick seats independently — the advertised
+per-seat granularity is unreachable. **Removed by:** step 2's three independent seat
+questions (`builder` / `reviewer` / `guard`), each `session`/`auto`/typed-id, defaulting
+to the current value, zero-config (`auto`) led. The honesty caveats are unchanged: Claude
+bakes the per-seat `model:`; `auto` resolves to an Anthropic id (flag this for
+external-proxy users who need a concrete proxy-routed pin, per `## The chain`).
+
+### Papercut 2 — the orchestrator model is dead cosmetics
+
+**Today:** the dialog asks for an orchestrator model and the config can carry
+`roles.orchestrator.model`, but nothing applies it — the orchestrator IS the session, its
+model is the launch model. A stored value that nothing reads is a honesty defect (it
+implies a control that does not exist). **Removed by:** dropping the orchestrator question
+from the dialog entirely and not storing `roles.orchestrator.model`. The session model is
+a launch-time env (`## The fork`), set the same way the guard is. `roles.orchestrator`
+keeps only its `agent` binding (no `model` key).
+
+### Papercut 4 — a model change needs a re-bake, with the context-correct command
+
+**Today:** nothing tells the Operator that editing `roles.{builder,reviewer}.model` (via
+dialog OR by hand) requires re-assembling the agents so the baked `model:` updates. The
+live trigger: the Operator ran the **dogfood** command in a **downstream** repo and hit
+`MODULE_NOT_FOUND`, because `src/adapter/install.mjs` exists only in the protocol source —
+the orchestrator never told them the downstream path
+(`.ai-dev/tooling/src/adapter/install.mjs`, NO `--dogfood`). **Removed by:**
+
+- A **model-switch-mid-stream handler**, mirroring `## Setup` *Mode switch mid-stream*
+  (`src/agents/orchestrator.md`): the Operator names a seat model directly → a one-line
+  confirm → flip the pin → **re-apply the config (re-bake)** → announce. This is the
+  natural home for "a baked seat changed, re-bake now" — the same lightweight-flip pattern
+  the mode/doc-language/collaboration switches already use.
+- The orchestrator **knows the context** (dogfood = the protocol source repo;
+  downstream = a project carrying `.ai-dev/tooling/`) and gives the **right command**:
+  - dogfood: `node src/adapter/install.mjs . --dogfood --platform <p>`
+  - downstream: `node .ai-dev/tooling/src/adapter/install.mjs . --platform <p>` (no
+    `--dogfood`)
+  - The context signal is the same sentinel `install.mjs` already uses (`isSourceRepo` —
+    `src/adapter/install.mjs:84`: `src/adapter/install.mjs` present at root ⇒ dogfood).
+- **Ideally auto-apply** the re-bake (the installer is idempotent — `install.mjs`), so the
+  Operator never types a command. Printing the context-correct command is the fallback
+  when the orchestrator cannot run the install itself (e.g. a write it must route).
+
+### Papercut 9 — the installer falsely logs "wrote config"
+
+**Today:** `ensureConfig` (`src/adapter/install-core.mjs:81`) writes the default config
+**only where absent** (correct — never clobbers), but the install summary
+(`src/adapter/install.mjs:201`) prints `• wrote .ai-dev/config.json (minimal default)`
+**unconditionally**, even when `ensureConfig` was a no-op. A re-install on a configured
+project reads as a config-clobber scare (the Operator thought their model pins / mode /
+profile were overwritten). No data loss, but the log lying is a real honesty defect.
+**Removed by:** `ensureConfig` reports whether it wrote (return a flag, or the caller
+checks `fs.existsSync` first); the summary prints `wrote … (minimal default)` only on an
+actual write, else `kept existing .ai-dev/config.json` (or nothing). Trivial — folds into
+this slice or a standalone fixup.
+
+### Papercut 8 — the proxy exposes its configured models (reuse, don't re-ask)
+
+**Today:** setup asks the routing from scratch even when a running proxy already knows its
+full route table. **Removed by:** modelpipe exposing its configured set (model ids,
+capabilities, base_url host) on a safe-surface introspection — a `--list` dump or a
+read-only localhost endpoint — that the setup dialog reads to offer the configured models
+per seat (step 2). **Safe-surface boundary (load-bearing):** expose model ids +
+capabilities + host; the `keyEnv` *names* are borderline (probably fine); **never key
+values or auth secrets** — the no-secret-logging posture (`model-router.mjs` SECURITY
+POSTURE) extends here. This half **lands in modelpipe** (the transport owns its own
+config); the protocol **consumes** it (`docs/decisions/proxy-consume-mechanism.md` — the
+synced vendor-copy boundary). It needs its own scoping in modelpipe before the protocol
+can read it; until then, the dialog falls back to asking (no hard dependency).
+
+---
+
+## The fork: where do the launch-time models live? (requirement, conceptual split)
+
+The session and guard models are launch-time env, never baked. There must be **no dead
+cosmetic config field** for them. Three options:
+
+### Option (a) — config section + the protocol launcher applies it
+
+A config section (e.g. `launch: { sessionModel, guardModel }`) that `router-launch.mjs`
+reads and **exports as env before exec'ing `claude`** (`ANTHROPIC_MODEL`,
+`ANTHROPIC_SMALL_FAST_MODEL`). Config is the one home; the launcher applies it.
+
+- **Pro:** one home (the config), discoverable, the setup dialog writes it, the launcher
+  enforces it — symmetric with how the baked seats flow from config to assembled agent.
+- **Con:** it **only helps launcher users.** The Operator uses their OWN wrapper
+  (requirement 7's honest constraint — `ANTHROPIC_BASE_URL` must be set before `claude`
+  starts, so many users have a personal launch wrapper). A config field the protocol
+  launcher reads is dead cosmetics for anyone not launching through `router-launch.mjs` —
+  re-introducing exactly the dead-field defect papercut 2 removes, one layer down.
+
+### Option (b) — pure launch-env, documented, never stored in the config
+
+The session and guard models are **only** env vars the user exports in their proxy/wrapper
+setup (`ANTHROPIC_MODEL`, `ANTHROPIC_SMALL_FAST_MODEL`). The config stores nothing for
+them; setup documents the two env vars and (where it can) prints a ready export block.
+
+- **Pro:** **no dead field, ever** — honest by construction. Works regardless of which
+  wrapper the user launches through (the env is the universal contract Claude Code reads,
+  whoever sets it). Matches requirement 7's honest reality: the launch env is the only
+  mechanism that works before `claude` starts.
+- **Con:** the two models are not "in the config" — a reader inspecting `.ai-dev/config.json`
+  does not see them. Mitigated: they are not config-kind data (they are launch
+  environment, like `ANTHROPIC_BASE_URL` and the API keys, which are also never in the
+  config — `model-router.mjs` SECURITY: keys come only from env). The setup dialog and the
+  routes/proxy doc are their documented home.
+
+### Option (c) — hybrid
+
+Store them in the config AND have the launcher export them (a), but **also** document the
+raw env (b) for non-launcher users, marking the config field "applied only when launching
+through `router-launch.mjs`".
+
+- **Pro:** launcher users get one-home config; wrapper users get the documented env.
+- **Con:** the field is honestly-labelled-dead for wrapper users — a "sometimes dead"
+  field is harder to reason about than no field, and invites the same clobber-scare /
+  false-expectation class as papercut 2.
+
+**Original analysis recommended (b)** (pure launch-env, no stored field) as the only option
+with no dead field under any launch path. **The Operator ratified (c) instead, with a
+source-of-truth refinement that defeats (c)'s "sometimes-dead" con:**
+
+**RATIFIED — (c) hybrid, config is the source every launch path reads.** The session +
+guard models live in `.ai-dev/config.json` as the ONE home (e.g. a `launch:
+{ sessionModel, guardModel }` section). The field is never "dead" because **every launch
+path is documented to consume it**:
+
+- `router-launch.mjs` reads the section and exports `ANTHROPIC_MODEL` /
+  `ANTHROPIC_SMALL_FAST_MODEL` before exec'ing `claude` (option a's mechanism).
+- A **personal wrapper** (the Operator's case) reads the same config values — a documented
+  one-liner (`export ANTHROPIC_MODEL=$(node -e '…read .ai-dev/config.json…')`) or an explicit
+  "mirror these two values into your wrapper's env" note.
+
+So the config is the documented SOURCE of truth and the launch path (ours or the user's) is
+the documented CONSUMER — the value is always applied, never cosmetic, which is the exact
+no-dead-field bar requirements 1+2 set. The cost vs (b): the launch-env contract now has a
+config home that a launcher must be wired to read (router-launch must gain the read+export;
+the wrapper path is doc-only). Setup still prints a **ready export block** as the wrapper
+recipe. This supersedes the (b) recommendation above; (a)/(b) are kept only as the reasoning
+record.
+
+---
+
+## Requirement 7 — the autostart honesty
+
+**The honest constraint:** `ANTHROPIC_BASE_URL` (and the launch-time models, option b) must
+be set **before `claude` starts** — Claude Code reads them at process launch. Claude Code
+has **no per-session pre-launch hook** that can set its OWN process's env (a `SessionStart`
+hook fires inside an already-launched process; it cannot retroactively set the base URL the
+process already read). So a true in-harness autostart that wires `ANTHROPIC_BASE_URL` for
+the running session **is likely impossible** — investigate `SessionStart` / settings env
+injection, but expect the answer to be no.
+
+**The honest resolution:** the **launcher wrapper remains the only honest mechanism.** The
+deliverable is therefore **not** a true in-harness autostart — it is **making the wrapper
+frictionless and documented**: `router-launch.mjs` already does direct/router/external mode
+selection and starts the proxy where needed (`## router-launch.mjs` WHAT IT DOES). The flow
+points the user at one launch command that (1) ensures the proxy is up, (2) exports the
+launch-time models (option b's export block), (3) exports `ANTHROPIC_BASE_URL`, (4) exec's
+`claude`. Document it as THE launch path for a routed project; do not promise an autostart
+the harness cannot deliver.
+
+This is recorded so a later reader does not re-litigate "why isn't the proxy auto-started
+inside the session" — because the env-before-launch constraint makes it impossible, and the
+wrapper is the conscious, honest substitute.
+
+---
+
+## Recommendation (summary)
+
+Build one coherent flow, in one follow-up feature:
+
+1. **Two true config-model pins only** — `roles.{builder,reviewer}.model`. Drop the
+   orchestrator pin (papercut 2).
+2. **Three independent seat questions in setup** — `builder` / `reviewer` / `guard`, each
+   `session`/`auto`/typed-id, current-value default, zero-config led (papercut 1 + the
+   guard seat).
+3. **Launch-time models as config source, every launch path consumes it (RATIFIED option c,
+   with refinement)** — session + guard live in a `.ai-dev/config.json` `launch` section (the
+   one home); `router-launch.mjs` reads it and exports `ANTHROPIC_MODEL` /
+   `ANTHROPIC_SMALL_FAST_MODEL`; a wrapper launcher reads the same values (documented
+   one-liner / mirror). Setup prints a ready export block as the wrapper recipe. Never a
+   dead field — the source is always consumed by the launch path.
+4. **A model-switch-mid-stream handler** that flips a baked pin, re-bakes
+   (auto-apply, else prints the context-correct dogfood-vs-downstream command), and
+   announces (papercut 4).
+5. **Honest installer log** — report what `ensureConfig` actually did (papercut 9).
+6. **The alias-vs-concrete-id chain** documented in the dialog + the routes-config doc
+   (requirement 5).
+7. **Proxy expose-configured-models** consumed by the dialog where modelpipe exposes it,
+   with the safe-surface boundary; fall back to asking until modelpipe ships it (papercut 8
+   — modelpipe half is its own scoping).
+8. **Frictionless documented wrapper, not a true autostart** — the env-before-launch
+   constraint makes in-harness autostart impossible; the launcher is the honest mechanism
+   (requirement 7).
+
+---
+
+## The build worklist (the follow-up feature — NOT built here)
+
+A single feature through the loop, `platform: claude`-scoped (inert on OpenCode):
+
+1. **`src/agents/orchestrator.md` `## Setup` step 2 (models per role)** — rewrite to three
+   independent seat questions (`builder`/`reviewer`/`guard`); remove the orchestrator
+   question; add the one-line alias-vs-concrete-id rule; add the proxy-route-table read
+   (guarded on modelpipe exposing it). Add a **model-switch-mid-stream** handler to
+   `## Setup` mirroring *Mode switch mid-stream*.
+2. **Config + its `_roles` doc (`.ai-dev/config.json`)** — `roles.orchestrator` carries
+   `agent` only (no `model`); document `roles.{builder,reviewer}.model` as the only baked
+   pins; document that session + guard models are launch env (option b), not config keys.
+   The installer default (`install-core.mjs` `ensureConfig`) drops any orchestrator
+   `model` key (it already does — keep it that way).
+3. **Installer log honesty (`install-core.mjs` + `install.mjs`)** — `ensureConfig` reports
+   write-vs-no-op; the summary line reflects it (papercut 9). Tiny, standalone-shippable.
+4. **Launch-time models — config `launch` section + every launch path consumes it (RATIFIED
+   option c).** Add a `launch: { sessionModel, guardModel }` section to `.ai-dev/config.json`
+   (+ its `_launch` doc); **`router-launch.mjs` reads it and exports `ANTHROPIC_MODEL` /
+   `ANTHROPIC_SMALL_FAST_MODEL` before exec'ing `claude`** (a real launcher change, not a
+   no-op); document the wrapper path that reads the same config values (one-liner / mirror)
+   so a personal wrapper consumes the source too; setup prints a ready export block as the
+   wrapper recipe; document the wrapper as THE launch path for a routed project
+   (requirement 7). The field is the documented source, never cosmetic.
+5. **The chain doc** — the alias → `ANTHROPIC_DEFAULT_*` → `body.model` → modelpipe
+   first-match chain lands in the routes-config doc (and the dialog one-liner).
+6. **modelpipe expose-configured-models (separate, in modelpipe)** — scope the expose shape
+   (`--list` vs localhost endpoint) + the safe-surface boundary; the protocol consumes it
+   per `docs/decisions/proxy-consume-mechanism.md`. Gated; not on this feature's critical
+   path (the dialog falls back to asking).
+7. **Autostart investigation (spike)** — confirm `SessionStart`/settings-env cannot set
+   `ANTHROPIC_BASE_URL` for the running session; record the negative result; the wrapper
+   stands as the mechanism.
+
+Items 1–5 are the protocol-side core; item 3 is independently shippable as a fixup; items
+6–7 are the modelpipe-side and the spike.
+
+---
+
+## Grounding (point, don't restate)
+
+- Per-seat routing rationale, the `auto`/`session` semantics, the Claude-only constraint,
+  the `CLAUDE_CODE_SUBAGENT_MODEL`-must-be-unset fact:
+  `docs/decisions/per-seat-model-routing.md`.
+- modelpipe consume mechanism (synced drift-guarded vendor-copy; transport owns its config,
+  protocol consumes): `docs/decisions/proxy-consume-mechanism.md`.
+- The launcher (direct/router/external modes, `proxyUrl`, fail-closed key check):
+  `src/adapter/router-launch.mjs`. The routing code (`pickRoute`, literal first-match,
+  no aliasing/translation): `src/adapter/model-router.mjs`. The provider catalog + `match`
+  globs: `src/adapter/model-providers.json`.
+- The installer summary log + dogfood-vs-downstream paths + `isSourceRepo` sentinel:
+  `src/adapter/install.mjs`. `ensureConfig` (writes only where absent):
+  `src/adapter/install-core.mjs`.
+- The current models-per-role dialog + the *Mode switch mid-stream* lightweight-flip
+  pattern the model-switch handler mirrors: `src/agents/orchestrator.md` `## Setup`.
+- The config `roles` + its `_roles` doc: `.ai-dev/config.json`.
+- The six consolidated papercuts: the 2026-06-30 entries in `.ai-dev/backlog.md`
+  (coarse models-per-role dialog; re-bake awareness; false installer log; expose-configured
+  -models; Claude-native autostart) — this doc is their single coherent UX resolution.

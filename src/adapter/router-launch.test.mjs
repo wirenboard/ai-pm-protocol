@@ -17,6 +17,7 @@ import {
   distinctEndpoints,
   seatModels,
   missingKeyEnvs,
+  launchModelEnv,
   buildChildEnv,
   planLaunch,
 } from "./router-launch.mjs";
@@ -85,11 +86,35 @@ function main() {
   check("missingKeyEnvs skips passthrough routes",
     missingKeyEnvs([{ auth: "passthrough" }], {}).length, 0);
 
+  // ── launchModelEnv (config-sourced launch-time models) ────────────────────
+  const both = launchModelEnv({ launch: { sessionModel: "claude-opus-4-8", guardModel: "claude-haiku-4-6" } });
+  check("launchModelEnv maps sessionModel → ANTHROPIC_MODEL", both.ANTHROPIC_MODEL, "claude-opus-4-8");
+  check("launchModelEnv maps guardModel → ANTHROPIC_SMALL_FAST_MODEL", both.ANTHROPIC_SMALL_FAST_MODEL, "claude-haiku-4-6");
+  // Absent/empty section ⇒ exports nothing (a non-routing project stays byte-unchanged).
+  check("launchModelEnv: absent launch ⇒ empty", Object.keys(launchModelEnv({})).length, 0);
+  check("launchModelEnv: empty/whitespace values ⇒ dropped",
+    Object.keys(launchModelEnv({ launch: { sessionModel: "", guardModel: "   " } })).length, 0);
+  // Only one set ⇒ only that one key.
+  const onlyGuard = launchModelEnv({ launch: { guardModel: "claude-haiku-4-6" } });
+  check("launchModelEnv: only guard set ⇒ only the guard key", "ANTHROPIC_MODEL" in onlyGuard, false);
+  check("launchModelEnv: only guard set ⇒ guard key present", onlyGuard.ANTHROPIC_SMALL_FAST_MODEL, "claude-haiku-4-6");
+  // Non-string / non-object launch ⇒ safe empty (fail-safe like the rest).
+  check("launchModelEnv: non-object launch ⇒ empty", Object.keys(launchModelEnv({ launch: "nope" })).length, 0);
+
   // ── buildChildEnv ─────────────────────────────────────────────────────────
   const childEnv = buildChildEnv({ FOO: "1", CLAUDE_CODE_SUBAGENT_MODEL: "haiku" }, "http://127.0.0.1:9999");
   check("buildChildEnv sets ANTHROPIC_BASE_URL", childEnv.ANTHROPIC_BASE_URL, "http://127.0.0.1:9999");
   check("buildChildEnv UNSETS CLAUDE_CODE_SUBAGENT_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL" in childEnv, false);
   check("buildChildEnv preserves the rest of the env", childEnv.FOO, "1");
+  // buildChildEnv also layers the config-sourced launch-time models.
+  const childEnvWithModels = buildChildEnv({ FOO: "1" }, "http://127.0.0.1:9999",
+    { launch: { sessionModel: "claude-opus-4-8", guardModel: "claude-haiku-4-6" } });
+  check("buildChildEnv layers session model", childEnvWithModels.ANTHROPIC_MODEL, "claude-opus-4-8");
+  check("buildChildEnv layers guard model", childEnvWithModels.ANTHROPIC_SMALL_FAST_MODEL, "claude-haiku-4-6");
+  // routerUrl null ⇒ no ANTHROPIC_BASE_URL (the direct/external-without-url shape).
+  const childEnvNoUrl = buildChildEnv({ FOO: "1" }, null, { launch: { sessionModel: "claude-opus-4-8" } });
+  check("buildChildEnv: null routerUrl ⇒ no ANTHROPIC_BASE_URL", "ANTHROPIC_BASE_URL" in childEnvNoUrl, false);
+  check("buildChildEnv: null routerUrl still layers the launch model", childEnvNoUrl.ANTHROPIC_MODEL, "claude-opus-4-8");
 
   // ── planLaunch ────────────────────────────────────────────────────────────
   // all-Anthropic seats ⇒ 1 endpoint ⇒ direct (proxy off by default).

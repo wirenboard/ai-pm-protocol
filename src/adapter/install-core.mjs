@@ -78,9 +78,15 @@ export function deployProcedures(target) {
 // the resolved platform + the standard seat ids. Written ONLY where absent — a
 // re-run never overwrites the Operator's configured file. Config lives inside
 // .ai-dev/ — not at the project root.
+// Returns TRUE when it actually wrote the default, FALSE when an existing config was
+// kept — so the install summary reports the truth instead of an unconditional
+// "wrote config" that scares a re-installing Operator into thinking their pins were
+// clobbered (docs/decisions/multi-model-setup-ux.md papercut 9).
+// The default carries NO roles.orchestrator.model: the orchestrator is the running
+// session, its model is the launch model, never a baked pin (papercut 2).
 export function ensureConfig(target, platform) {
   const dest = path.join(target, ".ai-dev", "config.json");
-  if (fs.existsSync(dest)) return;
+  if (fs.existsSync(dest)) return false;
   const config = {
     mode: "interactive",
     profile: "solo",
@@ -93,6 +99,7 @@ export function ensureConfig(target, platform) {
     },
   };
   fs.writeFileSync(dest, JSON.stringify(config, null, 2) + "\n");
+  return true;
 }
 
 // 4. Ensure the local-only transient dirs are gitignored: state (the session

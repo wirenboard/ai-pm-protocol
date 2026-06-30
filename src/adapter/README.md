@@ -82,3 +82,39 @@ node src/adapter/router-launch.mjs [claude args…]
 It reads the seats' `roles.*.model` pins and the routes config (resolved against the catalog), then decides: if the seats touch **fewer than 2 distinct endpoints** (e.g. all-Anthropic), it execs `claude` **directly, no router** — a project that never opts in is unchanged. If **≥2 endpoints** are in play, it starts `model-router.mjs` on a free localhost port, points the child at it (`ANTHROPIC_BASE_URL`), **guarantees `CLAUDE_CODE_SUBAGENT_MODEL` is unset** in the child env, execs `claude`, and tears the router down on exit. **Fail-closed:** if a route in play names a backend key env var that is unset, the launcher errors **before launching anything** — never a silent wrong-backend.
 
 **External proxy (opt-in `proxyUrl`).** Set a top-level `proxyUrl` in the routes config to point at an **already-running** proxy (a self-hosted or shared modelpipe, or one under a debugger) instead of spawning one. The launcher then skips the spawn entirely and just points `claude` at that URL (still unsetting `CLAUDE_CODE_SUBAGENT_MODEL`). Auth/keys live in **that proxy's own env**, so the launcher's fail-closed key check does not apply — it cannot see the external proxy's credentials. A present-but-malformed `proxyUrl` is a hard error (never a silent fall-through to a local spawn); absent/blank ⇒ the launcher decides direct-vs-spawn itself.
+
+**Launch-time models (session + guard) — config is the source, every launch path consumes it.** Two seats are NOT baked into an assembled agent and so cannot be a `roles.*.model` pin: the **session** model (the orchestrator IS the running session — its model is whatever `claude` launches under) and the **guard** model (the background/small-fast model). Claude Code reads both from env *at process launch*, so they must be set **before `claude` starts**. The one home for their values is the config `launch` section (the RATIFIED option (c) source-of-truth — `docs/decisions/multi-model-setup-ux.md` `## The fork`):
+
+```json
+{ "launch": { "sessionModel": "claude-opus-4-8", "guardModel": "claude-haiku-4-6" } }
+```
+
+`router-launch.mjs` reads it and exports `sessionModel` as `ANTHROPIC_MODEL` and `guardModel` as `ANTHROPIC_SMALL_FAST_MODEL` into the child env in **every** mode (direct, external, router) before exec'ing `claude` — absent/empty values export nothing, so a non-routing project is byte-unchanged. **A personal launch wrapper** (the common case, since `ANTHROPIC_BASE_URL` must also be set pre-launch) reads the **same** config values — the launcher is not the only consumer. Mirror them with the ready export block setup prints:
+
+```sh
+# wrapper recipe — read the launch-time models from the config, then exec claude
+export ANTHROPIC_MODEL=$(node -e 'process.stdout.write((JSON.parse(require("fs").readFileSync(".ai-dev/config.json","utf8")).launch||{}).sessionModel||"")')
+export ANTHROPIC_SMALL_FAST_MODEL=$(node -e 'process.stdout.write((JSON.parse(require("fs").readFileSync(".ai-dev/config.json","utf8")).launch||{}).guardModel||"")')
+export ANTHROPIC_BASE_URL=http://127.0.0.1:8800   # → your running proxy
+claude "$@"
+```
+
+This wrapper is **THE launch path for a routed project**: there is no true in-harness autostart — Claude Code reads `ANTHROPIC_BASE_URL` and the launch-time models at process launch and has no per-session pre-launch hook that can set its own process's env, so the wrapper is the honest mechanism (`docs/decisions/multi-model-setup-ux.md` `## Requirement 7`).
+
+**What a model string does end to end — write a concrete id, or an alias?** The string a seat carries travels this chain, so a route's `match` glob must target what actually arrives:
+
+```text
+config pin (roles.{builder,reviewer}.model)  or  launch env (ANTHROPIC_MODEL / ANTHROPIC_SMALL_FAST_MODEL)
+        │
+        ▼  Claude Code alias resolution
+   an alias ("sonnet"/"haiku"/"opus")  →  ANTHROPIC_DEFAULT_{SONNET,HAIKU,OPUS}_MODEL  (if set)
+   a concrete id ("deepseek-chat")     →  passthrough, used verbatim
+        │
+        ▼  the string lands in the request body's `model` field
+        │
+        ▼  modelpipe routing (model-router.mjs pickRoute)
+   matched against each route's `match` glob, LITERAL FIRST-MATCH — modelpipe does NOT
+   alias and does NOT translate; it routes by body.model ALONE and forwards.
+```
+
+So: **for a cross-endpoint seat write the concrete provider id** (e.g. `deepseek-chat`) — it passes through verbatim and the route matches `deepseek-*`, with no indirection. An **alias** (`sonnet`) only works when the proxy carries a route for whatever `ANTHROPIC_DEFAULT_SONNET_MODEL` resolves it to (the default all-Anthropic `claude-*` route catches it). modelpipe matches the exact string in `body.model` — alias resolution is Claude Code's job, upstream, never the proxy's.
