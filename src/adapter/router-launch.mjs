@@ -5,6 +5,12 @@
 //   Reads .ai-dev/config.json (the seats' roles.*.model pins) + a routes config
 //   (each route either fully specified, or { provider: <id> } resolved against the
 //   built-in catalog src/adapter/model-providers.json), then decides:
+//     • EXTERNAL — if the routes config sets a non-empty `proxyUrl` (an
+//       already-running proxy — a self-hosted/shared modelpipe, or one under a
+//       debugger), DON'T spawn a router: point claude straight at that URL. Auth/keys
+//       live in the external proxy's OWN env, so the launcher's fail-closed key check
+//       does not apply (it cannot see the proxy's credentials). Takes precedence over
+//       the endpoint-count decision below.
 //     • DIRECT BY DEFAULT — if the seats' models touch fewer than 2 distinct
 //       endpoints (e.g. all Anthropic), exec `claude` straight through with NO
 //       router. A project that never opts into cross-endpoint routing is unchanged.
@@ -26,6 +32,7 @@
 // Run:  node src/adapter/router-launch.mjs [claude args…]
 //   AI_DEV_CONFIG       override the config path   (default .ai-dev/config.json)
 //   MODEL_ROUTER_ROUTES override the routes path   (default .ai-dev/model-routes.json)
+//   The routes config may carry a top-level `proxyUrl` to opt into EXTERNAL mode above.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -116,9 +123,32 @@ export function buildChildEnv(baseEnv, routerUrl) {
 // THE decision. Given the loaded config, routes config, catalog, and env, decide
 // whether to run direct or through the router, which routes the router would carry,
 // and whether any needed key env is missing (fail-closed). Returns:
-//   { mode: "direct"|"router", routes, exercisedRoutes, endpoints, missingKeyEnvs, error }
-// `error` is set (and mode irrelevant) when the routes config is malformed.
+//   { mode: "direct"|"router"|"external", proxyUrl?, routes, exercisedRoutes, endpoints,
+//     missingKeyEnvs, error }
+// `mode: "external"` carries `proxyUrl` (an opt-in already-running proxy). `error` is set
+// (and mode irrelevant) when the routes config is malformed OR proxyUrl is present but
+// not a valid http(s) URL.
 export function planLaunch({ config, routesConfig, providers, env }) {
+  // Opt-in EXTERNAL proxy: a non-empty `proxyUrl` in the routes config short-circuits
+  // the spawn — the launcher just points claude at the already-running proxy. Keys live
+  // in that proxy's env, so the fail-closed key check below does not apply. A present-
+  // but-malformed proxyUrl is a HARD ERROR (fail-closed) — never a silent fall-through
+  // to spawning a local router the operator did not ask for.
+  const rawProxy = routesConfig && typeof routesConfig.proxyUrl === "string" ? routesConfig.proxyUrl.trim() : "";
+  if (rawProxy) {
+    let valid;
+    try {
+      const u = new URL(rawProxy);
+      valid = u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      return { mode: "direct", proxyUrl: null, routes: [], exercisedRoutes: [], endpoints: [], missingKeyEnvs: [], error: `proxyUrl is not a valid http(s) URL: "${rawProxy}"` };
+    }
+    return { mode: "external", proxyUrl: rawProxy, routes: [], exercisedRoutes: [], endpoints: [], missingKeyEnvs: [], error: null };
+  }
+
   let routes;
   try {
     routes = resolveRoutes(routesConfig, providers);
@@ -194,6 +224,12 @@ function main() {
   if (plan.error) {
     process.stderr.write(`[router-launch] routes config error: ${plan.error}\n`);
     process.exit(1);
+    return;
+  }
+
+  if (plan.mode === "external") {
+    process.stderr.write(`[router-launch] external proxy at ${plan.proxyUrl} — not spawning a router\n`);
+    execClaude(buildChildEnv(process.env, plan.proxyUrl), args);
     return;
   }
 

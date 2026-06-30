@@ -65,6 +65,25 @@ Right after setup, the orchestrator runs **genuine product discovery** — a dia
 
 Multi-user (team) mode is **opt-in and off by default** — single-user is the common case. When a team works one repo, the loop gains a colleague-approval step on the forge (on top of the AI Reviewer floor) and can move the backlog to forge issues. Turning it on and running it — prerequisites, the load-bearing branch-protection step, the per-developer loop, and the honest limits — is the **[team-collaboration guide](docs/team-collaboration.md)**. The design and trade-offs behind it live in `docs/decisions/multi-user-mode.md`.
 
+## Multi-model routing (optional)
+
+Run different loop seats on different model providers — e.g. a builder on DeepSeek or z.ai GLM, the reviewer on Anthropic — all behind one local endpoint. The router that makes this work **ships with the tooling** (vendored into `.ai-dev/tooling/src/adapter/` on install); there is nothing extra to pull. It is **off by default** — a project that never configures a cross-endpoint seat runs unchanged, and routing is **Claude Code only** (the harness must forward distinct per-subagent model ids).
+
+To turn it on:
+
+1. **Pin the seats** — `/dev-setup` (or edit `.ai-dev/config.json`) so a seat's `model` names a non-Anthropic provider's model id.
+2. **Write the routes** — create `.ai-dev/model-routes.json` (copy the shape from `.ai-dev/tooling/src/adapter/model-router.example.json`); a route can name a provider by id (`{ "provider": "deepseek" }`) and pull its endpoint + auth from the built-in catalog. Keys are referenced by **env-var name** only, never a value.
+3. **Export the backend keys** (e.g. `DEEPSEEK_API_KEY`).
+4. **Launch through the launcher** instead of bare `claude`:
+
+   ```sh
+   node .ai-dev/tooling/src/adapter/router-launch.mjs
+   ```
+
+   It reads the pins + routes and, when ≥2 distinct endpoints are in play, starts the proxy on a free localhost port, wires `ANTHROPIC_BASE_URL`, keeps `CLAUDE_CODE_SUBAGENT_MODEL` unset, and tears it down on exit. Fewer than 2 endpoints ⇒ it runs `claude` directly, no proxy. A missing backend key ⇒ it refuses to launch (fail-closed).
+
+**Already running a proxy yourself?** Set a top-level `proxyUrl` in `.ai-dev/model-routes.json` and the launcher points `claude` at that URL instead of spawning one (auth/keys then live in your proxy's env). The full reference — the provider catalog, route shape, the launcher's decisions, and the load-bearing constraints — is **[`src/adapter/README.md`](src/adapter/README.md)** (`### The launcher`); the rationale is `docs/decisions/per-seat-model-routing.md`.
+
 ## Layout
 
 ```text
