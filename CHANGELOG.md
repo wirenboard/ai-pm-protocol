@@ -12,6 +12,21 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.44.0] — 2026-07-01
+
+### Added
+
+- **Optional `.ai-dev/launch` launcher** (installer-generated, every project) — a drop-in for `claude` run from the project root, wrapping `router-launch.mjs`. It is **only needed when you want multi-model + proxy or a per-project claude profile**; plain single-model Claude launches normally (the launcher is not a forced entry). On an OpenCode project it is an honest stub that prints "multi-model routing is Claude-Code only" and execs `opencode`. The long `node …/router-launch.mjs` invocation keeps working. README `## Multi-model routing` now leads with a modes×launch matrix; the recipe's one home is `src/adapter/README.md` `### The launcher`; rationale in `docs/decisions/launcher-ux.md`.
+- **`launch.configDir` → `CLAUDE_CONFIG_DIR`** — pin a per-project claude profile (different keys per project) without editing a personal `.bashrc` wrapper. Applied by the launcher across all exec paths (proxy/direct/external) and useful without routing. Homed in a **new gitignored `.ai-dev/config.local.json`** (a per-machine personal path, never committed/forced on teammates); the launcher merges its `launch` over the shared config per-field.
+- **`.ai-dev/launch --proxy`** — foreground-only mode: start the router, print its URL, do not exec claude (point your own claude/wrapper at it via `proxyUrl`). Fail-closed when there is no local router to start.
+- **One-flow `/dev-setup` launch & routing sub-flow** — when a cross-endpoint seat is pinned, setup configures the per-seat models, writes `configDir` to `config.local.json`, offers to scaffold `model-routes.json`, reminds which backend key env-vars to export, and prints the ready launch command — instead of three hand-edited files.
+
+### Changed
+
+- **Launcher env precedence (`router-launch.mjs`)** — the launcher layers only `ANTHROPIC_BASE_URL` (to the proxy, when routing is on) and unsets `CLAUDE_CODE_SUBAGENT_MODEL`; everything else (your shell env) passes through. On an `ANTHROPIC_BASE_URL` conflict while routing is on, the launcher's value wins with a visible stderr warning; routing off ⇒ a preset value passes through untouched.
+
+---
+
 ## [5.43.2] — 2026-07-01
 
 ### Added

@@ -17,6 +17,7 @@ import {
   distinctEndpoints,
   seatModels,
   missingKeyEnvs,
+  mergeLocalLaunch,
   launchModelEnv,
   buildChildEnv,
   planLaunch,
@@ -101,6 +102,36 @@ function main() {
   // Non-string / non-object launch ⇒ safe empty (fail-safe like the rest).
   check("launchModelEnv: non-object launch ⇒ empty", Object.keys(launchModelEnv({ launch: "nope" })).length, 0);
 
+  // configDir → CLAUDE_CONFIG_DIR (a per-project claude profile dir). Exported by the
+  // SAME launchModelEnv that every exec path (proxy/direct/external) layers, so the
+  // export covers them all.
+  const withDir = launchModelEnv({ launch: { configDir: "/home/me/.claude-work" } });
+  check("launchModelEnv: configDir → CLAUDE_CONFIG_DIR", withDir.CLAUDE_CONFIG_DIR, "/home/me/.claude-work");
+  // configDir is useful WITHOUT routing — set alone, only that key is exported.
+  check("launchModelEnv: configDir alone ⇒ no model keys", "ANTHROPIC_MODEL" in withDir || "ANTHROPIC_SMALL_FAST_MODEL" in withDir, false);
+  // absent/empty/whitespace configDir ⇒ CLAUDE_CONFIG_DIR is NOT set (unset, byte-unchanged).
+  check("launchModelEnv: absent configDir ⇒ no CLAUDE_CONFIG_DIR", "CLAUDE_CONFIG_DIR" in launchModelEnv({ launch: { sessionModel: "x" } }), false);
+  check("launchModelEnv: blank configDir ⇒ no CLAUDE_CONFIG_DIR", "CLAUDE_CONFIG_DIR" in launchModelEnv({ launch: { configDir: "   " } }), false);
+
+  // ── mergeLocalLaunch (gitignored config.local.json overrides the shared launch) ──
+  const merged = mergeLocalLaunch(
+    { profile: "solo", launch: { sessionModel: "shared-sess", guardModel: "shared-guard" } },
+    { launch: { sessionModel: "local-sess", configDir: "/home/me/.cc" } },
+  );
+  check("mergeLocalLaunch: local sessionModel wins over shared", merged.launch.sessionModel, "local-sess");
+  check("mergeLocalLaunch: shared field with no local override is kept", merged.launch.guardModel, "shared-guard");
+  check("mergeLocalLaunch: local-only field (configDir) is added", merged.launch.configDir, "/home/me/.cc");
+  check("mergeLocalLaunch: the rest of the shared config is untouched", merged.profile, "solo");
+  // No local config (file absent) ⇒ the shared config unchanged (byte-equivalent path).
+  const noLocal = mergeLocalLaunch({ launch: { sessionModel: "s" } }, null);
+  check("mergeLocalLaunch: null local ⇒ shared unchanged", noLocal.launch.sessionModel, "s");
+  // A local file with no launch section ⇒ shared launch preserved (empty local launch).
+  const localNoLaunch = mergeLocalLaunch({ launch: { sessionModel: "s" } }, { other: 1 });
+  check("mergeLocalLaunch: local with no launch ⇒ shared launch kept", localNoLaunch.launch.sessionModel, "s");
+  // configDir homed ONLY in the local file still reaches the env via the merge.
+  const localDirEnv = launchModelEnv(mergeLocalLaunch({ launch: {} }, { launch: { configDir: "/x/y" } }));
+  check("mergeLocalLaunch + launchModelEnv: local-only configDir reaches CLAUDE_CONFIG_DIR", localDirEnv.CLAUDE_CONFIG_DIR, "/x/y");
+
   // ── buildChildEnv ─────────────────────────────────────────────────────────
   const childEnv = buildChildEnv({ FOO: "1", CLAUDE_CODE_SUBAGENT_MODEL: "haiku" }, "http://127.0.0.1:9999");
   check("buildChildEnv sets ANTHROPIC_BASE_URL", childEnv.ANTHROPIC_BASE_URL, "http://127.0.0.1:9999");
@@ -115,6 +146,35 @@ function main() {
   const childEnvNoUrl = buildChildEnv({ FOO: "1" }, null, { launch: { sessionModel: "claude-opus-4-8" } });
   check("buildChildEnv: null routerUrl ⇒ no ANTHROPIC_BASE_URL", "ANTHROPIC_BASE_URL" in childEnvNoUrl, false);
   check("buildChildEnv: null routerUrl still layers the launch model", childEnvNoUrl.ANTHROPIC_MODEL, "claude-opus-4-8");
+  // buildChildEnv also layers configDir → CLAUDE_CONFIG_DIR (covers the direct path too).
+  const childEnvDir = buildChildEnv({ FOO: "1" }, null, { launch: { configDir: "/home/me/.cc" } });
+  check("buildChildEnv: layers CLAUDE_CONFIG_DIR from configDir", childEnvDir.CLAUDE_CONFIG_DIR, "/home/me/.cc");
+
+  // ── env precedence: ANTHROPIC_BASE_URL conflict warning ────────────────────
+  // Routing ON + baseEnv already carries a DIFFERENT ANTHROPIC_BASE_URL ⇒ launcher wins
+  // (its router URL), but a visible WARNING is emitted naming both URLs (never a silent
+  // hijack of the user's own proxy). `warn` is injected to capture the message purely.
+  let warned = "";
+  const conflictEnv = buildChildEnv(
+    { ANTHROPIC_BASE_URL: "http://user-proxy:9000" },
+    "http://127.0.0.1:8800",
+    {},
+    (m) => { warned += m; },
+  );
+  check("buildChildEnv: launcher wins the ANTHROPIC_BASE_URL conflict", conflictEnv.ANTHROPIC_BASE_URL, "http://127.0.0.1:8800");
+  check("buildChildEnv: conflict emits a WARNING", warned.includes("WARNING") && warned.includes("http://user-proxy:9000") && warned.includes("http://127.0.0.1:8800"), true);
+  // No conflict (same URL, or none preset) ⇒ NO warning.
+  let warnedSame = "";
+  buildChildEnv({ ANTHROPIC_BASE_URL: "http://127.0.0.1:8800" }, "http://127.0.0.1:8800", {}, (m) => { warnedSame += m; });
+  check("buildChildEnv: identical preset URL ⇒ no warning", warnedSame, "");
+  let warnedNone = "";
+  buildChildEnv({ FOO: "1" }, "http://127.0.0.1:8800", {}, (m) => { warnedNone += m; });
+  check("buildChildEnv: no preset URL ⇒ no warning", warnedNone, "");
+  // routing OFF (null routerUrl) ⇒ a preset URL passes through untouched, NO warning.
+  let warnedOff = "";
+  const offEnv = buildChildEnv({ ANTHROPIC_BASE_URL: "http://user-proxy:9000" }, null, {}, (m) => { warnedOff += m; });
+  check("buildChildEnv: routing off ⇒ preset URL passes through", offEnv.ANTHROPIC_BASE_URL, "http://user-proxy:9000");
+  check("buildChildEnv: routing off ⇒ no warning", warnedOff, "");
 
   // ── planLaunch ────────────────────────────────────────────────────────────
   // all-Anthropic seats ⇒ 1 endpoint ⇒ direct (proxy off by default).

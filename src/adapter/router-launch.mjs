@@ -14,28 +14,41 @@
 //     • DIRECT BY DEFAULT — if the seats' models touch fewer than 2 distinct
 //       endpoints (e.g. all Anthropic), exec `claude` straight through with NO
 //       router. A project that never opts into cross-endpoint routing is unchanged.
-//   In EVERY mode it also layers the config's launch-time models onto the child env
-//   (config.launch.sessionModel → ANTHROPIC_MODEL, guardModel → ANTHROPIC_SMALL_FAST_MODEL)
-//   BEFORE exec'ing `claude` — the RATIFIED source-of-truth: the config is the one home,
-//   the launch path consumes it (docs/decisions/multi-model-setup-ux.md `## The fork`).
-//   Absent/empty launch values export nothing (a non-routing project stays byte-unchanged).
+//   In EVERY mode it also layers the config's launch-time env onto the child
+//   (config.launch.sessionModel → ANTHROPIC_MODEL, guardModel → ANTHROPIC_SMALL_FAST_MODEL,
+//   configDir → CLAUDE_CONFIG_DIR) BEFORE exec'ing `claude` — the RATIFIED source-of-truth:
+//   the config is the one home, the launch path consumes it (docs/decisions/multi-model-setup-ux.md
+//   `## The fork`; configDir: docs/decisions/launcher-ux.md). Absent/empty values export
+//   nothing (a non-routing project stays byte-unchanged).
 //     • ROUTER — if ≥2 distinct endpoints are in play, start model-router.mjs on a
 //       free localhost port, point the child at it via ANTHROPIC_BASE_URL, ensure
 //       CLAUDE_CODE_SUBAGENT_MODEL is UNSET in the child env (it would collapse every
 //       seat to one model and defeat the route key — decision doc, fact 2), exec
 //       `claude`, and tear the router down on exit.
 //
+// PERSONAL OVERRIDES: the gitignored .ai-dev/config.local.json carries the per-machine
+//   `launch.*` values (a configDir, a personal launch model) — its `launch` section is
+//   merged OVER the shared config's, so the shared file stays clean and nothing personal
+//   is forced on a teammate.
+//
+// FOREGROUND PROXY (--proxy): start the router, print its URL on stdout, and stay up
+//   WITHOUT exec'ing claude — for "don't touch my launch": point your own claude/wrapper
+//   at the printed URL. Errors if there is no local router to start (external/direct plan).
+//
 // FAIL-CLOSED: if a route the launch would use names a key env var that is unset, the
 //   launcher errors BEFORE starting anything — never a silent wrong-backend (a seat's
 //   traffic reaching the wrong provider, or a request forwarded with no credential).
 //
 // TESTABILITY: the decisions are PURE exported functions (resolveRoutes,
-//   distinctEndpoints, missingKeyEnvs, seatModels, launchModelEnv, buildChildEnv,
-//   planLaunch) unit-tested in router-launch.test.mjs. The real `claude` exec is the one untestable
-//   rung (a live process) — offered as a real-layer check, not run in the suite.
+//   distinctEndpoints, missingKeyEnvs, seatModels, mergeLocalLaunch, launchModelEnv,
+//   buildChildEnv, planLaunch) unit-tested in router-launch.test.mjs. The real `claude`
+//   exec is the one untestable rung (a live process) — offered as a real-layer check,
+//   not run in the suite.
 //
-// Run:  node src/adapter/router-launch.mjs [claude args…]
-//   AI_DEV_CONFIG       override the config path   (default .ai-dev/config.json)
+// Run:  node src/adapter/router-launch.mjs [--proxy] [claude args…]
+//   --proxy             foreground-only: start the router, print its URL, do NOT exec claude
+//   AI_DEV_CONFIG       override the config path   (default .ai-dev/config.json;
+//                       its .local.json sibling is the gitignored personal override)
 //   MODEL_ROUTER_ROUTES override the routes path   (default .ai-dev/model-routes.json)
 //   The routes config may carry a top-level `proxyUrl` to opt into EXTERNAL mode above.
 
@@ -116,32 +129,73 @@ export function missingKeyEnvs(routes, env) {
   return [...new Set(missing)];
 }
 
-// The launch-time model env the config `launch` section sources (the RATIFIED
-// option (c) source-of-truth: docs/decisions/multi-model-setup-ux.md `## The fork`).
-// config.launch.sessionModel → ANTHROPIC_MODEL (the orchestrator IS the session);
-// config.launch.guardModel   → ANTHROPIC_SMALL_FAST_MODEL (the background/small-fast
-// model). Returns ONLY the keys with a non-empty value — an absent/empty section
-// exports nothing, so a non-routing project's launch env is byte-unchanged. These
-// must be set BEFORE `claude` reads them at process launch, which is exactly what the
-// launcher does by putting them in the child's env below.
+// Merge the `launch` section of a LOCAL config override over the shared one. The
+// gitignored `.ai-dev/config.local.json` holds the personal/per-machine `launch.*`
+// values (a `configDir`, a personal launch model) so the shared `.ai-dev/config.json`
+// stays clean and nothing personal is forced on a teammate. Per-field override: a
+// non-undefined local field wins over the shared one; an absent local field keeps the
+// shared value. Returns a NEW config object carrying the merged `launch` — the rest of
+// the shared config is untouched (the local file only ever overrides `launch`). A null
+// local config (file absent) ⇒ the shared config unchanged (byte-equivalent path).
+export function mergeLocalLaunch(config, localConfig) {
+  const base = config && typeof config === "object" ? config : {};
+  if (!localConfig || typeof localConfig !== "object") return base;
+  const sharedLaunch = base.launch && typeof base.launch === "object" ? base.launch : {};
+  const localLaunch = localConfig.launch && typeof localConfig.launch === "object" ? localConfig.launch : {};
+  return { ...base, launch: { ...sharedLaunch, ...localLaunch } };
+}
+
+// The launch-time env the config `launch` section sources (the RATIFIED option (c)
+// source-of-truth: docs/decisions/multi-model-setup-ux.md `## The fork`).
+//   config.launch.sessionModel → ANTHROPIC_MODEL (the orchestrator IS the session);
+//   config.launch.guardModel   → ANTHROPIC_SMALL_FAST_MODEL (the background/small-fast model);
+//   config.launch.configDir    → CLAUDE_CONFIG_DIR (a per-project claude profile dir —
+//     the Operator's per-task-keys mechanism, pinned per project with no .bashrc edit;
+//     useful even WITHOUT routing, so it is exported here, where every exec path —
+//     proxy/direct/external — passes through, docs/decisions/launcher-ux.md).
+// Returns ONLY the keys with a non-empty value — an absent/empty section exports
+// nothing, so a non-routing project's launch env is byte-unchanged. These must be set
+// BEFORE `claude` reads them at process launch, which is exactly what the launcher does
+// by putting them in the child's env below.
 export function launchModelEnv(config) {
   const out = {};
   const launch = config && typeof config.launch === "object" && config.launch ? config.launch : {};
   const session = typeof launch.sessionModel === "string" ? launch.sessionModel.trim() : "";
   const guard = typeof launch.guardModel === "string" ? launch.guardModel.trim() : "";
+  const configDir = typeof launch.configDir === "string" ? launch.configDir.trim() : "";
   if (session) out.ANTHROPIC_MODEL = session;
   if (guard) out.ANTHROPIC_SMALL_FAST_MODEL = guard;
+  if (configDir) out.CLAUDE_CONFIG_DIR = configDir;
   return out;
 }
 
 // The child env for `claude`: layer the config-sourced launch-time models (session +
-// guard, when set) onto the base env, point it at the router when one is given, and
-// guarantee CLAUDE_CODE_SUBAGENT_MODEL is UNSET (it overrides per-seat model: pins and
-// would collapse every seat to one model — decision doc, fact 2). routerUrl may be
-// null/omitted for the direct/external paths that only need the launch-model layer.
-export function buildChildEnv(baseEnv, routerUrl, config) {
+// guard + configDir, when set) onto the base env, point it at the router when one is
+// given, and guarantee CLAUDE_CODE_SUBAGENT_MODEL is UNSET (it overrides per-seat
+// model: pins and would collapse every seat to one model — decision doc, fact 2).
+// routerUrl may be null/omitted for the direct/external paths that only need the
+// launch-model layer.
+//
+// env precedence (ratified, docs/decisions/launcher-ux.md): the launcher layers ONLY
+// ANTHROPIC_BASE_URL (to the proxy, when routing is on) + unsets
+// CLAUDE_CODE_SUBAGENT_MODEL + the launch-model env; everything else in baseEnv passes
+// through untouched. When routing is ON and baseEnv ALREADY carries a different
+// ANTHROPIC_BASE_URL (e.g. a personal wrapper pointed at another proxy), the LAUNCHER
+// WINS — but loudly: a visible stderr WARNING names both URLs so a silent hijack of the
+// user's own proxy can never happen. `warn` is injectable so the pure function stays
+// side-effect-testable; it defaults to a stderr writer.
+export function buildChildEnv(baseEnv, routerUrl, config, warn = (m) => process.stderr.write(m)) {
   const env = { ...baseEnv, ...launchModelEnv(config) };
-  if (routerUrl) env.ANTHROPIC_BASE_URL = routerUrl;
+  if (routerUrl) {
+    const prior = baseEnv && typeof baseEnv.ANTHROPIC_BASE_URL === "string" ? baseEnv.ANTHROPIC_BASE_URL.trim() : "";
+    if (prior && prior !== routerUrl) {
+      warn(
+        `[router-launch] WARNING: ANTHROPIC_BASE_URL was already set to ${prior}; ` +
+          `the launcher is routing through ${routerUrl} and OVERRIDES it for this session.\n`,
+      );
+    }
+    env.ANTHROPIC_BASE_URL = routerUrl;
+  }
   delete env.CLAUDE_CODE_SUBAGENT_MODEL;
   return env;
 }
@@ -230,14 +284,33 @@ function execClaude(env, args) {
   return child;
 }
 
+// The local-override config path that sits beside the shared one. Default
+// .ai-dev/config.local.json (gitignored); follows AI_DEV_CONFIG when that overrides
+// the shared path, so a test/alt config and its local sibling stay paired.
+function localConfigPath(configPath) {
+  const dir = path.dirname(configPath);
+  const base = path.basename(configPath, ".json");
+  return path.join(dir, `${base}.local.json`);
+}
+
 function main() {
   const args = process.argv.slice(2);
+  // --proxy: foreground-only proxy mode. Start the router, print its URL, do NOT exec
+  // claude — for "don't touch my launch": point your own claude/wrapper at the printed
+  // URL (or wire it as the routes config `proxyUrl`). The flag is consumed here, never
+  // forwarded to claude (claude is not started in this mode).
+  const proxyOnly = args.includes("--proxy");
+  const claudeArgs = args.filter((a) => a !== "--proxy");
   const configPath = process.env.AI_DEV_CONFIG || ".ai-dev/config.json";
   const routesPath = process.env.MODEL_ROUTER_ROUTES || ".ai-dev/model-routes.json";
 
   let config, routesConfig, providers;
   try {
-    config = readJsonIfPresent(configPath);
+    // Merge the gitignored local override's `launch` over the shared config's `launch`
+    // (configDir + any personal launch model live there — never forced on a teammate).
+    const shared = readJsonIfPresent(configPath);
+    const local = readJsonIfPresent(localConfigPath(configPath));
+    config = mergeLocalLaunch(shared, local);
     routesConfig = readJsonIfPresent(routesPath);
     providers = loadProviders();
   } catch (err) {
@@ -253,17 +326,29 @@ function main() {
     return;
   }
 
+  // --proxy foreground-only mode: there must be a LOCAL router to start. An external
+  // proxyUrl (the proxy already runs elsewhere) or a direct plan (no proxy at all) has
+  // nothing for this mode to start — fail-closed with a pointer, never a no-op claude.
+  if (proxyOnly && plan.mode !== "router") {
+    const why = plan.mode === "external"
+      ? `a proxy is already running at ${plan.proxyUrl} (routes config proxyUrl) — point your launch at THAT URL`
+      : "fewer than 2 distinct endpoints are in play (nothing to route) — pin a cross-endpoint seat first";
+    process.stderr.write(`[router-launch] --proxy: nothing to start: ${why}\n`);
+    process.exit(1);
+    return;
+  }
+
   if (plan.mode === "external") {
     process.stderr.write(`[router-launch] external proxy at ${plan.proxyUrl} — not spawning a router\n`);
-    execClaude(buildChildEnv(process.env, plan.proxyUrl, config), args);
+    execClaude(buildChildEnv(process.env, plan.proxyUrl, config), claudeArgs);
     return;
   }
 
   if (plan.mode === "direct") {
     process.stderr.write("[router-launch] single endpoint — running claude directly (no router)\n");
     // No router URL and CLAUDE_CODE_SUBAGENT_MODEL untouched in direct mode (per-seat
-    // baking still applies); only layer the config-sourced launch-time models.
-    execClaude({ ...process.env, ...launchModelEnv(config) }, args);
+    // baking still applies); only layer the config-sourced launch-time models + configDir.
+    execClaude({ ...process.env, ...launchModelEnv(config) }, claudeArgs);
     return;
   }
 
@@ -284,7 +369,18 @@ function main() {
     process.stderr.write(
       `[router-launch] router on ${routerUrl} — ${plan.endpoints.length} endpoints, ${plan.routes.length} routes\n`,
     );
-    const child = execClaude(buildChildEnv(process.env, routerUrl, config), args);
+    if (proxyOnly) {
+      // Foreground-only: print the URL on STDOUT (scriptable — capture it to wire your
+      // own launch) and stay up until interrupted; never exec claude. The server keeps
+      // the event loop alive; Ctrl-C / SIGTERM ends it.
+      process.stdout.write(`${routerUrl}\n`);
+      process.stderr.write("[router-launch] --proxy: proxy running in the foreground; point your claude at the URL above (Ctrl-C to stop)\n");
+      const stop = () => { server.close(); process.exit(0); };
+      process.on("SIGINT", stop);
+      process.on("SIGTERM", stop);
+      return;
+    }
+    const child = execClaude(buildChildEnv(process.env, routerUrl, config), claudeArgs);
     const teardown = () => server.close();
     child.on("exit", teardown);
     child.on("error", teardown);

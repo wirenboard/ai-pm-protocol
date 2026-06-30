@@ -45,7 +45,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SOURCE, PLATFORMS } from "./install-fs.mjs";
 import { resolveSourceVersion, readPriorVersion, stampVersion, isStaleNpxReRun } from "./install-version.mjs";
-import { vendorTooling, layDownCore, deployProcedures, ensureConfig, ensureTransientsGitignore, installPrePushHook } from "./install-core.mjs";
+import { vendorTooling, layDownCore, deployProcedures, ensureConfig, ensureTransientsGitignore, generateLaunchScript, installPrePushHook } from "./install-core.mjs";
 import { writeInactiveBreadcrumb } from "./install-breadcrumb.mjs";
 import { wireClaude, verifyClaudeWiring } from "./install-claude.mjs";
 import { wireOpenCode } from "./install-opencode.mjs";
@@ -122,6 +122,7 @@ export function install(targetDir, platformFlag, opts = {}) {
     deployProcedures(target); // readable .ai-dev/procedures/ — converges to committed bytes
     ensureConfig(target, platform);
     ensureTransientsGitignore(target);
+    generateLaunchScript(target, platform, true); // .ai-dev/launch — converges to committed bytes
     if (platform === "claude") wireClaude(target, true);
     else wireOpenCode(target, true);
     return platform;
@@ -135,6 +136,7 @@ export function install(targetDir, platformFlag, opts = {}) {
   deployProcedures(target); // readable .ai-dev/procedures/ (the tooling copy is read-denied)
   ensureConfig(target, platform);
   ensureTransientsGitignore(target);
+  generateLaunchScript(target, platform, false); // .ai-dev/launch (always — optional, but generated)
   if (platform === "claude") wireClaude(target, false);
   else wireOpenCode(target, false);
   writeInactiveBreadcrumb(target, platform, false);
