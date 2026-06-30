@@ -12,7 +12,15 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
-## [5.43.1] — 2026-06-30
+## [5.43.2] — 2026-07-01
+
+### Added
+
+- **`audit` gains a live branch-protection verification dimension** (`src/agents/procedures/audit.md` step 2) — the model-independent remote floor (`## Setup` step 5) is recorded at setup but was verified nowhere in the loop. The audit now reads `gh api repos/{owner}/{repo}/branches/main/protection` and flags when the CI status-check context is absent from `required_status_checks` or `enforce_admins` is not `true` (the recipe-printed-but-never-applied gap a downstream incident exposed), recording "unverifiable here" when `gh`/forge is unavailable rather than a silent pass. Closes the F-A audit gap.
+
+### Fixed
+
+- **Backlog hygiene** (`.ai-dev/backlog.md`) — pruned resolved/superseded archaeology per the durable-text-hygiene discipline (git/CHANGELOG hold the record): the closed-out post-multi-model and post-multi-user audit-dispatch narratives (the still-open LOW-4 dev-only-CVE watch preserved as a standalone entry), the RESOLVED 40k-orchestrator BUG, the SUPERSEDED git-submodule item, the already-shipped F-B (whole-tree Reviewer run) and now-resolved F-A sections, and the stale `install.test.mjs` decompose item (split shipped 5.42.0). The whole-tree audit (2026-07-01) found these; verdict HEALTHY, no HIGH, no security/honesty defects.
 
 ### Fixed
 
