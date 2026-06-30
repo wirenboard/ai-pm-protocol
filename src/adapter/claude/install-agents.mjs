@@ -19,8 +19,12 @@
 // resolution lives in resolveModelPin below (the Claude-side mirror of OpenCode's
 // same-named export — intentionally per-platform: OpenCode ALWAYS returns null because
 // its `task` runtime ignores a subagent's model:, Claude resolves a real pin because it
-// honours one). `session`/absent and an off-allowlist id bake no line (honest inherit;
-// never invent a model). The orchestrator is never baked — it IS the session.
+// honours one). `session` and an off-allowlist id bake no line (honest inherit;
+// never invent a model). The orchestrator is never baked — it IS the session. The
+// REVIEWER is the one seat whose ABSENT model defaults to `auto` (so a no-pin reviewer
+// still cross-models — the cross-model-review contract); that default is applied in
+// install() at the reviewer seat, NOT in resolveModelPin (the pure resolver keeps
+// absent ⇒ null). Every other seat absent ⇒ no line ⇒ session inherit.
 //
 // The ORCHESTRATOR is special on Claude: it IS the session (held by CLAUDE.md), NOT a
 // spawnable subagent. Claude auto-registers subagents from `.claude/agents/` ONLY — so a
@@ -113,7 +117,15 @@ export function install(outDir, config) {
     const fm = fs.readFileSync(path.join(ROOT, "src", "adapter", "claude", "agents", `${role}.fm`), "utf8").trim();
     const floor = fs.readFileSync(path.join(ROOT, "src", "agents", `${role}.md`), "utf8").trimStart();
     const body = composeBody(ROOT, floor, role, registry, config, "claude");
-    const wish = config.roles?.[role]?.model;
+    // The REVIEWER defaults to `auto` when its `model` is absent/null (the
+    // cross-model-review contract: absent/unrecognised ⇒ auto — docs/contracts/
+    // cross-model-review.md). So a no-pin reviewer still cross-models (bakes the
+    // opposite of the session). Every OTHER seat keeps the resolveModelPin default:
+    // absent ⇒ no line ⇒ honest inherit of the session model (the builder IS the
+    // maker, it should run on the session). The defaulting lives HERE, not in
+    // resolveModelPin, so the pure resolver stays "absent ⇒ null".
+    let wish = config.roles?.[role]?.model;
+    if (role === "reviewer" && (wish === undefined || wish === null)) wish = "auto";
     const pin = resolveModelPin(wish, sessionWish, policy);
     const modelLine = pin ? `model: ${pin}\n` : "";
     if (!pin && typeof wish === "string" && wish !== "session" && wish !== "auto") {

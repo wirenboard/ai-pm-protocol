@@ -83,6 +83,9 @@ check("claude-pin: 'auto' (session not knowable) → claude-sonnet-4-6", resolve
 check("claude-pin: 'auto' opposite an opus session → claude-sonnet-4-6", resolveClaudePin("auto", "opus") === "claude-sonnet-4-6");
 check("claude-pin: 'auto' opposite a sonnet session → claude-opus-4-8", resolveClaudePin("auto", "sonnet") === "claude-opus-4-8");
 check("claude-pin: 'auto' opposite a claude-opus-* session id → claude-sonnet-4-6", resolveClaudePin("auto", "claude-opus-4-8") === "claude-sonnet-4-6");
+// A1 — the full-id form of the sonnet session (the mirror of the line above); the
+// 5.34.0 Reviewer named this edge as missing.
+check("claude-pin: 'auto' opposite a claude-sonnet-* session id → claude-opus-4-8", resolveClaudePin("auto", "claude-sonnet-4-6") === "claude-opus-4-8");
 check("claude-pin: alias 'sonnet' → canonical id claude-sonnet-4-6", resolveClaudePin("sonnet", undefined) === "claude-sonnet-4-6");
 check("claude-pin: alias 'opus' → canonical id claude-opus-4-8", resolveClaudePin("opus", undefined) === "claude-opus-4-8");
 check("claude-pin: a concrete claude-* id bakes verbatim", resolveClaudePin("claude-opus-4-8", undefined) === "claude-opus-4-8");
@@ -114,12 +117,21 @@ function claudeReviewerFrontmatter(reviewerModel, sessionModel) {
   return fm;
 }
 
-check("claude-bake: 'auto' (opus-class session) bakes model: claude-sonnet-4-6", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", undefined)));
-check("claude-bake: 'auto' opposite a sonnet session bakes model: claude-opus-4-8", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("auto", "sonnet")));
+// True-opposite for `auto`, exercised end-to-end through install() — the reviewer's
+// `auto` bakes the allow-listed OPPOSITE of the orchestrator/session model:
+check("claude-bake: 'auto' opposite an opus orchestrator bakes model: claude-sonnet-4-6", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", "opus")));
+check("claude-bake: 'auto' opposite a sonnet orchestrator bakes model: claude-opus-4-8", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("auto", "sonnet")));
+check("claude-bake: 'auto' with no orchestrator pin bakes the sonnet default", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", undefined)));
 check("claude-bake: a concrete allow-listed pin (sonnet) bakes model: claude-sonnet-4-6", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("sonnet", undefined)));
 check("claude-bake: a concrete claude-* id bakes that line verbatim", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("claude-opus-4-8", undefined)));
 check("claude-bake: 'session' bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("session", undefined)));
-check("claude-bake: absent model bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter(undefined, undefined)));
+// A2 — an ABSENT reviewer model defaults to `auto` (cross-model-review.md: absent ⇒
+// auto), so a no-pin reviewer still cross-models. This REPLACES the pre-A2 expectation
+// (absent ⇒ no line): the reviewer-defaults-to-auto contract clause the 5.34.0 Reviewer
+// flagged. The pure resolver still returns null for absent (asserted above) — the
+// default is applied at the reviewer seat in install(), not in resolveModelPin.
+check("claude-bake: absent reviewer (defaults to auto) bakes the sonnet default", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter(undefined, undefined)));
+check("claude-bake: absent reviewer opposite a sonnet orchestrator bakes model: claude-opus-4-8", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter(undefined, "sonnet")));
 check("claude-bake: an off-allowlist id bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("claude-haiku-4-5", undefined)));
 
 console.log(`\nINSTALL-MODEL bake: ${pass} passed, ${fail} failed`);
