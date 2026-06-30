@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.42.1] — 2026-06-30
+
+### Changed
+
+- **Protocol-surface optimization (levers 1+4 of `docs/decisions/protocol-surface-optimization.md`)** — reclaim context-window budget by moving rarely-fired prose behind in-core triggers. `## Your seat`'s rarely-fired bodies (release rollback, stacked-queue / cross-repo merge order, the cross-component N-repo ship sequence, the two `team:true`-only bullets) moved to a read-on-demand `src/agents/procedures/ship-and-git-edge-cases.md` (the 5.42.0 decompose pattern); a thin trigger→pointer stub stays in the always-loaded core. Plus an invariant-6 dedup of `## When something is off` (restatement of the firefight + trace-before-patch rules cut to pointers at their canonical homes). **Behaviour-preserving** — every loop-critical in-core item and escalation trigger survives, every moved body is reachable via its in-core trigger. Assembled `.claude/ai-dev.md` **25,711 → 23,769 chars** (a further ~0.5k tokens off the every-session surface, under the 39k size-guard). The research's lever 2 (move capability-module reasoning off the orchestrator) was a phantom — modules already compose only into builder/reviewer, never the router; lever 3 (constitution density pass) is descoped to the backlog (higher risk, marginal gain).
+
+---
+
 ## [5.42.0] — 2026-06-30
 
 ### Added

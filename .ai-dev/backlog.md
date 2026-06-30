@@ -3,6 +3,12 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Protocol-surface optimization — lever 3 deferred, lever 2 closed — 2026-06-30 (from `docs/decisions/protocol-surface-optimization.md`)
+
+Levers 1+4 shipped (5.42.1, ~0.5k tokens off the every-session surface). Remaining:
+- **Lever 3 (DEFERRED, higher risk) — `PROTOCOL.md` editorial density pass.** A lose-no-rule tightening of the 35.8k constitution (the bigger always-loaded half) could reclaim ~10–15% more, but it's higher risk (cutting nuance from the constitution) for a marginal gain over levers 1+4. Revisit ONLY if more window budget is genuinely needed; its own careful feature + full review. The autonomous descope call: not worth the constitution-risk now.
+- **Lever 2 (CLOSED, no action) — phantom.** The research assumed capability modules compose reasoning fragments into the always-loaded ORCHESTRATOR; they do not (modules target `builder`/`reviewer` only; no orchestrator marker/fragment exists). The "reasoning lands in the spawned workers, not the router" end-state is already the design. No saving was ever available. Recorded so it isn't re-investigated.
+
 ## Audit dispatch — post-multi-model batch (v5.37–5.41) — 2026-06-30
 
 Whole-tree sweep after the multi-model-routing batch. **VERDICT: HEALTHY** — 0 BLOCK, 0 new HIGH; suite 28/28 build + 2/2 review green. Security of the new surface CLEAN (no secrets; `mergeLaunchEnv` writes model ids only; `model-router.mjs` logging is `model -> host` only; `keyEnv` is a NAME). CVEs: same 3 dev-only (watch). Drift/honesty-labels/one-home/transient-hygiene/state-pointer all confirmed healthy. Dispatch:
