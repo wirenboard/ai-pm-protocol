@@ -72,8 +72,10 @@ export function wireClaude(target, dogfood) {
   // an empty/absent launch section writes nothing and prunes any key we previously set,
   // so a non-routing project's settings.json is byte-unchanged (dogfood stays clean).
   const launchEnv = mergeLaunchEnv(settings.env, readLaunchModels(target));
-  if (launchEnv) settings.env = launchEnv;
-  else if (settings.env !== undefined && Object.keys(settings.env).length === 0) delete settings.env;
+  // Non-empty ⇒ write it; empty (our keys pruned to nothing) or null ⇒ drop the `env`
+  // key entirely — never leave a cosmetic `env: {}` (and never a stale our-key).
+  if (launchEnv && Object.keys(launchEnv).length > 0) settings.env = launchEnv;
+  else delete settings.env;
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
 

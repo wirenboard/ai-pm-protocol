@@ -9,13 +9,9 @@ Levers 1+4 shipped (5.42.1, ~0.5k tokens off the every-session surface). Remaini
 - **Lever 3 (DEFERRED, higher risk) — `PROTOCOL.md` editorial density pass.** A lose-no-rule tightening of the 35.8k constitution (the bigger always-loaded half) could reclaim ~10–15% more, but it's higher risk (cutting nuance from the constitution) for a marginal gain over levers 1+4. Revisit ONLY if more window budget is genuinely needed; its own careful feature + full review. The autonomous descope call: not worth the constitution-risk now.
 - **Lever 2 (CLOSED, no action) — phantom.** The research assumed capability modules compose reasoning fragments into the always-loaded ORCHESTRATOR; they do not (modules target `builder`/`reviewer` only; no orchestrator marker/fragment exists). The "reasoning lands in the spawned workers, not the router" end-state is already the design. No saving was ever available. Recorded so it isn't re-investigated.
 
-## Audit dispatch — post-multi-model batch (v5.37–5.41) — 2026-06-30
+## Audit dispatch — post-multi-model batch (v5.37–5.41) — 2026-06-30 (closed-out)
 
-Whole-tree sweep after the multi-model-routing batch. **VERDICT: HEALTHY** — 0 BLOCK, 0 new HIGH; suite 28/28 build + 2/2 review green. Security of the new surface CLEAN (no secrets; `mergeLaunchEnv` writes model ids only; `model-router.mjs` logging is `model -> host` only; `keyEnv` is a NAME). CVEs: same 3 dev-only (watch). Drift/honesty-labels/one-home/transient-hygiene/state-pointer all confirmed healthy. Dispatch:
-
-- **H1 (HIGH, the headline) — assembled `.claude/ai-dev.md` = 56,878 chars (16,878 over 40k); grew ~5k this batch.** Truncation lands in `## Product discovery` at char 40,000, so FIVE orchestrator sections fall after it and (worst-case, on hard truncation) silently don't load: `## Fixup`, `## Audit`, `## Backlog`, `## Side-tools`, `## When something is off`. `## Audit` lives ONLY here (not in `PROTOCOL.md`), so the orchestrator's own audit procedure is the most exposed. → the **next feature** (its own loop): decompose `src/agents/orchestrator.md` (push more body into `.ai-dev/procedures/*.md`, leave a thin trigger→procedure router) + add a `tools.json` mechanical size-guard row (assembled orchestrator ≤ ~40k) — confirm the real warn-vs-truncate behaviour as part of it. **Bundle into this feature:** LOW-2 (install.test.mjs 985-line decompose) + NIT-1 (the size-guard) + NIT-2 (mirror V7 case). This is the single highest-value follow-up.
-- **MED-1 (NEW) — `docs/decisions/audit-cadence-backstop.md` is UNTRACKED but referenced by committed files** (`docs/decisions/transient-hygiene-catch.md:13,70,88,101`; `src/quality/transient-hygiene.mjs:7`). A fresh clone has dangling references. → quick fix: commit the file (it's a completed decision doc) — standalone fixup or bundle with the next feature.
-- **LOW-1 (carry-forward) — `.ai-dev/backlog.md` `## Multi-repo epic follow-ups` item ~2 still calls seam-contract transport "unsolved"** though `docs/decisions/seam-contract-transport.md` shipped in 5.17.0 (invariant-6 stale archaeology). → prune at the next backlog touch.
+Whole-tree sweep, VERDICT HEALTHY. **All findings shipped:** H1 (40k orchestrator → 5.42.0 decompose + size-guard, further trimmed 5.42.1), MED-1 (dangling decision doc committed → 5.41.1), LOW-1 (stale seam-contract pruned → 5.41.1), LOW-2 (install.test.mjs split → 5.42.0), NIT-1 (size-guard → 5.42.0), NIT-2 (mirror V7 → 5.41.1). Nothing open.
 
 
 ## WATCH: split planning onto the orchestrator if cheap-builder plans need rework (option B) — 2026-06-30 (Operator, watch-not-build)
@@ -42,33 +38,13 @@ The proxy knows its full route table (model globs → backend, auth scheme, forI
 
 Per code.claude.com/docs/model-config, the harness's background/"guard" model is now owned by `ANTHROPIC_DEFAULT_HAIKU_MODEL` (the haiku slot); `ANTHROPIC_SMALL_FAST_MODEL` is its **deprecated predecessor** (still honoured today). Decision **G1** (recorded in `docs/decisions/multi-model-setup-ux.md` `## Requirement 7`): keep the separate `guard` seat mapped to `ANTHROPIC_SMALL_FAST_MODEL`, because the modern haiku-slot path folds the background model INTO the haiku slot — which in a typical routed setup is also the builder seat (e.g. haiku→deepseek) — so the deprecated var is the **only** way to set the background model independently of the haiku slot. **Watch:** the next Claude Code release(s) for `ANTHROPIC_SMALL_FAST_MODEL`'s removal. On removal, the independent guard knob is gone (background folds into the haiku slot) — the `guard` seat would then need re-mapping to the haiku slot or dropping. The installer writes `launch.guardModel` → `ANTHROPIC_SMALL_FAST_MODEL` into `.claude/settings.json` `env` (`src/adapter/install-claude.mjs` `mergeLaunchEnv`); that mapping is the line to revisit.
 
-**NIT (cosmetic, from the expose-consume review — non-blocking):** when a settings.json `env` that held ONLY our two launch keys gets cleared (launch values removed), the merge leaves a cosmetic empty `env: {}` rather than removing the `env` key entirely. Non-functional. Fix on the next `install-claude.mjs` touch: drop the `env` key when it becomes empty after pruning.
+## BUG: assembled orchestrator exceeds Claude Code's 40k memory limit — 2026-06-30 (Operator-reported, HIGH) — RESOLVED 5.42.0/5.42.1
 
-## BUG: assembled orchestrator `.claude/ai-dev.md` exceeds Claude Code's 40k-char memory limit — 2026-06-30 (Operator-reported, HIGH)
+Assembled `.claude/ai-dev.md` was 57.6k > the 40k limit, risking silent truncation of later orchestrator sections. Fixed by decomposing section bodies to read-on-demand `.ai-dev/procedures/*.md` (triggers stay in-core) — 57.6k → 25.7k (5.42.0) → 24.1k (5.42.1) — plus a mechanical `agent-size` quality guard (<39k) so it can't silently regrow. Closed.
 
-**Symptom (Operator screenshot).** Claude Code warns: `.claude/ai-dev.md is over the 40.0k-char limit (51.8k chars) · /memory to free up`. The assembled orchestrator agent (the dogfood `.claude/ai-dev.md`; downstream the equivalent assembled-orchestrator artifact) is **51.8k chars vs Claude Code's 40k per-imported-file limit** — so the harness truncates/declines part of it, and **the orchestrator's own procedure can silently fail to load** (the loop, the gates, Setup, Audit, Backlog…). This is a correctness + honesty risk: the running session may be missing rules it believes it has.
+## Proxy as a git submodule — 2026-06-30 — SUPERSEDED (not doing)
 
-**Affects downstream too.** Every project on the protocol gets an assembled orchestrator of similar size — the limit is the harness's, not ours, so the truncation hits adopters identically.
-
-**Roots in the manifesto.** Directly violates "a thin core — small enough to read in one sitting; when it grows past that, cut it back, never append" (`PROTOCOL.md` `## Manifesto` #3). The orchestrator agent (`src/agents/orchestrator.md` → assembled `.claude/ai-dev.md`) has accreted.
-
-**Fix candidates (need design):**
-- **Split / point, don't restate.** The orchestrator agent already pushes procedures to `.ai-dev/procedures/*.md` (read-on-demand). Push MORE of the always-loaded body to on-demand procedure files, leaving the agent a thin router (trigger → procedure path). Biggest lever; matches the existing side-tool pattern.
-- **Audit for duplication** — the agent may restate things `PROTOCOL.md` already homes (invariant 6). Cut to pointers.
-- **Mechanical guard:** add a size check (a `tools.json` row, or an install-time/assembly check) that fails when an assembled agent exceeds ~40k chars, so this can't regress silently — the limit is a hard harness constraint, deserves a mechanical floor like the ~800-line file rule.
-- Confirm the exact Claude Code limit + behaviour (truncate vs decline-to-load) before sizing the target; the warning says 40k chars.
-
-Likely a `decompose`-style effort on the orchestrator agent + an assembly-size guard. Sibling of the standing `install.test.mjs` 888-line item but more urgent (this one silently drops live protocol rules).
-
-## Follow-up: mirror `model-router.test.mjs` lacks a local V7 (vision:false) case — 2026-06-30 (LOW, advisory from sync review)
-
-The protocol's mirror test `src/adapter/model-router.test.mjs` does not exercise the `route.vision === false` unconditional-pre-route path. No behavioural gap — the path is covered exhaustively by `modelpipe@e13ebd5`'s own V7 case AND the drift guard enforces byte-identity of the router code — but the mirror's coverage is incomplete. Add a V7-style local case (vision:false + image ⇒ straight to vision backend, non-vision backend never hit) next time the file is touched.
-
-## Proxy as a git submodule — retire the in-repo router copy — 2026-06-30 (OPEN, Operator-requested, GATED on modelpipe merge)
-
-The transport was extracted to a standalone `modelpipe` repo as a DECISION (5.36.2), but ai-pm-protocol still carries an in-repo copy (`src/adapter/model-router.mjs` + `model-providers.json` + `model-router.example.json`) and the launcher imports `./model-router.mjs`. Operator wants the proxy wired as a **git submodule** of the modelpipe repo: delete the in-repo copy, add the submodule, rewire `router-launch.mjs`'s `createRouter`/`pickRoute` import to it. **Strictly AFTER the modelpipe vision-rewrite PR (aadegtyarev/modelpipe#1) merges** — the submodule must point at merged main.
-
-⚠️ **Design question — submodules vs the vendoring install model.** `install.mjs` adopts a downstream by **vendoring** `src/adapter/` into `<target>/.ai-dev/tooling/`. A git submodule is NOT pulled by a plain copy or an `npx github:` fetch (needs `--recurse-submodules`), so "router as submodule" breaks the one-command install unless the installer is taught to vendor the submodule's checked-out contents too (or modelpipe is consumed as an npm dependency instead of a submodule). Decide submodule-vs-npm-dep here; both must keep `docs/contracts/one-command-install.md` true. This is its own feature/loop, not a mechanical swap.
+Superseded by the ratified `docs/decisions/proxy-consume-mechanism.md` Option 3 (synced drift-guarded vendor-copy, shipped 5.39.0): the in-repo router is a pinned mirror of modelpipe with a drift guard — a submodule would break the vendoring one-command install (`--recurse-submodules` not run on a plain copy / npx fetch). Closed; an npm dependency remains the recorded future end-state once both repos publish to npm.
 
 ## Enforcer bug: commit-on-main gate resolves the branch by session-root, not the cwd repo — 2026-06-30 (BUG, found this session)
 
