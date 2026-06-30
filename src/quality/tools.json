@@ -82,6 +82,14 @@
       "init": "Node >= 18 + git, no install"
     },
     {
+      "id": "nested-repo-scope",
+      "checks": "the nested separate-repo deny scoping (SECURITY FLOOR) against REAL git fixtures — resolveSessionRoot anchors to the nearest .ai-dev/config.json marker so a nested .git no longer flips the root (normal case byte-identical; deepest marker wins; unconfigured falls back to git-toplevel then cwd); targetsSessionRepo is fail-CLOSED (true at the session repo, true on a git-unresolvable cwd, false ONLY for a positively-different nested repo); the git-targeting denies (f4 add -A + commit-on-main, the merge-gate push-main) fire on undefined/true and exempt on false, identically through both shims; and END-TO-END through the real node shim.mjs subprocess a nested-cwd write to the session's .ai-dev/state / add -A / push main ALLOW while the same from the session cwd DENY and the session's tooling/out-of-root writes STILL DENY (the boundary stays session-anchored)",
+      "config": null,
+      "run": "node src/adapter/nested-repo-scope.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18 + git, no install"
+    },
+    {
       "id": "merge-gate",
       "checks": "the unstamped-review merge-gate parses commands correctly — the pushed/merged ref outranks .git/HEAD (cross-branch push reads the right stamp), any branch prefix strips (feature/, fix/, bare), non-shell heredoc bodies are data (no verb false positives; shell-heredoc and malformed bodies stay matched), the accepted stamp labels are exactly the documented two, and an UNRESOLVABLE topic asks, never passes",
       "config": null,

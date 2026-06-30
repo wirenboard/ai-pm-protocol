@@ -50,7 +50,7 @@ console.log("MALFORMED REGISTRY (shim fails open — exit 0, allow, no crash):")
   // with broken JSON. The engine entry imports the engine-*.mjs helper modules, so
   // every one must land in the temp adapter or the import chain breaks before the
   // fail-open path under test is reached.
-  for (const f of ["engine.mjs", "engine-paths.mjs", "engine-bash.mjs", "engine-git.mjs", "engine-config.mjs", "engine-components.mjs"]) {
+  for (const f of ["engine.mjs", "engine-paths.mjs", "engine-bash.mjs", "engine-git.mjs", "engine-config.mjs", "engine-components.mjs", "session-root.mjs"]) {
     fs.copyFileSync(path.join(HERE, f), path.join(adapter, f));
   }
   fs.copyFileSync(SHIM, path.join(adapter, "claude", "shim.mjs"));

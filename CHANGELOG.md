@@ -12,6 +12,15 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.37.0] — 2026-06-30
+
+### Fixed
+
+- **Nested separate-repo deny scoping** (`src/adapter/session-root.mjs`, `engine.mjs`, both shims) — the mechanical SECURITY FLOOR mis-fired on a legitimate separate-repo bootstrap (a nested `.git` under the session root, e.g. `_scratch/proj`). Two coupled, fail-CLOSED changes:
+  - **Root anchored to the `.ai-dev/config.json` marker.** The Claude shim resolved the session root via `git rev-parse --show-toplevel` from cwd, which flips to a nested repo's toplevel when cwd is inside one — mis-anchoring the write-boundary, the stamp read, and the merge-gate onto the nested repo. Resolution now walks up to the nearest `.ai-dev/config.json` marker (the protocol/downstream root carries it; a nested repo does not), falling back to the git toplevel then cwd. The normal case is **byte-identical** (marker dir == git toplevel); only the nested-cwd case is corrected.
+  - **Git-targeting denies scoped to the session repo.** The f4-floor (`git add -A`, commit-on-main) and the merge-gate (`push`/`merge`) fire only when the command targets the session repo's git db. A new shim-computed `targetsSessionRepo` signal is **fail-CLOSED**: it defaults to `true` (the deny applies) on any doubt — an unresolvable cwd, an unresolvable session repo — and exempts only on **positive** confirmation cwd is a different repo (both git toplevels resolve and differ). A nested repo's `add -A`/`push main` target a separate git db + origin and can never move the protocol's `main`; an agent cannot `git init` a subdir to bypass the floor.
+  - Security invariant preserved and tested (`src/adapter/nested-repo-scope.test.mjs`, real git fixtures + the real `node shim.mjs` subprocess): from the session repo every existing f4 + merge-gate deny still fires (ZERO regression — the entire existing `f4-floor`/`merge-gate` suite passes unchanged); the write-boundary, `.ai-dev/tooling/`, and out-of-root denies stay session-root-anchored and unconditional. OpenCode does not compute the signal (its runtime hands the session root in directly, with no per-command cwd to detect a nested repo) so it defaults to the fail-closed deny — recorded asymmetry, the safe direction; the engine consumes the signal identically through both shims.
+
 ## [5.36.2] — 2026-06-30
 
 ### Added
