@@ -52,9 +52,17 @@ export function normalise(tool, args, root, isOrchestrator) {
 }
 
 // ── decide: full pure path (for the parity test and the plugin entry) ────────
-export function decide(tool, args, root, isOrchestrator, config) {
+// `opts.targetsSessionRepo` threads the same session-repo signal the Claude shim
+// computes, so the shared engine consumes it identically on both platforms. The
+// OpenCode plugin entry does NOT compute it: the runtime hands the session root in
+// directly (ctx.directory) and there is no per-command cwd to detect a nested repo, so
+// the signal is left undefined ⇒ the engine's fail-CLOSED default (deny applies). The
+// param exists so the engine-consumption path is provably identical across shims and
+// is ready the day OpenCode surfaces a per-command working dir.
+export function decide(tool, args, root, isOrchestrator, config, opts = {}) {
   const input = normalise(tool, args, root, isOrchestrator);
   if (!input) return { verdict: "allow", ruleId: null, reason: "" };
+  if (opts.targetsSessionRepo !== undefined) input.targetsSessionRepo = opts.targetsSessionRepo;
   return evaluate(input, config);
 }
 

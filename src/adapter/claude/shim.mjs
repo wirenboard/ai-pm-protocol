@@ -9,7 +9,7 @@
 // drop-in for the inline shell+jq guards. Install wiring: adapter README.
 
 import { evaluate, loadConfig } from "../engine.mjs";
-import { execFileSync } from "node:child_process";
+import { resolveSessionRoot, targetsSessionRepo } from "../session-root.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -86,21 +86,20 @@ export function mapVerdict(result, eventName) {
 }
 
 // ── decide: full pure path (for the parity test) ─────────────────────────────
-export function decide(payload, root, config) {
+// `opts.targetsSessionRepo` (when supplied) is threaded onto the neutral input so the
+// engine's git-targeting denies (f4-floor, merge-gate) can scope to the session repo.
+// Omitted (undefined) ⇒ the engine's fail-CLOSED default applies (the deny fires) —
+// so a caller that passes no signal gets the unchanged, strict behaviour.
+export function decide(payload, root, config, opts = {}) {
   const input = normalise(payload, root);
   if (!input) return { verdict: "allow", ruleId: null, reason: "" };
+  if (opts.targetsSessionRepo !== undefined) input.targetsSessionRepo = opts.targetsSessionRepo;
   return evaluate(input, config);
 }
 
 // ── main: stdin → stdout ─────────────────────────────────────────────────────
-function resolveRoot(payload) {
-  const cwd = (payload && typeof payload.cwd === "string" && payload.cwd) || process.cwd();
-  try {
-    return execFileSync("git", ["rev-parse", "--show-toplevel"],
-      { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-  } catch {
-    return cwd;
-  }
+function resolveCwd(payload) {
+  return (payload && typeof payload.cwd === "string" && payload.cwd) || process.cwd();
 }
 
 function main() {
@@ -118,9 +117,13 @@ function main() {
     // around by disabling the hook entirely (strictly worse than fail-open). The immutable
     // tooling dir is the compensating control. Matches the JSON.parse(raw) fail-open above.
     try {
-      const root = resolveRoot(payload);
+      const cwd = resolveCwd(payload);
+      const root = resolveSessionRoot(cwd);
       const config = loadConfig(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
-      const result = decide(payload, root, config);
+      // Scope the git-targeting denies to the session repo (fail-CLOSED — see
+      // session-root.mjs): a command in a separate nested repo is exempt, the session
+      // repo's floor is untouched, any doubt denies.
+      const result = decide(payload, root, config, { targetsSessionRepo: targetsSessionRepo(cwd, root) });
       const out = mapVerdict(result, payload.hook_event_name);
       if (out) process.stdout.write(JSON.stringify(out));
     } catch (e) {

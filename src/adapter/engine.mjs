@@ -177,6 +177,11 @@ const PREDICATES = {
     });
   },
   mergeWithUnstampedReview(input) {
+    // Scope to the SESSION repo (fail-CLOSED): an `add -A`/`push main` in a positively-
+    // different nested repo (targetsSessionRepo===false) targets that repo's own db +
+    // origin and can never move the protocol's main, so it is exempt; undefined (no
+    // signal) or true ⇒ the merge-gate applies (the strict, unchanged behaviour).
+    if (input.targetsSessionRepo === false) return false;
     // `merge(?![-\w])` lets read-only `git merge-base`/`merge-tree`/`merge-file`/`mergetool`
     // fall through (a hyphen/word-char after `merge` is plumbing, not a merge) while a real
     // `git merge <topic>` (whitespace/EOL after `merge`) still matches. `push\b` unchanged.
@@ -200,6 +205,10 @@ const PREDICATES = {
   // resolved (detached HEAD and no branch ref in the command) leaves the stamp
   // uncheckable — escalate to the Operator instead of passing.
   mergeTopicUnresolvable(input) {
+    // Session-repo scope, consistent with its merge-gate sibling: a push/merge in a
+    // positively-different nested repo is not the protocol's to gate, so it raises no
+    // Operator ask; undefined/true ⇒ unchanged. (Fail-CLOSED — see session-root.mjs.)
+    if (input.targetsSessionRepo === false) return false;
     // Same `merge(?![-\w])` tightening as mergeWithUnstampedReview — a `merge-*` plumbing
     // command must not be routed to the unresolvable-topic ask either.
     if (!/git\s+(merge(?![-\w])|push\b)/.test(input.command || "")) return false;
@@ -255,6 +264,11 @@ const PREDICATES = {
   // file literally named `.gitignore`) and `git add -p` (interactive patch) are NOT bulk
   // stages and fall through.
   gitAddAll(input) {
+    // Scope to the SESSION repo: a `git add -A` in a POSITIVELY-different nested repo
+    // (targetsSessionRepo===false) stages only that repo's own tree into its own git db,
+    // never the protocol's transients — so it is exempt. Undefined (no signal) or true ⇒
+    // the deny applies (fail-CLOSED — session-root.mjs computes the signal).
+    if (input.targetsSessionRepo === false) return false;
     const masked = maskQuotedSpans(input.command || "");
     // Each `git add` invocation's own argument span (to the next shell separator).
     const inv = /\bgit\s+add\b([^;&|\n]*)/g;
@@ -282,6 +296,10 @@ const PREDICATES = {
   //     violation and denies.
   // yolo turns the gate off (consistency with the merge-gate). Runs on the masked command.
   commitOnUnstampedMain(input) {
+    // Scope to the SESSION repo (fail-CLOSED, like gitAddAll): a commit in a positively-
+    // different nested repo lands in that repo's own db on its own main — it cannot move
+    // the protocol's main — so it is exempt; undefined/true ⇒ the deny applies.
+    if (input.targetsSessionRepo === false) return false;
     if (!/\bgit\s+commit\b/.test(maskQuotedSpans(input.command || ""))) return false;
     if (projectProfile(input.root) === "yolo") return false; // gate explicitly off
     const branch = headBranch(input.root);
