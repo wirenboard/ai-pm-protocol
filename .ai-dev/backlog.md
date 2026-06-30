@@ -3,15 +3,35 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## modelpipe: expose the configured models + their params (discoverable, reusable) — 2026-06-30 (Operator idea)
+
+The proxy knows its full route table (model globs → backend, auth scheme, forImages/forImagesModel, vision flag). Idea: **expose that configured set** — the models and their parameters — so it can be **reused** downstream instead of re-declared. Use cases to scope: a client/setup dialog discovering "what models/routes are configured here" to offer them; a `modelpipe --list` CLI dump; or a read-only HTTP introspection endpoint. Open questions before any build: **what exactly is safe to expose** (model ids + capabilities + base_url host = fine; the **keyEnv NAMES** maybe; NEVER key values or the auth secrets — the no-secret-logging posture extends here); shape (JSON over a localhost endpoint vs CLI stdout vs a generated file the protocol's setup reads); and who consumes it (the protocol's `/dev-setup` routing dialog is the obvious first consumer — it could read the running proxy's config instead of asking). Lands in modelpipe (transport owns its own config), the protocol consumes. Needs `research`/design (the expose-shape + the safe-surface boundary) before build.
+
+## BUG: assembled orchestrator `.claude/ai-dev.md` exceeds Claude Code's 40k-char memory limit — 2026-06-30 (Operator-reported, HIGH)
+
+**Symptom (Operator screenshot).** Claude Code warns: `.claude/ai-dev.md is over the 40.0k-char limit (51.8k chars) · /memory to free up`. The assembled orchestrator agent (the dogfood `.claude/ai-dev.md`; downstream the equivalent assembled-orchestrator artifact) is **51.8k chars vs Claude Code's 40k per-imported-file limit** — so the harness truncates/declines part of it, and **the orchestrator's own procedure can silently fail to load** (the loop, the gates, Setup, Audit, Backlog…). This is a correctness + honesty risk: the running session may be missing rules it believes it has.
+
+**Affects downstream too.** Every project on the protocol gets an assembled orchestrator of similar size — the limit is the harness's, not ours, so the truncation hits adopters identically.
+
+**Roots in the manifesto.** Directly violates "a thin core — small enough to read in one sitting; when it grows past that, cut it back, never append" (`PROTOCOL.md` `## Manifesto` #3). The orchestrator agent (`src/agents/orchestrator.md` → assembled `.claude/ai-dev.md`) has accreted.
+
+**Fix candidates (need design):**
+- **Split / point, don't restate.** The orchestrator agent already pushes procedures to `.ai-dev/procedures/*.md` (read-on-demand). Push MORE of the always-loaded body to on-demand procedure files, leaving the agent a thin router (trigger → procedure path). Biggest lever; matches the existing side-tool pattern.
+- **Audit for duplication** — the agent may restate things `PROTOCOL.md` already homes (invariant 6). Cut to pointers.
+- **Mechanical guard:** add a size check (a `tools.json` row, or an install-time/assembly check) that fails when an assembled agent exceeds ~40k chars, so this can't regress silently — the limit is a hard harness constraint, deserves a mechanical floor like the ~800-line file rule.
+- Confirm the exact Claude Code limit + behaviour (truncate vs decline-to-load) before sizing the target; the warning says 40k chars.
+
+Likely a `decompose`-style effort on the orchestrator agent + an assembly-size guard. Sibling of the standing `install.test.mjs` 888-line item but more urgent (this one silently drops live protocol rules).
+
+## Follow-up: mirror `model-router.test.mjs` lacks a local V7 (vision:false) case — 2026-06-30 (LOW, advisory from sync review)
+
+The protocol's mirror test `src/adapter/model-router.test.mjs` does not exercise the `route.vision === false` unconditional-pre-route path. No behavioural gap — the path is covered exhaustively by `modelpipe@e13ebd5`'s own V7 case AND the drift guard enforces byte-identity of the router code — but the mirror's coverage is incomplete. Add a V7-style local case (vision:false + image ⇒ straight to vision backend, non-vision backend never hit) next time the file is touched.
+
 ## Proxy as a git submodule — retire the in-repo router copy — 2026-06-30 (OPEN, Operator-requested, GATED on modelpipe merge)
 
 The transport was extracted to a standalone `modelpipe` repo as a DECISION (5.36.2), but ai-pm-protocol still carries an in-repo copy (`src/adapter/model-router.mjs` + `model-providers.json` + `model-router.example.json`) and the launcher imports `./model-router.mjs`. Operator wants the proxy wired as a **git submodule** of the modelpipe repo: delete the in-repo copy, add the submodule, rewire `router-launch.mjs`'s `createRouter`/`pickRoute` import to it. **Strictly AFTER the modelpipe vision-rewrite PR (aadegtyarev/modelpipe#1) merges** — the submodule must point at merged main.
 
 ⚠️ **Design question — submodules vs the vendoring install model.** `install.mjs` adopts a downstream by **vendoring** `src/adapter/` into `<target>/.ai-dev/tooling/`. A git submodule is NOT pulled by a plain copy or an `npx github:` fetch (needs `--recurse-submodules`), so "router as submodule" breaks the one-command install unless the installer is taught to vendor the submodule's checked-out contents too (or modelpipe is consumed as an npm dependency instead of a submodule). Decide submodule-vs-npm-dep here; both must keep `docs/contracts/one-command-install.md` true. This is its own feature/loop, not a mechanical swap.
-
-## Launcher external-proxy URL — IN FLIGHT 2026-06-30 (feature/launcher-external-proxy-url)
-
-Opt-in `proxyUrl` in the routes config: when set, the launcher points claude at an already-running proxy instead of spawning one (keys live in that proxy's env, so the fail-closed key check is skipped; malformed URL is a hard error). Built + tested this session; awaiting review + ship. Remove this entry on ship (it is durable in the CHANGELOG then).
 
 ## Claude-Code-native proxy: dialog-config + auto-start each session — 2026-06-30 (idea, Operator-requested)
 

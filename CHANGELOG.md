@@ -12,6 +12,18 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.39.0] — 2026-06-30
+
+### Added
+
+- **Protocol consumes `modelpipe` as a synced, drift-guarded vendor-copy** (`src/adapter/sync-modelpipe.mjs`, `src/quality/tools.json`) — realises the ratified Option 3 of `docs/decisions/proxy-consume-mechanism.md`. The in-repo router copy (`src/adapter/model-router.mjs`) is now a mirror of the standalone **`modelpipe`** repo at a **pinned immutable SHA** (v0.3.0, `e13ebd5`), fetched by `sync-modelpipe.mjs` over public HTTPS (Node stdlib, no token, no external tool). A new `modelpipe-sync-drift` quality row runs `--check` on the `build` beat: **online it enforces** byte-identity (loud non-zero on drift), **offline it degrades gracefully** (clear notice + PASS, so local dev stays green) — CI is the enforcement point. Only the transport CODE is synced; `model-providers.json` + `model-router.example.json` stay protocol-local (launcher policy). No `install.mjs` change — the files remain under `src/adapter/`, vendored unchanged.
+
+### Fixed
+
+- **Bundled router brought current with `modelpipe` 0.3.0** (`src/adapter/model-router.mjs`, via the sync above) — closes the divergence where the in-repo copy lacked modelpipe's shipped vision improvements. The bundled router now carries the cross-provider **`forImagesModel`** rewrite (the vision-reroute hop rewrites the body's `model` to the target route's id, so a cross-provider vision fallback reaches a model the backend accepts) and the per-route **`vision` flag** (default true; `vision: false` pre-routes an image-bearing request straight to the `forImages` target, for a backend that does not 400 on an image — a 200 soft-refusal or its own server-side image tool).
+
+---
+
 ## [5.38.0] — 2026-06-30
 
 ### Added

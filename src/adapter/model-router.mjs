@@ -1,21 +1,22 @@
-// Per-seat cross-endpoint model router — a first-party localhost reverse-proxy.
-//
-// WHY THIS EXISTS (the rationale, the options, the empirical routing probe):
-//   docs/decisions/per-seat-model-routing.md — that doc is the contract; this
-//   file is the realisation of its option C. Goal: let the loop's seats run on
-//   models behind DIFFERENT endpoints (e.g. Anthropic for Opus/Sonnet, DeepSeek
-//   for the Builder) under ONE Claude Code instance, which itself takes a single
-//   ANTHROPIC_BASE_URL. Claude Code is pointed at this router; the router keys on
-//   the request body's `model` (proven to arrive as a distinct id per subagent
-//   `model:` pin) and forwards to the matching backend.
+// modelpipe — a passthrough Anthropic-format model router (first-party localhost
+// reverse-proxy).
 //
 // WHAT IT IS: a reverse-proxy with model-based routing + a per-backend auth swap.
-//   The request body is passthrough (never transformed) and both ends speak the
-//   Messages API (decision doc, fact 1), so there is nothing to translate. The
-//   response is mostly passthrough too — a 2xx / SSE streams straight back — with
-//   ONE reactive hop: a specific "image not supported" 400 is buffered, classified,
-//   and the same request is rerouted to the `forImages` vision target; any other
-//   400 is relayed verbatim (added 5.36.0).
+//   A client (any Anthropic-format client — the Anthropic SDK, Cline, Cursor's
+//   Anthropic mode, Claude Code) is pointed at this router via ANTHROPIC_BASE_URL;
+//   the router keys on the request body's `model` id and forwards to the matching
+//   backend. The request body is passthrough (never transformed) and both ends speak
+//   the Anthropic Messages API, so there is nothing to translate. The response is
+//   mostly passthrough too — a 2xx / SSE streams straight back — with ONE reactive
+//   hop: a specific "image not supported" 400 is buffered, classified, and the same
+//   request is rerouted to the `forImages` vision target; any other 400 is relayed
+//   verbatim. The reroute is the ONE scoped exception to passthrough: it rewrites the
+//   body's `model` to the vision route's `forImagesModel`, because the reroute crosses
+//   to a different provider whose model id differs from the client's (rewriteModelInBody).
+//   A route may also be DECLARED non-vision (`vision: false`): an image-bearing request
+//   for it is pre-routed to the `forImages` target WITHOUT trying the backend first —
+//   reliable where the backend does not 400 on an image (a 200 soft-refusal, or its own
+//   server-side image tool), which the reactive catch-400 hop cannot detect.
 //
 // SECURITY POSTURE (the threat surface this code owns):
 //   • Backend keys come ONLY from env vars named by the route config — never
@@ -25,16 +26,17 @@
 //     meant for another.
 //   • FAIL-CLOSED: an unroutable request (no model, or a model no route matches,
 //     or a route whose key env is unset) is a 4xx/5xx error — NEVER silently sent
-//     to a default backend (sending a seat's traffic to the wrong provider, or
-//     forwarding with no credential, is the worst failure).
+//     to a default backend (sending traffic to the wrong provider, or forwarding
+//     with no credential, is the worst failure).
 //   • No secret / body / header logging. At most an opt-in (MODEL_ROUTER_LOG=1)
 //     `model -> hostname` line to stderr — built from safe pieces only.
 //   • Binds to localhost by default (config.listen.host).
 //
-// Run as a process:   node src/adapter/model-router.mjs <config.json>
-//   (config shape + worked example: src/adapter/model-router.example.json)
+// Run as a process:   node src/router.mjs <config.json>   (or the modelpipe CLI:
+//   modelpipe <config.json> [--port N] — see bin/modelpipe.mjs)
+//   (config shape + worked example: routes.example.json; provider catalog: providers.json)
 // Importable:         createRouter / pickRoute / resolveAuthHeader / loadConfig …
-//   are exported for the self-test (src/adapter/model-router.test.mjs).
+//   are exported for the self-test (test/router.test.mjs).
 
 import http from "node:http";
 import https from "node:https";
@@ -98,12 +100,30 @@ export function modelFromBody(body) {
   }
 }
 
+// Rewrite the `model` field of a JSON request body to `newModel`, returning a NEW
+// Buffer (the original is never mutated). Used ONLY on the vision-reroute hop: the
+// reroute crosses to a different provider, so the client's model id (which that
+// backend does not know) is replaced with the vision route's own `forImagesModel`.
+// This is the single scoped exception to passthrough, on the hop that is already
+// content-aware. Fail-safe: a falsy newModel or an unparseable body is returned
+// unchanged (it would fail downstream regardless) — this never throws.
+export function rewriteModelInBody(body, newModel) {
+  if (!newModel || !body || body.length === 0) return body;
+  try {
+    const parsed = JSON.parse(body.toString("utf8"));
+    parsed.model = newModel;
+    return Buffer.from(JSON.stringify(parsed), "utf8");
+  } catch {
+    return body;
+  }
+}
+
 // True when the request body carries an image content block — the Messages API
 // shape is a `messages[].content[]` block whose `type` is "image" (verified against
-// the Anthropic Messages API, the only format this router speaks; the decision doc's
-// "Anthropic-format only" constraint). Used ONLY by the pre-route optimisation to
-// skip a known-failing first call — never to transform the payload. Fail-safe to
-// false on any parse miss (a non-detected image just falls back to the reactive path).
+// the Anthropic Messages API, the only format this router speaks). Used ONLY by the
+// pre-route optimisation to skip a known-failing first call — never to transform the
+// payload. Fail-safe to false on any parse miss (a non-detected image just falls back
+// to the reactive path).
 export function bodyHasImageBlock(body) {
   if (!body || body.length === 0) return false;
   try {
@@ -186,6 +206,23 @@ export function validateConfig(config) {
     if (route.forImages !== undefined) {
       if (route.forImages !== true) throw new Error(`${at}.forImages: must be true when present`);
       visionCount++;
+      // The vision target rewrites the rerouted request's `model` to this id (the one
+      // scoped exception to passthrough — the reroute crosses to a different provider
+      // whose model id differs from the client's). REQUIRED, fail-closed: a vision route
+      // with no model id would forward the client's id to a backend that does not know
+      // it — a guaranteed runtime 400 — so the omission is caught here at startup.
+      if (typeof route.forImagesModel !== "string" || route.forImagesModel.length === 0) {
+        throw new Error(`${at}.forImagesModel: required non-empty model id on the forImages route`);
+      }
+    } else if (route.forImagesModel !== undefined) {
+      throw new Error(`${at}.forImagesModel: only valid on the forImages route (needs forImages: true)`);
+    }
+    // vision: OPTIONAL boolean, default true. false ⇒ this route's backend has no vision,
+    // so an image-bearing request is routed straight to the forImages target (forward()),
+    // never sent to this backend first — reliable where the backend does not 400 on an
+    // image (a 200 soft-refusal or a server-side image tool). Must be a boolean when present.
+    if (route.vision !== undefined && typeof route.vision !== "boolean") {
+      throw new Error(`${at}.vision: must be a boolean (default true) when present`);
     }
     // auth is EITHER the string "passthrough" (forward the client's auth unchanged)
     // OR a key-swap object { header, keyEnv, scheme? }.
@@ -398,10 +435,12 @@ function makeResponseHandler(ctx) {
           return;
         }
         if (ctx.visionRoute) {
-          // Reroute the SAME buffered request to the vision target; remember the model
-          // so the next image call pre-routes (per-process cache, never the payload).
+          // Reroute the buffered request to the vision target, rewriting only `model`
+          // to the route's forImagesModel (the cross-provider hop); remember the client
+          // model so the next image call pre-routes (per-process cache, never the payload).
           if (ctx.model) ctx.nonVisionCache.set(ctx.model, true);
-          proxyToRoute(ctx.visionRoute, ctx.req, ctx.res, ctx.body, ctx.log, {
+          const visionBody = rewriteModelInBody(ctx.body, ctx.visionRoute.forImagesModel);
+          proxyToRoute(ctx.visionRoute, ctx.req, ctx.res, visionBody, ctx.log, {
             onResponse: makeResponseHandler({ ...ctx, isVisionTarget: true }),
           });
           return;
@@ -430,16 +469,25 @@ function forward(config, req, res, body, log, nonVisionCache) {
 
   const visionRoute = pickVisionRoute(config.routes);
 
-  // Pre-route optimisation: a known non-vision model carrying an image, with a vision
-  // target configured, skips the first call we already know will 400-image.
+  // Pre-route an image-bearing request straight to the vision target, skipping the
+  // non-vision backend call, when the matched route is known non-vision — EITHER:
+  //   • DECLARED non-vision (`vision: false` on the route) — proactive, reliable. Needed
+  //     because a backend that lacks vision does NOT always 400: it may soft-refuse with a
+  //     200 ("I can't see images") or invoke its own server-side image tool, neither of
+  //     which the reactive catch-400 path (makeResponseHandler) can detect. The flag is
+  //     the config-driven escape from wire-detection's blind spots.
+  //   • LEARNED non-vision (cached from a prior 400-image on this model) — the reactive
+  //     optimisation that skips a repeat known-failing first call.
+  // The catch-400 fallback in makeResponseHandler stays for the default (vision unset/true)
+  // route — belt-and-suspenders for a backend that DOES 400.
   if (
     visionRoute &&
     route !== visionRoute &&
-    model &&
-    nonVisionCache.has(model) &&
-    bodyHasImageBlock(body)
+    bodyHasImageBlock(body) &&
+    (route.vision === false || (model && nonVisionCache.has(model)))
   ) {
-    proxyToRoute(visionRoute, req, res, body, log, {
+    const visionBody = rewriteModelInBody(body, visionRoute.forImagesModel);
+    proxyToRoute(visionRoute, req, res, visionBody, log, {
       onResponse: makeResponseHandler({ res, req, body, log, model, visionRoute, nonVisionCache, isVisionTarget: true }),
     });
     return;
@@ -469,11 +517,13 @@ export function createRouter(config, options = {}) {
   });
 }
 
-// CLI entry: node model-router.mjs <config.json>  (or MODEL_ROUTER_CONFIG=<path>).
+// CLI entry: node src/router.mjs <config.json>  (or MODEL_ROUTER_CONFIG=<path>).
+// The packaged `modelpipe` bin (bin/modelpipe.mjs) is the supported entry point and
+// adds a --port override; this remains for a direct `node src/router.mjs` run.
 function main() {
   const configPath = process.argv[2] || process.env.MODEL_ROUTER_CONFIG;
   if (!configPath) {
-    process.stderr.write("usage: node model-router.mjs <config.json>  (or set MODEL_ROUTER_CONFIG)\n");
+    process.stderr.write("usage: node src/router.mjs <config.json>  (or set MODEL_ROUTER_CONFIG)\n");
     process.exit(2);
   }
   const config = loadConfig(configPath);

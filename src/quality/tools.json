@@ -42,6 +42,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "modelpipe-sync-drift",
+      "checks": "modelpipe transport vendor-copy anti-drift — src/adapter/model-router.mjs is byte-identical to aadegtyarev/modelpipe's src/router.mjs at the pinned ref recorded in the sync script (the ratified Option 3 consume mechanism, docs/decisions/proxy-consume-mechanism.md). Guards ONLY the transport CODE file (NOT the launcher-owned model-providers.json / model-router.example.json policy config, which deliberately diverge). Honest CI-enforced / offline-degraded split: with network the byte-compare is enforced (drift ⇒ red); with NO network the check degrades gracefully (prints 'source unreachable — drift not verified' and PASSES) so local offline `run.mjs build` stays green — CI (which has network) is the real enforcement point",
+      "config": null,
+      "run": "node src/adapter/sync-modelpipe.mjs --check",
+      "beat": "build",
+      "init": "Node >= 18, no install (fetches the pinned modelpipe router over public HTTPS; offline ⇒ degraded PASS)"
+    },
+    {
       "id": "install-modules",
       "checks": "capability-module assembly — the shared assembler composes an enabled module's fragment into the role agent, omits it when off, never drops the floor body, fails safe to ON (malformed/unknown toggle ⇒ on), throws on a missing fragment for an enabled module, and rejects a root-escaping fragment pointer",
       "config": null,
