@@ -9,9 +9,13 @@
 //   the request body's `model` (proven to arrive as a distinct id per subagent
 //   `model:` pin) and forwards to the matching backend.
 //
-// WHAT IT IS: a pure reverse-proxy with model-based routing + a per-backend auth
-//   swap + SSE/stream passthrough. NOT a format translator — both ends speak the
-//   Messages API (decision doc, fact 1), so there is nothing to translate.
+// WHAT IT IS: a reverse-proxy with model-based routing + a per-backend auth swap.
+//   The request body is passthrough (never transformed) and both ends speak the
+//   Messages API (decision doc, fact 1), so there is nothing to translate. The
+//   response is mostly passthrough too — a 2xx / SSE streams straight back — with
+//   ONE reactive hop: a specific "image not supported" 400 is buffered, classified,
+//   and the same request is rerouted to the `forImages` vision target; any other
+//   400 is relayed verbatim (added 5.36.0).
 //
 // SECURITY POSTURE (the threat surface this code owns):
 //   • Backend keys come ONLY from env vars named by the route config — never
@@ -313,7 +317,6 @@ function bufferResponse(upstreamRes, cap, cb) {
 // content-length / transfer-encoding so Node recomputes them for the exact bytes we
 // re-send; keeps content-type and the status.
 function relayBuffered(res, status, upstreamHeaders, buffered) {
-  if (res.headersSent) { res.end(buffered); return; }
   const headers = {};
   for (const [k, v] of Object.entries(upstreamHeaders)) {
     const lower = k.toLowerCase();

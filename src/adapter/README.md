@@ -44,7 +44,7 @@ Install glue is in `INSTALL.md` (where each file lands, the Claude hook fragment
 
 A second, independent adapter-layer tool (`model-router.mjs`), unrelated to the deny-engine above. It lets the loop's seats run on models behind **different endpoints** — Opus/Sonnet on Anthropic, the Builder on DeepSeek's Anthropic-compatible endpoint — under **one** Claude Code instance, which itself takes a single `ANTHROPIC_BASE_URL`. The *why*, the alternatives, and the empirical routing probe live in `docs/decisions/per-seat-model-routing.md` — read it; this section is the HOW-TO only.
 
-It is a pure reverse-proxy: it reads each request body's `model`, matches it against a config route table, swaps in that backend's auth header (key from an env var, never inline, never logged), and streams the response through. An unroutable request fails closed (a 4xx/5xx error, never a silent default backend) — sending a seat's traffic to the wrong provider is the worst outcome it must prevent.
+It is a reverse-proxy: it reads each request body's `model`, matches it against a config route table, swaps in that backend's auth header (key from an env var, never inline, never logged), and streams the response back — with one reactive exception, the vision fallback below. An unroutable request fails closed (a 4xx/5xx error, never a silent default backend) — sending a seat's traffic to the wrong provider is the worst outcome it must prevent.
 
 **Run it:**
 
