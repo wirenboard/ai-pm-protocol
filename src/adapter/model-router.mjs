@@ -76,6 +76,12 @@ export function pickRoute(model, routes) {
   return null;
 }
 
+// The single route flagged `forImages: true` — the vision fallback target — or null
+// when none is configured. validateConfig guarantees at most one.
+export function pickVisionRoute(routes) {
+  return routes.find((route) => route.forImages === true) || null;
+}
+
 // The `model` field of a JSON request body, or null when the body is empty, not
 // JSON, or carries no string model — all fail-closed (the caller returns a 4xx).
 export function modelFromBody(body) {
@@ -86,6 +92,48 @@ export function modelFromBody(body) {
   } catch {
     return null;
   }
+}
+
+// True when the request body carries an image content block — the Messages API
+// shape is a `messages[].content[]` block whose `type` is "image" (verified against
+// the Anthropic Messages API, the only format this router speaks; the decision doc's
+// "Anthropic-format only" constraint). Used ONLY by the pre-route optimisation to
+// skip a known-failing first call — never to transform the payload. Fail-safe to
+// false on any parse miss (a non-detected image just falls back to the reactive path).
+export function bodyHasImageBlock(body) {
+  if (!body || body.length === 0) return false;
+  try {
+    const parsed = JSON.parse(body.toString("utf8"));
+    if (!Array.isArray(parsed.messages)) return false;
+    for (const msg of parsed.messages) {
+      const content = msg && msg.content;
+      if (!Array.isArray(content)) continue;
+      for (const block of content) {
+        if (block && block.type === "image") return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// True only for the SPECIFIC image-unsupported 400 signal: status 400 AND the JSON
+// error message mentions an image together with a support/block word (e.g. a backend's
+// "does not support image blocks"). Deliberately narrow — an ambiguous 400 (e.g.
+// "messages: roles must alternate") does NOT match, so a real bad request is relayed
+// as-is and never rerouted. Fail-safe to false on any parse miss.
+export function isImageUnsupported400(status, body) {
+  if (status !== 400) return false;
+  let message;
+  try {
+    const parsed = JSON.parse(body.toString("utf8"));
+    message = parsed && parsed.error && parsed.error.message;
+  } catch {
+    return false;
+  }
+  if (typeof message !== "string") return false;
+  return /image/i.test(message) && /(support|block)/i.test(message);
 }
 
 // True when a route forwards the client's incoming auth header unchanged instead of
@@ -118,6 +166,7 @@ export function validateConfig(config) {
   if (!Array.isArray(config.routes) || config.routes.length === 0) {
     throw new Error("config.routes: must be a non-empty array");
   }
+  let visionCount = 0;
   for (const [i, route] of config.routes.entries()) {
     const at = `config.routes[${i}]`;
     if (typeof route.match !== "string" || route.match.length === 0) throw new Error(`${at}.match: missing`);
@@ -127,6 +176,13 @@ export function validateConfig(config) {
     } catch {
       throw new Error(`${at}.base_url: not a valid URL`);
     }
+    // forImages flags the vision fallback target — the route a 400-image reroute
+    // lands on. Optional; when present it must be exactly true, and at most one route
+    // may carry it (a second is ambiguous about which backend is the vision target).
+    if (route.forImages !== undefined) {
+      if (route.forImages !== true) throw new Error(`${at}.forImages: must be true when present`);
+      visionCount++;
+    }
     // auth is EITHER the string "passthrough" (forward the client's auth unchanged)
     // OR a key-swap object { header, keyEnv, scheme? }.
     if (route.auth === "passthrough") continue;
@@ -134,6 +190,7 @@ export function validateConfig(config) {
     if (typeof route.auth.header !== "string" || route.auth.header.length === 0) throw new Error(`${at}.auth.header: missing`);
     if (typeof route.auth.keyEnv !== "string" || route.auth.keyEnv.length === 0) throw new Error(`${at}.auth.keyEnv: missing`);
   }
+  if (visionCount > 1) throw new Error("config.routes: at most one route may set forImages: true (the vision fallback target)");
   return config;
 }
 
@@ -214,15 +271,63 @@ function readBody(req, maxBytes) {
   });
 }
 
-// Route one buffered request to its backend and stream the response back.
-function forward(config, req, res, body, log) {
-  const model = modelFromBody(body);
-  const route = pickRoute(model, config.routes);
-  if (!route) {
-    sendError(res, 400, model ? `no route for model "${model}"` : "request has no routable model");
-    return;
-  }
+// A 400 error body is small JSON — bound the buffer we read to classify it, so a
+// pathological upstream can't make us hold an unbounded error response in memory.
+const REROUTE_BUFFER_CAP = 64 * 1024;
 
+// Stream an upstream response straight back to the client — SSE/chunked passthrough.
+// A success (2xx) and every non-reroutable status take this path: nothing is buffered.
+function pipeResponse(upstreamRes, res) {
+  // Mid-stream upstream failure (the backend drops the socket after we began
+  // streaming): the response headers are already sent, so sendError can only tear the
+  // client connection down — never a write-after-headers crash.
+  const onUpstreamFail = () => {
+    if (res.headersSent) res.destroy();
+    else sendError(res, 502, "upstream response error");
+  };
+  upstreamRes.on("error", onUpstreamFail);
+  upstreamRes.on("aborted", onUpstreamFail);
+  res.writeHead(upstreamRes.statusCode || 502, upstreamRes.headers);
+  upstreamRes.pipe(res);
+}
+
+// Read a (small) upstream response fully into a buffer, bounded by `cap`. Only used
+// for a 400, to classify it before deciding reroute-vs-relay. cb(err, buffer, headers).
+function bufferResponse(upstreamRes, cap, cb) {
+  const chunks = [];
+  let size = 0;
+  let done = false;
+  const finish = (err) => { if (!done) { done = true; cb(err, Buffer.concat(chunks), upstreamRes.headers); } };
+  upstreamRes.on("data", (c) => {
+    if (done) return;
+    size += c.length;
+    if (size > cap) { finish(new Error("error response too large to buffer")); return; }
+    chunks.push(c);
+  });
+  upstreamRes.on("end", () => finish(null));
+  upstreamRes.on("error", () => finish(new Error("upstream error")));
+  upstreamRes.on("aborted", () => finish(new Error("upstream aborted")));
+}
+
+// Relay a buffered (already-read) error response verbatim. Drops the upstream's
+// content-length / transfer-encoding so Node recomputes them for the exact bytes we
+// re-send; keeps content-type and the status.
+function relayBuffered(res, status, upstreamHeaders, buffered) {
+  if (res.headersSent) { res.end(buffered); return; }
+  const headers = {};
+  for (const [k, v] of Object.entries(upstreamHeaders)) {
+    const lower = k.toLowerCase();
+    if (lower === "content-length" || lower === "transfer-encoding") continue;
+    headers[k] = v;
+  }
+  res.writeHead(status, headers);
+  res.end(buffered);
+}
+
+// Send the buffered request to one backend route and hand its response to `onResponse`
+// (or stream it straight back when none is given). Pure routing + per-backend auth
+// swap — the body buffer is never transformed (passthrough; image bytes untouched).
+function proxyToRoute(route, req, res, body, log, { onResponse } = {}) {
   const passthrough = isPassthrough(route);
   let auth = null;
   if (!passthrough) {
@@ -235,7 +340,7 @@ function forward(config, req, res, body, log) {
   }
 
   const upstream = new URL(route.base_url);
-  log(`${model} -> ${upstream.host}`); // safe: model + hostname only, never key/body/header
+  log(`${modelFromBody(body)} -> ${upstream.host}`); // safe: model + hostname only, never key/body/header
 
   // Passthrough keeps the client's auth header; key-swap drops it and sets the backend's.
   const headers = sanitizeHeaders(req.headers, upstream.host, { keepClientAuth: passthrough });
@@ -256,24 +361,92 @@ function forward(config, req, res, body, log) {
       method: req.method,
       headers,
     },
-    (upstreamRes) => {
-      // Mid-stream upstream failure (the backend drops the socket after we began
-      // streaming): the response headers are already sent, so sendError can only
-      // tear the client connection down — never a write-after-headers crash.
-      const onUpstreamFail = () => {
-        if (res.headersSent) res.destroy();
-        else sendError(res, 502, "upstream response error");
-      };
-      upstreamRes.on("error", onUpstreamFail);
-      upstreamRes.on("aborted", onUpstreamFail);
-      // Stream the upstream response straight back — SSE/chunked passthrough.
-      res.writeHead(upstreamRes.statusCode || 502, upstreamRes.headers);
-      upstreamRes.pipe(res);
-    },
+    onResponse || ((upstreamRes) => pipeResponse(upstreamRes, res)),
   );
   upstreamReq.on("error", () => sendError(res, 502, "upstream request failed"));
   if (body.length) upstreamReq.write(body);
   upstreamReq.end();
+}
+
+// Build the response handler that realises the reactive vision fallback. `ctx` carries
+// the in-flight request; `isVisionTarget` is true when the route being answered IS the
+// `forImages` route (so a 400-image from it is the loop-guard case, never a re-reroute).
+function makeResponseHandler(ctx) {
+  return (upstreamRes) => {
+    const status = upstreamRes.statusCode || 502;
+    // 2xx and every other non-400 stream straight back — a success / SSE is NEVER
+    // buffered, so streaming stays intact.
+    if (status !== 400) {
+      pipeResponse(upstreamRes, ctx.res);
+      return;
+    }
+    // A 400: buffer the small error body and classify it.
+    bufferResponse(upstreamRes, REROUTE_BUFFER_CAP, (err, buffered, headers) => {
+      if (err) {
+        if (!ctx.res.headersSent) sendError(ctx.res, 502, "upstream error response could not be relayed");
+        else ctx.res.destroy();
+        return;
+      }
+      if (isImageUnsupported400(status, buffered)) {
+        if (ctx.isVisionTarget) {
+          // Loop guard: the vision target itself can't take the image — clear error,
+          // never re-reroute (no infinite loop).
+          sendError(ctx.res, 422, "vision route cannot process this image request; not rerouting (loop guard)");
+          return;
+        }
+        if (ctx.visionRoute) {
+          // Reroute the SAME buffered request to the vision target; remember the model
+          // so the next image call pre-routes (per-process cache, never the payload).
+          if (ctx.model) ctx.nonVisionCache.set(ctx.model, true);
+          proxyToRoute(ctx.visionRoute, ctx.req, ctx.res, ctx.body, ctx.log, {
+            onResponse: makeResponseHandler({ ...ctx, isVisionTarget: true }),
+          });
+          return;
+        }
+        // No vision fallback configured — fail LOUD with a clear error, never the raw
+        // cryptic upstream 400.
+        sendError(ctx.res, 422, `model "${ctx.model}" cannot process images and no vision fallback is configured`);
+        return;
+      }
+      // An ambiguous 400 (a real bad request) — relay it as-is, never reroute.
+      relayBuffered(ctx.res, status, headers, buffered);
+    });
+  };
+}
+
+// Route one buffered request to its backend, with the reactive vision fallback.
+// `nonVisionCache` is a per-process Map(model → true) of models a backend has already
+// rejected for images — ephemeral state, never the payload.
+function forward(config, req, res, body, log, nonVisionCache) {
+  const model = modelFromBody(body);
+  const route = pickRoute(model, config.routes);
+  if (!route) {
+    sendError(res, 400, model ? `no route for model "${model}"` : "request has no routable model");
+    return;
+  }
+
+  const visionRoute = pickVisionRoute(config.routes);
+
+  // Pre-route optimisation: a known non-vision model carrying an image, with a vision
+  // target configured, skips the first call we already know will 400-image.
+  if (
+    visionRoute &&
+    route !== visionRoute &&
+    model &&
+    nonVisionCache.has(model) &&
+    bodyHasImageBlock(body)
+  ) {
+    proxyToRoute(visionRoute, req, res, body, log, {
+      onResponse: makeResponseHandler({ res, req, body, log, model, visionRoute, nonVisionCache, isVisionTarget: true }),
+    });
+    return;
+  }
+
+  proxyToRoute(route, req, res, body, log, {
+    onResponse: makeResponseHandler({
+      res, req, body, log, model, visionRoute, nonVisionCache, isVisionTarget: route === visionRoute,
+    }),
+  });
 }
 
 // Build the router as an http.Server. `options.log` overrides the stderr logger
@@ -282,9 +455,13 @@ export function createRouter(config, options = {}) {
   validateConfig(config);
   const maxBytes = config.maxBodyBytes || DEFAULT_MAX_BODY_BYTES;
   const log = options.log || defaultLogger();
+  // Per-process (per-router-instance) cache of models a backend rejected for images,
+  // so a repeat image call pre-routes to the vision target without the failing first
+  // hop. Ephemeral, holds only model ids — never any request payload.
+  const nonVisionCache = new Map();
   return http.createServer((req, res) => {
     readBody(req, maxBytes)
-      .then((body) => forward(config, req, res, body, log))
+      .then((body) => forward(config, req, res, body, log, nonVisionCache))
       .catch((err) => sendError(res, err.status || 400, err.message || "bad request"));
   });
 }

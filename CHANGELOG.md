@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.36.0] — 2026-06-30
+
+### Added
+
+- **Model router — reactive vision fallback** (`src/adapter/model-router.mjs`). A route may carry `forImages: true` to mark the vision fallback target. When a non-vision backend rejects an image-bearing request with a specific `400 … does not support image blocks` signal, the router buffers that `400` and re-forwards the **same** request to the `forImages` route (caching the model as non-vision so the next image call pre-routes there directly); the client sees the vision route's response. Capability is **discovered from the wire, not declared** — a multimodal model returns `200` and is never rerouted, an ambiguous `400` relays as-is, a no-`forImages` config fails loud with a clear error, and a loop guard prevents re-rerouting when the vision target itself `400`-images. Passthrough is preserved: the reroute changes only the backend choice, never the payload (image bytes untouched); the non-vision cache is per-process ephemeral state; the no-secret/no-body/no-header logging discipline is unchanged. `validateConfig` accepts and bounds `forImages` (at most one route). The design and value framing (the router directs ANY model-bearing call; vision is one reroute): `docs/decisions/vision-routing.md`.
+
+---
+
 ## [5.35.0] — 2026-06-30
 
 ### Added
