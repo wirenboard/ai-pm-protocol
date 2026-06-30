@@ -12,6 +12,22 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.42.0] — 2026-06-30
+
+### Added
+
+- **Mechanical size-guard for assembled agents** (`src/quality/agent-size.mjs` + a `build`-beat `tools.json` row) — fails the build when an assembled agent surface (`.claude/ai-dev.md`, `.opencode/agents/ai-dev.md`) exceeds 39,000 chars (a 1k margin under Claude Code's 40k memory-file limit). A ratchet test (`agent-size.test.mjs`) pins the comparison. This is the regression backstop for the audit's H1 finding — the assembled orchestrator can no longer silently grow past the limit (which truncates later sections).
+
+### Changed
+
+- **Orchestrator decomposed under the 40k limit (audit H1).** The assembled `.claude/ai-dev.md` was **57,650 chars — over Claude Code's 40k memory-file limit**, so sections past char 40,000 (`## Fixup`, `## Audit`, `## Backlog`, `## Side-tools`, `## When something is off`) risked silently not loading in a live session. Six section BODIES (`## Setup`, `## Audit`, `## Multi-component coordination`, `## Product discovery`, `## Backlog`, `## Safeguards`) moved out of `src/agents/orchestrator.md` into read-on-demand `src/agents/procedures/*.md` (deployed to `.ai-dev/procedures/`), leaving a thin trigger→pointer stub in the always-loaded core — mirroring the existing `## Side-tools` pattern. Assembled surface now **~25.7k chars**. **Behaviour-preserving:** every loop-critical WHEN/WHETHER trigger and floor (the audit cadence + fail-safe-to-offer, the mandatory branch-protection floor, "fail safe to file / never silently lose a backlog item", the deny/merge-gate-never-disablable floor, the multi-component recognise-announce) stays in the always-loaded core; only the step-by-step HOW moved on-demand. Nothing dropped (verified by install-drift byte-identity + the per-section review).
+
+### Fixed
+
+- **`install.test.mjs` decomposed** (LOW-2; 985 lines, over the 800-line soft threshold) into `install-core.test.mjs` (150) + `install-claude-wiring.test.mjs` (50) with a shared `install-shared.mjs` helper — 200 assertions preserved (= the original), none weakened; `tools.json` + `INSTALL.md` pointers updated.
+
+---
+
 ## [5.41.1] — 2026-06-30
 
 ### Fixed
