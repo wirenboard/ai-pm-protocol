@@ -65,6 +65,15 @@ export function wireClaude(target, dogfood) {
   const settingsPath = path.join(target, ".claude", "settings.json");
   const settings = fs.existsSync(settingsPath) ? JSON.parse(fs.readFileSync(settingsPath, "utf8")) : {};
   settings.hooks = mergeHooks(settings.hooks || {}, hooksFragment.hooks);
+  // The wrapper-less auto-apply of the launch-time models: write the config `launch`
+  // section into settings.json `env`, which Claude Code reads AT STARTUP — so a routed
+  // project needs no personal export wrapper for the env (the proxy PROCESS is still
+  // started separately). Merges OUR two keys only (never clobbers a user-set env key);
+  // an empty/absent launch section writes nothing and prunes any key we previously set,
+  // so a non-routing project's settings.json is byte-unchanged (dogfood stays clean).
+  const launchEnv = mergeLaunchEnv(settings.env, readLaunchModels(target));
+  if (launchEnv) settings.env = launchEnv;
+  else if (settings.env !== undefined && Object.keys(settings.env).length === 0) delete settings.env;
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
 
@@ -232,6 +241,50 @@ function repointOrchestratorImport(claudeMd) {
     if (kept.length !== lines.length) fs.writeFileSync(claudeMd, kept.join("\n"));
   }
   ensureLine(claudeMd, ORCHESTRATOR_IMPORT);
+}
+
+// The two env keys the launch-time models own in settings.json (G1: the guard maps to
+// the DEPRECATED `ANTHROPIC_SMALL_FAST_MODEL` — the only var that sets the background
+// model independently of the haiku slot; tracked in the backlog for its eventual
+// removal. See docs/decisions/multi-model-setup-ux.md `## Requirement 7`).
+const LAUNCH_ENV_KEYS = {
+  sessionModel: "ANTHROPIC_MODEL",
+  guardModel: "ANTHROPIC_SMALL_FAST_MODEL",
+};
+
+// Read the config `launch` section ({ sessionModel, guardModel }) from the target's
+// .ai-dev/config.json — the same file in dogfood (the source repo's own root config) and
+// downstream. Absent file / section / non-object ⇒ {} (a non-routing project, no env).
+// Best-effort: a malformed config must NOT abort the install — the deny wiring above is
+// the load-bearing write; the launch env is an optional convenience layered on top.
+function readLaunchModels(target) {
+  const configPath = path.join(target, ".ai-dev", "config.json");
+  if (!fs.existsSync(configPath)) return {};
+  let config;
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  } catch {
+    return {};
+  }
+  return config && typeof config.launch === "object" && config.launch ? config.launch : {};
+}
+
+// Merge the launch-time model values into an existing settings.json `env` object,
+// touching ONLY our two keys (LAUNCH_ENV_KEYS) — a user-set env key is never clobbered.
+// A non-empty trimmed value is written; an empty/absent value PRUNES our key (so clearing
+// the config field clears the env, never leaving a stale value). Returns the merged env
+// object, or `null` when the result would be empty AND there was no pre-existing env (so
+// the caller writes no `env` key at all — byte-unchanged for a non-routing project).
+export function mergeLaunchEnv(existingEnv, launch) {
+  const env = existingEnv && typeof existingEnv === "object" ? { ...existingEnv } : {};
+  const hadEnv = existingEnv !== undefined && existingEnv !== null;
+  for (const [field, key] of Object.entries(LAUNCH_ENV_KEYS)) {
+    const raw = launch && typeof launch[field] === "string" ? launch[field].trim() : "";
+    if (raw) env[key] = raw;
+    else delete env[key];
+  }
+  if (Object.keys(env).length === 0 && !hadEnv) return null;
+  return env;
 }
 
 // Merge a hooks fragment into an existing hooks object: foreign groups are kept

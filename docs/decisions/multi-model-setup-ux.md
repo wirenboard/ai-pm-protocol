@@ -256,10 +256,16 @@ guard models live in `.ai-dev/config.json` as the ONE home (e.g. a `launch:
 { sessionModel, guardModel }` section). The field is never "dead" because **every launch
 path is documented to consume it**:
 
+- **The installer writes `.claude/settings.json` `env`** (the wrapper-less consumer added by
+  the protocol-consume PR — the spike's positive finding, `## Requirement 7`): the launch
+  section's two values land in the harness's declarative startup env, applied on the next
+  install with **no wrapper at all**. This is now the primary consume mechanism on Claude.
 - `router-launch.mjs` reads the section and exports `ANTHROPIC_MODEL` /
-  `ANTHROPIC_SMALL_FAST_MODEL` before exec'ing `claude` (option a's mechanism).
-- A **personal wrapper** (the Operator's case) reads the same config values — a documented
-  one-liner (`export ANTHROPIC_MODEL=$(node -e '…read .ai-dev/config.json…')`) or an explicit
+  `ANTHROPIC_SMALL_FAST_MODEL` before exec'ing `claude` (option a's mechanism) — for projects
+  launched through the protocol launcher.
+- A **personal wrapper** (the Operator's case, when `ANTHROPIC_BASE_URL` must also be set
+  pre-launch) reads the same config values — a documented one-liner
+  (`export ANTHROPIC_MODEL=$(node -e '…read .ai-dev/config.json…')`) or an explicit
   "mirror these two values into your wrapper's env" note.
 
 So the config is the documented SOURCE of truth and the launch path (ours or the user's) is
@@ -272,28 +278,56 @@ record.
 
 ---
 
-## Requirement 7 — the autostart honesty
+## Requirement 7 — the autostart honesty (SPIKE-confirmed, 2026-06-30)
 
-**The honest constraint:** `ANTHROPIC_BASE_URL` (and the launch-time models, option b) must
-be set **before `claude` starts** — Claude Code reads them at process launch. Claude Code
-has **no per-session pre-launch hook** that can set its OWN process's env (a `SessionStart`
-hook fires inside an already-launched process; it cannot retroactively set the base URL the
-process already read). So a true in-harness autostart that wires `ANTHROPIC_BASE_URL` for
-the running session **is likely impossible** — investigate `SessionStart` / settings env
-injection, but expect the answer to be no.
+**The honest constraint, now confirmed by spike:** `ANTHROPIC_BASE_URL` and the launch-time
+models must be set **before `claude` starts** — Claude Code reads them at process startup.
+A true in-harness autostart that wires `ANTHROPIC_BASE_URL` for the *running* session is
+**IMPOSSIBLE** (not "likely impossible" — the spike settled it): a `SessionStart` hook fires
+**after** the API client has already bound, and `settings.json` is read **once** at startup,
+so neither can retroactively change the base URL the process already read. The proxy
+*process* is therefore always started separately; no harness hook can launch it for the
+session that needs it.
 
-**The honest resolution:** the **launcher wrapper remains the only honest mechanism.** The
-deliverable is therefore **not** a true in-harness autostart — it is **making the wrapper
-frictionless and documented**: `router-launch.mjs` already does direct/router/external mode
-selection and starts the proxy where needed (`## router-launch.mjs` WHAT IT DOES). The flow
-points the user at one launch command that (1) ensures the proxy is up, (2) exports the
-launch-time models (option b's export block), (3) exports `ANTHROPIC_BASE_URL`, (4) exec's
-`claude`. Document it as THE launch path for a routed project; do not promise an autostart
-the harness cannot deliver.
+**The wrapper-less startup home the installer now writes: `.claude/settings.json` `env`.**
+The spike's positive finding: `settings.json` `env` IS a valid **declarative** startup home
+that Claude Code reads at launch — so it sets `ANTHROPIC_MODEL` / `ANTHROPIC_SMALL_FAST_MODEL`
+(and could carry `ANTHROPIC_BASE_URL`) with **no bash wrapper**. The installer already manages
+`.claude/settings.json` (the deny hooks), so it now also writes the config `launch` section
+into `env` — `sessionModel` → `ANTHROPIC_MODEL`, `guardModel` → `ANTHROPIC_SMALL_FAST_MODEL`
+(G1, below) — merging only those two keys, never clobbering a user key, and pruning them when
+the `launch` section is empty (a non-routing project is byte-unchanged). This is cleaner than
+the shipped "launcher/wrapper exports": the launch-time models auto-apply on the next install
+with no wrapper at all. (Code: `src/adapter/install-claude.mjs` `mergeLaunchEnv`; the env-name
+home + the wrapper recipe: `src/adapter/README.md` `### The launcher`.) `ANTHROPIC_BASE_URL`
+itself stays the user's own proxy URL — out of scope for the installer to write unless the
+config already carries it; there is no invented base-URL config field.
 
-This is recorded so a later reader does not re-litigate "why isn't the proxy auto-started
-inside the session" — because the env-before-launch constraint makes it impossible, and the
-wrapper is the conscious, honest substitute.
+**The restart requirement (Operator-required MUST).** Because `settings.json` `env` is read
+**only at startup**, a launch-time change (guard / session model, or the proxy base-URL) lands
+in `env` but the **running session keeps the old value until restart**. So the setup dialog
+AND the model-switch-mid-stream handler MUST, on any launch-time change, explicitly tell the
+Operator **"restart your session for this to take effect"**. The two apply-paths are distinct
+and named at the seam (`src/agents/orchestrator.md` `## Setup`): a **baked** seat change
+(builder/reviewer) ⇒ **re-bake** (takes effect on the next spawn); a **launch-time** change
+(guard/session) ⇒ **re-run the installer to update `settings.json` `env`** + **announce a
+session RESTART**.
+
+**G1 — the guard maps to the DEPRECATED `ANTHROPIC_SMALL_FAST_MODEL` (decided, kept).** The
+modern path folds the background/small-fast model into the haiku slot
+(`ANTHROPIC_DEFAULT_HAIKU_MODEL`), which in a typical routed setup is *also* the builder seat —
+so the only way to set the background model **independently** of the haiku slot is the
+deprecated `ANTHROPIC_SMALL_FAST_MODEL` (still honoured today). G1 keeps the separate `guard`
+seat mapped to it for that independence, documents the deprecation, and the backlog watches for
+its removal in a future Claude Code release — on removal, the independent guard knob is gone
+and background folds into the haiku slot.
+
+**For the user who needs `ANTHROPIC_BASE_URL` set too**, the launch wrapper (or
+`router-launch.mjs`) remains the honest mechanism for the proxy URL, reading the same config
+`launch` source for the models. This is recorded so a later reader does not re-litigate "why
+isn't the proxy auto-started inside the session" — the env-before-launch constraint makes it
+impossible, and the declarative `settings.json` `env` plus the wrapper are the conscious,
+honest substitutes.
 
 ---
 

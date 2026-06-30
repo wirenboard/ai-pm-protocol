@@ -89,7 +89,14 @@ It reads the seats' `roles.*.model` pins and the routes config (resolved against
 { "launch": { "sessionModel": "claude-opus-4-8", "guardModel": "claude-haiku-4-6" } }
 ```
 
-`router-launch.mjs` reads it and exports `sessionModel` as `ANTHROPIC_MODEL` and `guardModel` as `ANTHROPIC_SMALL_FAST_MODEL` into the child env in **every** mode (direct, external, router) before exec'ing `claude` — absent/empty values export nothing, so a non-routing project is byte-unchanged. **A personal launch wrapper** (the common case, since `ANTHROPIC_BASE_URL` must also be set pre-launch) reads the **same** config values — the launcher is not the only consumer. Mirror them with the ready export block setup prints:
+There are **two consumers of this source**, both wrapper-less by default:
+
+- **The installer writes the startup env.** On Claude the install path (`install-claude.mjs`) writes `sessionModel` → `ANTHROPIC_MODEL` and `guardModel` → `ANTHROPIC_SMALL_FAST_MODEL` into `.claude/settings.json` `env`, which Claude Code reads **at process startup** — so a routed project gets the launch-time models applied with **no personal export wrapper** (the proxy *process* is still started separately). It merges **only those two keys**, never clobbering a user-set `env` key; an empty/absent `launch` section writes nothing and prunes any key it previously set, so a non-routing project's `settings.json` is byte-unchanged. **`settings.json` `env` is read only at startup**, so changing a launch-time value (re-running the installer with a new `launch`) takes effect **on the next session — restart the running session for it to apply** (the setup dialog and the model-switch handler announce this; `src/agents/orchestrator.md` `## Setup`).
+- **`router-launch.mjs` exports the same source.** When launched through the protocol launcher, it reads the `launch` section and exports `ANTHROPIC_MODEL` / `ANTHROPIC_SMALL_FAST_MODEL` into the child env in **every** mode (direct, external, router) before exec'ing `claude` — absent/empty values export nothing, byte-unchanged for a non-routing project.
+
+**Guard knob — `ANTHROPIC_SMALL_FAST_MODEL` (G1, deprecated-but-kept).** The guard is the harness's background/small-fast model. The modern path folds the background model into the haiku slot (`ANTHROPIC_DEFAULT_HAIKU_MODEL`), which in a typical routed setup is *also* the builder seat — so the only way to set the background model **independently** of the haiku slot is the deprecated `ANTHROPIC_SMALL_FAST_MODEL` (still honoured by Claude Code today). G1 keeps the separate guard seat mapped to it for that independence; watch for its removal in a future Claude Code release (tracked in the backlog) — on removal, the independent guard knob is gone and background folds into the haiku slot.
+
+**A personal launch wrapper** (used when `ANTHROPIC_BASE_URL` must also be set pre-launch and the user prefers their own launcher) reads the **same** config values — the installer's `settings.json` `env` and the launcher are not the only consumers. Mirror them with the ready export block setup prints:
 
 ```sh
 # wrapper recipe — read the launch-time models from the config, then exec claude
@@ -99,7 +106,15 @@ export ANTHROPIC_BASE_URL=http://127.0.0.1:8800   # → your running proxy
 claude "$@"
 ```
 
-This wrapper is **THE launch path for a routed project**: there is no true in-harness autostart — Claude Code reads `ANTHROPIC_BASE_URL` and the launch-time models at process launch and has no per-session pre-launch hook that can set its own process's env, so the wrapper is the honest mechanism (`docs/decisions/multi-model-setup-ux.md` `## Requirement 7`).
+**No true in-harness autostart (confirmed).** Claude Code reads `ANTHROPIC_BASE_URL` and the launch-time models at process startup and has **no per-session pre-launch hook** that can set its own process's env — a `SessionStart` hook fires after the API client has already bound. So the proxy URL cannot be wired from inside a running session. The honest substitutes are the two declarative startup homes above: **`settings.json` `env`** (installer-written, wrapper-less, for the launch-time models) and, where the user needs `ANTHROPIC_BASE_URL` set too, **their own launch wrapper** reading the same config source. Either way a launch-time change needs a **session restart** to take effect (`docs/decisions/multi-model-setup-ux.md` `## Requirement 7`).
+
+**Setup-dialog model discovery (`modelpipe --list`).** When a routes config is available, the setup dialog MAY list the proxy's configured model ids to offer them per seat instead of asking blind:
+
+```sh
+modelpipe <routes-config> --list          # or: node <path-to>/modelpipe.mjs <routes-config> --list
+```
+
+It falls back to asking when `modelpipe` or its `--list` surface is unavailable (no hard dependency — `docs/decisions/multi-model-setup-ux.md` papercut 8). The list exposes model ids + capabilities + host only — never key values or auth secrets.
 
 **What a model string does end to end — write a concrete id, or an alias?** The string a seat carries travels this chain, so a route's `match` glob must target what actually arrives:
 
