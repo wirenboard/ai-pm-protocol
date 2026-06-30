@@ -14,6 +14,11 @@
 //     • DIRECT BY DEFAULT — if the seats' models touch fewer than 2 distinct
 //       endpoints (e.g. all Anthropic), exec `claude` straight through with NO
 //       router. A project that never opts into cross-endpoint routing is unchanged.
+//   In EVERY mode it also layers the config's launch-time models onto the child env
+//   (config.launch.sessionModel → ANTHROPIC_MODEL, guardModel → ANTHROPIC_SMALL_FAST_MODEL)
+//   BEFORE exec'ing `claude` — the RATIFIED source-of-truth: the config is the one home,
+//   the launch path consumes it (docs/decisions/multi-model-setup-ux.md `## The fork`).
+//   Absent/empty launch values export nothing (a non-routing project stays byte-unchanged).
 //     • ROUTER — if ≥2 distinct endpoints are in play, start model-router.mjs on a
 //       free localhost port, point the child at it via ANTHROPIC_BASE_URL, ensure
 //       CLAUDE_CODE_SUBAGENT_MODEL is UNSET in the child env (it would collapse every
@@ -25,8 +30,8 @@
 //   traffic reaching the wrong provider, or a request forwarded with no credential).
 //
 // TESTABILITY: the decisions are PURE exported functions (resolveRoutes,
-//   distinctEndpoints, missingKeyEnvs, seatModels, buildChildEnv, planLaunch) unit-
-//   tested in router-launch.test.mjs. The real `claude` exec is the one untestable
+//   distinctEndpoints, missingKeyEnvs, seatModels, launchModelEnv, buildChildEnv,
+//   planLaunch) unit-tested in router-launch.test.mjs. The real `claude` exec is the one untestable
 //   rung (a live process) — offered as a real-layer check, not run in the suite.
 //
 // Run:  node src/adapter/router-launch.mjs [claude args…]
@@ -111,11 +116,32 @@ export function missingKeyEnvs(routes, env) {
   return [...new Set(missing)];
 }
 
-// The child env for `claude`: point it at the router, and guarantee
-// CLAUDE_CODE_SUBAGENT_MODEL is UNSET (it overrides per-seat model: pins and would
-// collapse every seat to one model — decision doc, fact 2).
-export function buildChildEnv(baseEnv, routerUrl) {
-  const env = { ...baseEnv, ANTHROPIC_BASE_URL: routerUrl };
+// The launch-time model env the config `launch` section sources (the RATIFIED
+// option (c) source-of-truth: docs/decisions/multi-model-setup-ux.md `## The fork`).
+// config.launch.sessionModel → ANTHROPIC_MODEL (the orchestrator IS the session);
+// config.launch.guardModel   → ANTHROPIC_SMALL_FAST_MODEL (the background/small-fast
+// model). Returns ONLY the keys with a non-empty value — an absent/empty section
+// exports nothing, so a non-routing project's launch env is byte-unchanged. These
+// must be set BEFORE `claude` reads them at process launch, which is exactly what the
+// launcher does by putting them in the child's env below.
+export function launchModelEnv(config) {
+  const out = {};
+  const launch = config && typeof config.launch === "object" && config.launch ? config.launch : {};
+  const session = typeof launch.sessionModel === "string" ? launch.sessionModel.trim() : "";
+  const guard = typeof launch.guardModel === "string" ? launch.guardModel.trim() : "";
+  if (session) out.ANTHROPIC_MODEL = session;
+  if (guard) out.ANTHROPIC_SMALL_FAST_MODEL = guard;
+  return out;
+}
+
+// The child env for `claude`: layer the config-sourced launch-time models (session +
+// guard, when set) onto the base env, point it at the router when one is given, and
+// guarantee CLAUDE_CODE_SUBAGENT_MODEL is UNSET (it overrides per-seat model: pins and
+// would collapse every seat to one model — decision doc, fact 2). routerUrl may be
+// null/omitted for the direct/external paths that only need the launch-model layer.
+export function buildChildEnv(baseEnv, routerUrl, config) {
+  const env = { ...baseEnv, ...launchModelEnv(config) };
+  if (routerUrl) env.ANTHROPIC_BASE_URL = routerUrl;
   delete env.CLAUDE_CODE_SUBAGENT_MODEL;
   return env;
 }
@@ -229,13 +255,15 @@ function main() {
 
   if (plan.mode === "external") {
     process.stderr.write(`[router-launch] external proxy at ${plan.proxyUrl} — not spawning a router\n`);
-    execClaude(buildChildEnv(process.env, plan.proxyUrl), args);
+    execClaude(buildChildEnv(process.env, plan.proxyUrl, config), args);
     return;
   }
 
   if (plan.mode === "direct") {
     process.stderr.write("[router-launch] single endpoint — running claude directly (no router)\n");
-    execClaude(process.env, args);
+    // No router URL and CLAUDE_CODE_SUBAGENT_MODEL untouched in direct mode (per-seat
+    // baking still applies); only layer the config-sourced launch-time models.
+    execClaude({ ...process.env, ...launchModelEnv(config) }, args);
     return;
   }
 
@@ -256,7 +284,7 @@ function main() {
     process.stderr.write(
       `[router-launch] router on ${routerUrl} — ${plan.endpoints.length} endpoints, ${plan.routes.length} routes\n`,
     );
-    const child = execClaude(buildChildEnv(process.env, routerUrl), args);
+    const child = execClaude(buildChildEnv(process.env, routerUrl, config), args);
     const teardown = () => server.close();
     child.on("exit", teardown);
     child.on("error", teardown);

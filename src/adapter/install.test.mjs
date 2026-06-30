@@ -10,6 +10,7 @@
 // Run: node src/adapter/install.test.mjs
 
 import { install, hasGitRepo, verifyClaudeWiring, isStaleNpxReRun } from "./install.mjs";
+import { ensureConfig } from "./install-core.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -878,6 +879,31 @@ testPlatform("opencode", (target) => {
     check("[git] repo-less target detected", hasGitRepo(target) === false);
     fs.mkdirSync(path.join(target, ".git"), { recursive: true });
     check("[git] .git presence detected", hasGitRepo(target) === true);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
+}
+
+// ── ensureConfig: honest write-vs-kept reporting + no orchestrator model pin ──
+// (docs/decisions/multi-model-setup-ux.md papercuts 9 + 2). The return flag is what
+// lets the install summary print the truth instead of an unconditional "wrote config".
+{
+  const target = freshTarget("ensureconfig");
+  try {
+    fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
+    const wroteFresh = ensureConfig(target, "claude");
+    check("[ensureConfig] returns TRUE on a fresh write", wroteFresh === true);
+    const cfg = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8"));
+    check("[ensureConfig] default carries NO roles.orchestrator.model (papercut 2)",
+      !("model" in cfg.roles.orchestrator));
+    check("[ensureConfig] default still pins the reviewer to auto", cfg.roles.reviewer.model === "auto");
+
+    // A second call must NOT clobber and must report the no-op honestly.
+    fs.writeFileSync(path.join(target, ".ai-dev", "config.json"), '{"platform":"claude","mode":"autonomous"}\n');
+    const wroteAgain = ensureConfig(target, "claude");
+    check("[ensureConfig] returns FALSE when a config already exists (kept)", wroteAgain === false);
+    const kept = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8"));
+    check("[ensureConfig] existing config is untouched (no clobber)", kept.mode === "autonomous");
   } finally {
     fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }

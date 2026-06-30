@@ -174,6 +174,10 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
     // (the source repo's version is its live package.json, not an install stamp). The
     // resolve is best-effort: a failure must not abort the install, so guard it.
     let bannerVersion = null, priorBeforeInstall = null;
+    // Did a config already exist BEFORE this run? ensureConfig writes only where
+    // absent, so this single pre-check tells the summary the truth (wrote vs kept)
+    // without changing install()'s return contract (papercut 9).
+    const configExistedBefore = fs.existsSync(path.join(path.resolve(targetDir), ".ai-dev", "config.json"));
     if (!dogfood) {
       try {
         bannerVersion = resolveSourceVersion();
@@ -198,7 +202,11 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
     console.log(`\nInstalled the ai-dev protocol into ${rel} (platform: ${platform}).`);
     console.log("  • vendored the shared adapter into .ai-dev/tooling/ (self-sufficient for the upgrade re-run)");
     console.log("  • laid down .ai-dev/PROTOCOL.md, .ai-dev/quality/ (the quality-runner shape), and .ai-dev/upgrades.md");
-    console.log("  • wrote .ai-dev/config.json (minimal default — run /dev-setup to configure)");
+    console.log(
+      configExistedBefore
+        ? "  • kept existing .ai-dev/config.json (your roles/models/mode untouched)"
+        : "  • wrote .ai-dev/config.json (minimal default — run /dev-setup to configure)",
+    );
     console.log(`  • wired ${platform} (deny hooks, agents, the /dev-setup command${platform === "opencode" ? ", the plugin" : ""})`);
     console.log("  • stamped .ai-dev/VERSION and left a breadcrumb load-surface for the inactive platform");
     if (!hasGitRepo(targetDir)) {

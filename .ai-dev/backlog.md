@@ -3,6 +3,14 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## WATCH: split planning onto the orchestrator if cheap-builder plans need rework (option B) — 2026-06-30 (Operator, watch-not-build)
+
+**Context.** The Builder both plans AND builds, on ONE model (`roles.builder.model`). Planning is high-value thinking, building is more mechanical — so a cheap builder pays for mechanical work but may under-plan. The orchestrator's plan oversight is SHALLOW (it relays the plan in plain language + the Operator approves; neither deeply vets technical plan quality). The deep plan check is the Reviewer's, but POST-build (built-diff-vs-plan) — so a weak plan surfaces late, as rework.
+
+**Why not just split now.** A 4th Planner agent = the role-swarm the protocol deliberately collapsed (thin-core manifesto) — rejected. A per-phase model split inside the Builder (plan@strong, build@cheap, same role) is NOT cleanly possible on Claude (one baked model per agent) — it would need two baked agents = the same swarm. So the only no-swarm split is **option B: planning moves to the orchestrator** (already on the capable launch model, already in the plan loop), Builder becomes a pure cheap executor. That is a CONSTITUTIONAL change (Builder's "plans before it builds" contract in `PROTOCOL.md` `## Role contracts` + the orchestrator-routes-never-works rule), so not worth doing on spec.
+
+**The watch.** Leave it as-is (option A). **Trigger for option B:** if plans drafted by a cheap builder seat repeatedly go to rework (the Reviewer blocks on plan-quality, or builds miss the mark because the plan was thin) — i.e. real, observed evidence, not a guess. On trigger: a decision doc for option B (orchestrator owns the plan beat; Builder contract narrows to build-only; the Reviewer independence is unchanged), then the loop. Full reasoning: this session's discussion (2026-06-30). Do NOT add a Planner role/agent.
+
 ## modelpipe: rewrite the README — outdated + awkward to use — 2026-06-30 (Operator-reported)
 
 The standalone `modelpipe` README is out of date and inconvenient as a getting-started surface (Operator's read). Incremental edits this session bolted on `forImagesModel` + the `vision` flag sections, but the whole doc needs a rewrite: a clean quick-start, the route-config ergonomics, and how it relates to a client's setup.
