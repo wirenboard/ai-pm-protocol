@@ -241,6 +241,70 @@ export function loadConfig(configPath) {
   return validateConfig(config);
 }
 
+// Build a SAFE JSON summary of the route table for discovery (the `--list` CLI mode,
+// so a client setup dialog can read what a modelpipe is configured for instead of
+// re-asking). PURE: reads only the parsed config object, NEVER process.env and NEVER a
+// backend — no secret value is ever in scope.
+//
+// SAFE-SURFACE (whitelist, fail-closed by construction): each field is copied in by
+// name, so an unexpected future config field cannot leak through. Per route we expose
+// only the model glob (`match`), the backend origin (`base_url`), the capability flags
+// (forImages / forImagesModel / vision, when present), and an auth VIEW:
+//   • "passthrough" verbatim — it carries no secret (the client's own auth is forwarded).
+//   • the key-swap object as { header, scheme?, keyEnv } — the env-var NAME only.
+// `keyEnv` is the NAME of the env var holding the key, never the key VALUE: the config
+// by design holds env-var names (SECURITY POSTURE above), so the name is config data,
+// not a secret. The top-level `proxyUrl` is surfaced only when present.
+//
+// Does NOT call validateConfig: an empty/no-routes config yields a well-formed empty
+// list (the discovery contract is "summarise whatever is configured", not "serve it").
+export function listConfig(config) {
+  const safe = {};
+  if (config && config.proxyUrl !== undefined) safe.proxyUrl = config.proxyUrl;
+  const routes = (config && Array.isArray(config.routes)) ? config.routes : [];
+  safe.routes = routes.map((route) => {
+    const out = { match: route.match, base_url: route.base_url };
+    if (route.auth === "passthrough") {
+      out.auth = "passthrough";
+    } else if (route.auth && typeof route.auth === "object") {
+      const authView = { header: route.auth.header };
+      if (route.auth.scheme !== undefined) authView.scheme = route.auth.scheme;
+      authView.keyEnv = route.auth.keyEnv; // the env-var NAME, never a key value
+      out.auth = authView;
+    }
+    if (route.forImages !== undefined) out.forImages = route.forImages;
+    if (route.forImagesModel !== undefined) out.forImagesModel = route.forImagesModel;
+    if (route.vision !== undefined) out.vision = route.vision;
+    return out;
+  });
+  return safe;
+}
+
+// The NETWORK-FACING view of the route table for GET /v1/models — a STRICTER projection
+// of listConfig (the operator-facing `--list`/CLI view). listConfig is localhost/operator
+// scope and exposes the key env-var NAME + the full base_url + the auth header/scheme;
+// this HTTP endpoint is reachable by ANY client pointed at the router, so it drops all of
+// that and exposes ONLY: the match glob (as `id`), the backend `host` (hostname[:port],
+// never the base path), the auth MODE ("passthrough" | "key" — never the env name or
+// header), and the vision flags. NEVER a key value, NEVER the key env-var name — the
+// stricter surface a network endpoint demands. Built on listConfig so there is one source
+// of truth for "what is configured"; this is its safe-for-network projection. PURE: reads
+// only the parsed config, no process.env, no backend.
+export function listModels(config) {
+  return listConfig(config).routes.map((r) => {
+    let host = null;
+    try { host = new URL(r.base_url).host; } catch { /* bad base_url → leave null */ }
+    return {
+      id: r.match,                                       // the match glob, e.g. "deepseek-*"
+      object: "model",
+      host,                                              // backend host — no path, no key
+      auth: r.auth === "passthrough" ? "passthrough" : "key",  // mode only, never the env name
+      vision: r.vision !== false,                        // vision-capable unless explicitly opted out
+      for_images: r.forImages === true,                  // the forImages vision-fallback flag
+    };
+  });
+}
+
 // The opt-in stderr logger: a no-op unless MODEL_ROUTER_LOG=1. Logs only the
 // caller-supplied line (which is always model -> hostname) — never a key, body, or header.
 function defaultLogger(env = process.env) {
@@ -511,6 +575,16 @@ export function createRouter(config, options = {}) {
   // hop. Ephemeral, holds only model ids — never any request payload.
   const nonVisionCache = new Map();
   return http.createServer((req, res) => {
+    // GET /v1/models (and the bare /models) returns the configured routes as a
+    // secret-free model listing (listModels). Intercepted BEFORE body reading/routing so
+    // it needs no request body and never reaches a backend — everything else (POST
+    // messages, passthrough, the vision reroute) flows through readBody → forward unchanged.
+    if (req.method === "GET" && (req.url === "/v1/models" || req.url === "/models")) {
+      const payload = JSON.stringify({ object: "list", data: listModels(config) });
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(payload);
+      return;
+    }
     readBody(req, maxBytes)
       .then((body) => forward(config, req, res, body, log, nonVisionCache))
       .catch((err) => sendError(res, err.status || 400, err.message || "bad request"));

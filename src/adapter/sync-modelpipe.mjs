@@ -34,7 +34,7 @@
 //   (model-router.test.mjs) and the launcher import by the LOCAL path regardless.
 //
 // PINNED REF — immutable. We pin to a full commit SHA, never a moving branch, so the
-//   drift target cannot change under us. modelpipe v0.3.0 = main HEAD at this SHA.
+//   drift target cannot change under us. modelpipe 0.5.0 = main HEAD at this SHA.
 //
 // MODES:
 //   (default / --write)  fetch the pinned router.mjs and write src/adapter/model-router.mjs.
@@ -56,10 +56,10 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-// The pinned, immutable source — aadegtyarev/modelpipe at the v0.3.0 commit (main
-// HEAD, 2026-06-30). Bump this SHA to adopt a newer modelpipe, then re-run the sync.
+// The pinned, immutable source — aadegtyarev/modelpipe at the 0.5.0 commit (main
+// HEAD, 2026-06-30; no git tag). Bump this SHA to adopt a newer modelpipe, then re-run the sync.
 const MODELPIPE_REPO = "aadegtyarev/modelpipe";
-const MODELPIPE_REF = "e13ebd5c192b9f1de33d68491beba95cc6e402dd"; // v0.3.0
+const MODELPIPE_REF = "9bd3779c109071117bfcfda7acf2cab4ac96de67"; // modelpipe 0.5.0 (main HEAD, no tag) — adds GET /v1/models
 const MODELPIPE_SRC_PATH = "src/router.mjs";
 
 // The one in-repo target — the transport code file only (NOT the policy config).

@@ -115,6 +115,20 @@ WITHOUT exec'ing claude — for "don't touch my launch": point your own claude/w
 printed URL (or wire it as the routes config `proxyUrl`). Errors when there is no LOCAL
 router to start (an external `proxyUrl` already runs, or fewer than 2 endpoints are in play).
 
+**Probe — `--probe [url]`.** Best-effort discovery of an **already-running** proxy for the
+setup dialog. Tries candidate origins — an explicit `url` arg, the routes-config `proxyUrl`,
+then the conventional localhost default `http://127.0.0.1:8787` — at `GET /v1/models` (then
+`/models`), and prints ONE JSON line `{ alive, url, models }` to stdout, exiting `0` (alive)
+/ `1` (none). Lets the dialog **skip asking for a URL** when a proxy is up. Never throws — a
+refused/timed-out candidate is simply "not alive". Note: a launcher-**spawned** proxy needs
+no probe (the launcher holds the routes config and uses a random free port) — the probe is
+for an **external** proxy the Operator already runs (a standalone modelpipe, or a
+LiteLLM-class proxy that exposes `/v1/models`). The vendored modelpipe is a pure passthrough
+proxy; it answers `/v1/models` only once the upstream gains that endpoint, so against an
+older modelpipe the probe finds nothing and the dialog falls through to the spawn fork —
+honest, no false promise. The candidate-list + response parse are pure (`probeCandidates` /
+`parseModelsResponse`, unit-tested); the live HTTP is the one untestable rung.
+
 It reads the seats' `roles.*.model` pins and the routes config (resolved against the catalog), then decides: if the seats touch **fewer than 2 distinct endpoints** (e.g. all-Anthropic), it execs `claude` **directly, no router** — a project that never opts in is unchanged. If **≥2 endpoints** are in play, it starts `model-router.mjs` on a free localhost port, points the child at it (`ANTHROPIC_BASE_URL`), **guarantees `CLAUDE_CODE_SUBAGENT_MODEL` is unset** in the child env, execs `claude`, and tears the router down on exit. **Fail-closed:** if a route in play names a backend key env var that is unset, the launcher errors **before launching anything** — never a silent wrong-backend.
 
 **External proxy (opt-in `proxyUrl`).** Set a top-level `proxyUrl` in the routes config to point at an **already-running** proxy (a self-hosted or shared modelpipe, or one under a debugger) instead of spawning one. The launcher then skips the spawn entirely and just points `claude` at that URL (still unsetting `CLAUDE_CODE_SUBAGENT_MODEL`). Auth/keys live in **that proxy's own env**, so the launcher's fail-closed key check does not apply — it cannot see the external proxy's credentials. A present-but-malformed `proxyUrl` is a hard error (never a silent fall-through to a local spawn); absent/blank ⇒ the launcher decides direct-vs-spawn itself.
@@ -144,15 +158,21 @@ export ANTHROPIC_BASE_URL=http://127.0.0.1:8800   # → your running proxy
 claude "$@"
 ```
 
-**No true in-harness autostart (confirmed).** Claude Code reads `ANTHROPIC_BASE_URL` and the launch-time models at process startup and has **no per-session pre-launch hook** that can set its own process's env — a `SessionStart` hook fires after the API client has already bound. So the proxy URL cannot be wired from inside a running session. The honest substitutes are the two declarative startup homes above: **`settings.json` `env`** (installer-written, wrapper-less, for the launch-time models) and, where the user needs `ANTHROPIC_BASE_URL` set too, **their own launch wrapper** reading the same config source. Either way a launch-time change needs a **session restart** to take effect (`docs/decisions/multi-model-setup-ux.md` `## Requirement 7`).
+**Configured from the session, applied on restart (the honest framing).** The *configuration* is fully writable from inside a running session — the installer/dialog writes `settings.json` `env`, `config.json`, and `model-routes.json` like any other file. What a running session **cannot** do is rebind **its own** process's env: Claude Code reads `ANTHROPIC_BASE_URL` and the launch-time models at process startup, and a `SessionStart` hook fires after the API client has already bound, so there is **no per-session pre-launch hook** that re-points the *current* process. The accurate statement is therefore *"set it from the session → restart to apply it"*, never *"impossible from the session"*. The two declarative startup homes carry the values across the restart: **`settings.json` `env`** (installer-written, wrapper-less, for the launch-time models) and, where the user needs `ANTHROPIC_BASE_URL` set too, **their own launch wrapper** (or `./.ai-dev/launch`) reading the same config source. Either way a launch-time change takes effect on the **next session** (`docs/decisions/multi-model-setup-ux.md` `## Requirement 7`).
 
-**Setup-dialog model discovery (`modelpipe --list`).** When a routes config is available, the setup dialog MAY list the proxy's configured model ids to offer them per seat instead of asking blind:
+**Setup-dialog model discovery — probe-first.** The dialog discovers model ids two ways, in order. **First** it **probes for an already-running proxy** (the common "my proxy is up" case):
+
+```sh
+./.ai-dev/launch --probe              # → { "alive": true, "url": "...", "models": [...] }  (exit 0/1)
+```
+
+A live proxy's `/v1/models` ids are offered per seat and **the URL question is skipped**. **Second**, where no proxy answers but a routes **config** is available, it MAY list the config's configured ids instead of asking blind:
 
 ```sh
 modelpipe <routes-config> --list          # or: node <path-to>/modelpipe.mjs <routes-config> --list
 ```
 
-It falls back to asking when `modelpipe` or its `--list` surface is unavailable (no hard dependency — `docs/decisions/multi-model-setup-ux.md` papercut 8). The list exposes model ids + capabilities + host only — never key values or auth secrets.
+Both fall back to plainly asking when neither surface is available (no hard dependency — `docs/decisions/multi-model-setup-ux.md` papercut 8). Each exposes model ids + capabilities + host only — **never key values or auth secrets**.
 
 **What a model string does end to end — write a concrete id, or an alias?** The string a seat carries travels this chain, so a route's `match` glob must target what actually arrives:
 
