@@ -16,7 +16,18 @@
 // Run: node src/adapter/model-router.test.mjs
 
 import http from "node:http";
-import { createRouter, pickRoute, globToRegExp, modelFromBody, resolveAuthHeader, isPassthrough } from "./model-router.mjs";
+import {
+  createRouter,
+  pickRoute,
+  globToRegExp,
+  modelFromBody,
+  resolveAuthHeader,
+  isPassthrough,
+  bodyHasImageBlock,
+  isImageUnsupported400,
+  pickVisionRoute,
+  validateConfig,
+} from "./model-router.mjs";
 
 let pass = 0;
 const fails = [];
@@ -43,6 +54,35 @@ function makeStub() {
     });
   });
   return { server, received };
+}
+
+// A mode-switchable stub for the vision-fallback scenarios. `mode`:
+//   "ok"      → streamed 200 (the multimodal / vision-success path)
+//   "reject"  → 400 with the image-unsupported signal body
+//   "badreq"  → 400 with an ambiguous (non-image) error body
+function makeModeStub(initialMode) {
+  const received = [];
+  let mode = initialMode;
+  const server = http.createServer((req, res) => {
+    const chunks = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => {
+      received.push({ url: req.url, headers: req.headers, body: Buffer.concat(chunks).toString("utf8") });
+      if (mode === "ok") {
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        res.write(STREAM_PARTS[0]);
+        res.write(STREAM_PARTS[1]);
+        res.end(STREAM_PARTS[2]);
+        return;
+      }
+      const message = mode === "reject"
+        ? "this model does not support image blocks"
+        : "messages: roles must alternate between user and assistant";
+      res.writeHead(400, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: { message } }));
+    });
+  });
+  return { server, received, setMode: (m) => { mode = m; } };
 }
 
 function listen(server) {
@@ -153,6 +193,52 @@ async function main() {
   check("resolveAuthHeader unset env throws (fail-closed)", unsetThrew, true);
   check("isPassthrough true for string \"passthrough\"", isPassthrough({ auth: "passthrough" }), true);
   check("isPassthrough false for a key-swap object", isPassthrough(sampleRoutes[0]), false);
+
+  // ── vision-fallback pure units (no network) ───────────────────────────────
+  const imageBody = Buffer.from(JSON.stringify({
+    model: "m", messages: [{ role: "user", content: [
+      { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } },
+      { type: "text", text: "hi" },
+    ] }],
+  }));
+  check("bodyHasImageBlock detects an image block", bodyHasImageBlock(imageBody), true);
+  check("bodyHasImageBlock false for text-only content array",
+    bodyHasImageBlock(Buffer.from('{"model":"m","messages":[{"role":"user","content":[{"type":"text","text":"hi"}]}]}')), false);
+  check("bodyHasImageBlock false for a string content turn",
+    bodyHasImageBlock(Buffer.from('{"model":"m","messages":[{"role":"user","content":"hi"}]}')), false);
+  check("bodyHasImageBlock false for bad json", bodyHasImageBlock(Buffer.from("not json")), false);
+  check("bodyHasImageBlock false for empty", bodyHasImageBlock(Buffer.from("")), false);
+
+  const imageErr = Buffer.from('{"error":{"message":"this model does not support image blocks"}}');
+  check("isImageUnsupported400 matches the image-unsupported signal", isImageUnsupported400(400, imageErr), true);
+  check("isImageUnsupported400 ignores a non-400 status", isImageUnsupported400(500, imageErr), false);
+  check("isImageUnsupported400 rejects an ambiguous 400",
+    isImageUnsupported400(400, Buffer.from('{"error":{"message":"messages: roles must alternate between user and assistant"}}')), false);
+  check("isImageUnsupported400 rejects a 400 mentioning image without support/block",
+    isImageUnsupported400(400, Buffer.from('{"error":{"message":"image bytes were truncated"}}')), false);
+  check("isImageUnsupported400 false for bad json", isImageUnsupported400(400, Buffer.from("not json")), false);
+
+  const visionRoutes = [
+    { match: "nonvis-*", base_url: "https://a.example", auth: { header: "x-api-key", keyEnv: "K" } },
+    { match: "vis-*", base_url: "https://b.example", forImages: true, auth: { header: "x-api-key", keyEnv: "K" } },
+  ];
+  check("pickVisionRoute returns the forImages route", pickVisionRoute(visionRoutes).match, "vis-*");
+  check("pickVisionRoute null when none flagged", pickVisionRoute(sampleRoutes), null);
+  check("validateConfig accepts one forImages route",
+    validateConfig({ routes: visionRoutes }).routes.length, 2);
+  let twoVisionThrew = false;
+  try {
+    validateConfig({ routes: [
+      { match: "a-*", base_url: "https://a.example", forImages: true, auth: { header: "x-api-key", keyEnv: "K" } },
+      { match: "b-*", base_url: "https://b.example", forImages: true, auth: { header: "x-api-key", keyEnv: "K" } },
+    ] });
+  } catch { twoVisionThrew = true; }
+  check("validateConfig rejects two forImages routes", twoVisionThrew, true);
+  let badVisionThrew = false;
+  try {
+    validateConfig({ routes: [{ match: "a-*", base_url: "https://a.example", forImages: "yes", auth: { header: "x-api-key", keyEnv: "K" } }] });
+  } catch { badVisionThrew = true; }
+  check("validateConfig rejects a non-true forImages", badVisionThrew, true);
 
   // ── e2e through the real socket ───────────────────────────────────────────
   const anthropicStub = makeStub();
@@ -291,6 +377,126 @@ async function main() {
     await close(bearerStub.server);
     await close(passthroughStub.server);
     await close(midStub);
+  }
+
+  // ── vision fallback e2e (reactive catch-400 reroute) ──────────────────────
+  // Stub A (nonvis-*): mode-switchable; Stub B (vis-*, forImages): the vision target.
+  const aStub = makeModeStub("reject");
+  const bStub = makeModeStub("ok");
+  const aVPort = await listen(aStub.server);
+  const bVPort = await listen(bStub.server);
+
+  process.env.TEST_VISION_KEY = "VIS-SECRET-789";
+  process.env.MODEL_ROUTER_LOG = "1";
+  const vLogCapture = [];
+  const vRealStderrWrite = process.stderr.write.bind(process.stderr);
+  process.stderr.write = (chunk, ...rest) => { vLogCapture.push(String(chunk)); return vRealStderrWrite(chunk, ...rest); };
+
+  // A request carrying an image block — text sentinel + image-data sentinel let us
+  // prove the body (and the image bytes) pass through unaltered and never leak to logs.
+  const imageReq = (model) => ({
+    model,
+    messages: [{ role: "user", content: [
+      { type: "image", source: { type: "base64", media_type: "image/png", data: "IMG-DATA-SENTINEL" } },
+      { type: "text", text: "VISION-BODY-SENTINEL" },
+    ] }],
+  });
+
+  const visionConfig = {
+    listen: { host: "127.0.0.1", port: 0 },
+    routes: [
+      { match: "nonvis-*", base_url: `http://127.0.0.1:${aVPort}`, auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
+      { match: "vis-*", base_url: `http://127.0.0.1:${bVPort}`, forImages: true, auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
+    ],
+  };
+  const vRouter = createRouter(visionConfig);
+  const vPort = await listen(vRouter);
+
+  // A no-vision router: same nonvis route, NO forImages target (the fail-loud case).
+  const noVisionConfig = {
+    listen: { host: "127.0.0.1", port: 0 },
+    routes: [
+      { match: "nonvis-*", base_url: `http://127.0.0.1:${aVPort}`, auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
+    ],
+  };
+  const noVisionRouter = createRouter(noVisionConfig);
+  const noVisionPort = await listen(noVisionRouter);
+
+  try {
+    // V1. image request → route A 400-image → rerouted to B → client gets B's 200.
+    aStub.setMode("reject");
+    const v1 = await request(vPort, imageReq("nonvis-1"));
+    check("V1 reroute: A received the first (failing) call", aStub.received.length, 1);
+    check("V1 reroute: B received the rerouted call", bStub.received.length, 1);
+    check("V1 reroute: client gets the vision route's 200", v1.status, 200);
+    check("V1 reroute: client gets B's streamed body intact", v1.body, STREAM_BODY);
+    // passthrough: the SAME image-bearing body reached B, bytes unaltered.
+    const v1b = JSON.parse(bStub.received[0].body);
+    check("V1 reroute: image bytes reached B unaltered", v1b.messages[0].content[0].source.data, "IMG-DATA-SENTINEL");
+    check("V1 reroute: B got the backend key, not the client front-key", bStub.received[0].headers["x-api-key"], "VIS-SECRET-789");
+
+    // V2. multimodal: route A returns 200 → NO reroute (B untouched). Distinct model
+    //     so the V1 cache entry (nonvis-1) does not pre-route it.
+    aStub.setMode("ok");
+    const v2 = await request(vPort, imageReq("nonvis-mm"));
+    check("V2 no-reroute: A handled it (200)", aStub.received.length, 2);
+    check("V2 no-reroute: B was NOT touched", bStub.received.length, 1);
+    check("V2 no-reroute: client gets A's 200", v2.status, 200);
+    check("V2 no-reroute: client gets A's streamed body", v2.body, STREAM_BODY);
+
+    // V3. 400-image but NO forImages route → clear error, not the raw upstream 400.
+    aStub.setMode("reject");
+    const aBefore3 = aStub.received.length;
+    const v3 = await request(noVisionPort, imageReq("nonvis-1"));
+    check("V3 fail-loud: A received the call", aStub.received.length, aBefore3 + 1);
+    check("V3 fail-loud: client gets a clear 4xx", v3.status >= 400 && v3.status < 500, true);
+    check("V3 fail-loud: error names the missing vision fallback", v3.body.includes("no vision fallback"), true);
+    check("V3 fail-loud: NOT the raw upstream image-blocks text", v3.body.includes("does not support image blocks"), false);
+
+    // V4. ambiguous 400 (not image) → relayed as-is, no reroute, B untouched.
+    aStub.setMode("badreq");
+    const bBefore4 = bStub.received.length;
+    const v4 = await request(vPort, { model: "nonvis-amb", messages: [{ role: "user", content: "no image here" }] });
+    check("V4 ambiguous: relayed as the upstream 400", v4.status, 400);
+    check("V4 ambiguous: the upstream body is relayed verbatim", v4.body.includes("roles must alternate"), true);
+    check("V4 ambiguous: B was NOT touched (no reroute)", bStub.received.length, bBefore4);
+
+    // V5. session cache: a 2nd image call to nonvis-1 pre-routes to B WITHOUT hitting A.
+    aStub.setMode("reject"); // would 400 if hit — proving the pre-route skipped A
+    const aBefore5 = aStub.received.length;
+    const v5 = await request(vPort, imageReq("nonvis-1"));
+    check("V5 pre-route: A was NOT hit (cache skipped the failing call)", aStub.received.length, aBefore5);
+    check("V5 pre-route: B served it directly", bStub.received.length, 2);
+    check("V5 pre-route: client gets B's 200", v5.status, 200);
+    check("V5 pre-route: client gets B's streamed body", v5.body, STREAM_BODY);
+
+    // V6. loop guard: A 400-image → reroute to B, but B ALSO 400-images → clear error,
+    //     NO infinite reroute (A and B each hit exactly once for this call).
+    aStub.setMode("reject");
+    bStub.setMode("reject");
+    const aBefore6 = aStub.received.length;
+    const bBefore6 = bStub.received.length;
+    const v6 = await request(vPort, imageReq("nonvis-loop"));
+    check("V6 loop-guard: A hit exactly once", aStub.received.length, aBefore6 + 1);
+    check("V6 loop-guard: B hit exactly once (no re-reroute)", bStub.received.length, bBefore6 + 1);
+    check("V6 loop-guard: client gets a clear 4xx", v6.status >= 400 && v6.status < 500, true);
+    check("V6 loop-guard: error names the loop guard", v6.body.includes("loop guard"), true);
+
+    // log safety across every vision case: no key, no body sentinel, no image bytes.
+    const vLogText = vLogCapture.join("");
+    check("V-log: leaks NO backend key", vLogText.includes("VIS-SECRET-789"), false);
+    check("V-log: leaks NO client front-key", vLogText.includes("CLIENT-FRONT-KEY"), false);
+    check("V-log: leaks NO request body sentinel", vLogText.includes("VISION-BODY-SENTINEL"), false);
+    check("V-log: leaks NO image bytes", vLogText.includes("IMG-DATA-SENTINEL"), false);
+    check("V-log: leaks NO 400 error body", vLogText.includes("does not support image blocks"), false);
+  } finally {
+    process.stderr.write = vRealStderrWrite;
+    delete process.env.TEST_VISION_KEY;
+    delete process.env.MODEL_ROUTER_LOG;
+    await close(vRouter);
+    await close(noVisionRouter);
+    await close(aStub.server);
+    await close(bStub.server);
   }
 
   if (fails.length) {
