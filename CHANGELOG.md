@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.36.1] — 2026-06-30
+
+### Fixed
+
+- **Model-router audit follow-up** (`router-batch-2026-06-30` audit, code/doc LOW + NIT findings). Dead-code removal and comment/doc accuracy after the 5.36.0 vision reroute — no behaviour change. Removed the unreachable `res.headersSent` branch in `relayBuffered()` (the 400-buffer path never writes client headers before it is called; the surviving path uses `status` + `upstreamHeaders` correctly). Refreshed the stale `model-router.mjs` file header (was "pure reverse-proxy … SSE/stream passthrough", now describes the 2xx-pipe + buffered image-400 vision reroute) and the `src/adapter/README.md` entry sentence (points at the vision fallback below, one-home). Extended the `model-router-test` registry description to cover the V1–V6 vision cases.
+
+---
+
 ## [5.36.0] — 2026-06-30
 
 ### Added
