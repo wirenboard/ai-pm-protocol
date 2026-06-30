@@ -27,6 +27,7 @@ import {
   isImageUnsupported400,
   pickVisionRoute,
   validateConfig,
+  rewriteModelInBody,
 } from "./model-router.mjs";
 
 let pass = 0;
@@ -220,7 +221,7 @@ async function main() {
 
   const visionRoutes = [
     { match: "nonvis-*", base_url: "https://a.example", auth: { header: "x-api-key", keyEnv: "K" } },
-    { match: "vis-*", base_url: "https://b.example", forImages: true, auth: { header: "x-api-key", keyEnv: "K" } },
+    { match: "vis-*", base_url: "https://b.example", forImages: true, forImagesModel: "vendor/vis", auth: { header: "x-api-key", keyEnv: "K" } },
   ];
   check("pickVisionRoute returns the forImages route", pickVisionRoute(visionRoutes).match, "vis-*");
   check("pickVisionRoute null when none flagged", pickVisionRoute(sampleRoutes), null);
@@ -229,8 +230,8 @@ async function main() {
   let twoVisionThrew = false;
   try {
     validateConfig({ routes: [
-      { match: "a-*", base_url: "https://a.example", forImages: true, auth: { header: "x-api-key", keyEnv: "K" } },
-      { match: "b-*", base_url: "https://b.example", forImages: true, auth: { header: "x-api-key", keyEnv: "K" } },
+      { match: "a-*", base_url: "https://a.example", forImages: true, forImagesModel: "vendor/a", auth: { header: "x-api-key", keyEnv: "K" } },
+      { match: "b-*", base_url: "https://b.example", forImages: true, forImagesModel: "vendor/b", auth: { header: "x-api-key", keyEnv: "K" } },
     ] });
   } catch { twoVisionThrew = true; }
   check("validateConfig rejects two forImages routes", twoVisionThrew, true);
@@ -239,6 +240,32 @@ async function main() {
     validateConfig({ routes: [{ match: "a-*", base_url: "https://a.example", forImages: "yes", auth: { header: "x-api-key", keyEnv: "K" } }] });
   } catch { badVisionThrew = true; }
   check("validateConfig rejects a non-true forImages", badVisionThrew, true);
+  // The forImagesModel contract added by the synced modelpipe transport (the vision
+  // reroute crosses to a different provider, so the forImages route MUST name the model
+  // id to rewrite to — fail-closed at startup, never a guaranteed runtime 400).
+  check("rewriteModelInBody replaces the model id",
+    modelFromBody(rewriteModelInBody(Buffer.from('{"model":"glm-x","messages":[]}'), "vendor/m")), "vendor/m");
+  check("rewriteModelInBody preserves other fields",
+    JSON.parse(rewriteModelInBody(Buffer.from('{"model":"glm-x","messages":[1]}'), "vendor/m").toString()).messages[0], 1);
+  check("rewriteModelInBody falsy newModel ⇒ body unchanged",
+    rewriteModelInBody(Buffer.from('{"model":"glm-x"}'), "").toString(), '{"model":"glm-x"}');
+  check("rewriteModelInBody bad json ⇒ body unchanged (fail-safe)",
+    rewriteModelInBody(Buffer.from("not json"), "vendor/m").toString(), "not json");
+  let missingModelThrew = false;
+  try {
+    validateConfig({ routes: [{ match: "vis-*", base_url: "https://b.example", forImages: true, auth: { header: "x-api-key", keyEnv: "K" } }] });
+  } catch { missingModelThrew = true; }
+  check("validateConfig rejects forImages route with no forImagesModel (fail-closed)", missingModelThrew, true);
+  let strayModelThrew = false;
+  try {
+    validateConfig({ routes: [{ match: "x-*", base_url: "https://b.example", forImagesModel: "vendor/x", auth: { header: "x-api-key", keyEnv: "K" } }] });
+  } catch { strayModelThrew = true; }
+  check("validateConfig rejects forImagesModel without forImages", strayModelThrew, true);
+  let emptyModelThrew = false;
+  try {
+    validateConfig({ routes: [{ match: "vis-*", base_url: "https://b.example", forImages: true, forImagesModel: "", auth: { header: "x-api-key", keyEnv: "K" } }] });
+  } catch { emptyModelThrew = true; }
+  check("validateConfig rejects an empty forImagesModel", emptyModelThrew, true);
 
   // ── e2e through the real socket ───────────────────────────────────────────
   const anthropicStub = makeStub();
@@ -406,7 +433,7 @@ async function main() {
     listen: { host: "127.0.0.1", port: 0 },
     routes: [
       { match: "nonvis-*", base_url: `http://127.0.0.1:${aVPort}`, auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
-      { match: "vis-*", base_url: `http://127.0.0.1:${bVPort}`, forImages: true, auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
+      { match: "vis-*", base_url: `http://127.0.0.1:${bVPort}`, forImages: true, forImagesModel: "vendor/vision-model", auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
     ],
   };
   const vRouter = createRouter(visionConfig);
@@ -430,9 +457,11 @@ async function main() {
     check("V1 reroute: B received the rerouted call", bStub.received.length, 1);
     check("V1 reroute: client gets the vision route's 200", v1.status, 200);
     check("V1 reroute: client gets B's streamed body intact", v1.body, STREAM_BODY);
-    // passthrough: the SAME image-bearing body reached B, bytes unaltered.
+    // the image CONTENT bytes reached B unaltered (only `model` is rewritten, below).
     const v1b = JSON.parse(bStub.received[0].body);
     check("V1 reroute: image bytes reached B unaltered", v1b.messages[0].content[0].source.data, "IMG-DATA-SENTINEL");
+    // the cross-provider hop rewrites only `model` to the vision route's forImagesModel.
+    check("V1 reroute: B got the rewritten model id (forImagesModel)", v1b.model, "vendor/vision-model");
     check("V1 reroute: B got the backend key, not the client front-key", bStub.received[0].headers["x-api-key"], "VIS-SECRET-789");
 
     // V2. multimodal: route A returns 200 → NO reroute (B untouched). Distinct model
