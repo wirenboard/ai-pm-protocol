@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.35.0] — 2026-06-30
+
+### Added
+
+- **Setup asks the model per role, not just the reviewer** (`src/agents/orchestrator.md` `## Setup`). The single reviewer-model question is generalised into a **models-per-role** section: the session / orchestrator model, the builder, and the reviewer, written to `roles.{orchestrator,builder,reviewer}.model`. It leads with zero-config (`auto` the recommended default, `session` for one-model), keeps every cross-model claim `platform: claude`-gated (Claude bakes the per-seat `model:`; OpenCode bakes nothing — points at the `## Your seat` honesty note), and points an advanced cross-endpoint route at the model-router launcher + catalog rather than asking provider keys inline (that dialog is deferred).
+
+### Fixed
+
+- **An absent reviewer `model` now defaults to `auto`** in the Claude installer (`src/adapter/claude/install-agents.mjs`), per the cross-model-review contract (`docs/contracts/cross-model-review.md`: absent/unrecognised ⇒ auto). A no-pin reviewer therefore still cross-models — it bakes the allow-listed opposite of the orchestrator/session model (else `sonnet`), instead of inheriting the session and reviewing under itself. The default is applied at the reviewer seat in `install()`; the pure `resolveModelPin` resolver is unchanged (absent ⇒ null), and every other seat still inherits the session on absent. Builder and orchestrator behaviour is untouched.
+- **Post-5.34.0 prose corrected to the realised bake reality** (`src/agents/orchestrator.md`). 5.34.0 inverted which platform bakes the per-seat `model:` line — **Claude bakes it; OpenCode bakes nothing** — but two claims still read the old way: the platform-switch step said "a platform that bakes the reviewer model into the assembled agent (OpenCode does)" (now `Claude does`), and the apply-config step said "zero-config writes no model line, agent files come out unchanged" (now states a `session` seat bakes no line while an `auto`/pinned reviewer bakes its resolved cross-model line on Claude).
+
+---
+
 ## [5.34.0] — 2026-06-30
 
 ### Fixed
