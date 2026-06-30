@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.36.2] — 2026-06-30
+
+### Added
+
+- **`docs/decisions/router-extraction.md`** — the decision to extract the model-router's **transport** (router core + provider catalog + CLI) into a standalone repo **`modelpipe`** (user `aadegtyarev`, not an org), keeping the **policy** (the `router-launch.mjs` launcher + the per-role baking) in the protocol. Records the transport-vs-policy boundary, the "routes ANY model-bearing call — tiers/guard/vision — for ANY Anthropic-format client; passthrough, no translator" value-prop, and the **staged** migration: phase 1 (a PRIVATE standalone repo, protocol untouched) vs phase 2 (the deferred protocol-rewiring — the Operator's packaging call). Doc-only; no code change.
+
 ## [5.36.1] — 2026-06-30
 
 ### Fixed
