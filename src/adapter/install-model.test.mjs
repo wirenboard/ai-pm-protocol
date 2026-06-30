@@ -14,10 +14,13 @@
 // CLAUDE — DOES bake, because its `task` runtime honours a baked subagent `model:` (probe-
 // verified; without the line a Claude subagent inherits the session model and the reviewer
 // reviews under itself — the bug this path fixes). Resolved against the Claude model policy
-// (tool-map.json `models.claude`): `auto` bakes the allow-listed model OPPOSITE the session
-// (else `sonnet`); a concrete allow-listed pin (`opus`/`sonnet` or a `claude-opus-*`/
-// `claude-sonnet-*` id) bakes that model; `session`/absent and an off-allowlist id bake NO
-// line (honest inherit; never invent a model).
+// (tool-map.json `models.claude`, allow-list opus/sonnet/haiku): a concrete allow-listed pin
+// (`opus`/`sonnet`/`haiku` or a `claude-<alias>-*` id) bakes that model; `session`/absent and
+// an off-allowlist id bake NO line (honest inherit; never invent a model). `auto` bakes the
+// model OPPOSITE the session — opus↔sonnet, never haiku — but ONLY in the VANILLA state (no
+// concrete seat pin and no launch model anywhere); in a CUSTOMIZED config a reviewer `auto`
+// (or absent ⇒ auto) degrades to `session` ⇒ NO line, because the opus↔sonnet guess is a
+// fiction once the Operator makes any explicit model decision.
 //
 // (The WHY a cross-model reviewer is unavailable on OpenCode is documented for the Operator
 // in orchestrator.md `## Your seat`, tool-map.json `models.opencode._note`, and the research
@@ -30,6 +33,7 @@ import { install, resolveModelPin } from "./opencode/install-agents.mjs";
 import {
   install as installClaude,
   resolveModelPin as resolveClaudePin,
+  isVanilla,
 } from "./claude/install-agents.mjs";
 import fs from "node:fs";
 import os from "node:os";
@@ -89,16 +93,23 @@ check("claude-pin: 'auto' opposite a claude-sonnet-* session id → claude-opus-
 check("claude-pin: alias 'sonnet' → canonical id claude-sonnet-4-6", resolveClaudePin("sonnet", undefined) === "claude-sonnet-4-6");
 check("claude-pin: alias 'opus' → canonical id claude-opus-4-8", resolveClaudePin("opus", undefined) === "claude-opus-4-8");
 check("claude-pin: a concrete claude-* id bakes verbatim", resolveClaudePin("claude-opus-4-8", undefined) === "claude-opus-4-8");
+// haiku is now allow-listed (tool-map.json), so it BAKES like any other alias:
+check("claude-pin: alias 'haiku' → canonical id claude-haiku-4-5", resolveClaudePin("haiku", undefined) === "claude-haiku-4-5");
+check("claude-pin: a concrete claude-haiku-* id bakes verbatim", resolveClaudePin("claude-haiku-4-5", undefined) === "claude-haiku-4-5");
 check("claude-pin: 'session' → null (honest inherit)", resolveClaudePin("session", undefined) === null);
 check("claude-pin: absent (undefined) → null", resolveClaudePin(undefined, undefined) === null);
-check("claude-pin: off-allowlist id → null (never invent)", resolveClaudePin("claude-haiku-4-5", undefined) === null);
+check("claude-pin: 'auto' never resolves to haiku (opposite stays opus↔sonnet)", resolveClaudePin("auto", "opus") !== "claude-haiku-4-5");
+check("claude-pin: an off-allowlist id → null (never invent)", resolveClaudePin("claude-fictional-9-9", undefined) === null);
 check("claude-pin: a non-claude pin → null", resolveClaudePin("deepseek/deepseek-chat", undefined) === null);
 
 // 5. end-to-end: assert the REAL assembled Claude reviewer frontmatter carries (or omits)
 //    the right `model:` line. Claude's install() also writes the orchestrator load surface
 //    to outDir's PARENT, so a tmp dir keeps it isolated. `sessionModel` sets the
-//    orchestrator's wish so the `auto` opposite is exercised.
-function claudeReviewerFrontmatter(reviewerModel, sessionModel) {
+//    orchestrator's wish so the `auto` opposite is exercised. `opts` injects what moves the
+//    config OUT of the vanilla state: `builderModel` (a concrete builder pin) and/or
+//    `launch` (a launch-time model block) — both default unset, so the helper builds a
+//    VANILLA config unless an opt is passed (the existing vanilla cases stay unchanged).
+function claudeReviewerFrontmatter(reviewerModel, sessionModel, opts = {}) {
   // outDir nested under a tmp parent: Claude's install writes the orchestrator surface to
   // dirname(outDir), so the parent (not /tmp) is what gets cleaned up.
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-claude-bake-"));
@@ -106,9 +117,10 @@ function claudeReviewerFrontmatter(reviewerModel, sessionModel) {
   const config = {
     roles: {
       orchestrator: { agent: "ai-dev", ...(sessionModel !== undefined ? { model: sessionModel } : {}) },
-      builder: { agent: "dev-builder" },
+      builder: { agent: "dev-builder", ...(opts.builderModel !== undefined ? { model: opts.builderModel } : {}) },
       reviewer: { agent: "dev-reviewer", ...(reviewerModel !== undefined ? { model: reviewerModel } : {}) },
     },
+    ...(opts.launch !== undefined ? { launch: opts.launch } : {}),
   };
   const written = installClaude(outDir, config);
   const text = fs.readFileSync(written["dev-reviewer"], "utf8");
@@ -117,11 +129,15 @@ function claudeReviewerFrontmatter(reviewerModel, sessionModel) {
   return fm;
 }
 
-// True-opposite for `auto`, exercised end-to-end through install() — the reviewer's
-// `auto` bakes the allow-listed OPPOSITE of the orchestrator/session model:
-check("claude-bake: 'auto' opposite an opus orchestrator bakes model: claude-sonnet-4-6", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", "opus")));
-check("claude-bake: 'auto' opposite a sonnet orchestrator bakes model: claude-opus-4-8", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("auto", "sonnet")));
-check("claude-bake: 'auto' with no orchestrator pin bakes the sonnet default", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", undefined)));
+// `auto`'s opus↔sonnet OPPOSITE logic is unit-tested directly above (resolveClaudePin) and
+// stays unchanged. END-TO-END through install(), an orchestrator pin (sessionModel) is now a
+// CONCRETE model decision ⇒ the config is CUSTOMIZED ⇒ a reviewer `auto` degrades to session
+// ⇒ NO line (the new vanilla-only-auto spec). So these formerly-baked e2e cases now bake NO
+// line — the opposite resolution they once exercised is covered by the pure-resolver tests.
+check("claude-bake: 'auto' with an opus orchestrator pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter("auto", "opus")));
+check("claude-bake: 'auto' with a sonnet orchestrator pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter("auto", "sonnet")));
+// VANILLA (no orchestrator pin, no other decision): `auto` still bakes the sonnet default.
+check("claude-bake: 'auto' in a vanilla config bakes the sonnet default", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", undefined)));
 check("claude-bake: a concrete allow-listed pin (sonnet) bakes model: claude-sonnet-4-6", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("sonnet", undefined)));
 check("claude-bake: a concrete claude-* id bakes that line verbatim", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("claude-opus-4-8", undefined)));
 check("claude-bake: 'session' bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("session", undefined)));
@@ -130,9 +146,33 @@ check("claude-bake: 'session' bakes NO model line", !/^model:/m.test(claudeRevie
 // (absent ⇒ no line): the reviewer-defaults-to-auto contract clause the 5.34.0 Reviewer
 // flagged. The pure resolver still returns null for absent (asserted above) — the
 // default is applied at the reviewer seat in install(), not in resolveModelPin.
-check("claude-bake: absent reviewer (defaults to auto) bakes the sonnet default", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter(undefined, undefined)));
-check("claude-bake: absent reviewer opposite a sonnet orchestrator bakes model: claude-opus-4-8", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter(undefined, "sonnet")));
-check("claude-bake: an off-allowlist id bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("claude-haiku-4-5", undefined)));
+check("claude-bake: absent reviewer (defaults to auto) in a vanilla config bakes the sonnet default", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter(undefined, undefined)));
+// An orchestrator pin makes the config customized, so the absent⇒auto reviewer degrades to session ⇒ NO line:
+check("claude-bake: absent reviewer WITH a sonnet orchestrator pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter(undefined, "sonnet")));
+// haiku is now allow-listed → a reviewer pinned haiku BAKES (flips the old off-allowlist case):
+check("claude-bake: a reviewer pinned 'haiku' bakes model: claude-haiku-4-5", /^model: claude-haiku-4-5$/m.test(claudeReviewerFrontmatter("haiku", undefined)));
+check("claude-bake: a reviewer pinned a claude-haiku-* id bakes that line verbatim", /^model: claude-haiku-4-5$/m.test(claudeReviewerFrontmatter("claude-haiku-4-5", undefined)));
+check("claude-bake: a still-off-allowlist id bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("claude-fictional-9-9", undefined)));
+
+// ───────── 6. isVanilla + the customized-state `auto` degrade (the new spec) ─────────
+// isVanilla — `session`/`auto`/absent are NOT explicit decisions (stay vanilla); a concrete
+// seat pin OR a non-empty launch model is (customized).
+check("isVanilla: bare config (no models) → vanilla", isVanilla({ roles: { orchestrator: { agent: "ai-dev" }, builder: { agent: "b" }, reviewer: { agent: "r" } } }) === true);
+check("isVanilla: reviewer 'auto' alone → still vanilla", isVanilla({ roles: { reviewer: { agent: "r", model: "auto" } } }) === true);
+check("isVanilla: a 'session' seat → still vanilla", isVanilla({ roles: { builder: { agent: "b", model: "session" } } }) === true);
+check("isVanilla: empty/whitespace launch models → still vanilla", isVanilla({ launch: { sessionModel: "", guardModel: "  " } }) === true);
+check("isVanilla: a concrete builder pin → customized", isVanilla({ roles: { builder: { agent: "b", model: "sonnet" } } }) === false);
+check("isVanilla: a concrete orchestrator pin → customized", isVanilla({ roles: { orchestrator: { agent: "ai-dev", model: "opus" } } }) === false);
+check("isVanilla: a non-empty launch.sessionModel → customized", isVanilla({ launch: { sessionModel: "deepseek-chat" } }) === false);
+check("isVanilla: a non-empty launch.guardModel → customized", isVanilla({ launch: { guardModel: "claude-haiku-4-5" } }) === false);
+
+// end-to-end: in a CUSTOMIZED config, a reviewer `auto` / absent ⇒ degrades to session ⇒ NO line.
+check("claude-bake: reviewer 'auto' WITH a concrete builder pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter("auto", undefined, { builderModel: "sonnet" })));
+check("claude-bake: ABSENT reviewer WITH a concrete builder pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter(undefined, undefined, { builderModel: "sonnet" })));
+check("claude-bake: reviewer 'auto' WITH a launch model (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter("auto", undefined, { launch: { sessionModel: "deepseek-chat" } })));
+check("claude-bake: ABSENT reviewer WITH a launch model (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter(undefined, undefined, { launch: { guardModel: "claude-haiku-4-5" } })));
+// but a CONCRETE reviewer pin in a customized config still bakes (the explicit choice is honored):
+check("claude-bake: a concrete reviewer pin in a customized config still bakes", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("opus", undefined, { builderModel: "sonnet" })));
 
 console.log(`\nINSTALL-MODEL bake: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

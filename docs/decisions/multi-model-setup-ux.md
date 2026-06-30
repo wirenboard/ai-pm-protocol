@@ -20,6 +20,35 @@ This consolidates six 2026-06-30 backlog entries into one UX (referenced, not re
 the coarse models-per-role dialog, the re-bake-awareness gap, the false installer log,
 the guard-model seat, modelpipe expose-configured-models, and Claude-native autostart.
 
+**`auto` is a vanilla-only convenience, and `haiku` is allow-listed (RATIFIED 2026-06-30).**
+Two coupled refinements to the per-seat model, settled after the flow above:
+
+- **`auto` is honored only in the VANILLA state.** `auto` (the reviewer rides the model
+  opposite the session, opus↔sonnet) is a safe out-of-box default ONLY on stock Claude
+  Code, where that pair is guaranteed. The moment the config carries any explicit model
+  decision — a concrete pin on any seat, or a non-empty launch model (the multi-model /
+  proxy world, where an alias can hide anything) — that automatic opus↔sonnet guess is a
+  fiction. So once the config is **customized**, a reviewer `auto` (or an absent reviewer,
+  which defaults to `auto`) degrades to `session`: no baked line, an honest inherit, no
+  false cross-model claim. A per-seat **`default`** dialog choice un-pins a seat (omit the
+  `model` key); un-pinning everything returns the config to vanilla and `auto` revives. The
+  vanilla/customized predicate's single home is `src/adapter/claude/install-agents.mjs`
+  `isVanilla`; the contract it serves is `docs/contracts/cross-model-review.md`.
+- **`haiku` is a first-class allow-listed Claude model** (`tool-map.json`
+  `models.claude.allow` = opus/sonnet/haiku, `ids.haiku` = `claude-haiku-4-5`). It is a real
+  choice for any seat — the cheap background guard, or an explicit builder/reviewer pin —
+  and bakes like any other alias (a haiku pin resolves automatically; the installer code is
+  not touched per-model). **`auto`'s opposite logic itself stays opus↔sonnet** and never
+  picks haiku — haiku is not a review-grade slot for the automatic cross-model default; it
+  is only ever chosen by an explicit pin.
+
+This refines the seat-question dialog (`## Recommendation` item 2, `## Papercut 1`): the
+dialog leads with zero-config (vanilla); when the Operator pins any seat, it presents
+per-seat explicit choices (`default` to un-pin + concrete ids incl. haiku), with **no `auto`
+option in that customized branch**, and states plainly that pinning turns auto off and that
+`default` on the reviewer rides the session (no cross-model). Where this supersedes the
+earlier "each `session`/`auto`/typed-id" framing, the rule here wins.
+
 ---
 
 ## The conceptual split the whole design rests on
@@ -135,7 +164,10 @@ per-seat granularity is unreachable. **Removed by:** step 2's three independent 
 questions (`builder` / `reviewer` / `guard`), each `session`/`auto`/typed-id, defaulting
 to the current value, zero-config (`auto`) led. The honesty caveats are unchanged: Claude
 bakes the per-seat `model:`; `auto` resolves to an Anthropic id (flag this for
-external-proxy users who need a concrete proxy-routed pin, per `## The chain`).
+external-proxy users who need a concrete proxy-routed pin, per `## The chain`). **Refined by
+the vanilla-only-`auto` rule above** — `auto` is offered only in the zero-config (vanilla)
+lead; in the customized (any-pin) branch the dialog drops `auto` and offers `default` + concrete ids
+(incl. haiku) instead.
 
 ### Papercut 2 — the orchestrator model is dead cosmetics
 
