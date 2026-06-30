@@ -162,10 +162,18 @@
       "init": "Node >= 18, no install"
     },
     {
-      "id": "install",
-      "checks": "the unified installer — installs into a temp target inside the root, vendors the adapter self-sufficiently (the vendored installer can re-run), wires both platforms (hooks/agents/commands/plugin), stamps .ai-dev/VERSION + writes the UPGRADING marker on a version change, lays the migration notes + the inactive-platform breadcrumb, replaces stale ai-dev hook groups, resolves the platform (flag/config/error), never clobbers a real doc or file, and a second run is byte-identical (idempotent)",
+      "id": "install-core",
+      "checks": "the unified installer — platform-agnostic behaviour: installs into a temp target inside the root, vendors the adapter self-sufficiently (the vendored installer can re-run), wires both platforms (hooks/agents/commands/plugin), stamps .ai-dev/VERSION + writes the UPGRADING marker on a version change, lays the migration notes + the inactive-platform breadcrumb, deploys the on-demand procedure bodies, replaces stale ai-dev hook groups, resolves the platform (flag/config/error), the opencode plugin-load self-verify ratchet, the F3 pre-push hook (installs/never-clobbers/idempotent), the loud version banner, never clobbers a real doc or file, and a second run is byte-identical (idempotent). One of the two halves the former install.test.mjs split into (LOW-2); shares helpers via install-shared.mjs",
       "config": null,
-      "run": "node src/adapter/install.test.mjs",
+      "run": "node src/adapter/install-core.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "install-claude-wiring",
+      "checks": "the unified installer — Claude-wiring half (LOW-2 split): the Claude hook self-verify FAILS the install loudly on a broken/missing deny shim, malformed/missing settings.json entry, or a PreToolUse matcher that dropped a floor tool (Bash/Task/Read/Write/Edit) while a reordered superset still passes; the hasGitRepo no-repo predicate; ensureConfig honest write-vs-kept + no orchestrator model pin; and the launch-time models → settings.json env auto-apply (mergeLaunchEnv unit + end-to-end, our two keys only, never clobbering a user key). Shares helpers via install-shared.mjs",
+      "config": null,
+      "run": "node src/adapter/install-claude-wiring.test.mjs",
       "beat": "build",
       "init": "Node >= 18, no install"
     },
@@ -214,6 +222,22 @@
       "checks": "the whole-set quality runner itself — filters by beat, fails closed on a malformed registry, no-op-safe when empty/absent",
       "config": null,
       "run": "node src/quality/run.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "agent-size",
+      "checks": "assembled orchestrator load-surface size guard (audit H1) — each per-platform memory file (.claude/ai-dev.md, .opencode/agents/ai-dev.md) stays under 39000 chars, a 1000-char margin below Claude Code's ~40000 memory-file cap past which the file's tail silently fails to load. FAILS the build on an over-limit surface (the remedy is decompose — move a heavy section body to .ai-dev/procedures/ behind a trigger→pointer stub); an absent surface is skipped, never a failure",
+      "config": null,
+      "run": "node src/quality/agent-size.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "agent-size-test",
+      "checks": "the size-guard's own threshold logic against crafted size lists (at-limit green, one-over red, mixed returns only the offender, custom-limit honoured) so a future edit cannot invert the comparison silently, PLUS the end-to-end half — the live committed assembled surfaces are present and under the limit",
+      "config": null,
+      "run": "node src/quality/agent-size.test.mjs",
       "beat": "build",
       "init": "Node >= 18, no install"
     },

@@ -20,7 +20,7 @@ node src/adapter/install.mjs <target-dir> [--platform claude|opencode]
 - writes a minimal default `.ai-dev/config.json` where absent (a real project then runs `/dev-setup`), and prints a summary + the next step.
 - **warns when the target has no git repository** (the loop — branches, reviews, the merge-gate — runs on git). A warning, never a block or an auto-`git init`: the interactive init offer is setup's repo check (`src/agents/orchestrator.md` `## Setup` step 0, the single home).
 
-Platform resolution: the `--platform` flag, else the target's `.ai-dev/config.json` `platform`, else a clear error — never a silent guess. The guarantee it realises is `docs/contracts/one-command-install.md`; the test is `src/adapter/install.test.mjs`.
+Platform resolution: the `--platform` flag, else the target's `.ai-dev/config.json` `platform`, else a clear error — never a silent guess. The guarantee it realises is `docs/contracts/one-command-install.md`; the tests are `src/adapter/install-core.test.mjs` (platform-agnostic) + `src/adapter/install-claude-wiring.test.mjs` (Claude wiring), sharing helpers via `src/adapter/install-shared.mjs`.
 
 ### Dogfood / source mode (`--dogfood`)
 
