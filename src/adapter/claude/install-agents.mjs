@@ -26,6 +26,18 @@
 // install() at the reviewer seat, NOT in resolveModelPin (the pure resolver keeps
 // absent ⇒ null). Every other seat absent ⇒ no line ⇒ session inherit.
 //
+// The Claude allow-list is the SET opus/sonnet/haiku (tool-map.json `models.claude`),
+// not a fixed pair — a haiku pin bakes like any other allow-listed alias (its
+// resolveModelPin path is automatic, aliasOf already loops the whole `allow`). `auto`'s
+// opposite logic itself stays opus↔sonnet (it never picks haiku, a non-review-grade
+// slot). `auto` is a VANILLA-ONLY convenience: it cross-models out of the box, but the
+// opus↔sonnet guess is a fiction the moment the Operator makes any explicit model
+// decision (a concrete seat pin, or a launch model — the proxy/alias world). So when the
+// config is NOT vanilla (isVanilla below), a reviewer `auto` is degraded to `session` in
+// install() — no baked line, an honest inherit, no false cross-model claim. The gate
+// lives at the reviewer seat in install(), beside the absent⇒auto default, so the pure
+// resolveModelPin stays "auto ⇒ opposite".
+//
 // The ORCHESTRATOR is special on Claude: it IS the session (held by CLAUDE.md), NOT a
 // spawnable subagent. Claude auto-registers subagents from `.claude/agents/` ONLY — so a
 // file there would wrongly surface the orchestrator as a spawnable `ai-dev` agent. We
@@ -64,9 +76,10 @@ export function loadClaudeModelPolicy() {
 }
 
 // Map a model WISH to its allow-listed Claude alias, or null when not knowable / not
-// allow-listed. An alias (`opus`/`sonnet`) maps to itself; a concrete `claude-opus-*` /
-// `claude-sonnet-*` id maps to the alias of its family; everything else (`session`,
-// `auto`, absent, or an off-allowlist id) is null.
+// allow-listed. An alias (`opus`/`sonnet`/`haiku`) maps to itself; a concrete
+// `claude-<alias>-*` id maps to the alias of its family; everything else (`session`,
+// `auto`, absent, or an off-allowlist id) is null. Loops the whole `allow` set, so a new
+// allow-listed model resolves for free with no code change here.
 function aliasOf(wish, policy) {
   if (typeof wish !== "string") return null;
   if (policy.allow.includes(wish)) return wish;
@@ -79,11 +92,13 @@ function aliasOf(wish, policy) {
 // Resolve a role's `model` wish to the model id to BAKE as a `model:` line, or null for
 // no line. Per the Claude model policy (tool-map.json `models.claude`):
 //   • `session` / absent      → null  (honest explicit inherit = the session model)
-//   • a concrete allow-listed pin (`opus`/`sonnet`, or a `claude-opus-*`/`claude-sonnet-*`
-//     id) → that model (an alias maps to its canonical id; a full id bakes verbatim)
-//   • `auto`                  → the cross-model: the allow-listed model OPPOSITE the
-//     orchestrator/session wish when knowable from config, ELSE `sonnet` (the documented
-//     opus-class-session default — PR-2's dialog refines this from the dialog-known session)
+//   • a concrete allow-listed pin (`opus`/`sonnet`/`haiku`, or a `claude-<alias>-*` id)
+//     → that model (an alias maps to its canonical id; a full id bakes verbatim)
+//   • `auto`                  → the cross-model: the model OPPOSITE the orchestrator/
+//     session wish — opus↔sonnet — when knowable from config, ELSE `sonnet` (the
+//     documented opus-class-session default). `auto` never resolves to haiku; and it is
+//     honored only in the vanilla state — the install() gate degrades it to `session`
+//     in a customized config (it never reaches resolveModelPin as `auto` there).
 //   • off-allowlist / unknown → null  (never invent a model)
 // `sessionWish` is the orchestrator's `model` wish; the orchestrator IS the session, so a
 // `session`/`auto`/absent orchestrator wish is "session model not knowable from config".
@@ -101,6 +116,29 @@ export function resolveModelPin(wish, sessionWish, policy = loadClaudeModelPolic
   return wish.startsWith("claude-") ? wish : policy.ids[alias];
 }
 
+// Is the config in the VANILLA state — no explicit model decision anywhere? Vanilla =
+// NO concrete pin on builder/reviewer/orchestrator (each `model` absent / `session` /
+// `auto`) AND `launch.sessionModel` + `launch.guardModel` both empty/whitespace. Only in
+// the vanilla state is the reviewer's `auto` honored (the opus↔sonnet cross-model guess
+// is a safe out-of-box default ONLY on stock Claude Code where that pair is guaranteed).
+// Any explicit decision — a concrete seat pin OR a launch model — moves the config to the
+// CUSTOMIZED state, where `auto` degrades to `session` (install() applies it). A `session`
+// or `auto` wish is NOT a concrete decision (it is the absence of one), so it does not
+// break vanilla.
+export function isVanilla(config) {
+  const roles = config.roles ?? {};
+  for (const role of ["builder", "reviewer", "orchestrator"]) {
+    const wish = roles[role]?.model;
+    if (wish !== undefined && wish !== null && wish !== "session" && wish !== "auto") return false;
+  }
+  const launch = config.launch ?? {};
+  for (const key of ["sessionModel", "guardModel"]) {
+    const v = launch[key];
+    if (typeof v === "string" && v.trim() !== "") return false;
+  }
+  return true;
+}
+
 // Assemble the spawnable role agent files into outDir, PLUS the orchestrator's
 // platform-filtered load surface into outDir's parent (`.claude/ai-dev.md`). Returns the
 // agentId→path map written (orchestrator keyed on its configured agent id), so a test can
@@ -110,6 +148,7 @@ export function install(outDir, config) {
   const registry = loadRegistry(ROOT);
   const policy = loadClaudeModelPolicy();
   const sessionWish = config.roles?.orchestrator?.model; // the session model wish (for `auto`)
+  const vanilla = isVanilla(config); // `auto` is honored only in the vanilla state
   const written = {};
   for (const role of SPAWNABLE) {
     const agentId = config.roles?.[role]?.agent;
@@ -126,6 +165,11 @@ export function install(outDir, config) {
     // resolveModelPin, so the pure resolver stays "absent ⇒ null".
     let wish = config.roles?.[role]?.model;
     if (role === "reviewer" && (wish === undefined || wish === null)) wish = "auto";
+    // `auto` is a VANILLA-ONLY convenience (see header): once the config carries any
+    // explicit model decision (a concrete seat pin or a launch model), the opus↔sonnet
+    // guess is a fiction, so degrade `auto` → `session` (no line, honest inherit). The
+    // gate lives here beside the absent⇒auto default, so resolveModelPin stays pure.
+    if (wish === "auto" && !vanilla) wish = "session";
     const pin = resolveModelPin(wish, sessionWish, policy);
     const modelLine = pin ? `model: ${pin}\n` : "";
     if (!pin && typeof wish === "string" && wish !== "session" && wish !== "auto") {
