@@ -23,6 +23,7 @@ import { install as installClaudeAgents } from "./claude/install-agents.mjs";
 import { install as installOpencodeAgents } from "./opencode/install-agents.mjs";
 import { install as installClaudeCommands } from "./claude/install-commands.mjs";
 import { install as installOpencodeCommands } from "./opencode/install-commands.mjs";
+import { generateLaunchScript } from "./install-core.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..", "..");
@@ -118,6 +119,25 @@ check(
   procOrphans.length === 0,
   "delete the leftover, or restore its src/agents/procedures/ source",
 );
+
+// The OPTIONAL project launcher .ai-dev/launch is a generated artifact (the
+// layout-correct engine path, platform-shaped) — committed for the repo's TRACKED
+// platform (claude, dogfood layout), so it carries the same class drift guard. Generate
+// it into the temp sibling under dogfood+claude and byte-compare the committed twin.
+{
+  const rel = path.join(".ai-dev", "launch");
+  const launchTmp = path.join(tmp, "launch-dogfood-claude");
+  generateLaunchScript(launchTmp, "claude", true);
+  const generated = path.join(launchTmp, rel);
+  const committed = path.join(ROOT, rel);
+  const same = fs.existsSync(committed) && fs.existsSync(generated)
+    && fs.readFileSync(committed, "utf8") === fs.readFileSync(generated, "utf8");
+  check(
+    `${rel} is byte-identical to a fresh dogfood:claude generation`,
+    same,
+    "re-run `node src/adapter/install.mjs . --dogfood --platform claude` (the launcher source changed without re-generation, or the committed file was hand-edited)",
+  );
+}
 
 // The plugin dir's byte-compare lives in install-plugin.test.mjs (that row also locks
 // the layout rewrite); the ORPHAN check still belongs here — a `.gen` stray beside the

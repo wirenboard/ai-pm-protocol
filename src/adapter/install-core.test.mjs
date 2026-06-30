@@ -79,11 +79,22 @@ function testPlatform(platform, assertWiring) {
     // 3. config present inside .ai-dev/
     check(`[${platform}] config written at .ai-dev/config.json with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8")).platform === platform);
 
-    // 3b. .gitignore excludes the local-only transients (state + raw feedback reports)
+    // 3b. .gitignore excludes the local-only transients (state + raw feedback reports
+    // + the personal launch override config.local.json)
     const gi = fs.existsSync(path.join(target, ".gitignore")) ? fs.readFileSync(path.join(target, ".gitignore"), "utf8") : "";
     check(`[${platform}] .gitignore excludes .ai-dev/state/`, gi.includes(".ai-dev/state/"));
     check(`[${platform}] .gitignore excludes .ai-dev/feedback/`, gi.includes(".ai-dev/feedback/"));
     check(`[${platform}] .gitignore excludes .ai-dev/worktrees/`, gi.includes(".ai-dev/worktrees/"));
+    check(`[${platform}] .gitignore excludes the personal .ai-dev/config.local.json`, gi.includes(".ai-dev/config.local.json"));
+
+    // 3e. the OPTIONAL project launcher .ai-dev/launch — generated ALWAYS (so enabling
+    // routing/configDir later needs no re-install), platform-shaped, and executable.
+    const launchPath = path.join(target, ".ai-dev", "launch");
+    check(`[${platform}] .ai-dev/launch generated`, fs.existsSync(launchPath));
+    if (fs.existsSync(launchPath)) {
+      const lmode = fs.statSync(launchPath).mode;
+      check(`[${platform}] .ai-dev/launch is executable (owner +x)`, (lmode & 0o100) !== 0);
+    }
 
     // 3c. the gitignored session-state dir is CREATED, not just ignored (the
     // orchestrator's first current.md write expects the parent to exist).
@@ -136,6 +147,11 @@ testPlatform("claude", (target) => {
   check("[claude] deny hook wired into settings.json", cmds.some((c) => c.includes("shim.mjs")));
   // idempotence of the hook merge: exactly one PreToolUse + one UserPromptSubmit group
   check("[claude] hook merge did not duplicate (one PreToolUse group)", settings.hooks.PreToolUse.length === 1);
+  // .ai-dev/launch wraps the router-launch engine at the DOWNSTREAM (vendored) path,
+  // passing claude args through; no shell-injection surface (exec ... "$@", argv passthrough).
+  const launch = fs.readFileSync(path.join(target, ".ai-dev", "launch"), "utf8");
+  check("[claude] .ai-dev/launch wraps the vendored router-launch engine", launch.includes('exec node ".ai-dev/tooling/src/adapter/router-launch.mjs" "$@"'));
+  check("[claude] .ai-dev/launch carries no sh -c untrusted-eval surface", !launch.includes("sh -c"));
   const claudeMd = fs.readFileSync(path.join(target, "CLAUDE.md"), "utf8");
   check("[claude] CLAUDE.md imports the constitution + the filtered orchestrator surface", claudeMd.includes("@.ai-dev/PROTOCOL.md") && claudeMd.includes("@.claude/ai-dev.md"));
   // the raw orchestrator import is REPLACED, never left dangling beside the new one.
@@ -163,6 +179,12 @@ testPlatform("opencode", (target) => {
   // opencode.json), NOT project-root-relative — `./.opencode/plugins/...` would
   // double-resolve and silently fail to load.
   check("[opencode] plugin spec is .opencode/-relative, not project-root-relative", oc.plugin.includes("./plugins/ai-dev.mjs") && !oc.plugin.some((p) => p.includes(".opencode/plugins/")));
+  // .ai-dev/launch on OpenCode is the HONEST stub: routing is Claude-Code only, so it
+  // prints that and execs opencode (no proxy, no router-launch engine).
+  const launch = fs.readFileSync(path.join(target, ".ai-dev", "launch"), "utf8");
+  check("[opencode] .ai-dev/launch is the Claude-only stub that execs opencode", launch.includes('exec opencode "$@"'));
+  check("[opencode] .ai-dev/launch prints the Claude-only routing note", launch.includes("multi-model routing is Claude-Code only"));
+  check("[opencode] .ai-dev/launch does NOT wrap the router-launch engine (routing N/A)", !launch.includes("router-launch.mjs"));
   const agentsMd = fs.readFileSync(path.join(target, "AGENTS.md"), "utf8");
   check("[opencode] AGENTS.md imports the constitution once", agentsMd.split("@.ai-dev/PROTOCOL.md").length - 1 === 1);
 });
@@ -420,7 +442,10 @@ testPlatform("opencode", (target) => {
 // the touched surfaces is restored at the end so the test never dirties the repo
 // even if an assertion regresses mid-run.
 {
-  const SURFACES = ["CLAUDE.md", "AGENTS.md", ".claude/settings.json", ".opencode/opencode.json"];
+  // .ai-dev/launch is in the snapshot set: a dogfood OpenCode install below would write
+  // the opencode stub form over the committed claude form, so it MUST be restored (the
+  // finally block restores every SURFACE byte-for-byte regardless of outcome).
+  const SURFACES = ["CLAUDE.md", "AGENTS.md", ".claude/settings.json", ".opencode/opencode.json", ".ai-dev/launch"];
   const before = {};
   for (const s of SURFACES) before[s] = fs.readFileSync(path.join(ROOT, s), "utf8");
   const toolingExisted = fs.existsSync(path.join(ROOT, ".ai-dev", "tooling"));

@@ -69,20 +69,30 @@ Multi-user (team) mode is **opt-in and off by default** — single-user is the c
 
 Run different loop seats on different model providers — e.g. a builder on DeepSeek or z.ai GLM, the reviewer on Anthropic — all behind one local endpoint. The router that makes this work **ships with the tooling** (vendored into `.ai-dev/tooling/src/adapter/` on install); there is nothing extra to pull. It is **off by default** — a project that never configures a cross-endpoint seat runs unchanged, and routing is **Claude Code only** (the harness must forward distinct per-subagent model ids).
 
-To turn it on:
+**The launcher is OPTIONAL.** The installer always generates a convenient drop-in for `claude` at **`.ai-dev/launch`** (run from the project root), but you only **need** it for **multi-model + proxy** (or to pin a per-project claude profile, below) — a plain single-model project just launches normally. How each mode launches:
 
-1. **Pin the seats** — `/dev-setup` (or edit `.ai-dev/config.json`) so a seat's `model` names a non-Anthropic provider's model id.
+| Mode | How you launch | Routing |
+| --- | --- | --- |
+| **Claude, single model** | `claude` / your own wrapper — no launcher needed | none — direct |
+| **Claude + multi-model** | `./.ai-dev/launch` — starts the proxy when ≥2 endpoints are in play | the local router |
+| **OpenCode** | `opencode` normally — routing N/A (the stub says so) | not realisable |
+
+To turn multi-model routing on:
+
+1. **Pin the seats** — `/dev-setup` (or edit `.ai-dev/config.json`) so a seat's `model` names a non-Anthropic provider's model id. When you pin a cross-endpoint seat, `/dev-setup` runs **one coherent flow**: the per-seat models, an optional per-project claude profile dir (`configDir`), an offer to scaffold `.ai-dev/model-routes.json`, a reminder of which backend keys to export, and it prints the ready launch command.
 2. **Write the routes** — create `.ai-dev/model-routes.json` (copy the shape from `.ai-dev/tooling/src/adapter/model-router.example.json`); a route can name a provider by id (`{ "provider": "deepseek" }`) and pull its endpoint + auth from the built-in catalog. Keys are referenced by **env-var name** only, never a value.
 3. **Export the backend keys** (e.g. `DEEPSEEK_API_KEY`).
-4. **Launch through the launcher** instead of bare `claude`:
+4. **Launch through `.ai-dev/launch`** instead of bare `claude`:
 
    ```sh
-   node .ai-dev/tooling/src/adapter/router-launch.mjs
+   ./.ai-dev/launch          # the engine is also runnable directly: node .ai-dev/tooling/src/adapter/router-launch.mjs
    ```
 
    It reads the pins + routes and, when ≥2 distinct endpoints are in play, starts the proxy on a free localhost port, wires `ANTHROPIC_BASE_URL`, keeps `CLAUDE_CODE_SUBAGENT_MODEL` unset, and tears it down on exit. Fewer than 2 endpoints ⇒ it runs `claude` directly, no proxy. A missing backend key ⇒ it refuses to launch (fail-closed).
 
-**Already running a proxy yourself?** Set a top-level `proxyUrl` in `.ai-dev/model-routes.json` and the launcher points `claude` at that URL instead of spawning one (auth/keys then live in your proxy's env). The full reference — the provider catalog, route shape, the launcher's decisions, and the load-bearing constraints — is **[`src/adapter/README.md`](src/adapter/README.md)** (`### The launcher`); the rationale is `docs/decisions/per-seat-model-routing.md`.
+**A per-project claude profile (no routing needed).** Set `launch.configDir` and the launcher exports `CLAUDE_CONFIG_DIR` to it before launching — a per-project keys/profile dir with no `.bashrc` edit. Personal/per-machine launch values (a `configDir`, a personal launch model) belong in the **gitignored `.ai-dev/config.local.json`**, whose `launch` the launcher merges over the shared config — never forced on a teammate.
+
+**Already running a proxy yourself, or want the proxy without the launcher driving claude?** Set a top-level `proxyUrl` in `.ai-dev/model-routes.json` (the launcher points `claude` at that URL instead of spawning one; auth/keys then live in your proxy's env), or run `./.ai-dev/launch --proxy` to start the proxy in the foreground, print its URL, and point your own launch at it. The full reference — the provider catalog, route shape, the launcher's decisions, env precedence, and the load-bearing constraints — is **[`src/adapter/README.md`](src/adapter/README.md)** (`### The launcher`); the rationale is `docs/decisions/per-seat-model-routing.md` and `docs/decisions/launcher-ux.md`.
 
 ## Layout
 

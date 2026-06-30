@@ -69,19 +69,57 @@ A built-in, data-only map of the known Anthropic-format backends, so a routes co
 
 A route in a routes config references one: `{ "provider": "deepseek" }` (base_url + auth + match patterns pulled from the catalog), with any field overridable inline — e.g. `{ "provider": "anthropic", "auth": "passthrough" }` to forward a subscription/OAuth session's own auth (no API key), or a `base_url` override for a regional GLM host.
 
-### The launcher — `router-launch.mjs`
+### The launcher — `.ai-dev/launch` (and the engine `router-launch.mjs`)
 
-One command to run the wired pipeline, **direct by default**:
+**`.ai-dev/launch` is the convenient entry — OPTIONAL, generated always.** The installer
+writes a short, root-relative drop-in for `claude` at `.ai-dev/launch` (a drop-in for
+`claude`, run from the project root) that wraps the engine below. You only NEED it for
+multi-model + proxy, or a per-project claude profile (`launch.configDir`) — a plain
+single-model Claude project can keep launching `claude` (or its own wrapper) directly; the
+launcher then just execs claude straight through. It is generated even on a vanilla project
+so enabling routing or a `configDir` later needs no re-install. On **OpenCode** it is an
+honest stub: routing is Claude-Code only (the provider-catalog `opencode._note`), so it
+prints that and execs `opencode` (no proxy). The launcher framing + the modes × launch
+matrix live in the top `README.md` `## Multi-model routing`; the why is
+`docs/decisions/launcher-ux.md`.
 
 ```sh
-node src/adapter/router-launch.mjs [claude args…]
-#   AI_DEV_CONFIG        config path   (default .ai-dev/config.json)
+./.ai-dev/launch [claude args…]   # normal launch (direct, or through the proxy)
+./.ai-dev/launch --proxy          # foreground proxy only — prints the URL, does NOT exec claude
+```
+
+The engine it wraps, also runnable directly, is **direct by default**:
+
+```sh
+node src/adapter/router-launch.mjs [--proxy] [claude args…]
+#   --proxy              foreground-only: start the router, print its URL, do NOT exec claude
+#   AI_DEV_CONFIG        config path   (default .ai-dev/config.json; its .local.json
+#                        sibling is the gitignored personal override)
 #   MODEL_ROUTER_ROUTES  routes path   (default .ai-dev/model-routes.json)
 ```
+
+**Personal overrides — `.ai-dev/config.local.json` (gitignored).** The launcher merges the
+`launch` section of `.ai-dev/config.local.json` OVER the shared `.ai-dev/config.json`'s
+`launch`, so per-machine values (a `configDir`, a personal launch model) never land in the
+shared, committed file or get forced on a teammate. The installer ensures it is gitignored.
+
+**Per-project claude profile — `launch.configDir` → `CLAUDE_CONFIG_DIR`.** When set, the
+launcher exports `CLAUDE_CONFIG_DIR` to it before exec'ing claude — a per-project claude
+profile/keys dir with **no `.bashrc` edit**, the per-task-keys mechanism a global wrapper
+used to own. It is exported in **every** mode (direct / external / router), so it is useful
+**without routing too** (just pin a project's claude profile). Home it in
+`config.local.json` (it is a per-machine path).
+
+**Foreground proxy — `--proxy`.** Starts the router, prints its URL on stdout, and stays up
+WITHOUT exec'ing claude — for "don't touch my launch": point your own claude/wrapper at the
+printed URL (or wire it as the routes config `proxyUrl`). Errors when there is no LOCAL
+router to start (an external `proxyUrl` already runs, or fewer than 2 endpoints are in play).
 
 It reads the seats' `roles.*.model` pins and the routes config (resolved against the catalog), then decides: if the seats touch **fewer than 2 distinct endpoints** (e.g. all-Anthropic), it execs `claude` **directly, no router** — a project that never opts in is unchanged. If **≥2 endpoints** are in play, it starts `model-router.mjs` on a free localhost port, points the child at it (`ANTHROPIC_BASE_URL`), **guarantees `CLAUDE_CODE_SUBAGENT_MODEL` is unset** in the child env, execs `claude`, and tears the router down on exit. **Fail-closed:** if a route in play names a backend key env var that is unset, the launcher errors **before launching anything** — never a silent wrong-backend.
 
 **External proxy (opt-in `proxyUrl`).** Set a top-level `proxyUrl` in the routes config to point at an **already-running** proxy (a self-hosted or shared modelpipe, or one under a debugger) instead of spawning one. The launcher then skips the spawn entirely and just points `claude` at that URL (still unsetting `CLAUDE_CODE_SUBAGENT_MODEL`). Auth/keys live in **that proxy's own env**, so the launcher's fail-closed key check does not apply — it cannot see the external proxy's credentials. A present-but-malformed `proxyUrl` is a hard error (never a silent fall-through to a local spawn); absent/blank ⇒ the launcher decides direct-vs-spawn itself.
+
+**Env precedence.** The launcher layers ONLY `ANTHROPIC_BASE_URL` (to the proxy, **when routing is on**) + unsets `CLAUDE_CODE_SUBAGENT_MODEL` + the launch-time env (`ANTHROPIC_MODEL` / `ANTHROPIC_SMALL_FAST_MODEL` / `CLAUDE_CONFIG_DIR`, each only when its config field is non-empty); **everything else in the environment passes through untouched**. When routing is on and the environment already carries a *different* `ANTHROPIC_BASE_URL` (e.g. a personal wrapper pointed at another proxy), the **launcher wins** — but loudly: a visible stderr WARNING names both URLs, so a silent hijack of the user's own proxy can never happen. Routing off ⇒ a preset `ANTHROPIC_BASE_URL` passes through unchanged, no warning.
 
 **Launch-time models (session + guard) — config is the source, every launch path consumes it.** Two seats are NOT baked into an assembled agent and so cannot be a `roles.*.model` pin: the **session** model (the orchestrator IS the running session — its model is whatever `claude` launches under) and the **guard** model (the background/small-fast model). Claude Code reads both from env *at process launch*, so they must be set **before `claude` starts**. The one home for their values is the config `launch` section (the RATIFIED option (c) source-of-truth — `docs/decisions/multi-model-setup-ux.md` `## The fork`):
 
