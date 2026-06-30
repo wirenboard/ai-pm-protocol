@@ -11,6 +11,7 @@
 
 import { install, hasGitRepo, verifyClaudeWiring, isStaleNpxReRun } from "./install.mjs";
 import { ensureConfig } from "./install-core.mjs";
+import { mergeLaunchEnv } from "./install-claude.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -904,6 +905,76 @@ testPlatform("opencode", (target) => {
     check("[ensureConfig] returns FALSE when a config already exists (kept)", wroteAgain === false);
     const kept = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8"));
     check("[ensureConfig] existing config is untouched (no clobber)", kept.mode === "autonomous");
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
+}
+
+// ── launch-time models → settings.json `env` (the wrapper-less auto-apply) ──────────
+// The installer writes config.launch.{sessionModel,guardModel} into .claude/settings.json
+// `env` (read by Claude Code at startup), touching ONLY our two keys and never clobbering
+// a user-set env key. Pure-unit the merge (mergeLaunchEnv) + end-to-end the write through
+// install(). Source: docs/decisions/multi-model-setup-ux.md `## Requirement 7`.
+
+// Pure merge — both launch values populate ANTHROPIC_MODEL / ANTHROPIC_SMALL_FAST_MODEL.
+{
+  const env = mergeLaunchEnv(undefined, { sessionModel: "glm-5.2", guardModel: "deepseek-v4" });
+  check("[launch-env] sessionModel → ANTHROPIC_MODEL", env.ANTHROPIC_MODEL === "glm-5.2");
+  check("[launch-env] guardModel → ANTHROPIC_SMALL_FAST_MODEL (G1, deprecated var)", env.ANTHROPIC_SMALL_FAST_MODEL === "deepseek-v4");
+}
+// Empty/absent launch ⇒ NULL (no env key written at all) when there was no pre-existing env.
+check("[launch-env] empty launch + no prior env ⇒ null (byte-unchanged project)", mergeLaunchEnv(undefined, {}) === null);
+check("[launch-env] absent launch (undefined) ⇒ null", mergeLaunchEnv(undefined, undefined) === null);
+check("[launch-env] whitespace-only values are treated as empty ⇒ null", mergeLaunchEnv(undefined, { sessionModel: "  ", guardModel: "" }) === null);
+// Our keys only — a user-set foreign env key is never clobbered.
+{
+  const env = mergeLaunchEnv({ MY_OWN: "keep", ANTHROPIC_BASE_URL: "http://proxy" }, { sessionModel: "glm-5.2", guardModel: "" });
+  check("[launch-env] foreign env key preserved", env.MY_OWN === "keep");
+  check("[launch-env] user's ANTHROPIC_BASE_URL preserved (out of our scope)", env.ANTHROPIC_BASE_URL === "http://proxy");
+  check("[launch-env] our session key set alongside foreign keys", env.ANTHROPIC_MODEL === "glm-5.2");
+  check("[launch-env] empty guard prunes our guard key (not written)", !("ANTHROPIC_SMALL_FAST_MODEL" in env));
+}
+// Idempotent prune — a previously-written key is removed when its config value clears,
+// without disturbing a foreign key (so a routed→non-routed flip leaves no stale env).
+{
+  const env = mergeLaunchEnv({ ANTHROPIC_MODEL: "stale", ANTHROPIC_SMALL_FAST_MODEL: "stale", MY_OWN: "keep" }, {});
+  check("[launch-env] clearing launch prunes both our stale keys", !("ANTHROPIC_MODEL" in env) && !("ANTHROPIC_SMALL_FAST_MODEL" in env));
+  check("[launch-env] prune keeps foreign keys ⇒ env object retained (not null)", env.MY_OWN === "keep");
+}
+
+// End-to-end: install() with a populated launch section writes the env into settings.json;
+// a non-routing install leaves NO env block.
+{
+  const target = fs.mkdtempSync(path.join(ROOT, ".tmp-launch-env-"));
+  try {
+    install(target, "claude");
+    // Default config has an empty launch section ⇒ no env block (byte-unchanged class).
+    const s0 = JSON.parse(fs.readFileSync(path.join(target, ".claude", "settings.json"), "utf8"));
+    check("[launch-env e2e] default (empty launch) writes NO env block", s0.env === undefined);
+
+    // Populate the config launch section + a hand-set foreign env key, re-install (re-bake).
+    const cfgPath = path.join(target, ".ai-dev", "config.json");
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+    cfg.launch = { sessionModel: "glm-5.2", guardModel: "deepseek-v4" };
+    fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + "\n");
+    const sMid = JSON.parse(fs.readFileSync(path.join(target, ".claude", "settings.json"), "utf8"));
+    sMid.env = { ...(sMid.env || {}), USER_SET: "keep" };
+    fs.writeFileSync(path.join(target, ".claude", "settings.json"), JSON.stringify(sMid, null, 2) + "\n");
+
+    install(target, "claude");
+    const s1 = JSON.parse(fs.readFileSync(path.join(target, ".claude", "settings.json"), "utf8"));
+    check("[launch-env e2e] populated launch writes ANTHROPIC_MODEL into env", s1.env.ANTHROPIC_MODEL === "glm-5.2");
+    check("[launch-env e2e] populated launch writes ANTHROPIC_SMALL_FAST_MODEL into env", s1.env.ANTHROPIC_SMALL_FAST_MODEL === "deepseek-v4");
+    check("[launch-env e2e] user-set env key survives the re-install", s1.env.USER_SET === "keep");
+
+    // Clearing the launch section prunes our keys on the next install (no stale env).
+    const cfg2 = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+    cfg2.launch = { sessionModel: "", guardModel: "" };
+    fs.writeFileSync(cfgPath, JSON.stringify(cfg2, null, 2) + "\n");
+    install(target, "claude");
+    const s2 = JSON.parse(fs.readFileSync(path.join(target, ".claude", "settings.json"), "utf8"));
+    check("[launch-env e2e] cleared launch prunes our keys", s2.env && !("ANTHROPIC_MODEL" in s2.env) && !("ANTHROPIC_SMALL_FAST_MODEL" in s2.env));
+    check("[launch-env e2e] clearing leaves the user key intact", s2.env.USER_SET === "keep");
   } finally {
     fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }

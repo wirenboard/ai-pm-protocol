@@ -19,5 +19,5 @@
     "MD041": false
   },
   "globs": ["**/*.md"],
-  "ignores": ["node_modules", ".claude", ".opencode", ".ai-dev"]
+  "ignores": ["node_modules", ".claude", ".opencode", ".ai-dev", "_scratch"]
 }

@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.41.0] — 2026-06-30
+
+### Added
+
+- **Launch-time models auto-applied via `.claude/settings.json` `env`** (`src/adapter/install-claude.mjs`) — the Claude installer now reads the config `launch: { sessionModel, guardModel }` and writes `ANTHROPIC_MODEL` (session) + `ANTHROPIC_SMALL_FAST_MODEL` (guard) into `settings.json` `env`, so a routed project applies its launch-time models with **no wrapper** (Claude Code reads them at startup). Merge is our-keys-only — a user-set `env` key is never clobbered; an empty/absent `launch` writes nothing and prunes any key it previously set (a non-routing project is byte-unchanged); a malformed config never aborts the install. This realises the ratified option-c source-of-truth: the config `launch` section is the one home, the installer materialises it into the startup env.
+- **Setup reads `modelpipe --list`** — the models-per-seat dialog can read the proxy's safe route-table (`modelpipe <routes> --list`, shipped in modelpipe 0.4.0) to offer the configured model ids per seat, falling back to asking when unavailable (no hard dependency). Concrete command homed in `src/adapter/README.md`.
+
+### Changed
+
+- **The two model-apply paths are now explicit, with the restart requirement** (`src/agents/orchestrator.md` `## Setup` + the *Model switch mid-stream* handler) — a **baked** seat change (builder/reviewer) takes effect via a re-bake on the next spawn; a **launch-time** change (guard/session) requires re-running the installer to update `settings.json` `env` AND **a session restart** (the env is read only at startup — the running session keeps the old value). The prior handler text that implied launch-time models "re-export on next launch" without a restart is corrected. The `guard` seat maps to `ANTHROPIC_SMALL_FAST_MODEL` (the only knob that sets the background model independently of the haiku slot; deprecated upstream but functional — backlogged as a watch). Autostart inside a running session is confirmed impossible (`docs/decisions/multi-model-setup-ux.md` `## Requirement 7`); the wrapper-less `settings.json` `env` + restart is the honest mechanism.
+
+---
+
 ## [5.40.0] — 2026-06-30
 
 ### Added
