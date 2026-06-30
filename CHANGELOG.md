@@ -22,6 +22,10 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 - **Backlog hygiene** (`.ai-dev/backlog.md`) — pruned resolved/superseded archaeology per the durable-text-hygiene discipline (git/CHANGELOG hold the record): the closed-out post-multi-model and post-multi-user audit-dispatch narratives (the still-open LOW-4 dev-only-CVE watch preserved as a standalone entry), the RESOLVED 40k-orchestrator BUG, the SUPERSEDED git-submodule item, the already-shipped F-B (whole-tree Reviewer run) and now-resolved F-A sections, and the stale `install.test.mjs` decompose item (split shipped 5.42.0). The whole-tree audit (2026-07-01) found these; verdict HEALTHY, no HIGH, no security/honesty defects.
 
+---
+
+## [5.43.1] — 2026-06-30
+
 ### Fixed
 
 - **Config hygiene** — `.ai-dev/config.json` `roles.reviewer` normalized from an explicit `"model": "auto"` to an omitted key. Behavior-identical: the reviewer seat defaults to `auto` when its `model` is absent (the cross-model-review contract; `install-agents.mjs` reviewer-default step), so the dogfood re-bake produces a byte-identical assembled `dev-reviewer.md` (still `model: claude-sonnet-4-6`). Removes a redundant explicit value the `_roles` doc string already documents as the default.
