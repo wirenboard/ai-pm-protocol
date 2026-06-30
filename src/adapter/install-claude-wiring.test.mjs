@@ -366,4 +366,27 @@ check("[launch-env] whitespace-only values are treated as empty ⇒ null", merge
   }
 }
 
+// NIT (cosmetic): when `env` held ONLY our launch keys (no foreign key), clearing the
+// launch section must REMOVE the `env` key entirely — never leave a cosmetic `env: {}`.
+{
+  const target = freshTarget("launchenv-onlyours");
+  try {
+    const cfgPath = path.join(target, ".ai-dev", "config.json");
+    const settingsPath = path.join(target, ".claude", "settings.json");
+    install(target, "claude");
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+    cfg.launch = { sessionModel: "glm-5.2", guardModel: "deepseek-v4" };
+    fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + "\n");
+    install(target, "claude"); // env now holds ONLY our two keys (no foreign key seeded)
+    const cfg2 = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+    cfg2.launch = { sessionModel: "", guardModel: "" };
+    fs.writeFileSync(cfgPath, JSON.stringify(cfg2, null, 2) + "\n");
+    install(target, "claude"); // cleared → our keys pruned → was only-ours ⇒ drop `env`
+    const sFinal = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    check("[launch-env e2e] env held only our keys + cleared ⇒ `env` key removed (no cosmetic {})", sFinal.env === undefined);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
+}
+
 report("INSTALL-CLAUDE-WIRING", "PASS — Claude wiring self-verify, ensureConfig, and launch-env all hold");

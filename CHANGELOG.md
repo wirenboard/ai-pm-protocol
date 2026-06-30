@@ -12,6 +12,15 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.42.2] — 2026-06-30
+
+### Fixed
+
+- **Installer no longer leaves a cosmetic `env: {}`** (`src/adapter/install-claude.mjs`) — when `.claude/settings.json`'s `env` held ONLY the launch-time keys and the `launch` config is cleared, the merge pruned them to `{}` but `wireClaude` still wrote `env: {}`. Now the caller drops the `env` key entirely when the merged result is empty (and never leaves a stale key). An e2e test pins it (install-claude-wiring 50→51).
+- **Backlog hygiene** — closed out the resolved post-multi-model audit-dispatch (all findings shipped by 5.41.1/5.42.0/5.42.1), the 40k-orchestrator HIGH (resolved 5.42.0), and the mirror-V7 follow-up (shipped 5.41.1); marked the "proxy as a git submodule" item SUPERSEDED (the ratified synced drift-guarded vendor-copy, 5.39.0, is the chosen mechanism — a submodule would break the vendoring one-command install).
+
+---
+
 ## [5.42.1] — 2026-06-30
 
 ### Changed
