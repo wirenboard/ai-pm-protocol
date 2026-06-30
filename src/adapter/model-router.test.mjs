@@ -433,6 +433,8 @@ async function main() {
     listen: { host: "127.0.0.1", port: 0 },
     routes: [
       { match: "nonvis-*", base_url: `http://127.0.0.1:${aVPort}`, auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
+      // declared non-vision: an image turn must pre-route to B WITHOUT hitting A first.
+      { match: "declared-*", base_url: `http://127.0.0.1:${aVPort}`, vision: false, auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
       { match: "vis-*", base_url: `http://127.0.0.1:${bVPort}`, forImages: true, forImagesModel: "vendor/vision-model", auth: { header: "x-api-key", keyEnv: "TEST_VISION_KEY" } },
     ],
   };
@@ -510,6 +512,28 @@ async function main() {
     check("V6 loop-guard: B hit exactly once (no re-reroute)", bStub.received.length, bBefore6 + 1);
     check("V6 loop-guard: client gets a clear 4xx", v6.status >= 400 && v6.status < 500, true);
     check("V6 loop-guard: error names the loop guard", v6.body.includes("loop guard"), true);
+
+    // V7. declared non-vision (vision:false): an image turn pre-routes to B WITHOUT ever
+    //     hitting A — even though A would 400/refuse, A is never called (proactive flag).
+    aStub.setMode("reject");
+    bStub.setMode("ok");
+    const aBefore7 = aStub.received.length;
+    const bBefore7 = bStub.received.length;
+    const v7 = await request(vPort, imageReq("declared-1"));
+    check("V7 declared-non-vision: A was NOT hit (unconditional pre-route)", aStub.received.length, aBefore7);
+    check("V7 declared-non-vision: B served it directly", bStub.received.length, bBefore7 + 1);
+    check("V7 declared-non-vision: client gets B's 200", v7.status, 200);
+    check("V7 declared-non-vision: B got the rewritten model id", JSON.parse(bStub.received[bStub.received.length - 1].body).model, "vendor/vision-model");
+
+    // V8. declared non-vision but a TEXT-ONLY turn: the flag only affects image turns, so
+    //     it routes normally to A (no pre-route to the vision backend).
+    aStub.setMode("ok");
+    const aBefore8 = aStub.received.length;
+    const bBefore8 = bStub.received.length;
+    const v8 = await request(vPort, { model: "declared-2", messages: [{ role: "user", content: "no image here" }] });
+    check("V8 declared-non-vision text: A handled it (no pre-route)", aStub.received.length, aBefore8 + 1);
+    check("V8 declared-non-vision text: B NOT touched", bStub.received.length, bBefore8);
+    check("V8 declared-non-vision text: client gets A's 200", v8.status, 200);
 
     // log safety across every vision case: no key, no body sentinel, no image bytes.
     const vLogText = vLogCapture.join("");

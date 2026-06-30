@@ -3,6 +3,15 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Audit dispatch — post-multi-model batch (v5.37–5.41) — 2026-06-30
+
+Whole-tree sweep after the multi-model-routing batch. **VERDICT: HEALTHY** — 0 BLOCK, 0 new HIGH; suite 28/28 build + 2/2 review green. Security of the new surface CLEAN (no secrets; `mergeLaunchEnv` writes model ids only; `model-router.mjs` logging is `model -> host` only; `keyEnv` is a NAME). CVEs: same 3 dev-only (watch). Drift/honesty-labels/one-home/transient-hygiene/state-pointer all confirmed healthy. Dispatch:
+
+- **H1 (HIGH, the headline) — assembled `.claude/ai-dev.md` = 56,878 chars (16,878 over 40k); grew ~5k this batch.** Truncation lands in `## Product discovery` at char 40,000, so FIVE orchestrator sections fall after it and (worst-case, on hard truncation) silently don't load: `## Fixup`, `## Audit`, `## Backlog`, `## Side-tools`, `## When something is off`. `## Audit` lives ONLY here (not in `PROTOCOL.md`), so the orchestrator's own audit procedure is the most exposed. → the **next feature** (its own loop): decompose `src/agents/orchestrator.md` (push more body into `.ai-dev/procedures/*.md`, leave a thin trigger→procedure router) + add a `tools.json` mechanical size-guard row (assembled orchestrator ≤ ~40k) — confirm the real warn-vs-truncate behaviour as part of it. **Bundle into this feature:** LOW-2 (install.test.mjs 985-line decompose) + NIT-1 (the size-guard) + NIT-2 (mirror V7 case). This is the single highest-value follow-up.
+- **MED-1 (NEW) — `docs/decisions/audit-cadence-backstop.md` is UNTRACKED but referenced by committed files** (`docs/decisions/transient-hygiene-catch.md:13,70,88,101`; `src/quality/transient-hygiene.mjs:7`). A fresh clone has dangling references. → quick fix: commit the file (it's a completed decision doc) — standalone fixup or bundle with the next feature.
+- **LOW-1 (carry-forward) — `.ai-dev/backlog.md` `## Multi-repo epic follow-ups` item ~2 still calls seam-contract transport "unsolved"** though `docs/decisions/seam-contract-transport.md` shipped in 5.17.0 (invariant-6 stale archaeology). → prune at the next backlog touch.
+
+
 ## WATCH: split planning onto the orchestrator if cheap-builder plans need rework (option B) — 2026-06-30 (Operator, watch-not-build)
 
 **Context.** The Builder both plans AND builds, on ONE model (`roles.builder.model`). Planning is high-value thinking, building is more mechanical — so a cheap builder pays for mechanical work but may under-plan. The orchestrator's plan oversight is SHALLOW (it relays the plan in plain language + the Operator approves; neither deeply vets technical plan quality). The deep plan check is the Reviewer's, but POST-build (built-diff-vs-plan) — so a weak plan surfaces late, as rework.
@@ -97,7 +106,7 @@ Whole-tree audit after the 8-feature multi-user batch. HEALTHY, 0 BLOCK/HIGH. **
 
 Whole-tree audit after the fork→canon squash re-unification: **HEALTHY** — 0 BLOCK, 1 HIGH (resolved this same session: H1 two orphaned tests wired into the registry + an inverse orphan-guard, 5.19.3), plus these non-blocking residuals to fold on a future touch (run-note: `.ai-dev/audit/post-reunification-2026-06-20.md`, deleted once dispatched):
 
-- **L1** — the "Multi-repo epic follow-ups" entry still lists *seam-contract transport* as open though it shipped in 5.17.0; fold to RESOLVED on the next backlog edit (Operator deferred folding it in the H1 PR — not worth its own PR).
+- **L1 — RESOLVED 2026-06-30** (folded: the "Multi-repo epic follow-ups" item 2 now reads RESOLVED, seam-contract shipped 5.17.0).
 - **L2** — `backlog.md:242` references a future `npx ai-dev-protocol@latest` brand path not yet published; correct as a future item, skim-misread awareness only.
 - **N1** — `src/agents/orchestrator.md` grew to 312 lines (agent file, not bound by the docs ceiling); watch, consider extraction past ~330.
 - **N2** — `docs/decisions/persona-floor-external-substitute.md` is the heaviest decision doc (278 lines); justified epic rationale, watch accumulate-vs-supersede on revisit.
@@ -158,7 +167,7 @@ The multi-repo-components epic shipped (boundary mechanism 5.15.0 + coordination
 
 1. **Firmware flash-and-probe verification rung.** The real-layer verification offer (`src/agents/orchestrator.md` `## Your seat`) is described only generically (CLI / IPC / socket / API). An embedded firmware component needs a concrete "flash the artifact to the device and probe it" rung — with its blast-radius safety (a device that can be bricked). Needed in ANY layout, not just multi-component. Likely overlaps prior on-hardware-preflight thinking.
 
-2. **Seam-contract transport (epic decision D6).** A cross-component feature changes the contract at the seam (a UI↔service API; a service↔firmware wire protocol). The manifest can *name* a seam contract, but how a CONSUMING repo references a contract OWNED by the producing repo — without reading the producer's tree (project-boundary deny) and without copying it into every repo (invariant-6 violation) — is unsolved. Options sketched in the research: snapshot/copy vs URL vs hub-owned. Its own feature; scope with `research` first.
+2. **Seam-contract transport (epic decision D6) — RESOLVED, shipped 5.17.0** (`docs/decisions/seam-contract-transport.md`: a consuming repo reads the seam contract from the owner's `docs/contracts/` within a coordinated session; pointer-not-copy outside one). No longer open.
 
 ## Process lessons — git/stamp friction caught live — 2026-06-16
 

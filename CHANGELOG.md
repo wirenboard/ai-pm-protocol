@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.41.1] — 2026-06-30
+
+### Fixed
+
+- **Audit hygiene (post-multi-model audit dispatch).** (MED-1) Commit `docs/decisions/audit-cadence-backstop.md` — it was untracked but referenced by committed files (`docs/decisions/transient-hygiene-catch.md`, `src/quality/transient-hygiene.mjs`), so a fresh clone had dangling references. (NIT-2) Add the local V7/V8 cases to `src/adapter/model-router.test.mjs` exercising the `vision: false` unconditional-pre-route path (closing the mirror-test coverage gap; the synced router already carries the behaviour). (LOW-1) Prune the stale "seam-contract transport unsolved" backlog item — it shipped in 5.17.0.
+
+---
+
 ## [5.41.0] — 2026-06-30
 
 ### Added
