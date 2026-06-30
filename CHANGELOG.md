@@ -12,6 +12,19 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.43.0] — 2026-06-30
+
+### Added
+
+- **`haiku` is a first-class Claude model** (`src/adapter/tool-map.json` `models.claude`) — added to the allow-list (`["opus","sonnet","haiku"]`) with `ids.haiku = claude-haiku-4-5`, so it is a real per-seat choice: the cheap background guard, or an explicit build/review pin. Motivated by a routed multi-model setup where an alias hides any backend (e.g. `haiku→deepseek` behind the proxy). `aliasOf` already loops the allow-list, so haiku pins resolve with no resolver change.
+
+### Changed
+
+- **`auto` is now a vanilla-only convenience** (`src/adapter/claude/install-agents.mjs`) — the reviewer's `auto` (ride the model opposite the session, opus↔sonnet) is honored only when the config carries **no explicit model decision**. New exported `isVanilla(config)` (no concrete pin on builder/reviewer/orchestrator AND both launch models empty/whitespace); `install()` degrades `auto`→`session` when not vanilla, so a customized config's unset/`auto` reviewer rides the session (no false cross-model claim) instead of guessing an opposite that may not exist behind a proxy. `auto` never resolves to haiku. Contract updated in `docs/contracts/cross-model-review.md`; decision recorded in `docs/decisions/multi-model-setup-ux.md`.
+- **`setup` model dialog** (`src/agents/procedures/setup.md`) — leads with zero-config (vanilla); on any per-seat pin it offers per-seat **`default`** (un-pin, ride the harness) + concrete ids incl. haiku, with no `auto` option in the customized branch, and states plainly that pinning turns auto off and that `default` on the reviewer rides the session (no cross-model). Un-pinning every seat returns to vanilla and `auto` revives.
+
+---
+
 ## [5.42.2] — 2026-06-30
 
 ### Fixed
