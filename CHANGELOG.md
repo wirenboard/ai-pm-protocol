@@ -12,6 +12,15 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.46.1] — 2026-07-01
+
+### Fixed
+
+- **Setup model dialog is gate-first / Stage-1-global again** — the cross-endpoint dialog had regressed to role-first (a per-seat "another provider" escape), which hid that binding a Claude tier to a foreign model is a *global* act: the `opus` tier also backs the running session and `haiku` the background/guard, so a per-role binding silently re-points them — the failure that bricked a live downstream session mid-setup. Cross-endpoint is now entered through one top-level gate; on "yes", **Stage 1** binds tiers globally with an explicit whole-family warning (opus→session, haiku→guard) and a tier-budget note (N foreign seats need N free tiers), **then Stage 2** assigns each role a pure tier. Restores the design ratified in `docs/decisions/multi-model-setup-ux.md` papercut 11; papercut 12 records the regression + correction. `src/agents/procedures/setup.md`.
+- **Corrected a false cross-endpoint recommendation** — "write a concrete foreign id straight into a builder/reviewer seat" does NOT route on Claude: the installer (`resolveModelPin`) drops an off-allow-list id and the seat silently inherits the session model. Tier binding is now the sole documented cross-endpoint path for a baked seat; a concrete foreign id works only for the launch-env session/guard. `src/adapter/README.md`, `docs/decisions/multi-model-setup-ux.md`.
+
+---
+
 ## [5.46.0] — 2026-07-01
 
 ### Added
