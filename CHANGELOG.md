@@ -12,6 +12,22 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.48.0] — 2026-07-01
+
+### Added
+
+- **A fourth role — the Researcher-Planner** — a strong-model role that runs the research+plan front (folds architect · stack-researcher · codebase-reader · product-advocate at plan-time) and hands the Builder an approved plan. Its activation is **profile-graded**: spawned on `full` (and for non-trivial `lite` work); on `solo` and simple `lite` work the Orchestrator plans directly (no extra spawn); `yolo` unchanged. The split is `planner ≠ builder` — it carries cost/model-quality economics (a strong model plans, a cheap one builds), **not** reliability (that stays the untouched `reviewer ≠ builder` split). Ratified in `docs/decisions/planning-model-split.md`. New `roles.planner` seat; installed on both platforms (model economy is Claude-only). `src/agents/planner.md`, the adapter seat wiring, 15 plan-beat capability-module fragments retargeted builder→planner.
+
+### Changed
+
+- **The Builder is now a pure executor** — its contract narrows from "plans before it builds" to "builds the approved plan" (folds only `coder`); the plan-time thinking moves to the Researcher-Planner (or, on light profiles, the Orchestrator). `PROTOCOL.md` is now a **four-role** model.
+
+### Fixed
+
+- **Existing configs auto-heal the new seat** — `ensureConfig` now additively backfills any wholly-missing role seat into an existing `.ai-dev/config.json` (never overwriting a user's `agent`/`model`), so a project predating the `roles.planner` seat does not throw `roles.planner.agent is missing` on its next install/upgrade. `src/adapter/install-core.mjs`; upgrade note in `upgrades.md`.
+
+---
+
 ## [5.47.0] — 2026-07-01
 
 ### Changed
