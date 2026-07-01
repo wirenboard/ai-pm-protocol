@@ -73,6 +73,37 @@ export function deployProcedures(target) {
   );
 }
 
+// 2c. Deploy the RUNTIME-READ module files (src/modules/**) to a READABLE, non-tooling
+// home: .ai-dev/modules/. PREDICATE — a src/modules file gets a readable deploy iff a
+// RUNTIME role reads it on-demand: it is referenced BY PATH from a runtime instruction (a
+// deployed procedure body or a composed agent fragment) and resolved when a trigger fires.
+// It does NOT get a deploy if it is ASSEMBLY-ONLY — consumed by the installer at assembly
+// time and baked into an artifact the runtime role reads instead: registry.json (the
+// assembler reads it) and every <id>/<role>.md FRAGMENT (composed into the role agents;
+// the runtime role reads the assembled agent, never the fragment file). Today the ONLY
+// runtime-read file is elicitation/catalog.md — referenced from elicitation.md /
+// product-discovery.md (deployed procedures) and elicitation/builder.md (composed builder
+// fragment), NONE of which any assembler composes. Like deployProcedures, the source of
+// truth stays src/modules/ (one home); this readable copy is what the runtime reference
+// (.ai-dev/modules/<rel>) resolves to in BOTH dogfood and downstream, since the vendored
+// .ai-dev/tooling/src/modules/ copy is read-denied unconditionally (invariant 2). Committed
+// + drift-guarded (install-drift.test.mjs). Runs in BOTH modes — in dogfood SOURCE===target
+// so it converges to the committed bytes (git clean). Adding a runtime-read file = one line
+// here + a repoint; over-deploying the whole tree would duplicate every assembly-only
+// fragment into a second readable home (an invariant-6 smell), so we deploy the allow-list only.
+export const RUNTIME_READ_MODULE_FILES = [
+  path.join("elicitation", "catalog.md"),
+];
+
+export function deployModules(target) {
+  for (const rel of RUNTIME_READ_MODULE_FILES) {
+    copyFile(
+      path.join(SOURCE, "src", "modules", rel),
+      path.join(target, ".ai-dev", "modules", rel),
+    );
+  }
+}
+
 // 3. Ensure a config exists so the agent assembly has its `roles` bindings. A real
 // project configures via /dev-setup; pre-setup we write a minimal default carrying
 // the resolved platform + the standard seat ids. Written ONLY where absent — a

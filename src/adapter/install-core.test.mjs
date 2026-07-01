@@ -60,6 +60,23 @@ function testPlatform(platform, assertWiring) {
       fs.existsSync(deployedProc)
         && fs.readFileSync(deployedProc, "utf8") === fs.readFileSync(path.join(ROOT, "src", "agents", "procedures", "parallel-work.md"), "utf8"),
     );
+    // 2e. runtime-read module bodies deployed to the same READ-ALLOWED home. Same latent
+    // bug as the procedures above: the elicitation catalog vendored ONLY under
+    // .ai-dev/tooling/ (read-denied, invariant 2) is unreadable by the elicitation
+    // side-tool / builder plan-round whose own reference names it. The fix deploys a
+    // readable copy at .ai-dev/modules/elicitation/catalog.md, byte-identical to source.
+    // Guards against a regression dropping deployModules from the downstream branch.
+    const deployedMod = path.join(target, ".ai-dev", "modules", "elicitation", "catalog.md");
+    check(`[${platform}] runtime-read module deployed at the READABLE .ai-dev/modules/`, fs.existsSync(deployedMod));
+    check(
+      `[${platform}] deployed module path is OUTSIDE the read-denied .ai-dev/tooling/`,
+      !path.relative(target, deployedMod).split(path.sep).includes("tooling"),
+    );
+    check(
+      `[${platform}] deployed module is byte-identical to its src/modules/ source`,
+      fs.existsSync(deployedMod)
+        && fs.readFileSync(deployedMod, "utf8") === fs.readFileSync(path.join(ROOT, "src", "modules", "elicitation", "catalog.md"), "utf8"),
+    );
     // the quality SHAPE, not this repo's own tool rows
     const tools = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "quality", "tools.json"), "utf8"));
     check(`[${platform}] quality registry is the template shape, not this repo's rows`, tools.tools.length === 1 && tools.tools[0].id === "example-lint");

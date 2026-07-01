@@ -12,6 +12,14 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.46.2] — 2026-07-01
+
+### Fixed
+
+- **Runtime-read module content is now readable downstream** — the elicitation technique catalog (`src/modules/elicitation/catalog.md`) is read on-demand by three runtime instructions (the `elicitation` side-tool, the product-discovery conclude round, the builder's plan-beat elicitation), but the installer vendored `src/modules/` only into the read-banned `.ai-dev/tooling/` (invariant 2), so downstream every such read was denied and the session improvised instead of using the real technique list. The installer now deploys runtime-read module files to a READ-allowed `.ai-dev/modules/` (mirroring the existing `.ai-dev/procedures/` deploy) and the three references resolve there; a drift byte-compare + orphan + under-deploy guard keeps the copy honest and catches any future runtime-read module file added without its deploy. `src/adapter/install-core.mjs`, `src/adapter/install.mjs`; contract in `docs/contracts/one-command-install.md`.
+
+---
+
 ## [5.46.1] — 2026-07-01
 
 ### Fixed

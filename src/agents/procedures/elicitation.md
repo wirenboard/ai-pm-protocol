@@ -3,7 +3,7 @@
 Loaded on demand when the elicitation offer fires (the trigger line lives in
 `orchestrator.md` `## Side-tools`).
 
-`elicitation` stress-tests a draft by changing the angle of inquiry — one technique from the catalog (`src/modules/elicitation/catalog.md`, the one home) applied to the draft at hand. Side-tool, not a beat. `[persona]`.
+`elicitation` stress-tests a draft by changing the angle of inquiry — one technique from the catalog (`.ai-dev/modules/elicitation/catalog.md`, the one home) applied to the draft at hand. Side-tool, not a beat. `[persona]`.
 
 **When it fires** — offered (declinable, never a block) at a decision point: a drafted brief section during discovery, a feature plan before approval, a non-trivial idea being captured to the backlog.
 

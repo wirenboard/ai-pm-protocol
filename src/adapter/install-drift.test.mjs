@@ -23,7 +23,7 @@ import { install as installClaudeAgents } from "./claude/install-agents.mjs";
 import { install as installOpencodeAgents } from "./opencode/install-agents.mjs";
 import { install as installClaudeCommands } from "./claude/install-commands.mjs";
 import { install as installOpencodeCommands } from "./opencode/install-commands.mjs";
-import { generateLaunchScript } from "./install-core.mjs";
+import { generateLaunchScript, RUNTIME_READ_MODULE_FILES } from "./install-core.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..", "..");
@@ -118,6 +118,62 @@ check(
   `.ai-dev/procedures/ holds no file without a source${procOrphans.length ? ` (orphans: ${procOrphans.join(", ")})` : ""}`,
   procOrphans.length === 0,
   "delete the leftover, or restore its src/agents/procedures/ source",
+);
+
+// Runtime-read module files: the committed deployed copy (.ai-dev/modules/) MUST be
+// byte-identical to its source of truth (src/modules/). Same class rule as the procedures
+// block above — a plain COPY (install.mjs deployModules), drift-guarded because it is a
+// committed deployed artifact the RUNTIME role reads (the .ai-dev/tooling/ vendored copy is
+// read-denied, invariant 2). Byte-compare each allow-listed file against its deployed twin,
+// plus an orphan check (a deployed module file with no allow-list entry — a removed/renamed
+// runtime-read file left behind).
+const moduleSrcDir = path.join(ROOT, "src", "modules");
+const moduleDeployDir = path.join(ROOT, ".ai-dev", "modules");
+for (const rel of RUNTIME_READ_MODULE_FILES) {
+  const deployed = path.join(moduleDeployDir, rel);
+  const same = fs.existsSync(deployed)
+    && fs.readFileSync(deployed, "utf8") === fs.readFileSync(path.join(moduleSrcDir, rel), "utf8");
+  check(
+    `.ai-dev/modules/${rel} is byte-identical to src/modules/${rel}`,
+    same,
+    "re-run `node src/adapter/install.mjs . --dogfood` (the deployed module copy drifted from its source)",
+  );
+}
+// Orphan check: every file under the deployed .ai-dev/modules/ must be an allow-list entry.
+function walkFiles(dir, base = dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const full = path.join(dir, e.name);
+    return e.isDirectory() ? walkFiles(full, base) : [path.relative(base, full)];
+  });
+}
+const moduleOrphans = walkFiles(moduleDeployDir).filter((f) => !RUNTIME_READ_MODULE_FILES.includes(f));
+check(
+  `.ai-dev/modules/ holds no file outside the runtime-read allow-list${moduleOrphans.length ? ` (orphans: ${moduleOrphans.join(", ")})` : ""}`,
+  moduleOrphans.length === 0,
+  "delete the leftover, or add it to RUNTIME_READ_MODULE_FILES (install-core.mjs) if it is genuinely runtime-read",
+);
+
+// Under-deploy guard: every .ai-dev/modules/<rel> path a RUNTIME instruction references — a
+// deployed procedure body (.ai-dev/procedures/*.md) or a composed module fragment
+// (src/modules/**/*.md) — MUST name a file the deploy produced. Catches the class hole
+// reopening: a future repoint to .ai-dev/modules/ without its RUNTIME_READ_MODULE_FILES entry.
+const MODULE_REF = /\.ai-dev\/modules\/([^\s`)]+)/g;
+const runtimeRefSources = [
+  ...walkFiles(path.join(ROOT, ".ai-dev", "procedures")).map((f) => path.join(ROOT, ".ai-dev", "procedures", f)),
+  ...walkFiles(moduleSrcDir).map((f) => path.join(moduleSrcDir, f)),
+].filter((p) => p.endsWith(".md"));
+const referenced = new Set();
+for (const p of runtimeRefSources) {
+  const txt = fs.readFileSync(p, "utf8");
+  for (const m of txt.matchAll(MODULE_REF)) referenced.add(m[1]);
+}
+const deployedSet = new Set(RUNTIME_READ_MODULE_FILES.map((r) => r.split(path.sep).join("/")));
+const undeployed = [...referenced].filter((r) => !deployedSet.has(r));
+check(
+  `every .ai-dev/modules/ reference in a runtime instruction is deployed${undeployed.length ? ` (missing: ${undeployed.join(", ")})` : ""}`,
+  undeployed.length === 0,
+  "add the referenced file to RUNTIME_READ_MODULE_FILES (install-core.mjs) so deployModules produces it downstream",
 );
 
 // The OPTIONAL project launcher .ai-dev/launch is a generated artifact (the
