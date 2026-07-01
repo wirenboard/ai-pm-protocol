@@ -56,7 +56,7 @@ check("no-pin: 'session' resolves to null", resolveModelPin("session") === null)
 check("no-pin: absent (undefined) resolves to null", resolveModelPin(undefined) === null);
 check("no-pin: a {claude}-only pin gives no opencode id", resolveModelPin({ claude: "opus" }) === null);
 
-// A config skeleton with all three role agent ids (install() requires each).
+// A config skeleton with the role agent ids install() requires (orchestrator + planner + builder; reviewer added per-case).
 const baseRoles = {
   orchestrator: { agent: "ai-dev" },
   planner: { agent: "dev-planner" },

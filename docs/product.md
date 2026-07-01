@@ -2,7 +2,7 @@
 
 ## 0. The idea — what is this product?
 
-A platform-neutral protocol that gives AI-assisted software and documentation development a disciplined, reviewable loop — three roles (Orchestrator / Builder / Reviewer), five beats (understand → plan → build → review → ship), and a mechanical enforcement layer — so on guarantee profiles the builder and the reviewer are always different contexts and nothing ships unreviewed.
+A platform-neutral protocol that gives AI-assisted software and documentation development a disciplined, reviewable loop — four roles (Orchestrator / Researcher-Planner / Builder / Reviewer, the planner profile-staffed), five beats (understand → plan → build → review → ship), and a mechanical enforcement layer — so on guarantee profiles the builder and the reviewer are always different contexts and nothing ships unreviewed.
 
 ## 1. Customer — who exactly?
 

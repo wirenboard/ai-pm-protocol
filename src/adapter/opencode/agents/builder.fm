@@ -1,4 +1,4 @@
-description: Plans and builds one change — code, docs, tests (folds coder, architect, stack-researcher, codebase-reader). Plans before building; hands the working tree back without committing.
+description: Builds one approved change — code, docs, tests (folds coder). Executes the plan the Researcher-Planner (or the Orchestrator) approved, without re-planning; hands the working tree back without committing.
 mode: subagent
 tools:
   read: true

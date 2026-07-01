@@ -81,14 +81,14 @@ After writing `settings.json`, the installer **self-verifies the Claude deny wir
 @.claude/ai-dev.md
 ```
 
-The orchestrator **is** the session, so it is NOT a spawnable subagent (Claude auto-registers those from `.claude/agents/`). Its procedure is loaded via `@.claude/ai-dev.md` — a committed, drift-guarded artifact the install-agents step assembles by running the **same** `composeBody` platform filter the spawnable agents get (dropping the inactive OpenCode caveats), written outside `.claude/agents/` so it is never registered as a spawnable. The same `@.claude/ai-dev.md` path is wired in both dogfood and downstream modes. The Builder and Reviewer are spawned (below).
+The orchestrator **is** the session, so it is NOT a spawnable subagent (Claude auto-registers those from `.claude/agents/`). Its procedure is loaded via `@.claude/ai-dev.md` — a committed, drift-guarded artifact the install-agents step assembles by running the **same** `composeBody` platform filter the spawnable agents get (dropping the inactive OpenCode caveats), written outside `.claude/agents/` so it is never registered as a spawnable. The same `@.claude/ai-dev.md` path is wired in both dogfood and downstream modes. The Researcher-Planner, Builder, and Reviewer are spawned (below).
 
-### Spawn a sub-agent (the Builder and Reviewer)
+### Spawn a sub-agent (the Researcher-Planner, Builder, and Reviewer)
 
-**`node src/adapter/claude/install-agents.mjs`** assembles the two spawnable roles into Claude agent files:
+**`node src/adapter/claude/install-agents.mjs`** assembles the three spawnable roles into Claude agent files:
 
 - It reads each neutral role body (`src/agents/<role>.md`) + the Claude frontmatter (`src/adapter/claude/agents/<role>.fm`) and writes `.claude/agents/<agentId>.md`.
-- The **agent id comes from `.ai-dev/config.json` `roles`** (so `builder` → `dev-builder`, `reviewer` → `dev-reviewer`).
+- The **agent id comes from `.ai-dev/config.json` `roles`** (so `planner` → `dev-planner`, `builder` → `dev-builder`, `reviewer` → `dev-reviewer`).
 - It is concatenation, not a generator — the neutral body stays the single source.
 - Re-run it whenever a role body, its frontmatter, or the config binding changes.
 
@@ -148,7 +148,7 @@ The generic `build`/`plan` primaries are disabled so none can fill the orchestra
 
 ### Spawn a sub-agent (and assemble the orchestrator)
 
-`node src/adapter/opencode/install-agents.mjs` assembles the three role agents into `.opencode/agents/`: each neutral role body (`src/agents/<role>.md`) + its OpenCode frontmatter (`src/adapter/opencode/agents/<role>.fm`) → `.opencode/agents/<agentId>.md`.
+`node src/adapter/opencode/install-agents.mjs` assembles the four role agents into `.opencode/agents/`: each neutral role body (`src/agents/<role>.md`) + its OpenCode frontmatter (`src/adapter/opencode/agents/<role>.fm`) → `.opencode/agents/<agentId>.md`.
 
 - The agent id comes from `.ai-dev/config.json` `roles`: orchestrator → `ai-dev` with `mode: primary`; builder → `dev-builder`, reviewer → `dev-reviewer` with `mode: subagent`.
 - On OpenCode the filename *is* the agent id, so the frontmatter carries no `name` key.

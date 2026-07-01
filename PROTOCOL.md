@@ -18,7 +18,7 @@ This repo develops itself under this protocol: the same loop, roles, invariants,
 
 ---
 
-## The three roles
+## The four roles
 
 Four roles. Keep the one split that carries **reliability**: **the reviewer is never the builder** — an independent context re-checking the work. A second split, **the planner is not the builder**, carries only **cost / model-quality** (a strong model plans, a cheap one may build), never reliability — so it is **profile-graded**, off by default (`## Project config`; `docs/decisions/planning-model-split.md`). Each role's folded specialist concerns survive as a checklist in its agent (the **Folds** column), not as separate roles.
 

@@ -17,7 +17,7 @@ The **adapter** is the only platform-specific code: a small shim per platform th
 
 ## Actor model
 
-Four roles, three of them spawned (contracts in `PROTOCOL.md` `## The three roles`):
+Four roles, three of them spawned (contracts in `PROTOCOL.md` `## The four roles`):
 
 - the **Orchestrator** is the running session — it routes, holds gates, owns git and state;
 - the **Researcher-Planner** (profile-staffed), **Builder**, and **Reviewer** are **separate spawned sub-agents** — separate contexts. The Planner ≠ Builder split carries cost/model-quality, not reliability; the reliability split remains Reviewer ≠ Builder (`docs/decisions/planning-model-split.md`).

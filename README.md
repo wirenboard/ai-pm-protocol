@@ -8,7 +8,7 @@ It runs inside an AI coding harness — Claude Code and OpenCode, both live-veri
 
 The whole protocol is one short constitution you can read in one sitting: **[`PROTOCOL.md`](PROTOCOL.md)**. The essence:
 
-**Three roles.** A Builder plans and makes the change; a Reviewer independently checks it in a separate context; an Orchestrator drives the loop, talks to you, and owns git — the reviewer is never the builder, so a maker can't catch its own blind spots. The full role table: `PROTOCOL.md` `## The three roles`.
+**Four roles.** A profile-staffed Researcher-Planner plans the change on a strong model; a Builder executes the approved plan; a Reviewer independently checks it in a separate context; an Orchestrator drives the loop, talks to you, and owns git — the reviewer is never the builder, so a maker can't catch its own blind spots. The full role table: `PROTOCOL.md` `## The four roles`.
 
 **Product-first.** Onboarding goes **install → setup → product discovery → loop**. Before any feature, a genuine discovery dialog records a short brief (`docs/product.md`): the idea, the customer, the problem in their words, the zero-to-working story, the competition, who runs and funds it — and, at the end, the honest case against. It gathers prejudice-free and concludes willing to say "we are building the wrong thing". Every feature then grounds in that brief, so you are building a product, not churning code.
 
@@ -103,7 +103,7 @@ docs/              human-readable documentation:
   contracts/         the product promises, one compact file each
   decisions/         the compacted decision-base — why the protocol is shaped this way
 src/               the machinery:
-  agents/            the three role definitions (neutral bodies)
+  agents/            the role definitions (neutral bodies)
   adapter/           the only platform-specific code:
     engine.mjs         the shared enforcement engine (one copy, every platform)
     deny-rules.json    every guard, as data

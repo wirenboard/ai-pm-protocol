@@ -61,7 +61,7 @@ or none**, given that the split buys the economics below at a real constitutiona
 
 The one role split the protocol holds sacred — **Reviewer ≠ Builder** — carries
 **CORRECTNESS**: an independent context re-checking the work is a *reliability guarantee*
-(`minimal-core.md ## What survives every cut`; `PROTOCOL.md ## The three roles`, "the one
+(`minimal-core.md ## What survives every cut`; `PROTOCOL.md ## The four roles`, "the one
 split that carries reliability"). A **Planner ≠ Builder** split carries **only cost /
 model-quality economics** — it buys *cheaper-or-better tokens per beat*, **not** a new
 reliability guarantee. Weak planning is caught by the Reviewer either way; the split does
@@ -116,7 +116,7 @@ touching plan quality.
   plan model from the build model — at the **lowest** constitutional cost. And the benefit
   reaches the **default `solo` project immediately** (the session already plans there).
 - *Con:* it **bends "the Orchestrator routes, never does a role's work"**
-  (`PROTOCOL.md ## The three roles`; `orchestrator.md` opening). Planning is *currently* the Builder's
+  (`PROTOCOL.md ## The four roles`; `orchestrator.md` opening). Planning is *currently* the Builder's
   work (Builder contract: "Plans before it builds"). B moves a substantive knowledge-work
   act into the router. It also **loads planning into the long-lived session context** —
   every feature's research, codebase reading, and architecture reasoning piles into the one
@@ -160,7 +160,7 @@ None. No `PROTOCOL.md`, `src/agents/`, `src/adapter/`, or config surface changes
 
 | Surface | Change |
 | --- | --- |
-| `## The three roles` table + **Folds** | Builder "Does" drops *plans the change*; Orchestrator "Does" gains planning — contradicting "Routes every other act to a role; does no building or reviewing itself." The Folds `architect · stack-researcher · codebase-reader · product-advocate` move from Builder onto the Orchestrator row (today `(the session itself)`). |
+| `## The four roles` table + **Folds** | Builder "Does" drops *plans the change*; Orchestrator "Does" gains planning — contradicting "Routes every other act to a role; does no building or reviewing itself." The Folds `architect · stack-researcher · codebase-reader · product-advocate` move from Builder onto the Orchestrator row (today `(the session itself)`). |
 | `## Role contracts` — **Builder** | "Plans before it builds" (the *first* guarantee) is removed / relocated; Builder becomes "builds against a plan it did not draft." |
 | `## Role contracts` — **Orchestrator** | "never does a role's work itself, except where a rigor `profile` lets it build directly" gains a **second** standing exception (planning) — weakening the clean routing line on **all** profiles, not just `lite`/`solo`. |
 | `## The loop` beat 2 | "Builder drafts the change against its plan checklist" → "Orchestrator drafts." |
@@ -172,7 +172,7 @@ None. No `PROTOCOL.md`, `src/agents/`, `src/adapter/`, or config surface changes
 
 | Surface | Change |
 | --- | --- |
-| `## The three roles` | A **fourth** row (Researcher-Planner); header "Three roles" → "Four roles." Folds re-partition: `architect · stack-researcher · codebase-reader · product-advocate` → Planner; Builder keeps `coder`; Reviewer keeps its four. The reliability sentence ("the reviewer is never the builder") stays true and gains a sibling — **stated honestly as a cost/quality split, not a second reliability split.** |
+| `## The four roles` | A **fourth** row (Researcher-Planner); header "Three roles" → "Four roles." Folds re-partition: `architect · stack-researcher · codebase-reader · product-advocate` → Planner; Builder keeps `coder`; Reviewer keeps its four. The reliability sentence ("the reviewer is never the builder") stays true and gains a sibling — **stated honestly as a cost/quality split, not a second reliability split.** |
 | `## Role contracts` | A new Researcher-Planner contract; Builder loses "Plans before it builds," gains "builds against an approved plan it did not write." |
 | `## The loop` beats 2–3 | Planner drafts (beat 2); Builder implements (beat 3). Invariant 3's non-gate carve-out ("the Builder may be continued … plan→build") loses its **plan→build** half (now a cross-role handoff); **build→address-findings** continuation survives. |
 | `## Project config` `roles` | New `roles.planner` seat with a baked `model` pin. Invariant 1's designated-seat list grows by one. |
@@ -366,7 +366,7 @@ C.** Until one of those is true, the fourth role costs more thin-core than it bu
 
 You research and plan **one change**; you do not write its code. You fold four concerns —
 **architect · stack-researcher · codebase-reader · product-advocate** — into one (the
-**Folds** column, `PROTOCOL.md ## The three roles`). You are a **strong-model** seat: the
+**Folds** column, `PROTOCOL.md ## The four roles`). You are a **strong-model** seat: the
 plan you hand off is the contract the Builder executes and the Reviewer checks against, so
 the thinking is done here, once, well.
 
@@ -451,7 +451,7 @@ this section at assembly, exactly as they compose into the Builder today; the co
 
 ## Sources
 
-- **Internal / primary:** `PROTOCOL.md` (`## The three roles`, `## Role contracts`,
+- **Internal / primary:** `PROTOCOL.md` (`## The four roles`, `## Role contracts`,
   `## The loop`, `## Enforcement`, `## Project config`); `src/agents/builder.md` (the
   `## Plan` checklist + folds this appendix re-partitions); `src/agents/procedures/research.md`
   (the side-tool the Planner reuses, not absorbs); `.ai-dev/config.json` `roles` / `launch`
