@@ -9,7 +9,7 @@
       "scheme": "OPTIONAL prefix prepended to the key for the header value — e.g. \"Bearer\" yields `Authorization: Bearer <key>`; omit for a raw value like `x-api-key: <key>`"
     }
   },
-  "_proxyUrl": "OPTIONAL top-level string. When set to a non-empty http(s) URL, the LAUNCHER (router-launch.mjs) does NOT spawn its own router — it points claude straight at this already-running proxy (a self-hosted/shared modelpipe, or one under a debugger) via ANTHROPIC_BASE_URL. Auth/keys then live in THAT proxy's own env, so the launcher's fail-closed key check does not apply. Absent/empty/whitespace ⇒ the launcher decides direct-vs-spawn itself (the default). A present-but-malformed value is a hard error (fail-closed), never a silent local spawn. Omit it unless you run the proxy yourself.",
+  "_proxyUrl": "OPTIONAL top-level string — ONLY belongs in the gitignored personal override .ai-dev/model-routes.local.json, NEVER in this shared file (docs/decisions/personal-multi-model-setup.md). When set to a non-empty http(s) URL, the LAUNCHER (router-launch.mjs) does NOT spawn its own router — it points claude straight at this already-running proxy (a self-hosted/shared modelpipe, or one under a debugger) via ANTHROPIC_BASE_URL. Auth/keys then live in THAT proxy's own env, so the launcher's fail-closed key check does not apply. Absent/empty/whitespace ⇒ the launcher decides direct-vs-spawn itself (the default). A present-but-malformed value is a hard error (fail-closed), never a silent local spawn. Write it ONLY to .ai-dev/model-routes.local.json, never here.",
   "listen": { "host": "127.0.0.1", "port": 8787 },
   "routes": [
     {

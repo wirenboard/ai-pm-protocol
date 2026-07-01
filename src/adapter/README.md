@@ -95,13 +95,25 @@ node src/adapter/router-launch.mjs [--proxy] [claude args…]
 #   --proxy              foreground-only: start the router, print its URL, do NOT exec claude
 #   AI_DEV_CONFIG        config path   (default .ai-dev/config.json; its .local.json
 #                        sibling is the gitignored personal override)
-#   MODEL_ROUTER_ROUTES  routes path   (default .ai-dev/model-routes.json)
+#   MODEL_ROUTER_ROUTES  routes path   (default .ai-dev/model-routes.json; its .local.json
+#                        sibling is the gitignored personal override and the home of proxyUrl)
 ```
 
 **Personal overrides — `.ai-dev/config.local.json` (gitignored).** The launcher merges the
 `launch` section of `.ai-dev/config.local.json` OVER the shared `.ai-dev/config.json`'s
 `launch`, so per-machine values (a `configDir`, a personal launch model) never land in the
 shared, committed file or get forced on a teammate. The installer ensures it is gitignored.
+
+**Personal routes overrides — `.ai-dev/model-routes.local.json` (gitignored).** The launcher
+merges the gitignored `.ai-dev/model-routes.local.json` **over** the shared
+`.ai-dev/model-routes.json`, so per-machine values (a `proxyUrl`, personal route entries)
+never land in the shared, committed file or break a teammate's routing on pull. The shared file
+carries only the team-shareable routes table; the personal sibling carries the machine-specific
+`proxyUrl` (a loopback or personal external proxy) and any personal route overrides. The installer
+ensures it is gitignored. The merge follows the same pattern as `config.local.json` — scalar
+fields (like `proxyUrl`) are shallow overrides (local wins, shared is kept); `routes` is the
+one array field, and local routes are concatenated **before** shared ones (because the router's
+matching is first-match-wins, so a personal route must sort first to override a shared glob).
 
 **Per-project claude profile — `launch.configDir` → `CLAUDE_CONFIG_DIR`.** When set, the
 launcher exports `CLAUDE_CONFIG_DIR` to it before exec'ing claude — a per-project claude
@@ -116,22 +128,23 @@ printed URL (or wire it as the routes config `proxyUrl`). Errors when there is n
 router to start (an external `proxyUrl` already runs, or fewer than 2 endpoints are in play).
 
 **Probe — `--probe [url]`.** Best-effort discovery of an **already-running** proxy for the
-setup dialog. Tries candidate origins — an explicit `url` arg, the routes-config `proxyUrl`,
-then the conventional localhost default `http://127.0.0.1:8787` — at `GET /v1/models` (then
-`/models`), and prints ONE JSON line `{ alive, url, models }` to stdout, exiting `0` (alive)
-/ `1` (none). Lets the dialog **skip asking for a URL** when a proxy is up. Never throws — a
-refused/timed-out candidate is simply "not alive". Note: a launcher-**spawned** proxy needs
-no probe (the launcher holds the routes config and uses a random free port) — the probe is
-for an **external** proxy the Operator already runs (a standalone modelpipe, or a
-LiteLLM-class proxy that exposes `/v1/models`). The vendored modelpipe is a pure passthrough
-proxy; it answers `/v1/models` only once the upstream gains that endpoint, so against an
-older modelpipe the probe finds nothing and the dialog falls through to the spawn fork —
-honest, no false promise. The candidate-list + response parse are pure (`probeCandidates` /
-`parseModelsResponse`, unit-tested); the live HTTP is the one untestable rung.
+setup dialog. Tries candidate origins — an explicit `url` arg, the **merged** routes-config
+`proxyUrl` (shared + personal), then the conventional localhost default `http://127.0.0.1:8787`
+— at `GET /v1/models` (then `/models`), and prints ONE JSON line `{ alive, url, models }` to
+stdout, exiting `0` (alive) / `1` (none). Lets the dialog **skip asking for a URL** when a
+proxy is up. Never throws — a refused/timed-out candidate is simply "not alive". Note: a
+launcher-**spawned** proxy needs no probe (the launcher holds the routes config and uses a
+random free port) — the probe is for an **external** proxy the Operator already runs (a
+standalone modelpipe, or a LiteLLM-class proxy that exposes `/v1/models`). The vendored
+modelpipe is a pure passthrough proxy; it answers `/v1/models` only once the upstream gains
+that endpoint, so against an older modelpipe the probe finds nothing and the dialog falls
+through to the spawn fork — honest, no false promise. The candidate-list + response parse are
+pure (`probeCandidates` / `parseModelsResponse`, unit-tested); the live HTTP is the one
+untestable rung.
 
 It reads the seats' `roles.*.model` pins and the routes config (resolved against the catalog), then decides: if the seats touch **fewer than 2 distinct endpoints** (e.g. all-Anthropic), it execs `claude` **directly, no router** — a project that never opts in is unchanged. If **≥2 endpoints** are in play, it starts `model-router.mjs` on a free localhost port, points the child at it (`ANTHROPIC_BASE_URL`), **guarantees `CLAUDE_CODE_SUBAGENT_MODEL` is unset** in the child env, execs `claude`, and tears the router down on exit. **Fail-closed:** if a route in play names a backend key env var that is unset, the launcher errors **before launching anything** — never a silent wrong-backend.
 
-**External proxy (opt-in `proxyUrl`).** Set a top-level `proxyUrl` in the routes config to point at an **already-running** proxy (a self-hosted or shared modelpipe, or one under a debugger) instead of spawning one. The launcher then skips the spawn entirely and just points `claude` at that URL (still unsetting `CLAUDE_CODE_SUBAGENT_MODEL`). Auth/keys live in **that proxy's own env**, so the launcher's fail-closed key check does not apply — it cannot see the external proxy's credentials. A present-but-malformed `proxyUrl` is a hard error (never a silent fall-through to a local spawn); absent/blank ⇒ the launcher decides direct-vs-spawn itself.
+**External proxy (opt-in `proxyUrl`).** Set a top-level `proxyUrl` in the routes config to point at an **already-running** proxy (a self-hosted or shared modelpipe, or one under a debugger) instead of spawning one. The launcher then skips the spawn entirely and just points `claude` at that URL (still unsetting `CLAUDE_CODE_SUBAGENT_MODEL`). Auth/keys live in **that proxy's own env**, so the launcher's fail-closed key check does not apply — it cannot see the external proxy's credentials. A present-but-malformed `proxyUrl` is a hard error (never a silent fall-through to a local spawn); absent/blank ⇒ the launcher decides direct-vs-spawn itself. **Home `proxyUrl` in the gitignored personal `.ai-dev/model-routes.local.json`, never in the shared `.ai-dev/model-routes.json`** — it is a per-machine pointer that breaks routing for teammates who pull it.
 
 **Env precedence.** The launcher layers ONLY `ANTHROPIC_BASE_URL` (to the proxy, **when routing is on**) + unsets `CLAUDE_CODE_SUBAGENT_MODEL` + the launch-time env (`ANTHROPIC_MODEL` / `ANTHROPIC_SMALL_FAST_MODEL` / `CLAUDE_CONFIG_DIR`, each only when its config field is non-empty); **everything else in the environment passes through untouched**. When routing is on and the environment already carries a *different* `ANTHROPIC_BASE_URL` (e.g. a personal wrapper pointed at another proxy), the **launcher wins** — but loudly: a visible stderr WARNING names both URLs, so a silent hijack of the user's own proxy can never happen. Routing off ⇒ a preset `ANTHROPIC_BASE_URL` passes through unchanged, no warning.
 

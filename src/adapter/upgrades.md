@@ -4,6 +4,37 @@ The one home of "what to do after the protocol version bumps". The installer lay
 
 **Downgrades are unsupported.** A version-pinned re-run (`npx github:wirenboard/ai-pm-protocol#v<tag> <target>`) converges the vendored files back, but no downgrade notes exist — a MAJOR downgrade is the Operator's own risk.
 
+## MINOR 5.51.0 — model-routes.json split (shared routes / personal proxyUrl)
+
+After the re-run, if your `.ai-dev/model-routes.json` carries a `proxyUrl` (a personal,
+per-machine value), move it by hand into the gitignored `.ai-dev/model-routes.local.json`.
+
+**Common case — the shared file carries ONLY `proxyUrl` (no `routes`):** a plain rename:
+
+```sh
+mv .ai-dev/model-routes.json .ai-dev/model-routes.local.json
+```
+
+**Mixed case — the shared file carries BOTH `proxyUrl` AND a `routes` array:** split them
+by hand — create the local file with just the `proxyUrl`, then remove that key from the
+shared file so it keeps only `routes`:
+
+```sh
+cat <<'EOF' > .ai-dev/model-routes.local.json
+{
+  "proxyUrl": "http://127.0.0.1:8787"
+}
+EOF
+# then edit .ai-dev/model-routes.json to remove the "proxyUrl" key, keeping "routes"
+```
+
+**Why:** the shared `.ai-dev/model-routes.json` is team-committed and must never carry
+machine-specific values that break routing for teammates on pull. The new personal sibling
+`.ai-dev/model-routes.local.json` (gitignored, like `config.local.json`) is the correct home
+for `proxyUrl`. The launcher now merges both files, so a personal `proxyUrl` in the local file
+is discovered and used just as it was in the shared file before — but now teammates pulling
+the repo get only the safe, team-shareable routes table (docs/decisions/personal-multi-model-setup.md).
+
 ## MINOR 5.48.0 — the `roles.planner` seat (Researcher-Planner)
 
 Nothing manual. This version adds a fourth role, the profile-staffed **Researcher-Planner**, as a new spawnable seat (`roles.planner`). A config that predates it lacks the seat; the installer **auto-backfills** it with the default `{ "agent": "dev-planner" }` binding on the next run — additively, never overwriting any existing seat's `agent`/`model` or any other value. The re-run then bakes the new `dev-planner` agent on both platforms. No action required. (The planner is a strong-model *plan* seat; its model benefit is Claude-only and off by default on the `solo` profile — `docs/decisions/planning-model-split.md`.)

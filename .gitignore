@@ -24,4 +24,7 @@ _scratch/
 
 # Node dependencies (the linters; package-lock.json IS committed)
 node_modules/
+
+# Personal overrides — per-machine values never committed, never break a teammate
 .ai-dev/config.local.json
+.ai-dev/model-routes.local.json
