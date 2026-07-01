@@ -115,23 +115,68 @@ export function deployModules(target) {
 // clobbered (docs/decisions/multi-model-setup-ux.md papercut 9).
 // The default carries NO roles.orchestrator.model: the orchestrator is the running
 // session, its model is the launch model, never a baked pin (papercut 2).
+// The standard seat bindings a fresh config carries AND the source the backfill (below)
+// heals a pre-existing config from. One home for "the default roles" — a newly added
+// seat (e.g. `planner` in 5.48.0) is added here and both the fresh-write and the
+// upgrade-heal pick it up automatically.
+const DEFAULT_ROLES = {
+  orchestrator: { agent: "ai-dev" },
+  planner: { agent: "dev-planner" },
+  builder: { agent: "dev-builder" },
+  reviewer: { agent: "dev-reviewer", model: "auto" },
+};
+
 export function ensureConfig(target, platform) {
   const dest = path.join(target, ".ai-dev", "config.json");
-  if (fs.existsSync(dest)) return false;
+  if (fs.existsSync(dest)) {
+    // BACKWARD-COMPAT: a config that predates a newly-added seat (its `roles` lacks,
+    // e.g., `planner`) would make the bake throw `roles.<seat>.agent is missing`. Heal
+    // it — additively fill any WHOLLY-MISSING default seat, never touching an existing
+    // seat's agent/model or any other user value. Return FALSE regardless: the config
+    // EXISTED before this run (papercut 9 — the return means "existed", healed or not;
+    // the install summary's wrote-vs-kept pre-check is independent of this).
+    backfillMissingSeats(dest);
+    return false;
+  }
   const config = {
     mode: "interactive",
     profile: "solo",
     platform,
     kind: "code",
-    roles: {
-      orchestrator: { agent: "ai-dev" },
-      planner: { agent: "dev-planner" },
-      builder: { agent: "dev-builder" },
-      reviewer: { agent: "dev-reviewer", model: "auto" },
-    },
+    roles: { ...DEFAULT_ROLES },
   };
   fs.writeFileSync(dest, JSON.stringify(config, null, 2) + "\n");
   return true;
+}
+
+// Additively fill any role seat present in DEFAULT_ROLES but WHOLLY MISSING from the
+// config's `roles`, writing the file back only if something was added. General, not
+// seat-hardcoded: every future default seat a config lacks auto-heals on the next
+// install. Guarantees:
+//   • never overwrites an existing seat (a present `roles.planner` — even a customised
+//     one — is left byte-untouched), nor any other config value;
+//   • a seat present but agent-less is NOT a "missing seat" — left as-is (a malformed
+//     user binding the bake rightly rejects, not ours to guess);
+//   • a malformed (unparseable) config is left untouched — the Operator's to fix, never
+//     clobbered here.
+function backfillMissingSeats(dest) {
+  let config;
+  try {
+    config = JSON.parse(fs.readFileSync(dest, "utf8"));
+  } catch {
+    return; // malformed config — never clobber; the bake will surface it honestly
+  }
+  const roles = config.roles && typeof config.roles === "object" ? config.roles : {};
+  let added = false;
+  for (const [seat, binding] of Object.entries(DEFAULT_ROLES)) {
+    if (!roles[seat]) {
+      roles[seat] = { ...binding };
+      added = true;
+    }
+  }
+  if (!added) return; // nothing missing — leave the file byte-untouched
+  config.roles = roles;
+  fs.writeFileSync(dest, JSON.stringify(config, null, 2) + "\n");
 }
 
 // 4. Ensure the local-only transient dirs are gitignored: state (the session

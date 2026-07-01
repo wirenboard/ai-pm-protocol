@@ -4,6 +4,10 @@ The one home of "what to do after the protocol version bumps". The installer lay
 
 **Downgrades are unsupported.** A version-pinned re-run (`npx github:wirenboard/ai-pm-protocol#v<tag> <target>`) converges the vendored files back, but no downgrade notes exist — a MAJOR downgrade is the Operator's own risk.
 
+## MINOR 5.48.0 — the `roles.planner` seat (Researcher-Planner)
+
+Nothing manual. This version adds a fourth role, the profile-staffed **Researcher-Planner**, as a new spawnable seat (`roles.planner`). A config that predates it lacks the seat; the installer **auto-backfills** it with the default `{ "agent": "dev-planner" }` binding on the next run — additively, never overwriting any existing seat's `agent`/`model` or any other value. The re-run then bakes the new `dev-planner` agent on both platforms. No action required. (The planner is a strong-model *plan* seat; its model benefit is Claude-only and off by default on the `solo` profile — `docs/decisions/planning-model-split.md`.)
+
 ## MINOR 5.10.0 — version stamp + upgrade channel introduced
 
 Nothing manual. The re-run lays down `.ai-dev/VERSION` (the installed protocol version), this notes file, and a minimal breadcrumb load-surface for the inactive platform. An upgrade from any pre-stamp version is detected as `pre-5.10`; walk every section below that applies to your actual starting version.
