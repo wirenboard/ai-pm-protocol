@@ -334,6 +334,43 @@ installer never bakes it).
 
 ---
 
+### Papercut 13 — the per-tier two-stage dialog is retired for a FULLY PER-SEAT dialog; the concrete-id bake was a latent defect (the Operator's decision + a verified mechanic, 2026-07-01)
+
+**Supersession.** This section **supersedes the operator-facing DIALOG SHAPE of papercuts 11 and 12** — the native-per-seat GATE, Stage 1 (per-tier binding), Stage 2 (role→tier), the "global effect" and "tier-budget" warnings. The underlying **mechanic those papercuts established stays true and is unchanged**: a Claude tier is bound to a foreign model via `ANTHROPIC_DEFAULT_{TIER}_MODEL` (`launch.aliases.<tier>`), and a role routes foreign by using that tier. Only the way the Operator is *asked* changes. (Invariant 6: supersede, don't accumulate — papercuts 11/12 remain as the reasoning record for the mechanic; the dialog they describe is no longer the shipped one.)
+
+**The Operator's decision (ratified, structured-question, 2026-07-01): fully per-seat.** The two-stage per-tier dialog was confusing and wrong — it exposed the internal "tier" abstraction and coupled the session onto the opus tier and the background onto the haiku tier. The dialog now asks **seat by seat** — session · builder · reviewer · guard — each independently **native Claude OR a foreign provider (provider → concrete id)**. The tier-alias plumbing is **computed and hidden**: the Operator never sees "tier", "Stage", "budget", or "global effect". The auto-allocation the orchestrator runs is homed in `src/agents/procedures/setup.md` step 2 (*auto-allocation*).
+
+**The verified mechanic that drove the scope (bare alias vs concrete id).** Claude Code's `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL` **override ALIAS resolution only**: a baked `model: opus` (a **bare alias**) resolves through the env var (→ the foreign model), while a baked `model: claude-opus-4-8` (a **concrete id**) is used **verbatim** and bypasses the alias env (stays native). Triangulated (HIGH confidence, 2026-07-01): the official Claude Code docs (`code.claude.com/docs/en/model-config` — the `ANTHROPIC_DEFAULT_*` vars "only control alias resolution", contrasted with `CLAUDE_CODE_SUBAGENT_MODEL`; a full model name is used as-is); the RATIFIED `## The chain` above; and the Operator's own `noos` setup (papercut 11 — builder=haiku→deepseek, reviewer=sonnet→glm, two different foreign models, only reachable if each subagent frontmatter carries a **bare** tier alias resolving through a different `ANTHROPIC_DEFAULT_*`). `ANTHROPIC_SMALL_FAST_MODEL` is confirmed **deprecated in favour of `ANTHROPIC_DEFAULT_HAIKU_MODEL`** but still honoured (matches G1).
+
+**The latent defect this corrects.** `resolveModelPin` baked the **concrete** id (`policy.ids[alias]`) for a bare tier wish. Under the verified mechanic, a baked seat routed to a **foreign-bound** tier therefore baked a concrete native id → **ran native, silently ignoring the binding**. Papercut 12 verified the foreign-id-off-allowlist case but NOT this concrete-native-id-bypasses-alias case, so the shipped 5.46.x cross-endpoint baked-seat path never actually routed — which is why the Operator hand-rolled `noos` rather than using the installer's output. **The fix** (`src/adapter/claude/install-agents.mjs` `resolveModelPin`, new `boundTiers` param sourced from `config.launch.aliases`): bake the **bare alias** when the seat's tier is bound foreign (routes through the env), the **concrete id** otherwise (native passthrough). Backward-compatible — the common native case (no bound tier) bakes the concrete id exactly as before.
+
+**Why the tier budget can no longer collide (the structural win).** Only **builder** and **reviewer** consume a tier, and only when foreign; **session** and **guard** take a **direct concrete id** (`ANTHROPIC_MODEL` / `ANTHROPIC_SMALL_FAST_MODEL`) and never ride a tier. So at most **2 tier-consuming seats vs 3 tiers** — the collision the old coupled design warned about (native session+guard AND both routed) is impossible. The one rule that replaces the "global effect" warning: a native launch seat whose **default** tier got bound foreign is **pinned to its concrete native id** to free the alias (session's default = opus; guard's default = haiku, the folded background slot).
+
+**Worked example — the exact config the allocation produces.** session=native opus · builder=foreign GLM · reviewer=native sonnet · guard=native haiku:
+
+```json
+{
+  "launch": {
+    "sessionModel": "claude-opus-4-8",
+    "guardModel": "",
+    "aliases": { "opus": "glm-4.6" }
+  },
+  "roles": {
+    "orchestrator": { "agent": "ai-dev" },
+    "builder":  { "agent": "dev-builder",  "model": "opus" },
+    "reviewer": { "agent": "dev-reviewer", "model": "sonnet" }
+  }
+}
+```
+
+Resolution trace: **builder** — assembled frontmatter `model: opus` (bare, opus bound) → `ANTHROPIC_DEFAULT_OPUS_MODEL=glm-4.6` → GLM. **reviewer** — `model: claude-sonnet-4-6` (concrete, sonnet unbound) → native sonnet. **session** — `ANTHROPIC_MODEL=claude-opus-4-8` (concrete → bypasses the opus alias) → native opus, even though the opus tier is bound to GLM (the free-the-alias pin). **guard** — `ANTHROPIC_SMALL_FAST_MODEL` unset, haiku free → native haiku default.
+
+**Fail-loud post-apply routing self-verify (closes #318 candidate (b): "make the silent class visible").** The bare-alias bake fixes the routing; a self-check makes any *future* silent-native regression impossible to ship quietly. After the Claude apply path bakes the agents and writes `.claude/settings.json` `env`, `verifyRoutingConsistency` (`src/adapter/install-claude.mjs`, the loud twin of `verifyClaudeWiring`) runs a **static** config-intent ↔ baked-artifact ↔ settings-env consistency check — **no live proxy needed**: each baked seat's config intent (a bare tier bound in `launch.aliases` ⇒ FOREIGN; unbound / concrete ⇒ NATIVE) must match what actually baked (foreign ⇒ the bare alias AND `ANTHROPIC_DEFAULT_<TIER>_MODEL=<that id>`; native ⇒ the concrete id). Any mismatch — a foreign seat that baked concrete, a bound tier whose env var did not land, an alias/env disagreement — **fails the install loudly** with a per-seat report naming the seat and intended-vs-actual; on all-consistent it prints the `seat → model` trace. Also exposed standalone (`node …/install-claude.mjs --verify-routing [target]`) as a re-runnable probe. The pure check logic (`checkRouting`) is unit-tested and the throw path is e2e-tested (`install-model.test.mjs`).
+
+**The one residual (real-layer, unverified-here).** The subagent-frontmatter × bare-alias intersection — that a baked `model: opus` on a *subagent* resolves through `ANTHROPIC_DEFAULT_OPUS_MODEL` exactly as the session model does. HIGH confidence (official docs describe alias resolution as global; the Operator's noos empirically differentiates two foreign subagent models this way), but the last mile is a live routed session against a real proxy — offered as a real-layer verification, not a suite test. (The static self-verify above catches the *config↔artifact* class at apply time; it does not — cannot without a proxy — prove Claude's runtime resolves the bare subagent alias, which is why the live rung remains offered.)
+
+---
+
 ## The fork: where do the launch-time models live? (requirement, conceptual split)
 
 The session and guard models are launch-time env, never baked. There must be **no dead

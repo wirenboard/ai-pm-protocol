@@ -12,6 +12,22 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.47.0] — 2026-07-01
+
+### Changed
+
+- **Model-routing setup is now per-seat, not per-tier** — `/dev-setup`'s model dialog asks seat by seat (session · builder · reviewer · guard), each independently *native Claude* or *a foreign provider*, and the tier-alias plumbing is auto-allocated and never surfaced. This retires the per-tier two-stage flow (Stage-1 tier binding → Stage-2 role→tier) that exposed the internal "tier" abstraction and coupled session+builder onto opus. `src/agents/procedures/setup.md` (+ the drift-synced deploy copy); rationale in `docs/decisions/multi-model-setup-ux.md` papercut 13 (supersedes the papercut-11/12 dialog shape).
+
+### Fixed
+
+- **A baked seat routed cross-endpoint no longer silently runs native Claude** — the installer baked a bare tier pin as the *concrete* native id (`claude-opus-4-8`), but Claude Code only redirects a *bare alias* (`opus`) through `ANTHROPIC_DEFAULT_<TIER>_MODEL`; a concrete id passes through verbatim, so a builder/reviewer bound to a foreign provider silently ran native. `resolveModelPin` now bakes the bare alias when the tier is bound foreign, the concrete id otherwise (backward-compatible). Closes the latent 5.46.x cross-endpoint defect. `src/adapter/claude/install-agents.mjs`.
+
+### Added
+
+- **Fail-loud post-apply routing self-check** — after `/dev-setup` bakes the agents and writes the launch env, a static config-intent ↔ baked-artifact check verifies each seat's intended native/foreign routing and **throws naming the seat** on a mismatch (foreign intent baked concrete, or a bound tier missing its env var), turning the previously-silent wrong-backend class visible without needing a live proxy. Standalone entry `--verify-routing`. `src/adapter/install-claude.mjs`.
+
+---
+
 ## [5.46.2] — 2026-07-01
 
 ### Fixed
