@@ -2,6 +2,7 @@
 name: dev-builder
 description: Builds one approved change — code, docs, tests (folds coder). Executes the plan the Researcher-Planner (or the Orchestrator) approved, without re-planning; hands the working tree back without committing.
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill, WebFetch, WebSearch
+model: claude-haiku-4-5
 ---
 
 # Builder

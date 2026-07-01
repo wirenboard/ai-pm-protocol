@@ -31,9 +31,9 @@
 
   "roles": {
     "orchestrator": { "agent": "ai-dev" },
-    "planner": { "agent": "dev-planner" },
-    "builder": { "agent": "dev-builder" },
-    "reviewer": { "agent": "dev-reviewer" }
+    "planner": { "agent": "dev-planner", "model": "sonnet" },
+    "builder": { "agent": "dev-builder", "model": "haiku" },
+    "reviewer": { "agent": "dev-reviewer", "model": "sonnet" }
   },
   "_roles": "Each seat binds an `agent` and (for the baked seats) an optional `model`. `agent` = the id the active platform knows (a Claude subagent_type / an OpenCode agent id); swap it for ANY agent that honours the seat's contract — that is how you plug in a different reviewer (stricter, or an external engine) with zero core edit. The THREE baked model pins are `roles.{planner,builder,reviewer}.model` — baked into the assembled agent at install, so changing one needs a RE-BAKE (re-run the installer). A baked pin holds the SHARED tier LANE (fable/opus/sonnet/haiku, strongest→weakest); the personal foreign BINDING for that tier lives in the gitignored config.local.json `launch.aliases` (the personal/shared split — see `_launch` above and docs/decisions/personal-multi-model-setup.md). `roles.orchestrator` carries `agent` ONLY and NO `model` key: the orchestrator IS the running session, so its model is the launch model (the `launch` section above), never a config pin that nothing applies (papercut 2 — docs/decisions/multi-model-setup-ux.md). `model` states only the WISH ('session' / 'auto' / a per-platform pin); the platform adapter realises it. Omitted ⇒ 'session', EXCEPT the reviewer defaults to 'auto' (a maker-model can't see its own blind spots). The PLANNER takes NO special default — absent ⇒ 'session', so a no-pin planner inherits the strong launch model by construction (never 'auto': planning needs a strong model, not cross-model independence — that is the reviewer's need). The planner (docs/decisions/planning-model-split.md) is `profile`-STAFFED: it is spawned only where the profile calls for it (full always; lite for non-trivial; solo/yolo the orchestrator plans directly), and its economy is a CHEAP `roles.builder.model` pin against the strong session-inherited planner. On OpenCode no seat bakes a model line (its `task` runtime ignores subagent model:), so the planner's model benefit is Claude-only — the role still spawns for context separation. The model policy — what 'auto' resolves to and each platform's model authority — is homed in the platform adapter: src/adapter/tool-map.json `models`."
 }
