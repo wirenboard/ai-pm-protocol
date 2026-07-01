@@ -6,8 +6,8 @@ A model reviewing its own work shares its own blind spots — it misses what it 
 
 ## Vanilla vs customized
 
-- **Vanilla state** — no explicit model decision anywhere: no concrete pin on the builder, reviewer, or orchestrator seat (each `model` absent / `session` / `auto`), AND `launch.sessionModel` + `launch.guardModel` both empty/whitespace. (Single home for the predicate: `src/adapter/claude/install-agents.mjs` `isVanilla`.)
-- **Customized state** — any concrete pin on a seat OR any non-empty launch model.
+- **Vanilla state** — no explicit model decision anywhere: no concrete pin on the builder, reviewer, or orchestrator seat (each `model` absent / `session` / `auto`), AND every `launch` model setting empty/whitespace — `launch.sessionModel`, `launch.guardModel`, AND every `launch.aliases` tier binding. (Single home for the predicate: `src/adapter/claude/install-agents.mjs` `isVanilla`.)
+- **Customized state** — any concrete pin on a seat OR any non-empty launch model OR any `launch.aliases` tier binding (a cross-endpoint decision — a proxy can then hide what a tier resolves to, so `auto` is no longer honest).
 
 ## Must work
 

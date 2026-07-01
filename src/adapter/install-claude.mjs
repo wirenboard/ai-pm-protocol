@@ -254,6 +254,16 @@ const LAUNCH_ENV_KEYS = {
   guardModel: "ANTHROPIC_SMALL_FAST_MODEL",
 };
 
+// The tier-alias bindings (nested config.launch.aliases.{opus,sonnet,haiku}) → the
+// ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL vars Claude Code resolves a tier through.
+// The cross-endpoint lever: bind a Claude tier to a foreign model id. Same launch-env class
+// (startup-read, restart-applied) and same prune semantics as LAUNCH_ENV_KEYS above.
+const LAUNCH_ALIAS_ENV_KEYS = {
+  opus: "ANTHROPIC_DEFAULT_OPUS_MODEL",
+  sonnet: "ANTHROPIC_DEFAULT_SONNET_MODEL",
+  haiku: "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+};
+
 // Read the config `launch` section ({ sessionModel, guardModel }) from the target's
 // .ai-dev/config.json — the same file in dogfood (the source repo's own root config) and
 // downstream. Absent file / section / non-object ⇒ {} (a non-routing project, no env).
@@ -272,7 +282,8 @@ function readLaunchModels(target) {
 }
 
 // Merge the launch-time model values into an existing settings.json `env` object,
-// touching ONLY our two keys (LAUNCH_ENV_KEYS) — a user-set env key is never clobbered.
+// touching ONLY our keys (LAUNCH_ENV_KEYS + LAUNCH_ALIAS_ENV_KEYS) — a foreign env key is
+// never clobbered.
 // A non-empty trimmed value is written; an empty/absent value PRUNES our key (so clearing
 // the config field clears the env, never leaving a stale value). Returns the merged env
 // object, or `null` when the result would be empty AND there was no pre-existing env (so
@@ -282,6 +293,14 @@ export function mergeLaunchEnv(existingEnv, launch) {
   const hadEnv = existingEnv !== undefined && existingEnv !== null;
   for (const [field, key] of Object.entries(LAUNCH_ENV_KEYS)) {
     const raw = launch && typeof launch[field] === "string" ? launch[field].trim() : "";
+    if (raw) env[key] = raw;
+    else delete env[key];
+  }
+  // Tier-alias bindings (nested launch.aliases.{opus,sonnet,haiku}) → ANTHROPIC_DEFAULT_*.
+  // Same per-key prune: a non-empty value is written, an empty/absent one clears our key.
+  const aliases = launch && typeof launch.aliases === "object" && launch.aliases ? launch.aliases : {};
+  for (const [tier, key] of Object.entries(LAUNCH_ALIAS_ENV_KEYS)) {
+    const raw = typeof aliases[tier] === "string" ? aliases[tier].trim() : "";
     if (raw) env[key] = raw;
     else delete env[key];
   }

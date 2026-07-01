@@ -118,8 +118,9 @@ export function resolveModelPin(wish, sessionWish, policy = loadClaudeModelPolic
 
 // Is the config in the VANILLA state — no explicit model decision anywhere? Vanilla =
 // NO concrete pin on builder/reviewer/orchestrator (each `model` absent / `session` /
-// `auto`) AND `launch.sessionModel` + `launch.guardModel` both empty/whitespace. Only in
-// the vanilla state is the reviewer's `auto` honored (the opus↔sonnet cross-model guess
+// `auto`) AND every `launch` model setting empty/whitespace — `sessionModel`, `guardModel`,
+// AND every `launch.aliases` tier binding. Only in the vanilla state is the reviewer's
+// `auto` honored (the opus↔sonnet cross-model guess
 // is a safe out-of-box default ONLY on stock Claude Code where that pair is guaranteed).
 // Any explicit decision — a concrete seat pin OR a launch model — moves the config to the
 // CUSTOMIZED state, where `auto` degrades to `session` (install() applies it). A `session`
@@ -134,6 +135,15 @@ export function isVanilla(config) {
   const launch = config.launch ?? {};
   for (const key of ["sessionModel", "guardModel"]) {
     const v = launch[key];
+    if (typeof v === "string" && v.trim() !== "") return false;
+  }
+  // A tier-alias binding (launch.aliases.{opus,sonnet,haiku}) is an explicit cross-endpoint
+  // decision — it redirects a Claude tier to a foreign model, so the reviewer's opus↔sonnet
+  // `auto` guess is no longer honest (a proxy can hide what the tier resolves to). Any set
+  // tier moves the config to CUSTOMIZED, exactly like a seat pin or a launch model.
+  const aliases = launch.aliases && typeof launch.aliases === "object" ? launch.aliases : {};
+  for (const tier of ["opus", "sonnet", "haiku"]) {
+    const v = aliases[tier];
     if (typeof v === "string" && v.trim() !== "") return false;
   }
   return true;

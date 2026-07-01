@@ -165,6 +165,10 @@ check("isVanilla: a concrete builder pin → customized", isVanilla({ roles: { b
 check("isVanilla: a concrete orchestrator pin → customized", isVanilla({ roles: { orchestrator: { agent: "ai-dev", model: "opus" } } }) === false);
 check("isVanilla: a non-empty launch.sessionModel → customized", isVanilla({ launch: { sessionModel: "deepseek-chat" } }) === false);
 check("isVanilla: a non-empty launch.guardModel → customized", isVanilla({ launch: { guardModel: "claude-haiku-4-5" } }) === false);
+// A tier-alias binding is an explicit cross-endpoint decision ⇒ customized (auto no longer honest).
+check("isVanilla: a launch.aliases tier binding → customized", isVanilla({ launch: { aliases: { sonnet: "glm-4.6" } } }) === false);
+check("isVanilla: empty/whitespace alias tiers → still vanilla", isVanilla({ launch: { aliases: { sonnet: "", haiku: "  " } } }) === true);
+check("isVanilla: non-object aliases → still vanilla (fail-safe, no crash)", isVanilla({ launch: { aliases: "nope" } }) === true);
 
 // end-to-end: in a CUSTOMIZED config, a reviewer `auto` / absent ⇒ degrades to session ⇒ NO line.
 check("claude-bake: reviewer 'auto' WITH a concrete builder pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter("auto", undefined, { builderModel: "sonnet" })));
