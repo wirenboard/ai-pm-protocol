@@ -20,11 +20,11 @@
       },
       "targets": [
         { "role": "reviewer", "beat": "review" },
-        { "role": "builder", "beat": "plan" }
+        { "role": "planner", "beat": "plan" }
       ],
       "fragments": {
         "reviewer": "src/modules/threat-model/reviewer.md",
-        "builder": "src/modules/threat-model/builder.md"
+        "planner": "src/modules/threat-model/planner.md"
       }
     },
     {
@@ -37,11 +37,11 @@
         "mixed": { "depth": "rich" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/product-advocate/builder.md",
+        "planner": "src/modules/product-advocate/planner.md",
         "reviewer": "src/modules/product-advocate/reviewer.md"
       }
     },
@@ -55,11 +55,11 @@
         "mixed": { "depth": "light" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/test-methodology/builder.md",
+        "planner": "src/modules/test-methodology/planner.md",
         "reviewer": "src/modules/test-methodology/reviewer.md"
       }
     },
@@ -73,11 +73,11 @@
         "mixed": { "depth": "light" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/semantic-correctness/builder.md",
+        "planner": "src/modules/semantic-correctness/planner.md",
         "reviewer": "src/modules/semantic-correctness/reviewer.md"
       }
     },
@@ -91,11 +91,11 @@
         "mixed": { "depth": "rich" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/ui-ux/builder.md",
+        "planner": "src/modules/ui-ux/planner.md",
         "reviewer": "src/modules/ui-ux/reviewer.md"
       }
     },
@@ -109,11 +109,11 @@
         "mixed": { "depth": "rich" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/research-methodology/builder.md",
+        "planner": "src/modules/research-methodology/planner.md",
         "reviewer": "src/modules/research-methodology/reviewer.md"
       }
     },
@@ -127,11 +127,11 @@
         "mixed": { "depth": "light" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/debug-methodology/builder.md",
+        "planner": "src/modules/debug-methodology/planner.md",
         "reviewer": "src/modules/debug-methodology/reviewer.md"
       }
     },
@@ -145,11 +145,11 @@
         "mixed": { "depth": "light" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/performance/builder.md",
+        "planner": "src/modules/performance/planner.md",
         "reviewer": "src/modules/performance/reviewer.md"
       }
     },
@@ -163,11 +163,11 @@
         "mixed": { "depth": "light" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/database/builder.md",
+        "planner": "src/modules/database/planner.md",
         "reviewer": "src/modules/database/reviewer.md"
       }
     },
@@ -181,11 +181,11 @@
         "mixed": { "depth": "light" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/i18n/builder.md",
+        "planner": "src/modules/i18n/planner.md",
         "reviewer": "src/modules/i18n/reviewer.md"
       }
     },
@@ -199,11 +199,11 @@
         "mixed": { "depth": "light" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/concurrency/builder.md",
+        "planner": "src/modules/concurrency/planner.md",
         "reviewer": "src/modules/concurrency/reviewer.md"
       }
     },
@@ -217,11 +217,11 @@
         "mixed": { "depth": "light" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/modularity/builder.md",
+        "planner": "src/modules/modularity/planner.md",
         "reviewer": "src/modules/modularity/reviewer.md"
       }
     },
@@ -235,10 +235,10 @@
         "mixed": { "depth": "rich" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" }
+        { "role": "planner", "beat": "plan" }
       ],
       "fragments": {
-        "builder": "src/modules/elicitation/builder.md"
+        "planner": "src/modules/elicitation/planner.md"
       }
     },
     {
@@ -251,11 +251,11 @@
         "mixed": { "depth": "rich" }
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/plan-adversary/builder.md",
+        "planner": "src/modules/plan-adversary/planner.md",
         "reviewer": "src/modules/plan-adversary/reviewer.md"
       }
     },
@@ -269,11 +269,11 @@
         "mixed": false
       },
       "targets": [
-        { "role": "builder", "beat": "plan" },
+        { "role": "planner", "beat": "plan" },
         { "role": "reviewer", "beat": "review" }
       ],
       "fragments": {
-        "builder": "src/modules/team-collaboration/builder.md",
+        "planner": "src/modules/team-collaboration/planner.md",
         "reviewer": "src/modules/team-collaboration/reviewer.md"
       }
     }

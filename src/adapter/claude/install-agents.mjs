@@ -59,7 +59,7 @@ import { fileURLToPath } from "node:url";
 import { loadRegistry, composeBody } from "../modules.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const SPAWNABLE = ["builder", "reviewer"];
+const SPAWNABLE = ["planner", "builder", "reviewer"];
 const TOOL_MAP = path.join(ROOT, "src", "adapter", "tool-map.json");
 // The orchestrator load-surface filename is FIXED (not keyed on the configurable agent id):
 // CLAUDE.md @imports it by a stable string in both dogfood and downstream modes. Unlike the

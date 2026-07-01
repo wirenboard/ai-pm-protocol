@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { loadRegistry, composeBody } from "../modules.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const ROLES = ["orchestrator", "builder", "reviewer"];
+const ROLES = ["orchestrator", "planner", "builder", "reviewer"];
 
 // Resolve a role's configured model — on OpenCode this ALWAYS returns null: we
 // never bake a `model:` line. The OpenCode `task` runtime parses a subagent's

@@ -251,6 +251,10 @@ const FIXTURE = [
     claude: { tool_name: "Task", tool_input: { subagent_type: "dev-builder" } },
     opencode: { tool: "task", args: { subagent_type: "dev-builder" } } },
 
+  { name: "allow-spawn-dev-planner", expect: "allow",
+    claude: { tool_name: "Task", tool_input: { subagent_type: "dev-planner" } },
+    opencode: { tool: "task", args: { subagent_type: "dev-planner" } } },
+
   // yolo profile turns the merge-gate OFF — an unstamped push on a yolo project allows.
   // Uses a dedicated yolo root so only this case sees that profile.
   { name: "yolo-merge-gate-off", expect: "allow", root: YOLO,

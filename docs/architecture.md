@@ -7,7 +7,7 @@ One neutral core plus one thin adapter per platform.
 The **core** is prose and data an engineer reads without knowing the harness:
 
 - the constitution (`PROTOCOL.md`);
-- three role agents (`src/agents/`);
+- the role agents (`src/agents/`);
 - this file;
 - the project config (`.ai-dev/config.json`);
 - the quality layer (`src/quality/`);
@@ -17,10 +17,10 @@ The **adapter** is the only platform-specific code: a small shim per platform th
 
 ## Actor model
 
-Three roles, two of them spawned (contracts in `PROTOCOL.md` `## The three roles`):
+Four roles, three of them spawned (contracts in `PROTOCOL.md` `## The four roles`):
 
 - the **Orchestrator** is the running session — it routes, holds gates, owns git and state;
-- the **Builder** and **Reviewer** are **separate spawned sub-agents** — separate contexts.
+- the **Researcher-Planner** (profile-staffed), **Builder**, and **Reviewer** are **separate spawned sub-agents** — separate contexts. The Planner ≠ Builder split carries cost/model-quality, not reliability; the reliability split remains Reviewer ≠ Builder (`docs/decisions/planning-model-split.md`).
 
 That separation is load-bearing, not cosmetic: it is what the enforcement layer reads to tell *the Orchestrator authored content* (denied) from *a sub-agent authored content* (allowed).
 

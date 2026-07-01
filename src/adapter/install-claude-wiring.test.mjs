@@ -296,6 +296,58 @@ registerStragglerSweep();
   }
 }
 
+// ── ensureConfig: BACKWARD-COMPAT backfill of a newly-added seat (the planner) ──────
+// A config that predates a new SPAWNABLE seat lacks `roles.planner`; without a heal the
+// next install's bake throws `roles.planner.agent is missing`. ensureConfig must
+// additively fill the missing seat, preserve every user value, and stay return-FALSE
+// (the config existed). RED before the backfill (install() threw); GREEN after.
+{
+  const target = freshTarget("planner-backfill-unit");
+  try {
+    fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
+    // An OLD config: no planner seat, a user builder MODEL pin, a non-default mode.
+    const old = { mode: "autonomous", profile: "lite", platform: "claude", kind: "mixed",
+      roles: { orchestrator: { agent: "ai-dev" }, builder: { agent: "dev-builder", model: "sonnet" }, reviewer: { agent: "dev-reviewer", model: "auto" } } };
+    fs.writeFileSync(path.join(target, ".ai-dev", "config.json"), JSON.stringify(old, null, 2) + "\n");
+    const ret = ensureConfig(target, "claude");
+    check("[ensureConfig] backfill returns FALSE (config EXISTED — papercut 9)", ret === false);
+    const healed = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8"));
+    check("[ensureConfig] backfill adds the missing planner seat", healed.roles.planner && healed.roles.planner.agent === "dev-planner");
+    check("[ensureConfig] backfill NEVER overwrites a user's builder model pin", healed.roles.builder.model === "sonnet");
+    check("[ensureConfig] backfill preserves the existing reviewer seat", healed.roles.reviewer.model === "auto");
+    check("[ensureConfig] backfill preserves other user values (mode/profile/kind)",
+      healed.mode === "autonomous" && healed.profile === "lite" && healed.kind === "mixed");
+    // Idempotent: a second call finds nothing missing and leaves the file byte-identical.
+    const before = fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8");
+    const ret2 = ensureConfig(target, "claude");
+    check("[ensureConfig] second call is a no-op (nothing missing) and still FALSE", ret2 === false);
+    check("[ensureConfig] second call leaves the file byte-identical", fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8") === before);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
+}
+
+// End-to-end: the REAL downstream upgrade path. A pre-existing planner-less config →
+// full install() must NOT throw (ensureConfig heals before wireClaude bakes) and the
+// planner agent must actually assemble.
+{
+  const target = freshTarget("planner-backfill-e2e");
+  try {
+    fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
+    const old = { mode: "interactive", profile: "solo", platform: "claude", kind: "code",
+      roles: { orchestrator: { agent: "ai-dev" }, builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer", model: "auto" } } };
+    fs.writeFileSync(path.join(target, ".ai-dev", "config.json"), JSON.stringify(old, null, 2) + "\n");
+    let threw = false;
+    try { install(target, "claude"); } catch { threw = true; }
+    check("[backfill-e2e] a planner-less config no longer throws on install (bake heals first)", threw === false);
+    check("[backfill-e2e] the planner agent assembled after the heal", fs.existsSync(path.join(target, ".claude", "agents", "dev-planner.md")));
+    const healed = JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8"));
+    check("[backfill-e2e] the healed config carries the planner seat", healed.roles.planner.agent === "dev-planner");
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
+}
+
 // ── launch-time models → settings.json `env` (the wrapper-less auto-apply) ──────────
 // The installer writes config.launch.{sessionModel,guardModel} into .claude/settings.json
 // `env` (read by Claude Code at startup), touching ONLY our two keys and never clobbering
