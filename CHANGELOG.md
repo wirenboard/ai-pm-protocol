@@ -12,6 +12,20 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.50.0] — 2026-07-01
+
+### Added
+
+- **`fable` is a first-class remappable tier synonym** — the setup model dialog's synonym set is now `fable · opus · sonnet · haiku` (strongest→weakest), each mappable to native Claude or a foreign provider like the other three. Grounded in the official Claude Code docs (four remappable `ANTHROPIC_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL` vars; custom aliases are not supported, so four is the ceiling). `src/adapter/tool-map.json` (`allow`+`ids`), `src/adapter/install-claude.mjs` (`LAUNCH_ALIAS_ENV_KEYS`), `src/adapter/claude/install-agents.mjs`, `src/adapter/router-launch.mjs` (`ALIAS_ENV`).
+- **The `planner` seat is now selectable in the setup model dialog** — the Researcher-Planner is a baked seat (`roles.planner.model`) but was previously only settable by hand; Phase 1 now offers it (with an explicit "inherit session — strong planner" default that preserves the cheap-builder/strong-planner economy). The routing self-verify (`checkRouting` `ROUTED_SEATS`) now covers the planner too, so a foreign-pinned planner that baked native fails loud.
+
+### Changed
+
+- **Setup model dialog → synonym-first two-phase flow** (`src/agents/procedures/setup.md`): after the vanilla gate, **Phase 1** assigns each baked seat (planner · builder · reviewer) a synonym and **Phase 2** maps each synonym to native/foreign — the synonym is now a visible, stable binding, so reseating a seat never touches the synonym↔model mapping. Supersedes the per-seat funnel's dialog shape (papercut 13); the underlying tier-alias mechanic is unchanged.
+- **Session and guard are chosen directly, independent of the synonym mappings.** Session takes a concrete `ANTHROPIC_MODEL` (native even over a foreign-bound synonym — no deprecation risk). Guard defaults to the haiku slot (`ANTHROPIC_DEFAULT_HAIKU_MODEL`, modern) with an explicit, deprecation-warned override (`ANTHROPIC_SMALL_FAST_MODEL`, G1) for a background model that differs from the haiku slot. The "globally native/foreign" rule now applies to the baked seats only. Decision record: `docs/decisions/multi-model-setup-ux.md` papercut 14.
+
+---
+
 ## [5.49.0] — 2026-07-01
 
 ### Added

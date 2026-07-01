@@ -198,14 +198,17 @@ export function verifyClaudeWiring(target, settingsPath) {
 }
 
 // The BAKED seats whose routing this check covers. Session + guard are launch-env concrete
-// ids (never tier-routed), so they carry no silent-native class — only builder/reviewer do.
-const ROUTED_SEATS = ["builder", "reviewer"];
+// ids (never tier-routed), so they carry no silent-native class — only the baked seats do.
+// `planner` is a first-class routable baked seat (papercut 14 C): a foreign-pinned planner
+// that baked native is the same silent-native class as builder/reviewer, so it is verified
+// too; an unpinned planner (inherit session) has no tier intent and is reported, never failed.
+const ROUTED_SEATS = ["planner", "builder", "reviewer"];
 
 // Pure routing-consistency check: config INTENT ↔ baked ACTUAL ↔ settings.json env — the
 // static apply-time guard against the silent-native cross-endpoint class (docs/decisions/
 // multi-model-setup-ux.md papercut 13), no live proxy needed. Inputs are already parsed:
 //   config          — .ai-dev/config.json
-//   seatModelLines  — { builder, reviewer } → the baked `model:` value, or null for no line
+//   seatModelLines  — { planner, builder, reviewer } → the baked `model:` value, or null for no line
 //   env             — .claude/settings.json `env` (or {})
 //   policy          — loadClaudeModelPolicy()
 // Intent per seat: a bare tier alias whose tier is bound in launch.aliases ⇒ FOREIGN (must
@@ -432,11 +435,15 @@ const LAUNCH_ENV_KEYS = {
   guardModel: "ANTHROPIC_SMALL_FAST_MODEL",
 };
 
-// The tier-alias bindings (nested config.launch.aliases.{opus,sonnet,haiku}) → the
-// ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL vars Claude Code resolves a tier through.
-// The cross-endpoint lever: bind a Claude tier to a foreign model id. Same launch-env class
-// (startup-read, restart-applied) and same prune semantics as LAUNCH_ENV_KEYS above.
+// The tier-alias bindings (nested config.launch.aliases.{fable,opus,sonnet,haiku}) → the
+// ANTHROPIC_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL vars Claude Code resolves a tier through
+// — the FOUR remappable aliases (strongest→weakest fable·opus·sonnet·haiku; the fixed set,
+// no custom aliases). The cross-endpoint lever: bind a Claude tier to a foreign model id.
+// Same launch-env class (startup-read, restart-applied) and same prune semantics as
+// LAUNCH_ENV_KEYS above. Mirror of router-launch.mjs `launchModelEnv` ALIAS_ENV (the
+// launcher-side export) — the two MUST stay in sync tier-for-tier.
 const LAUNCH_ALIAS_ENV_KEYS = {
+  fable: "ANTHROPIC_DEFAULT_FABLE_MODEL",
   opus: "ANTHROPIC_DEFAULT_OPUS_MODEL",
   sonnet: "ANTHROPIC_DEFAULT_SONNET_MODEL",
   haiku: "ANTHROPIC_DEFAULT_HAIKU_MODEL",
@@ -474,7 +481,7 @@ export function mergeLaunchEnv(existingEnv, launch) {
     if (raw) env[key] = raw;
     else delete env[key];
   }
-  // Tier-alias bindings (nested launch.aliases.{opus,sonnet,haiku}) → ANTHROPIC_DEFAULT_*.
+  // Tier-alias bindings (nested launch.aliases.{fable,opus,sonnet,haiku}) → ANTHROPIC_DEFAULT_*.
   // Same per-key prune: a non-empty value is written, an empty/absent one clears our key.
   const aliases = launch && typeof launch.aliases === "object" && launch.aliases ? launch.aliases : {};
   for (const [tier, key] of Object.entries(LAUNCH_ALIAS_ENV_KEYS)) {

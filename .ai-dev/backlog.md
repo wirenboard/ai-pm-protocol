@@ -3,6 +3,21 @@
 Observations and follow-ups recorded during reviews/audits. Triaged 2026-06-12 against the minimal core: entries resolved by shipped versions removed; entries referencing the retired template structure (workflow/*.md, the pm-* roster, gen/) re-stated as minimal-core touchpoints; the essence kept, the archaeology dropped (git history holds the originals).
 
 
+## Boundary deny blocks reading the agent's OWN out-of-root workspace (scratchpad + harness tool-result overflow) — 2026-07-01 (Operator-reported, live)
+
+**Symptom (hit live this session).** A `WebFetch` result exceeded the inline cap and the harness persisted the full body to `~/.claude-personal/projects/…/tool-results/<id>.txt` — **outside the session root**. Reading it back (Read tool, or a Bash `cat`/`grep`) is then refused by invariant-2's boundary deny: a legitimate, agent-created artifact becomes unreachable. The same applies to the assigned **scratchpad** (`/tmp/claude-…/…/scratchpad`), which the harness system-prompt explicitly hands the agent for temp files yet also sits outside the root.
+
+**The gap.** The boundary deny (invariant 2 / `## Enforcement`) is anchored to the session root (+ declared components) to keep an agent out of OTHER projects. But it does not carve out the agent's OWN sanctioned workspaces: (a) the harness-assigned scratchpad dir, (b) the harness tool-result overflow store. These are this agent's scratch, not a foreign project — denying them is a false positive that impedes legitimate work (here: consulting a doc the agent itself fetched).
+
+**Directions to scope (research/design first).** (1) Teach the deny an **allow-set** of sanctioned out-of-root roots — the scratchpad path + the tool-results store — sourced from the harness env where it exposes them (fail-closed: only exact, harness-declared paths, never a broad `~/.claude*` glob that could re-open the barn). (2) Or a narrower carve-out just for the tool-result store + the one scratchpad path the session was given. Security note: this WIDENS a `[mechanical]` floor, so it needs the same fail-closed care as the components-manifest widening (`docs/architecture.md` `## Components`) — a bad/absent value must resolve to the current (narrow) behaviour, never a wider one. Its own feature + full review. Operator-flagged as "pressing".
+
+## Advisory findings from personal-multi-model-setup review (#326, 5.49.0) — 2026-07-01
+
+Non-blocking Reviewer advisories on the config.local personal-model feature; A2 (README prose wall) was fixed in-branch, these three deferred:
+- **A1 — decision doc lacks per-claim method marks.** `docs/decisions/personal-multi-model-setup.md` has a dated header but no per-claim confidence/verification tags (research-methodology, rich depth). Low risk — every claim is self-verifiable from the codebase or a first-hand API error. Add per-claim `(verified YYYY-MM-DD)` marks on the load-bearing claims (the `^srvtoolu_…$` pattern, the cross-endpoint mechanic) if this doc is next revisited.
+- **A3 — no pinning test for "personal alias absent from committed `settings.json`".** The invariant holds by the unchanged `readLaunchModels` (reads only `config.json`), but no test exercises the full `wireClaude → readLaunchModels → mergeLaunchEnv` path with a `config.local.json` present to assert personal aliases never reach the committed env. Add a regression test that pins it (not contract/security-bearing — the code enforces it today; this guards against a future refactor).
+- **A4 — two files over the ~500-line sane default.** `src/adapter/router-launch.mjs` (582) and `src/adapter/install-claude.mjs` (521). No configured linter threshold; advisory. Candidates for `decompose` when a refactor opportunity arises (already tracked alongside the `engine.mjs`/`install.mjs` decompose worklist).
+
 ## Protocol-surface optimization — lever 3 deferred, lever 2 closed — 2026-06-30 (from `docs/decisions/protocol-surface-optimization.md`)
 
 Levers 1+4 shipped (5.42.1, ~0.5k tokens off the every-session surface). Remaining:

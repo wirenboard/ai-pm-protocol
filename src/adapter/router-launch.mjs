@@ -195,7 +195,7 @@ export function loadConfigWithLocal(configPath) {
 //     the Operator's per-task-keys mechanism, pinned per project with no .bashrc edit;
 //     useful even WITHOUT routing, so it is exported here, where every exec path —
 //     proxy/direct/external — passes through, docs/decisions/launcher-ux.md).
-//   config.launch.aliases.{opus,sonnet,haiku} → ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL
+//   config.launch.aliases.{fable,opus,sonnet,haiku} → ANTHROPIC_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL
 //     (the cross-endpoint tier lever — bind a Claude tier to a foreign model id).
 // Returns ONLY the keys with a non-empty value — an absent/empty section exports
 // nothing, so a non-routing project's launch env is byte-unchanged. These must be set
@@ -210,13 +210,15 @@ export function launchModelEnv(config) {
   if (session) out.ANTHROPIC_MODEL = session;
   if (guard) out.ANTHROPIC_SMALL_FAST_MODEL = guard;
   if (configDir) out.CLAUDE_CONFIG_DIR = configDir;
-  // Tier-alias bindings — config.launch.aliases.{opus,sonnet,haiku} → the
-  // ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL vars Claude Code resolves a tier through.
-  // This is the cross-endpoint lever: bind a Claude TIER to a foreign model id (e.g.
-  // sonnet → glm-4.6), then a role using that tier routes to it. Same launch-env class as
-  // the models above (startup-read, restart-applied); absent/empty per-tier ⇒ not set.
+  // Tier-alias bindings — config.launch.aliases.{fable,opus,sonnet,haiku} → the
+  // ANTHROPIC_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL vars Claude Code resolves a tier through
+  // (the FOUR remappable aliases, strongest→weakest). This is the cross-endpoint lever: bind a
+  // Claude TIER to a foreign model id (e.g. sonnet → glm-4.6), then a role using that tier
+  // routes to it. Same launch-env class as the models above (startup-read, restart-applied);
+  // absent/empty per-tier ⇒ not set. Mirror of install-claude.mjs `LAUNCH_ALIAS_ENV_KEYS`
+  // (the settings.json env writer) — the two MUST stay in sync tier-for-tier.
   const aliases = launch.aliases && typeof launch.aliases === "object" ? launch.aliases : {};
-  const ALIAS_ENV = { opus: "ANTHROPIC_DEFAULT_OPUS_MODEL", sonnet: "ANTHROPIC_DEFAULT_SONNET_MODEL", haiku: "ANTHROPIC_DEFAULT_HAIKU_MODEL" };
+  const ALIAS_ENV = { fable: "ANTHROPIC_DEFAULT_FABLE_MODEL", opus: "ANTHROPIC_DEFAULT_OPUS_MODEL", sonnet: "ANTHROPIC_DEFAULT_SONNET_MODEL", haiku: "ANTHROPIC_DEFAULT_HAIKU_MODEL" };
   for (const [tier, envVar] of Object.entries(ALIAS_ENV)) {
     const v = typeof aliases[tier] === "string" ? aliases[tier].trim() : "";
     if (v) out[envVar] = v;
