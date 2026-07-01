@@ -94,6 +94,18 @@ To turn multi-model routing on:
 
 **Already running a proxy yourself, or want the proxy without the launcher driving claude?** Set a top-level `proxyUrl` in `.ai-dev/model-routes.json` (the launcher points `claude` at that URL instead of spawning one; auth/keys then live in your proxy's env), or run `./.ai-dev/launch --proxy` to start the proxy in the foreground, print its URL, and point your own launch at it. The full reference — the provider catalog, route shape, the launcher's decisions, env precedence, and the load-bearing constraints — is **[`src/adapter/README.md`](src/adapter/README.md)** (`### The launcher`); the rationale is `docs/decisions/per-seat-model-routing.md` and `docs/decisions/launcher-ux.md`.
 
+## Troubleshooting
+
+### `API Error: 400 … server_tool_use.id` after switching back to a native model
+
+**Symptom.** `API Error: 400 … server_tool_use.id: String should match pattern '^srvtoolu_[a-zA-Z0-9_]+'`, raised when you switch the session back to a native Anthropic model (Opus/Sonnet/Haiku) after running it on a **foreign model behind the multi-model proxy** (DeepSeek, GLM, …).
+
+**Cause.** A tool call made while the session was on the foreign model was recorded with that model's native tool-call id (`call_<hex>`, the OpenAI/GLM shape) inside an Anthropic `server_tool_use` block — Anthropic ids are `toolu_…` / `srvtoolu_…`. The bad block sits in the transcript and fails validation when the full history replays to a native endpoint. This is a **harness/proxy behaviour, not a protocol bug** — the protocol generates no tool ids, so it cannot prevent it mechanically, only document it. The proof a project is innocent: a **fresh session in the same project runs the native model fine** (no poisoned history).
+
+**Fix.** Start a **fresh session** (not `--continue`/compact — compaction carries the bad block forward). The resume pointer (`.ai-dev/state/current.md`) and approved plan persist on disk, so you resume losslessly and lose only the poisoned scrollback. To keep the scrollback instead, rewrite the id surgically (`sed -i 's/call_<the-hex>/srvtoolu_fixed0001/g'` on the transcript under `~/.claude`, back the file up first) — but a fresh session is simpler and safer.
+
+The design rationale — why this is an unfixable-by-us tax of the multi-model path, alongside the personal/shared model split — is `docs/decisions/personal-multi-model-setup.md`.
+
 ## Layout
 
 ```text
