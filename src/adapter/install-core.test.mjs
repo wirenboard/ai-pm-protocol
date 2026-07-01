@@ -149,7 +149,7 @@ function testPlatform(platform, assertWiring) {
 }
 
 testPlatform("claude", (target) => {
-  check("[claude] agents assembled", fs.existsSync(path.join(target, ".claude", "agents", "dev-builder.md")) && fs.existsSync(path.join(target, ".claude", "agents", "dev-reviewer.md")));
+  check("[claude] agents assembled", fs.existsSync(path.join(target, ".claude", "agents", "dev-planner.md")) && fs.existsSync(path.join(target, ".claude", "agents", "dev-builder.md")) && fs.existsSync(path.join(target, ".claude", "agents", "dev-reviewer.md")));
   // the orchestrator load surface lands OUTSIDE .claude/agents/ (it is the session's
   // @imported instructions, not a spawnable subagent — a file in agents/ would auto-register).
   check("[claude] orchestrator load surface assembled at .claude/ai-dev.md", fs.existsSync(path.join(target, ".claude", "ai-dev.md")));
@@ -178,7 +178,7 @@ testPlatform("claude", (target) => {
 });
 
 testPlatform("opencode", (target) => {
-  check("[opencode] three agents assembled", ["ai-dev", "dev-builder", "dev-reviewer"].every((id) => fs.existsSync(path.join(target, ".opencode", "agents", `${id}.md`))));
+  check("[opencode] four agents assembled", ["ai-dev", "dev-planner", "dev-builder", "dev-reviewer"].every((id) => fs.existsSync(path.join(target, ".opencode", "agents", `${id}.md`))));
   check("[opencode] /dev-setup command assembled", fs.existsSync(path.join(target, ".opencode", "commands", "dev-setup.md")));
   const plugin = path.join(target, ".opencode", "plugins", "ai-dev.mjs");
   check("[opencode] plugin generated", fs.existsSync(plugin));

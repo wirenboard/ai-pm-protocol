@@ -59,6 +59,7 @@ check("no-pin: a {claude}-only pin gives no opencode id", resolveModelPin({ clau
 // A config skeleton with all three role agent ids (install() requires each).
 const baseRoles = {
   orchestrator: { agent: "ai-dev" },
+  planner: { agent: "dev-planner" },
   builder: { agent: "dev-builder" },
 };
 
@@ -133,6 +134,7 @@ function claudeReviewerFrontmatter(reviewerModel, sessionModel, opts = {}) {
   const config = {
     roles: {
       orchestrator: { agent: "ai-dev", ...(sessionModel !== undefined ? { model: sessionModel } : {}) },
+      planner: { agent: "dev-planner" },
       builder: { agent: "dev-builder", ...(opts.builderModel !== undefined ? { model: opts.builderModel } : {}) },
       reviewer: { agent: "dev-reviewer", ...(reviewerModel !== undefined ? { model: reviewerModel } : {}) },
     },
@@ -170,6 +172,39 @@ check("claude-bake: a reviewer pinned 'haiku' bakes model: claude-haiku-4-5", /^
 check("claude-bake: a reviewer pinned a claude-haiku-* id bakes that line verbatim", /^model: claude-haiku-4-5$/m.test(claudeReviewerFrontmatter("claude-haiku-4-5", undefined)));
 check("claude-bake: a still-off-allowlist id bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("claude-fictional-9-9", undefined)));
 
+// ───────── PLANNER seat (docs/decisions/planning-model-split.md) — no special default ─────────
+// The planner takes NO auto default (unlike the reviewer): absent ⇒ session inherit (no
+// line), so a no-pin planner runs on the strong session model by construction. A concrete
+// strong pin bakes verbatim (a project that wants the planner off-session). OpenCode bakes
+// nothing (its task runtime ignores subagent model:). This is the seat's new-path coverage.
+function claudePlannerFrontmatter(plannerModel, sessionModel) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-planner-bake-"));
+  const outDir = path.join(tmp, "agents");
+  const config = {
+    roles: {
+      orchestrator: { agent: "ai-dev", ...(sessionModel !== undefined ? { model: sessionModel } : {}) },
+      planner: { agent: "dev-planner", ...(plannerModel !== undefined ? { model: plannerModel } : {}) },
+      builder: { agent: "dev-builder" },
+      reviewer: { agent: "dev-reviewer" },
+    },
+  };
+  const written = installClaude(outDir, config);
+  const fm = fs.readFileSync(written["dev-planner"], "utf8").split("\n---")[0];
+  fs.rmSync(tmp, { recursive: true, force: true });
+  return fm;
+}
+check("claude-bake: absent planner bakes NO line (session-strong inherit, never auto)", !/^model:/m.test(claudePlannerFrontmatter(undefined, undefined)));
+check("claude-bake: absent planner even in a CUSTOMIZED config bakes NO line (no auto default)", !/^model:/m.test(claudePlannerFrontmatter(undefined, "sonnet")));
+check("claude-bake: a strong planner pin (opus) bakes model: claude-opus-4-8", /^model: claude-opus-4-8$/m.test(claudePlannerFrontmatter("opus", undefined)));
+// OpenCode: even a concrete strong planner pin bakes no line (its task runtime ignores it).
+{
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-oc-planner-"));
+  const written = install(outDir, { roles: { ...baseRoles, planner: { agent: "dev-planner", model: "opus" }, reviewer: { agent: "dev-reviewer" } } });
+  const fm = fs.readFileSync(written["dev-planner"], "utf8").split("\n---")[0];
+  fs.rmSync(outDir, { recursive: true, force: true });
+  check("opencode-bake: a concrete planner pin emits no model line (runtime ignores it)", !/^model:/m.test(fm));
+}
+
 // ───────── 6. isVanilla + the customized-state `auto` degrade (the new spec) ─────────
 // isVanilla — `session`/`auto`/absent are NOT explicit decisions (stay vanilla); a concrete
 // seat pin OR a non-empty launch model is (customized).
@@ -205,6 +240,7 @@ function claudeSeatFrontmatter(agentKey, roleModels, launch) {
   const config = {
     roles: {
       orchestrator: { agent: "ai-dev" },
+      planner: { agent: "dev-planner" },
       builder: { agent: "dev-builder", ...(roleModels.builder !== undefined ? { model: roleModels.builder } : {}) },
       reviewer: { agent: "dev-reviewer", ...(roleModels.reviewer !== undefined ? { model: roleModels.reviewer } : {}) },
     },
@@ -273,6 +309,7 @@ function applyRoutedTarget() {
   const config = {
     roles: {
       orchestrator: { agent: "ai-dev" },
+      planner: { agent: "dev-planner" },
       builder: { agent: "dev-builder", model: "opus" },
       reviewer: { agent: "dev-reviewer", model: "sonnet" },
     },

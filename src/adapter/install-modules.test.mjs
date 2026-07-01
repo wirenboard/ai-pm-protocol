@@ -157,7 +157,7 @@ check("in-root pointer resolves", resolveFragmentPath(ROOT, "src/modules/threat-
 console.log("END-TO-END — Claude install composes the module:");
 // orchestrator included: claudeInstall now also assembles the orchestrator load surface
 // (.claude/ai-dev.md), so the fixture config must name every seat install() writes.
-const baseRoles = { orchestrator: { agent: "ai-dev" }, builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer" } };
+const baseRoles = { orchestrator: { agent: "ai-dev" }, planner: { agent: "dev-planner" }, builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer" } };
 function reviewerAgentText(modulesCfg) {
   // nest the agents dir under a temp BASE: claudeInstall writes the orchestrator surface
   // to outDir's PARENT (.claude/ai-dev.md), so the parent must be inside a cleanable dir,
@@ -180,13 +180,13 @@ check("e2e: OFF ⇒ assembled agent keeps the floor", e2eOff.includes(REVIEWER_F
 // ── 7. SECOND MODULE: product-advocate — same binary behaviour, no threat-model
 //      assertion weakened (added, never edited). Targets builder (plan) + reviewer
 //      (review), declared AFTER threat-model so registry order = assembly order.
-const builderFloor = fs.readFileSync(path.join(ROOT, "src", "agents", "builder.md"), "utf8");
+const plannerFloor = fs.readFileSync(path.join(ROOT, "src", "agents", "planner.md"), "utf8");
 // The product-advocate builder fragment's distinguishing line, and a `[rich]`-only item.
 const PA_FRAGMENT_MARK = "The **product-advocate** module is on";
 const PA_RICH_ONLY = "The cheapest test that would tell us";
 const PA_LIGHT_CORE = "Who is this for";
 // The Builder plan-time product FLOOR line the module deepens — present under EVERY config.
-const BUILDER_PRODUCT_FLOOR = "Product questions";
+const PLANNER_PRODUCT_FLOOR = "Product questions";
 
 console.log("PRODUCT-ADVOCATE — resolver + per-kind defaults:");
 const pa = registry.modules.find((m) => m.id === "product-advocate");
@@ -214,22 +214,22 @@ check("pa default: absent kind ⇒ strict side (code/rich)", effectiveToggle(pa,
 check("pa override: config value overrides the kind default",
   effectiveToggle(pa, { kind: "code", modules: { "product-advocate": { depth: "light" } } }).depth === "light");
 
-console.log("PRODUCT-ADVOCATE — compose into builder, floor always present:");
-function builderComposed(cfg) {
-  return composeBody(ROOT, builderFloor, "builder", registry, cfg);
+console.log("PRODUCT-ADVOCATE — compose into planner, floor always present:");
+function plannerComposed(cfg) {
+  return composeBody(ROOT, plannerFloor, "planner", registry, cfg);
 }
-const paOn = builderComposed({ kind: "code", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
+const paOn = plannerComposed({ kind: "code", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
 check("pa compose: enabled ⇒ fragment text present", paOn.includes(PA_FRAGMENT_MARK));
 check("pa compose: enabled ⇒ marker consumed", !paOn.includes(MARKER));
-check("pa compose: enabled ⇒ Builder product FLOOR still present", paOn.includes(BUILDER_PRODUCT_FLOOR));
-const paOff = builderComposed({ modules: { "product-advocate": false, "threat-model": false } });
+check("pa compose: enabled ⇒ Builder product FLOOR still present", paOn.includes(PLANNER_PRODUCT_FLOOR));
+const paOff = plannerComposed({ modules: { "product-advocate": false, "threat-model": false } });
 check("pa omit: disabled ⇒ fragment absent", !paOff.includes(PA_FRAGMENT_MARK));
 check("pa omit: disabled ⇒ marker consumed", !paOff.includes(MARKER));
-check("pa omit: disabled ⇒ Builder product FLOOR STILL present", paOff.includes(BUILDER_PRODUCT_FLOOR));
+check("pa omit: disabled ⇒ Builder product FLOOR STILL present", paOff.includes(PLANNER_PRODUCT_FLOOR));
 
 console.log("PRODUCT-ADVOCATE — depth (light gets genuinely less):");
-const paRich = builderComposed({ kind: "code", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
-const paLight = builderComposed({ kind: "code", modules: { "product-advocate": { depth: "light" }, "threat-model": false } });
+const paRich = plannerComposed({ kind: "code", modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
+const paLight = plannerComposed({ kind: "code", modules: { "product-advocate": { depth: "light" }, "threat-model": false } });
 check("pa rich: light-core item present", paRich.includes(PA_LIGHT_CORE));
 check("pa rich: rich-only item present", paRich.includes(PA_RICH_ONLY));
 check("pa rich: banner names rich depth", paRich.includes("Depth: **rich**"));
@@ -239,7 +239,7 @@ check("pa light: rich-only item STRIPPED", !paLight.includes(PA_RICH_ONLY));
 check("pa light: banner names light depth", paLight.includes("Depth: **light**"));
 check("pa light: genuinely shorter than rich", paLight.length < paRich.length);
 for (const bad of ["garbage", "LIGHT", "", 42, null]) {
-  const body = builderComposed({ kind: "code", modules: { "product-advocate": { depth: bad }, "threat-model": false } });
+  const body = plannerComposed({ kind: "code", modules: { "product-advocate": { depth: bad }, "threat-model": false } });
   check(`pa depth fail-safe: depth ${JSON.stringify(bad)} ⇒ rich (rich-only kept)`, body.includes(PA_RICH_ONLY));
 }
 
@@ -265,31 +265,31 @@ check("pa reviewer: enabled ⇒ Reviewer product FLOOR still present", paRevOn.i
 //      is coverage the single-module suite never exercised — the second module
 //      unlocks it, proving registry-order composition with two modules.
 console.log("CO-EXISTENCE — both modules on, registry order:");
-const both = builderComposed({ kind: "code", modules: { "threat-model": { depth: "rich" }, "product-advocate": { depth: "rich" } } });
+const both = plannerComposed({ kind: "code", modules: { "threat-model": { depth: "rich" }, "product-advocate": { depth: "rich" } } });
 check("both: threat-model fragment present", both.includes(FRAGMENT_MARK));
 check("both: product-advocate fragment present", both.includes(PA_FRAGMENT_MARK));
-check("both: Builder product FLOOR present", both.includes(BUILDER_PRODUCT_FLOOR));
+check("both: Builder product FLOOR present", both.includes(PLANNER_PRODUCT_FLOOR));
 check("both: registry order — threat-model precedes product-advocate",
   both.indexOf(FRAGMENT_MARK) < both.indexOf(PA_FRAGMENT_MARK));
 check("both: no leftover marker", !both.includes(MARKER));
 
 // ── 9. END-TO-END through the Claude shim — the deployed BUILDER agent gains/loses
 //      the product-advocate fragment, floor intact.
-console.log("END-TO-END — Claude install composes product-advocate into the builder:");
-function builderAgentText(modulesCfg) {
+console.log("END-TO-END — Claude install composes product-advocate into the planner:");
+function plannerAgentText(modulesCfg) {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-pa-e2e-"));
   const written = claudeInstall(outDir, { roles: baseRoles, kind: "code", ...modulesCfg });
-  const text = fs.readFileSync(written["dev-builder"], "utf8");
+  const text = fs.readFileSync(written["dev-planner"], "utf8");
   fs.rmSync(outDir, { recursive: true, force: true });
   return text;
 }
-const paE2eOn = builderAgentText({ modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
-check("pa e2e: ON ⇒ assembled builder carries the fragment", paE2eOn.includes(PA_FRAGMENT_MARK));
-check("pa e2e: ON ⇒ assembled builder carries the product floor", paE2eOn.includes(BUILDER_PRODUCT_FLOOR));
+const paE2eOn = plannerAgentText({ modules: { "product-advocate": { depth: "rich" }, "threat-model": false } });
+check("pa e2e: ON ⇒ assembled planner carries the fragment", paE2eOn.includes(PA_FRAGMENT_MARK));
+check("pa e2e: ON ⇒ assembled planner carries the product floor", paE2eOn.includes(PLANNER_PRODUCT_FLOOR));
 check("pa e2e: ON ⇒ no leftover marker", !paE2eOn.includes(MARKER));
-const paE2eOff = builderAgentText({ modules: { "product-advocate": false, "threat-model": false } });
-check("pa e2e: OFF ⇒ assembled builder omits the fragment", !paE2eOff.includes(PA_FRAGMENT_MARK));
-check("pa e2e: OFF ⇒ assembled builder keeps the product floor", paE2eOff.includes(BUILDER_PRODUCT_FLOOR));
+const paE2eOff = plannerAgentText({ modules: { "product-advocate": false, "threat-model": false } });
+check("pa e2e: OFF ⇒ assembled planner omits the fragment", !paE2eOff.includes(PA_FRAGMENT_MARK));
+check("pa e2e: OFF ⇒ assembled planner keeps the product floor", paE2eOff.includes(PLANNER_PRODUCT_FLOOR));
 
 // ── 10. KIND-DEFAULT OFF: a REGISTRY-authored per-kind default of literal `false`
 //      defaults the module off for that kind — the "a docs project gets no UI module"
