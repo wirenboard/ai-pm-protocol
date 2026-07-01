@@ -141,11 +141,11 @@ It reads the seats' `roles.*.model` pins and the routes config (resolved against
 { "launch": {
     "sessionModel": "claude-opus-4-8",
     "guardModel": "claude-haiku-4-6",
-    "aliases": { "opus": "claude-opus-4-8", "sonnet": "glm-4.6", "haiku": "deepseek-chat" }
+    "aliases": { "opus": "claude-opus-4-8", "sonnet": "glm-5.2", "haiku": "deepseek-v4-pro" }
 } }
 ```
 
-**Tier-alias bindings — `launch.aliases.{opus,sonnet,haiku}`.** The cross-endpoint lever. Claude Code resolves a tier (`opus`/`sonnet`/`haiku`) through `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL`; `launch.aliases` is the config home for those, so you **bind a Claude tier to a foreign model id** (e.g. `sonnet → glm-4.6`) and any role using that tier routes to it. This is the recommended cross-endpoint path — a role carries a *tier*, not a foreign id (`## Setup` Stage 1/2). Same launch-env class as the two models above (startup-read, restart-applied); per-tier empty/absent ⇒ that var is not set. Because the bindings are proxy-specific, they may live in the gitignored `.ai-dev/config.local.json` `launch.aliases` — `mergeLocalLaunch` deep-merges the `aliases` object **per tier**, so a local override of one tier keeps the shared others.
+**Tier-alias bindings — `launch.aliases.{opus,sonnet,haiku}`.** The cross-endpoint lever. Claude Code resolves a tier (`opus`/`sonnet`/`haiku`) through `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL`; `launch.aliases` is the config home for those, so you **bind a Claude tier to a foreign model id** (e.g. `sonnet → glm-5.2`) and any role using that tier routes to it. This is the recommended cross-endpoint path — a role carries a *tier*, not a foreign id (`## Setup` Stage 1/2). Same launch-env class as the two models above (startup-read, restart-applied); per-tier empty/absent ⇒ that var is not set. Because the bindings are proxy-specific, they may live in the gitignored `.ai-dev/config.local.json` `launch.aliases` — `mergeLocalLaunch` deep-merges the `aliases` object **per tier**, so a local override of one tier keeps the shared others.
 
 There are **two consumers of this source**, both wrapper-less by default:
 
@@ -187,7 +187,7 @@ config pin (roles.{builder,reviewer}.model)  or  launch env (ANTHROPIC_MODEL / A
         │
         ▼  Claude Code alias resolution
    an alias ("sonnet"/"haiku"/"opus")  →  ANTHROPIC_DEFAULT_{SONNET,HAIKU,OPUS}_MODEL  (if set)
-   a concrete id ("deepseek-chat")     →  passthrough, used verbatim
+   a concrete id ("deepseek-v4-pro")   →  passthrough, used verbatim
         │
         ▼  the string lands in the request body's `model` field
         │
@@ -198,7 +198,7 @@ config pin (roles.{builder,reviewer}.model)  or  launch env (ANTHROPIC_MODEL / A
 
 So there are two ways to point a seat at a foreign model, and the chain shows why **tier binding is the recommended one**:
 
-- **Tier binding (recommended).** A role carries a **tier** (`sonnet`), and `launch.aliases.sonnet` sets `ANTHROPIC_DEFAULT_SONNET_MODEL=glm-4.6`. Claude Code resolves the tier → `glm-4.6` → modelpipe routes `glm-*`. This is the one lever that also moves **subagents and the background model** (they pick tiers), and it is what `## Setup` Stage 1/2 drives. One binding, every tier-user follows.
-- **Concrete id per seat (alternative).** Write `deepseek-chat` straight into `roles.builder.model` — it passes through verbatim and the route matches `deepseek-*`, no indirection. Fine for a single seat, but it does not move the tiers, so subagents/background stay on whatever their tier resolves to.
+- **Tier binding (recommended — and, for a baked seat on Claude, the ONLY path that routes).** A role carries a **tier** (`sonnet`), and `launch.aliases.sonnet` sets `ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5.2`. Claude Code resolves the tier → `glm-5.2` → modelpipe routes `glm-*`. This is the one lever that also moves **subagents and the background model** (they pick tiers), and it is what `## Setup` Stage 1/2 drives. One binding, every tier-user follows.
+- **Concrete id — launch-env ONLY, never a baked seat on Claude.** A concrete foreign id works for the **launch-env** seats — the session (`ANTHROPIC_MODEL`) and guard (`ANTHROPIC_SMALL_FAST_MODEL`): those are not baked subagent lines, so the id passes through verbatim (route matches `deepseek-*`). But a concrete foreign id written straight into a **baked** seat (`roles.{builder,reviewer}.model`) does **NOT** route on Claude: it is off the Claude allow-list, so the installer bakes **no** `model:` line and the seat silently inherits the session model (`resolveModelPin` in `claude/install-agents.mjs`). So for a cross-endpoint builder/reviewer, use tier binding — never a raw foreign id in the seat.
 
 Either way modelpipe matches the exact string in `body.model` — alias resolution is Claude Code's job, upstream, never the proxy's.
