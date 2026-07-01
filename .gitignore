@@ -10,6 +10,7 @@
 .claude/tmp/
 .ai-dev/tmp/
 _scratch/
+scratchpad/
 
 # Session state — local-only pointer, never committed
 .ai-dev/state/
