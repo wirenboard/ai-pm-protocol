@@ -57,6 +57,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadRegistry, composeBody } from "../modules.mjs";
+import { loadConfigWithLocal } from "../router-launch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const SPAWNABLE = ["planner", "builder", "reviewer"];
@@ -244,7 +245,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const configPath = process.env.AI_DEV_CONFIG
     ? path.resolve(process.env.AI_DEV_CONFIG)
     : path.join(ROOT, ".ai-dev", "config.json");
-  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  // Merge the gitignored config.local.json's `launch` over the shared config so a PERSONAL
+  // tier binding (config.local `launch.aliases.<tier>`) is visible to the bake: resolveModelPin
+  // then bakes the BARE alias (routes foreign at launch) instead of the concrete native id
+  // (which would silently ignore the binding). The `install()` API stays config-object-in, so
+  // a test still calls it directly with config.json alone — the merge happens only on this real
+  // installer entry (docs/decisions/personal-multi-model-setup.md).
+  const { config } = loadConfigWithLocal(configPath);
   const outDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, ".claude", "agents");
   install(outDir, config);
 }

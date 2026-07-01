@@ -165,6 +165,28 @@ export function mergeLocalLaunch(config, localConfig) {
   return { ...base, launch: mergedLaunch };
 }
 
+// Load the shared config at `configPath` merged with its gitignored
+// `.ai-dev/config.local.json` sibling's `launch` overrides — the ONE home for "the config
+// as BOTH the launcher AND the installer see it". Before this helper only the launcher
+// (main() below) merged the local file, so a personal tier binding (e.g. opus → deepseek)
+// living ONLY in config.local was INVISIBLE to the Claude installer's bake + routing
+// self-verify: the bake produced the concrete native id and the self-verify passed
+// against config.json alone, so the seat silently ran NATIVE (the silent-native class —
+// docs/decisions/personal-multi-model-setup.md). Routing the installer's config read
+// through here fixes that. Returns { config, shared, local }:
+//   • config — the launch-merged config (installer bake + self-verify read THIS, so a
+//     personal binding takes effect);
+//   • shared — the raw config.json (or null when absent), so a caller can tell "no config"
+//     from "config with an empty launch";
+//   • local  — the raw config.local.json override (or null), so a caller can tell a
+//     PERSONAL tier binding (config.local, applied by the launcher at startup, never
+//     committed to settings.json) from a SHARED one (config.json, written to settings.json).
+export function loadConfigWithLocal(configPath) {
+  const shared = readJsonIfPresent(configPath);
+  const local = readJsonIfPresent(localConfigPath(configPath));
+  return { config: mergeLocalLaunch(shared, local), shared, local };
+}
+
 // The launch-time env the config `launch` section sources (the RATIFIED option (c)
 // source-of-truth: docs/decisions/multi-model-setup-ux.md `## The fork`).
 //   config.launch.sessionModel → ANTHROPIC_MODEL (the orchestrator IS the session);
@@ -477,10 +499,10 @@ function main() {
   let config, routesConfig, providers;
   try {
     // Merge the gitignored local override's `launch` over the shared config's `launch`
-    // (configDir + any personal launch model live there — never forced on a teammate).
-    const shared = readJsonIfPresent(configPath);
-    const local = readJsonIfPresent(localConfigPath(configPath));
-    config = mergeLocalLaunch(shared, local);
+    // (configDir + any personal launch model / tier binding live there — never forced on
+    // a teammate). The ONE home for that merge is loadConfigWithLocal, shared with the
+    // installer so the launcher and the bake/self-verify see the identical merged launch.
+    ({ config } = loadConfigWithLocal(configPath));
     routesConfig = readJsonIfPresent(routesPath);
     providers = loadProviders();
   } catch (err) {
