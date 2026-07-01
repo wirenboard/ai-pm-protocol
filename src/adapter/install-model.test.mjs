@@ -36,7 +36,7 @@ import {
   isVanilla,
   loadClaudeModelPolicy,
 } from "./claude/install-agents.mjs";
-import { checkRouting, verifyRoutingConsistency } from "./install-claude.mjs";
+import { checkRouting, verifyRoutingConsistency, mergeLaunchEnv } from "./install-claude.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -120,6 +120,17 @@ check("claude-pin: bare 'sonnet' with only a DIFFERENT tier bound → concrete c
 check("claude-pin: bare 'opus' with an EMPTY opus binding → concrete claude-opus-4-8 (empty = not bound)", resolveClaudePin("opus", undefined, policy, { opus: "  " }) === "claude-opus-4-8");
 check("claude-pin: a CONCRETE claude-opus-* id stays verbatim even with opus BOUND (explicit native pick)", resolveClaudePin("claude-opus-4-8", undefined, policy, { opus: "glm-4.6" }) === "claude-opus-4-8");
 check("claude-pin: bare 'opus' with NO boundTiers arg → concrete (backward-compatible default)", resolveClaudePin("opus", undefined, policy) === "claude-opus-4-8");
+
+// 4c. FABLE — the 4th remappable tier (papercut 14, strongest→weakest fable·opus·sonnet·haiku).
+//     Same bare-alias-vs-concrete mechanic; resolves for free because aliasOf loops the whole
+//     allow-list once fable is in tool-map.json `models.claude` (allow + ids).
+check("claude-policy: allow-list includes fable (4 tiers)", policy.allow.includes("fable") && policy.allow.length === 4);
+check("claude-policy: ids.fable → claude-fable-5", policy.ids.fable === "claude-fable-5");
+check("claude-pin: alias 'fable' → canonical id claude-fable-5", resolveClaudePin("fable", undefined) === "claude-fable-5");
+check("claude-pin: a concrete claude-fable-* id bakes verbatim", resolveClaudePin("claude-fable-5", undefined) === "claude-fable-5");
+check("claude-pin: bare 'fable' with fable BOUND foreign → bare alias 'fable'", resolveClaudePin("fable", undefined, policy, { fable: "glm-4.6" }) === "fable");
+check("claude-pin: bare 'fable' with only a DIFFERENT tier bound → concrete claude-fable-5 (native)", resolveClaudePin("fable", undefined, policy, { opus: "glm-4.6" }) === "claude-fable-5");
+check("claude-pin: 'auto' never resolves to fable (opposite stays opus↔sonnet)", resolveClaudePin("auto", "opus") !== "claude-fable-5" && resolveClaudePin("auto", "sonnet") !== "claude-fable-5");
 
 // 5. end-to-end: assert the REAL assembled Claude reviewer frontmatter carries (or omits)
 //    the right `model:` line. Claude's install() also writes the orchestrator load surface
@@ -261,6 +272,31 @@ check("claude-bake: reviewer on the UNBOUND sonnet tier bakes the CONCRETE 'mode
 // Symmetry: a foreign-bound reviewer seat also bakes the bare alias.
 check("claude-bake: reviewer on a FOREIGN-bound sonnet tier bakes the BARE alias 'model: sonnet'", /^model: sonnet$/m.test(claudeSeatFrontmatter("dev-reviewer", { builder: "haiku", reviewer: "sonnet" }, { aliases: { sonnet: "glm-5.2", haiku: "deepseek-v4-pro" } })));
 
+// FABLE end-to-end (papercut 14): a foreign-bound fable seat bakes the bare alias; a native
+// fable seat bakes the concrete claude-fable-5. The 4th tier flows through the same bake path.
+check("claude-bake: builder on a FOREIGN-bound fable tier bakes the BARE alias 'model: fable'", /^model: fable$/m.test(claudeSeatFrontmatter("dev-builder", { builder: "fable", reviewer: "opus" }, { aliases: { fable: "glm-4.6" } })));
+check("claude-bake: reviewer on the UNBOUND fable tier bakes CONCRETE 'model: claude-fable-5' (native)", /^model: claude-fable-5$/m.test(claudeSeatFrontmatter("dev-reviewer", { builder: "opus", reviewer: "fable" }, { aliases: { opus: "glm-4.6" } })));
+
+// PLANNER is a first-class BAKED seat (papercut 14 C — it is in SPAWNABLE, so roles.planner.model
+// bakes like builder/reviewer). A planner on a foreign-bound tier bakes the bare alias (routes
+// foreign); an inherit-session planner (absent model) bakes NO line (strong-planner default).
+{
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-planner-fable-"));
+  const outDir = path.join(tmp, "agents");
+  const config = {
+    roles: {
+      orchestrator: { agent: "ai-dev" },
+      planner: { agent: "dev-planner", model: "fable" },
+      builder: { agent: "dev-builder" },
+      reviewer: { agent: "dev-reviewer" },
+    },
+    launch: { aliases: { fable: "glm-4.6" } },
+  };
+  const fm = fs.readFileSync(installClaude(outDir, config)["dev-planner"], "utf8").split("\n---")[0];
+  fs.rmSync(tmp, { recursive: true, force: true });
+  check("claude-bake: planner on a FOREIGN-bound fable tier bakes the BARE alias 'model: fable' (planner routes foreign like the baked seats)", /^model: fable$/m.test(fm));
+}
+
 // ───────── 8. routing self-check (papercut 13 candidate (b): fail loud, no live proxy) ─────────
 // checkRouting is pure: config INTENT ↔ baked ACTUAL ↔ settings.json env. A correctly-routed
 // config passes with per-seat confirmation lines; every silent-native / disagreeing-env class
@@ -303,6 +339,61 @@ const inheritRes = checkRouting({
   seatModelLines: { builder: null, reviewer: null }, env: {}, policy: rpolicy,
 });
 check("routing: inherit/session seats pass (reported, not failed)", inheritRes.ok === true && inheritRes.reports.length === 2);
+
+// FABLE in the routing self-check (papercut 14): the bound-synonym loop covers the 4th tier —
+// a fable-bound seat passes when it bakes the bare alias AND carries ANTHROPIC_DEFAULT_FABLE_MODEL,
+// and fails LOUD (naming the fable env var) when the binding did not land.
+const fableInput = {
+  config: { roles: { builder: { agent: "dev-builder", model: "fable" }, reviewer: { agent: "dev-reviewer", model: "opus" } }, launch: { aliases: { fable: "glm-4.6" } } },
+  seatModelLines: { builder: "fable", reviewer: "claude-opus-4-8" },
+  env: { ANTHROPIC_DEFAULT_FABLE_MODEL: "glm-4.6" },
+  policy: rpolicy,
+};
+const fableRouted = checkRouting(fableInput);
+check("routing: a fable-bound seat passes, reported 'via glm-4.6'", fableRouted.ok === true && fableRouted.reports.some((r) => /builder → fable tier via glm-4.6 \(foreign\)/.test(r)));
+const fableNoEnv = checkRouting({ ...fableInput, env: {} });
+check("routing: fable bound but ANTHROPIC_DEFAULT_FABLE_MODEL missing → fails loud, names the var", fableNoEnv.ok === false && fableNoEnv.failures.some((f) => f.includes("ANTHROPIC_DEFAULT_FABLE_MODEL")));
+
+// PLANNER in the routing self-check (papercut 14 C-follow): the planner is now a covered
+// ROUTED_SEAT. A foreign-pinned planner that (hypothetically) baked the CONCRETE native id is
+// the silent-native class — it must FAIL loud, naming the planner seat; an UNPINNED planner
+// (inherit session) has no tier intent and passes (reported, never failed — no false red).
+const plannerBrokeConcrete = checkRouting({
+  config: { roles: { planner: { agent: "dev-planner", model: "opus" }, builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer" } }, launch: { aliases: { opus: "glm-4.6" } } },
+  seatModelLines: { planner: "claude-opus-4-8", builder: null, reviewer: null },
+  env: { ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-4.6" },
+  policy: rpolicy,
+});
+check("routing: a FOREIGN planner that baked CONCRETE → fails loud, names 'seat planner' + NATIVE", plannerBrokeConcrete.ok === false && plannerBrokeConcrete.failures.some((f) => f.includes("seat planner") && /NATIVE/.test(f)));
+const plannerForeignOk = checkRouting({
+  config: { roles: { planner: { agent: "dev-planner", model: "opus" }, builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer" } }, launch: { aliases: { opus: "glm-4.6" } } },
+  seatModelLines: { planner: "opus", builder: null, reviewer: null },
+  env: { ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-4.6" },
+  policy: rpolicy,
+});
+check("routing: a FOREIGN planner that baked the BARE alias passes, reported 'via glm-4.6'", plannerForeignOk.ok === true && plannerForeignOk.reports.some((r) => /planner → opus tier via glm-4.6 \(foreign\)/.test(r)));
+const plannerInherit = checkRouting({
+  config: { roles: { planner: { agent: "dev-planner" }, builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer" } }, launch: {} },
+  seatModelLines: { planner: null, builder: null, reviewer: null }, env: {}, policy: rpolicy,
+});
+check("routing: an UNPINNED planner (inherit session) passes, reported not failed (no false red)", plannerInherit.ok === true && plannerInherit.reports.some((r) => /planner → inherits the session model/.test(r)));
+
+// ───────── guard independence over a foreign-bound haiku (papercut 14 B / G1) ─────────
+// The guard (background) is COUPLED to the haiku slot in the modern path. When haiku is bound
+// foreign for the baked seats, the DEFAULT guard (empty guardModel) follows that foreign slot;
+// an explicit OVERRIDE (guardModel = a concrete native id) keeps the background NATIVE via the
+// deprecated ANTHROPIC_SMALL_FAST_MODEL, independent of the haiku slot. Also asserts fable's
+// env write (the 4-tier LAUNCH_ALIAS_ENV_KEYS map).
+{
+  const envFable = mergeLaunchEnv(undefined, { aliases: { fable: "glm-4.6" } });
+  check("launch-env: aliases.fable → ANTHROPIC_DEFAULT_FABLE_MODEL (4-tier map)", envFable.ANTHROPIC_DEFAULT_FABLE_MODEL === "glm-4.6");
+  const envDefault = mergeLaunchEnv(undefined, { aliases: { haiku: "glm-4.6" } });
+  check("guard: DEFAULT (empty guardModel) ⇒ no ANTHROPIC_SMALL_FAST_MODEL; background follows the foreign haiku slot",
+    !("ANTHROPIC_SMALL_FAST_MODEL" in envDefault) && envDefault.ANTHROPIC_DEFAULT_HAIKU_MODEL === "glm-4.6");
+  const envOverride = mergeLaunchEnv(undefined, { guardModel: "claude-haiku-4-5", aliases: { haiku: "glm-4.6" } });
+  check("guard: OVERRIDE (guardModel concrete) ⇒ ANTHROPIC_SMALL_FAST_MODEL native, keeps background NATIVE over a foreign-bound haiku",
+    envOverride.ANTHROPIC_SMALL_FAST_MODEL === "claude-haiku-4-5" && envOverride.ANTHROPIC_DEFAULT_HAIKU_MODEL === "glm-4.6");
+}
 
 // ── config.local (PERSONAL) tier binding: the launcher applies the env at startup, so an
 // absent settings.json env var is EXPECTED, not the silent-native failure. The merged config

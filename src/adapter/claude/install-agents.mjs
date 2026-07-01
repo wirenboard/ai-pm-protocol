@@ -26,11 +26,11 @@
 // install() at the reviewer seat, NOT in resolveModelPin (the pure resolver keeps
 // absent ⇒ null). Every other seat absent ⇒ no line ⇒ session inherit.
 //
-// The Claude allow-list is the SET opus/sonnet/haiku (tool-map.json `models.claude`),
-// not a fixed pair — a haiku pin bakes like any other allow-listed alias (its
-// resolveModelPin path is automatic, aliasOf already loops the whole `allow`). `auto`'s
-// opposite logic itself stays opus↔sonnet (it never picks haiku, a non-review-grade
-// slot). `auto` is a VANILLA-ONLY convenience: it cross-models out of the box, but the
+// The Claude allow-list is the SET fable/opus/sonnet/haiku (tool-map.json `models.claude`),
+// not a fixed pair — a haiku (or fable) pin bakes like any other allow-listed alias (its
+// resolveModelPin path is automatic, aliasOf already loops the whole `allow`, so a 4th tier
+// needs no code here). `auto`'s opposite logic itself stays opus↔sonnet (it never picks
+// haiku or fable, non-review-grade / non-default slots for the automatic cross-model guess). `auto` is a VANILLA-ONLY convenience: it cross-models out of the box, but the
 // opus↔sonnet guess is a fiction the moment the Operator makes any explicit model
 // decision (a concrete seat pin, or a launch model — the proxy/alias world). So when the
 // config is NOT vanilla (isVanilla below), a reviewer `auto` is degraded to `session` in
@@ -77,7 +77,7 @@ export function loadClaudeModelPolicy() {
 }
 
 // Map a model WISH to its allow-listed Claude alias, or null when not knowable / not
-// allow-listed. An alias (`opus`/`sonnet`/`haiku`) maps to itself; a concrete
+// allow-listed. An alias (`fable`/`opus`/`sonnet`/`haiku`) maps to itself; a concrete
 // `claude-<alias>-*` id maps to the alias of its family; everything else (`session`,
 // `auto`, absent, or an off-allowlist id) is null. Loops the whole `allow` set, so a new
 // allow-listed model resolves for free with no code change here.
@@ -93,7 +93,7 @@ export function aliasOf(wish, policy) {
 // Resolve a role's `model` wish to the model id to BAKE as a `model:` line, or null for
 // no line. Per the Claude model policy (tool-map.json `models.claude`):
 //   • `session` / absent      → null  (honest explicit inherit = the session model)
-//   • a bare tier alias (`opus`/`sonnet`/`haiku`) → the CONCRETE id when that tier is
+//   • a bare tier alias (`fable`/`opus`/`sonnet`/`haiku`) → the CONCRETE id when that tier is
 //     NATIVE, but the BARE ALIAS itself when the tier is bound FOREIGN (see below).
 //   • a concrete `claude-<alias>-*` id → that model verbatim (an explicit native pick)
 //   • `auto`                  → the cross-model: the model OPPOSITE the orchestrator/
@@ -104,13 +104,13 @@ export function aliasOf(wish, policy) {
 //   • off-allowlist / unknown → null  (never invent a model)
 //
 // BARE ALIAS vs CONCRETE ID — the cross-endpoint mechanic (VERIFIED, docs/decisions/
-// multi-model-setup-ux.md papercut 13). Claude Code's `ANTHROPIC_DEFAULT_{OPUS,SONNET,
-// HAIKU}_MODEL` env vars override ALIAS resolution ONLY: a baked `model: opus` (a BARE
+// multi-model-setup-ux.md papercuts 13+14). Claude Code's `ANTHROPIC_DEFAULT_{FABLE,OPUS,
+// SONNET,HAIKU}_MODEL` env vars override ALIAS resolution ONLY: a baked `model: opus` (a BARE
 // alias) resolves THROUGH `ANTHROPIC_DEFAULT_OPUS_MODEL` (→ the foreign model a tier is
 // bound to), while a baked `model: claude-opus-4-8` (a CONCRETE id) is used VERBATIM and
 // bypasses the alias env (stays native). So a baked seat routed to a foreign provider MUST
 // carry the bare alias, never the concrete id. `boundTiers` is the config's
-// `launch.aliases` map ({ opus?, sonnet?, haiku? } → foreign id); when the seat's tier has
+// `launch.aliases` map ({ fable?, opus?, sonnet?, haiku? } → foreign id); when the seat's tier has
 // a non-empty binding there, we bake the bare alias (routes foreign); otherwise the
 // concrete id (native passthrough, immune to any stray alias env). Absent boundTiers ⇒ the
 // common native case ⇒ concrete id, byte-identical to before this param existed.
@@ -157,12 +157,12 @@ export function isVanilla(config) {
     const v = launch[key];
     if (typeof v === "string" && v.trim() !== "") return false;
   }
-  // A tier-alias binding (launch.aliases.{opus,sonnet,haiku}) is an explicit cross-endpoint
+  // A tier-alias binding (launch.aliases.{fable,opus,sonnet,haiku}) is an explicit cross-endpoint
   // decision — it redirects a Claude tier to a foreign model, so the reviewer's opus↔sonnet
   // `auto` guess is no longer honest (a proxy can hide what the tier resolves to). Any set
   // tier moves the config to CUSTOMIZED, exactly like a seat pin or a launch model.
   const aliases = launch.aliases && typeof launch.aliases === "object" ? launch.aliases : {};
-  for (const tier of ["opus", "sonnet", "haiku"]) {
+  for (const tier of ["fable", "opus", "sonnet", "haiku"]) {
     const v = aliases[tier];
     if (typeof v === "string" && v.trim() !== "") return false;
   }
