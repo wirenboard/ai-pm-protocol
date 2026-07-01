@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.51.2] — 2026-07-02
+
+### Changed
+
+- **Hygiene dispatch from the 2026-07-02 whole-tree audit.** Pruned resolved archaeology from `.ai-dev/backlog.md` (the resolved ⇒ pruned rule — the L1/npx-cache/seam-contract entries and the persona-floor F1/F3/F4/F5 bullets + mapped-findings + diagnostic block, all homed in their cited decision docs / git history; every open thread preserved — F2-2, the OpenCode-inject vendor-watch, the firmware-flash rung). Added `scratchpad/` to `.gitignore` (a stray prior-session dir at the repo root, asymmetric with the already-gitignored `_scratch/`). The audit's HIGH finding (a working-tree drift in `.claude/agents/dev-*.md` from an audit-time re-bake) was a non-committed artifact, restored via `git restore` — no code regression on `main`.
+
 ## [5.51.1] — 2026-07-02
 
 ### Fixed
