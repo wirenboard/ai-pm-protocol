@@ -125,6 +125,7 @@ export function ensureConfig(target, platform) {
     kind: "code",
     roles: {
       orchestrator: { agent: "ai-dev" },
+      planner: { agent: "dev-planner" },
       builder: { agent: "dev-builder" },
       reviewer: { agent: "dev-reviewer", model: "auto" },
     },
