@@ -263,6 +263,39 @@ The probe's candidate-list + response parse are pure, unit-tested (`probeCandida
 
 ---
 
+### Papercut 11 — the per-seat model dialog has the WRONG SHAPE for cross-endpoint (the Operator's two-stage insight, 2026-07-01)
+
+**The mechanism (confirmed):** Claude Code connects a foreign model by binding a **tier
+alias** — `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL=<foreign-id>`; a role uses a tier and
+resolves to it. The Operator's own `noos` runs exactly this way
+(`ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5.2`, `…HAIKU…=deepseek-v4-pro`; builder=haiku→deepseek,
+reviewer=sonnet→glm), set by hand in a personal wrapper.
+
+**The defects:**
+
+- **No config home** for the alias bindings — `launch` had only `sessionModel`/`guardModel`/
+  `configDir`. **Removed by** `launch.aliases.{opus,sonnet,haiku}` → exported as
+  `ANTHROPIC_DEFAULT_*_MODEL` by both consumers (installer→`settings.json` env; launcher→child
+  env), same launch-env class. `aliases` is the one nested launch field — `mergeLocalLaunch`
+  deep-merges it per-tier (a personal `config.local.json` overrides one tier, keeps the rest).
+- **The dialog asked per-seat for a concrete id** and **README + the 5.45.0 setup edits
+  recommended the wrong path** ("write the concrete provider id"). **Removed by** the
+  two-stage dialog: **Stage 1** binds Claude tiers ↔ foreign models, **Stage 2** maps roles →
+  tiers. README's chain conclusion now leads with tier-binding (the lever that also moves
+  subagents + the background model); concrete-id-per-seat stays documented as the alternative.
+
+**The probe returns provider GLOBS, not concrete ids** (modelpipe routes by glob): a binding
+needs a concrete id, so Stage 1 is **provider + model name** — pick a provider from the probe,
+enter the concrete id, validated against the glob (`glm-4.6` matches `glm-*`). Proxy-agnostic
+by response shape: a concrete `id` (no `*`) is a direct pick-list (third-party LiteLLM-class
+proxies work out of the box); a glob means the provider step. **Follow-up (modelpipe):** a
+`/v1/models?expand=1` that queries each backend's catalog and returns concrete ids filtered by
+the glob (only the proxy holds the provider keys) — spec handed to the Operator; upgrades
+Stage 1's glob branch from manual entry to a real filtered pick-list. **Follow-up (probe):** an
+auth header so an authed third-party proxy's `/v1/models` discovers too (today it 401s → manual).
+
+---
+
 ## The fork: where do the launch-time models live? (requirement, conceptual split)
 
 The session and guard models are launch-time env, never baked. There must be **no dead

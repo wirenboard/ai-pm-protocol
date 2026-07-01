@@ -12,6 +12,20 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.46.0] — 2026-07-01
+
+### Added
+
+- **Two-stage cross-endpoint model setup** — connecting a foreign model (GLM, DeepSeek, …) is now the natural two-stage flow the mechanism actually uses: **Stage 1** binds a Claude tier (`opus`/`sonnet`/`haiku`) to a foreign model, **Stage 2** maps roles (builder/reviewer/guard) → tiers. Stage 1 sources the foreign model from the `--probe` list: a concrete id is a direct pick-list; a provider glob (`glm-*`) means *pick provider → enter the model id, validated against the glob*. `src/agents/procedures/setup.md`; the why: `docs/decisions/multi-model-setup-ux.md` papercut 11.
+- **`launch.aliases.{opus,sonnet,haiku}`** — the config home for the tier bindings, exported as `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL` by both consumers (installer → `settings.json` `env`; launcher → child env), same launch-time class as `sessionModel`/`guardModel` (startup-read, restart-applied), same write+prune + byte-unchanged-when-empty semantics. It is the one nested `launch` field — `mergeLocalLaunch` deep-merges it per tier, so a personal `.ai-dev/config.local.json` may override one tier without dropping the shared others.
+
+### Changed
+
+- **Cross-endpoint recommendation reversed** — tier binding (a role carries a *tier*, the tier is bound to a foreign model) is now the recommended, dialog-driven path; it is the one lever that also moves subagents and the background model. Writing a concrete provider id straight into a seat stays documented as a valid alternative. README chain conclusion + `setup.md` updated.
+- **`isVanilla` counts `aliases`** — a tier binding is an explicit cross-endpoint decision, so it moves the config to the customized state (the reviewer's `auto` opus↔sonnet guess is no longer honest once a proxy can hide what a tier resolves to). `docs/contracts/cross-model-review.md` + the predicate agree. `PROTOCOL.md` `launch` enumeration extended to `{ sessionModel, guardModel, configDir, aliases }`.
+
+---
+
 ## [5.45.0] — 2026-07-01
 
 ### Added

@@ -116,6 +116,19 @@ function main() {
   check("launchModelEnv: absent configDir ⇒ no CLAUDE_CONFIG_DIR", "CLAUDE_CONFIG_DIR" in launchModelEnv({ launch: { sessionModel: "x" } }), false);
   check("launchModelEnv: blank configDir ⇒ no CLAUDE_CONFIG_DIR", "CLAUDE_CONFIG_DIR" in launchModelEnv({ launch: { configDir: "   " } }), false);
 
+  // ── launchModelEnv: tier-alias bindings → ANTHROPIC_DEFAULT_*_MODEL ─────────
+  const al = launchModelEnv({ launch: { aliases: { opus: "claude-opus-4-8", sonnet: "glm-4.6", haiku: "deepseek-chat" } } });
+  check("aliases: opus → ANTHROPIC_DEFAULT_OPUS_MODEL", al.ANTHROPIC_DEFAULT_OPUS_MODEL, "claude-opus-4-8");
+  check("aliases: sonnet → ANTHROPIC_DEFAULT_SONNET_MODEL", al.ANTHROPIC_DEFAULT_SONNET_MODEL, "glm-4.6");
+  check("aliases: haiku → ANTHROPIC_DEFAULT_HAIKU_MODEL", al.ANTHROPIC_DEFAULT_HAIKU_MODEL, "deepseek-chat");
+  // Only the set tiers are exported; blanks/absent are dropped (byte-unchanged otherwise).
+  const alPartial = launchModelEnv({ launch: { aliases: { sonnet: "glm-4.6", haiku: "  " } } });
+  check("aliases: only the set tier is exported", alPartial.ANTHROPIC_DEFAULT_SONNET_MODEL, "glm-4.6");
+  check("aliases: blank tier dropped", "ANTHROPIC_DEFAULT_HAIKU_MODEL" in alPartial, false);
+  check("aliases: absent tier dropped", "ANTHROPIC_DEFAULT_OPUS_MODEL" in alPartial, false);
+  check("aliases: absent section ⇒ no alias keys", "ANTHROPIC_DEFAULT_SONNET_MODEL" in launchModelEnv({ launch: { sessionModel: "x" } }), false);
+  check("aliases: non-object aliases ⇒ ignored", Object.keys(launchModelEnv({ launch: { aliases: "nope" } })).length, 0);
+
   // ── mergeLocalLaunch (gitignored config.local.json overrides the shared launch) ──
   const merged = mergeLocalLaunch(
     { profile: "solo", launch: { sessionModel: "shared-sess", guardModel: "shared-guard" } },
@@ -134,6 +147,22 @@ function main() {
   // configDir homed ONLY in the local file still reaches the env via the merge.
   const localDirEnv = launchModelEnv(mergeLocalLaunch({ launch: {} }, { launch: { configDir: "/x/y" } }));
   check("mergeLocalLaunch + launchModelEnv: local-only configDir reaches CLAUDE_CONFIG_DIR", localDirEnv.CLAUDE_CONFIG_DIR, "/x/y");
+
+  // aliases is the one NESTED launch field — DEEP-merged per tier so a local override of one
+  // tier keeps the shared others (a shallow spread would drop them).
+  const mergedAliases = mergeLocalLaunch(
+    { launch: { aliases: { opus: "claude-opus-4-8", sonnet: "shared-sonnet", haiku: "shared-haiku" } } },
+    { launch: { aliases: { sonnet: "glm-4.6" } } },
+  );
+  check("mergeLocalLaunch: local tier overrides shared", mergedAliases.launch.aliases.sonnet, "glm-4.6");
+  check("mergeLocalLaunch: shared tiers kept (opus)", mergedAliases.launch.aliases.opus, "claude-opus-4-8");
+  check("mergeLocalLaunch: shared tiers kept (haiku)", mergedAliases.launch.aliases.haiku, "shared-haiku");
+  // local-only aliases (no shared) still reach the env via the merge.
+  const localOnlyAliasEnv = launchModelEnv(mergeLocalLaunch({ launch: {} }, { launch: { aliases: { sonnet: "glm-4.6" } } }));
+  check("mergeLocalLaunch + launchModelEnv: local-only alias reaches ANTHROPIC_DEFAULT_SONNET_MODEL", localOnlyAliasEnv.ANTHROPIC_DEFAULT_SONNET_MODEL, "glm-4.6");
+  // shared-only aliases (no local) are preserved untouched.
+  const sharedOnlyAlias = mergeLocalLaunch({ launch: { aliases: { opus: "claude-opus-4-8" } } }, { launch: { sessionModel: "s" } });
+  check("mergeLocalLaunch: shared-only aliases preserved", sharedOnlyAlias.launch.aliases.opus, "claude-opus-4-8");
 
   // ── buildChildEnv ─────────────────────────────────────────────────────────
   const childEnv = buildChildEnv({ FOO: "1", CLAUDE_CODE_SUBAGENT_MODEL: "haiku" }, "http://127.0.0.1:9999");

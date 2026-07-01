@@ -327,6 +327,31 @@ check("[launch-env] whitespace-only values are treated as empty ⇒ null", merge
   check("[launch-env] clearing launch prunes both our stale keys", !("ANTHROPIC_MODEL" in env) && !("ANTHROPIC_SMALL_FAST_MODEL" in env));
   check("[launch-env] prune keeps foreign keys ⇒ env object retained (not null)", env.MY_OWN === "keep");
 }
+// Tier-alias bindings (nested launch.aliases) → ANTHROPIC_DEFAULT_*_MODEL, same write+prune.
+{
+  const env = mergeLaunchEnv(undefined, { aliases: { opus: "claude-opus-4-8", sonnet: "glm-4.6", haiku: "deepseek-chat" } });
+  check("[launch-env] aliases.opus → ANTHROPIC_DEFAULT_OPUS_MODEL", env.ANTHROPIC_DEFAULT_OPUS_MODEL === "claude-opus-4-8");
+  check("[launch-env] aliases.sonnet → ANTHROPIC_DEFAULT_SONNET_MODEL", env.ANTHROPIC_DEFAULT_SONNET_MODEL === "glm-4.6");
+  check("[launch-env] aliases.haiku → ANTHROPIC_DEFAULT_HAIKU_MODEL", env.ANTHROPIC_DEFAULT_HAIKU_MODEL === "deepseek-chat");
+}
+// Empty/whitespace alias tiers prune their key; a foreign ANTHROPIC_DEFAULT_* is OURS to manage.
+{
+  const env = mergeLaunchEnv({ ANTHROPIC_DEFAULT_SONNET_MODEL: "stale", MY_OWN: "keep" }, { aliases: { sonnet: "", haiku: "  " } });
+  check("[launch-env] clearing an alias tier prunes its stale key", !("ANTHROPIC_DEFAULT_SONNET_MODEL" in env));
+  check("[launch-env] alias prune keeps foreign keys", env.MY_OWN === "keep");
+}
+// Absent aliases section ⇒ no alias keys written (byte-unchanged for a non-routing project).
+check("[launch-env] absent aliases ⇒ null (no env)", mergeLaunchEnv(undefined, { aliases: {} }) === null);
+check("[launch-env] only aliases set ⇒ env carries just the alias keys", (() => {
+  const env = mergeLaunchEnv(undefined, { aliases: { sonnet: "glm-4.6" } });
+  return env && env.ANTHROPIC_DEFAULT_SONNET_MODEL === "glm-4.6" && !("ANTHROPIC_MODEL" in env);
+})());
+// Non-object aliases (a malformed value) ⇒ ignored, no alias keys, no crash (fail-safe).
+check("[launch-env] non-object aliases ⇒ ignored (null, no env)", mergeLaunchEnv(undefined, { aliases: "nope" }) === null);
+check("[launch-env] non-object aliases ⇒ no alias key written", (() => {
+  const env = mergeLaunchEnv({ MY_OWN: "keep" }, { aliases: 42 });
+  return env.MY_OWN === "keep" && !("ANTHROPIC_DEFAULT_SONNET_MODEL" in env);
+})());
 
 // End-to-end: install() with a populated launch section writes the env into settings.json;
 // a non-routing install leaves NO env block.

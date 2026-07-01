@@ -153,7 +153,16 @@ export function mergeLocalLaunch(config, localConfig) {
   if (!localConfig || typeof localConfig !== "object") return base;
   const sharedLaunch = base.launch && typeof base.launch === "object" ? base.launch : {};
   const localLaunch = localConfig.launch && typeof localConfig.launch === "object" ? localConfig.launch : {};
-  return { ...base, launch: { ...sharedLaunch, ...localLaunch } };
+  const mergedLaunch = { ...sharedLaunch, ...localLaunch };
+  // `aliases` is the one NESTED launch field — deep-merge it PER-TIER so a local file can
+  // override one tier (e.g. personal sonnet→glm) without dropping the shared opus/haiku
+  // bindings. The shallow spread above would replace the whole object.
+  const sharedAliases = sharedLaunch.aliases && typeof sharedLaunch.aliases === "object" ? sharedLaunch.aliases : null;
+  const localAliases = localLaunch.aliases && typeof localLaunch.aliases === "object" ? localLaunch.aliases : null;
+  if (sharedAliases || localAliases) {
+    mergedLaunch.aliases = { ...(sharedAliases || {}), ...(localAliases || {}) };
+  }
+  return { ...base, launch: mergedLaunch };
 }
 
 // The launch-time env the config `launch` section sources (the RATIFIED option (c)
@@ -164,6 +173,8 @@ export function mergeLocalLaunch(config, localConfig) {
 //     the Operator's per-task-keys mechanism, pinned per project with no .bashrc edit;
 //     useful even WITHOUT routing, so it is exported here, where every exec path —
 //     proxy/direct/external — passes through, docs/decisions/launcher-ux.md).
+//   config.launch.aliases.{opus,sonnet,haiku} → ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL
+//     (the cross-endpoint tier lever — bind a Claude tier to a foreign model id).
 // Returns ONLY the keys with a non-empty value — an absent/empty section exports
 // nothing, so a non-routing project's launch env is byte-unchanged. These must be set
 // BEFORE `claude` reads them at process launch, which is exactly what the launcher does
@@ -177,6 +188,17 @@ export function launchModelEnv(config) {
   if (session) out.ANTHROPIC_MODEL = session;
   if (guard) out.ANTHROPIC_SMALL_FAST_MODEL = guard;
   if (configDir) out.CLAUDE_CONFIG_DIR = configDir;
+  // Tier-alias bindings — config.launch.aliases.{opus,sonnet,haiku} → the
+  // ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL vars Claude Code resolves a tier through.
+  // This is the cross-endpoint lever: bind a Claude TIER to a foreign model id (e.g.
+  // sonnet → glm-4.6), then a role using that tier routes to it. Same launch-env class as
+  // the models above (startup-read, restart-applied); absent/empty per-tier ⇒ not set.
+  const aliases = launch.aliases && typeof launch.aliases === "object" ? launch.aliases : {};
+  const ALIAS_ENV = { opus: "ANTHROPIC_DEFAULT_OPUS_MODEL", sonnet: "ANTHROPIC_DEFAULT_SONNET_MODEL", haiku: "ANTHROPIC_DEFAULT_HAIKU_MODEL" };
+  for (const [tier, envVar] of Object.entries(ALIAS_ENV)) {
+    const v = typeof aliases[tier] === "string" ? aliases[tier].trim() : "";
+    if (v) out[envVar] = v;
+  }
   return out;
 }
 
