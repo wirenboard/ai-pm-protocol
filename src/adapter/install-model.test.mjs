@@ -34,7 +34,9 @@ import {
   install as installClaude,
   resolveModelPin as resolveClaudePin,
   isVanilla,
+  loadClaudeModelPolicy,
 } from "./claude/install-agents.mjs";
+import { checkRouting, verifyRoutingConsistency } from "./install-claude.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -101,6 +103,20 @@ check("claude-pin: absent (undefined) → null", resolveClaudePin(undefined, und
 check("claude-pin: 'auto' never resolves to haiku (opposite stays opus↔sonnet)", resolveClaudePin("auto", "opus") !== "claude-haiku-4-5");
 check("claude-pin: an off-allowlist id → null (never invent)", resolveClaudePin("claude-fictional-9-9", undefined) === null);
 check("claude-pin: a non-claude pin → null", resolveClaudePin("deepseek/deepseek-chat", undefined) === null);
+
+// 4b. BARE ALIAS vs CONCRETE ID — the cross-endpoint bake mechanic (papercut 13). A bare
+//     tier alias whose tier is BOUND FOREIGN (config.launch.aliases[tier] set) bakes the
+//     BARE ALIAS (so Claude resolves it through ANTHROPIC_DEFAULT_<TIER>_MODEL → foreign);
+//     an UNBOUND tier bakes the CONCRETE id (native passthrough). The 4th boundTiers arg
+//     defaults to {} — every 2-/3-arg call above is byte-identical to before it existed.
+const policy = loadClaudeModelPolicy();
+check("claude-pin: bare 'opus' with opus BOUND foreign → bare alias 'opus'", resolveClaudePin("opus", undefined, policy, { opus: "glm-4.6" }) === "opus");
+check("claude-pin: bare 'sonnet' with sonnet BOUND foreign → bare alias 'sonnet'", resolveClaudePin("sonnet", undefined, policy, { sonnet: "glm-5.2" }) === "sonnet");
+check("claude-pin: bare 'haiku' with haiku BOUND foreign → bare alias 'haiku'", resolveClaudePin("haiku", undefined, policy, { haiku: "deepseek-v4-pro" }) === "haiku");
+check("claude-pin: bare 'sonnet' with only a DIFFERENT tier bound → concrete claude-sonnet-4-6", resolveClaudePin("sonnet", undefined, policy, { haiku: "deepseek-v4-pro" }) === "claude-sonnet-4-6");
+check("claude-pin: bare 'opus' with an EMPTY opus binding → concrete claude-opus-4-8 (empty = not bound)", resolveClaudePin("opus", undefined, policy, { opus: "  " }) === "claude-opus-4-8");
+check("claude-pin: a CONCRETE claude-opus-* id stays verbatim even with opus BOUND (explicit native pick)", resolveClaudePin("claude-opus-4-8", undefined, policy, { opus: "glm-4.6" }) === "claude-opus-4-8");
+check("claude-pin: bare 'opus' with NO boundTiers arg → concrete (backward-compatible default)", resolveClaudePin("opus", undefined, policy) === "claude-opus-4-8");
 
 // 5. end-to-end: assert the REAL assembled Claude reviewer frontmatter carries (or omits)
 //    the right `model:` line. Claude's install() also writes the orchestrator load surface
@@ -177,6 +193,112 @@ check("claude-bake: reviewer 'auto' WITH a launch model (customized) bakes NO li
 check("claude-bake: ABSENT reviewer WITH a launch model (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter(undefined, undefined, { launch: { guardModel: "claude-haiku-4-5" } })));
 // but a CONCRETE reviewer pin in a customized config still bakes (the explicit choice is honored):
 check("claude-bake: a concrete reviewer pin in a customized config still bakes", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("opus", undefined, { builderModel: "sonnet" })));
+
+// ───────── 7. cross-endpoint bake: bare-alias-for-bound-tier, end-to-end (papercut 13) ─────────
+// The worked example (docs/decisions/multi-model-setup-ux.md papercut 13; the plan): a seat
+// on a FOREIGN-bound tier bakes the BARE alias (routes through ANTHROPIC_DEFAULT_*); a seat
+// on an UNBOUND (native) tier bakes the CONCRETE id. Assert both the builder and reviewer
+// assembled frontmatter in ONE config so the seat-agnostic loop is covered on both seats.
+function claudeSeatFrontmatter(agentKey, roleModels, launch) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-claude-xseat-"));
+  const outDir = path.join(tmp, "agents");
+  const config = {
+    roles: {
+      orchestrator: { agent: "ai-dev" },
+      builder: { agent: "dev-builder", ...(roleModels.builder !== undefined ? { model: roleModels.builder } : {}) },
+      reviewer: { agent: "dev-reviewer", ...(roleModels.reviewer !== undefined ? { model: roleModels.reviewer } : {}) },
+    },
+    ...(launch !== undefined ? { launch } : {}),
+  };
+  const written = installClaude(outDir, config);
+  const text = fs.readFileSync(written[agentKey], "utf8");
+  const fm = text.split("\n---")[0];
+  fs.rmSync(tmp, { recursive: true, force: true });
+  return fm;
+}
+// The worked example: builder = foreign GLM on the opus tier, reviewer = native sonnet.
+const xLaunch = { sessionModel: "claude-opus-4-8", guardModel: "", aliases: { opus: "glm-4.6" } };
+check("claude-bake: builder on a FOREIGN-bound opus tier bakes the BARE alias 'model: opus'", /^model: opus$/m.test(claudeSeatFrontmatter("dev-builder", { builder: "opus", reviewer: "sonnet" }, xLaunch)));
+check("claude-bake: reviewer on the UNBOUND sonnet tier bakes the CONCRETE 'model: claude-sonnet-4-6'", /^model: claude-sonnet-4-6$/m.test(claudeSeatFrontmatter("dev-reviewer", { builder: "opus", reviewer: "sonnet" }, xLaunch)));
+// Symmetry: a foreign-bound reviewer seat also bakes the bare alias.
+check("claude-bake: reviewer on a FOREIGN-bound sonnet tier bakes the BARE alias 'model: sonnet'", /^model: sonnet$/m.test(claudeSeatFrontmatter("dev-reviewer", { builder: "haiku", reviewer: "sonnet" }, { aliases: { sonnet: "glm-5.2", haiku: "deepseek-v4-pro" } })));
+
+// ───────── 8. routing self-check (papercut 13 candidate (b): fail loud, no live proxy) ─────────
+// checkRouting is pure: config INTENT ↔ baked ACTUAL ↔ settings.json env. A correctly-routed
+// config passes with per-seat confirmation lines; every silent-native / disagreeing-env class
+// fails LOUD, naming the seat.
+const rpolicy = loadClaudeModelPolicy();
+const goodRouted = {
+  config: { roles: { builder: { agent: "dev-builder", model: "opus" }, reviewer: { agent: "dev-reviewer", model: "sonnet" } }, launch: { aliases: { opus: "glm-4.6" } } },
+  seatModelLines: { builder: "opus", reviewer: "claude-sonnet-4-6" },
+  env: { ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-4.6" },
+  policy: rpolicy,
+};
+const goodRes = checkRouting(goodRouted);
+check("routing: a correctly-routed config passes (ok)", goodRes.ok === true && goodRes.failures.length === 0);
+check("routing: pass reports the FOREIGN seat as 'via <id>'", goodRes.reports.some((r) => /builder → opus tier via glm-4.6 \(foreign\)/.test(r)));
+check("routing: pass reports the NATIVE seat as concrete '(native)'", goodRes.reports.some((r) => /reviewer → claude-sonnet-4-6 \(native\)/.test(r)));
+
+// broken (i): a FOREIGN-intended seat that baked the CONCRETE id — the silent-native class.
+const brokeConcrete = checkRouting({ ...goodRouted, seatModelLines: { builder: "claude-opus-4-8", reviewer: "claude-sonnet-4-6" } });
+check("routing: foreign seat baked CONCRETE → fails loud (not ok)", brokeConcrete.ok === false);
+check("routing: the concrete-bake failure NAMES the seat and 'NATIVE'", brokeConcrete.failures.some((f) => f.includes("seat builder") && /NATIVE/.test(f)));
+
+// broken (ii): a bound tier whose env var did not land (settings.json env empty).
+const brokeEnv = checkRouting({ ...goodRouted, env: {} });
+check("routing: bound tier missing its env var → fails loud", brokeEnv.ok === false);
+check("routing: the missing-env failure names ANTHROPIC_DEFAULT_OPUS_MODEL", brokeEnv.failures.some((f) => f.includes("ANTHROPIC_DEFAULT_OPUS_MODEL")));
+
+// broken (iii): a NATIVE-intended seat (unbound tier) that baked a BARE alias — would route
+// foreign the moment that tier were ever bound; a native seat must bake the concrete id.
+const brokeNativeBare = checkRouting({
+  config: { roles: { builder: { agent: "dev-builder", model: "sonnet" }, reviewer: { agent: "dev-reviewer", model: "sonnet" } }, launch: { aliases: {} } },
+  seatModelLines: { builder: "sonnet", reviewer: "claude-sonnet-4-6" },
+  env: {},
+  policy: rpolicy,
+});
+check("routing: native seat baked a BARE alias → fails loud, names the seat", brokeNativeBare.ok === false && brokeNativeBare.failures.some((f) => f.includes("seat builder") && /NATIVE/.test(f)));
+
+// an inherit/auto seat (session/absent) is reported, never failed.
+const inheritRes = checkRouting({
+  config: { roles: { builder: { agent: "dev-builder" }, reviewer: { agent: "dev-reviewer", model: "session" } }, launch: {} },
+  seatModelLines: { builder: null, reviewer: null }, env: {}, policy: rpolicy,
+});
+check("routing: inherit/session seats pass (reported, not failed)", inheritRes.ok === true && inheritRes.reports.length === 2);
+
+// e2e through verifyRoutingConsistency (the file-reading + THROW half): a real routed apply
+// passes; a tampered baked agent throws loud, naming the seat.
+function applyRoutedTarget() {
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-route-e2e-"));
+  const config = {
+    roles: {
+      orchestrator: { agent: "ai-dev" },
+      builder: { agent: "dev-builder", model: "opus" },
+      reviewer: { agent: "dev-reviewer", model: "sonnet" },
+    },
+    launch: { sessionModel: "claude-opus-4-8", guardModel: "", aliases: { opus: "glm-4.6" } },
+  };
+  fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(target, ".ai-dev", "config.json"), JSON.stringify(config, null, 2));
+  installClaude(path.join(target, ".claude", "agents"), config);
+  const settingsPath = path.join(target, ".claude", "settings.json");
+  fs.writeFileSync(settingsPath, JSON.stringify({ env: { ANTHROPIC_MODEL: "claude-opus-4-8", ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-4.6" } }, null, 2));
+  return { target, settingsPath };
+}
+{
+  const { target, settingsPath } = applyRoutedTarget();
+  let threw = false;
+  try { verifyRoutingConsistency(target, settingsPath); } catch { threw = true; }
+  check("routing e2e: a real routed apply passes verifyRoutingConsistency (no throw)", threw === false);
+  // Tamper: rewrite the baked builder agent's bare `model: opus` to the concrete id (the
+  // silent-native regression) — verify must now THROW and name the seat.
+  const builderAgent = path.join(target, ".claude", "agents", "dev-builder.md");
+  fs.writeFileSync(builderAgent, fs.readFileSync(builderAgent, "utf8").replace(/^model: opus$/m, "model: claude-opus-4-8"));
+  let msg = "";
+  try { verifyRoutingConsistency(target, settingsPath); } catch (e) { msg = e.message; }
+  check("routing e2e: a tampered (concrete) builder bake THROWS, naming the seat", /Routing self-verify FAILED/.test(msg) && msg.includes("seat builder"));
+  fs.rmSync(target, { recursive: true, force: true });
+}
 
 console.log(`\nINSTALL-MODEL bake: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

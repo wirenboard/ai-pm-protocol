@@ -80,7 +80,7 @@ export function loadClaudeModelPolicy() {
 // `claude-<alias>-*` id maps to the alias of its family; everything else (`session`,
 // `auto`, absent, or an off-allowlist id) is null. Loops the whole `allow` set, so a new
 // allow-listed model resolves for free with no code change here.
-function aliasOf(wish, policy) {
+export function aliasOf(wish, policy) {
   if (typeof wish !== "string") return null;
   if (policy.allow.includes(wish)) return wish;
   for (const alias of policy.allow) {
@@ -92,17 +92,31 @@ function aliasOf(wish, policy) {
 // Resolve a role's `model` wish to the model id to BAKE as a `model:` line, or null for
 // no line. Per the Claude model policy (tool-map.json `models.claude`):
 //   • `session` / absent      → null  (honest explicit inherit = the session model)
-//   • a concrete allow-listed pin (`opus`/`sonnet`/`haiku`, or a `claude-<alias>-*` id)
-//     → that model (an alias maps to its canonical id; a full id bakes verbatim)
+//   • a bare tier alias (`opus`/`sonnet`/`haiku`) → the CONCRETE id when that tier is
+//     NATIVE, but the BARE ALIAS itself when the tier is bound FOREIGN (see below).
+//   • a concrete `claude-<alias>-*` id → that model verbatim (an explicit native pick)
 //   • `auto`                  → the cross-model: the model OPPOSITE the orchestrator/
 //     session wish — opus↔sonnet — when knowable from config, ELSE `sonnet` (the
 //     documented opus-class-session default). `auto` never resolves to haiku; and it is
 //     honored only in the vanilla state — the install() gate degrades it to `session`
 //     in a customized config (it never reaches resolveModelPin as `auto` there).
 //   • off-allowlist / unknown → null  (never invent a model)
+//
+// BARE ALIAS vs CONCRETE ID — the cross-endpoint mechanic (VERIFIED, docs/decisions/
+// multi-model-setup-ux.md papercut 13). Claude Code's `ANTHROPIC_DEFAULT_{OPUS,SONNET,
+// HAIKU}_MODEL` env vars override ALIAS resolution ONLY: a baked `model: opus` (a BARE
+// alias) resolves THROUGH `ANTHROPIC_DEFAULT_OPUS_MODEL` (→ the foreign model a tier is
+// bound to), while a baked `model: claude-opus-4-8` (a CONCRETE id) is used VERBATIM and
+// bypasses the alias env (stays native). So a baked seat routed to a foreign provider MUST
+// carry the bare alias, never the concrete id. `boundTiers` is the config's
+// `launch.aliases` map ({ opus?, sonnet?, haiku? } → foreign id); when the seat's tier has
+// a non-empty binding there, we bake the bare alias (routes foreign); otherwise the
+// concrete id (native passthrough, immune to any stray alias env). Absent boundTiers ⇒ the
+// common native case ⇒ concrete id, byte-identical to before this param existed.
+//
 // `sessionWish` is the orchestrator's `model` wish; the orchestrator IS the session, so a
 // `session`/`auto`/absent orchestrator wish is "session model not knowable from config".
-export function resolveModelPin(wish, sessionWish, policy = loadClaudeModelPolicy()) {
+export function resolveModelPin(wish, sessionWish, policy = loadClaudeModelPolicy(), boundTiers = {}) {
   if (wish === undefined || wish === null || wish === "session") return null;
   if (wish === "auto") {
     const session = aliasOf(sessionWish, policy);
@@ -113,7 +127,12 @@ export function resolveModelPin(wish, sessionWish, policy = loadClaudeModelPolic
   }
   const alias = aliasOf(wish, policy);
   if (!alias) return null; // off-allowlist / unknown → no line, never invent
-  return wish.startsWith("claude-") ? wish : policy.ids[alias];
+  if (wish.startsWith("claude-")) return wish; // a concrete id is an explicit native pick — verbatim
+  // A bare tier alias: bake the BARE ALIAS when that tier is bound foreign (so Claude
+  // resolves it through ANTHROPIC_DEFAULT_<TIER>_MODEL → the foreign model), else the
+  // CONCRETE native id (passthrough, immune to any alias env).
+  const bound = boundTiers && typeof boundTiers[alias] === "string" && boundTiers[alias].trim() !== "";
+  return bound ? alias : policy.ids[alias];
 }
 
 // Is the config in the VANILLA state — no explicit model decision anywhere? Vanilla =
@@ -159,6 +178,10 @@ export function install(outDir, config) {
   const policy = loadClaudeModelPolicy();
   const sessionWish = config.roles?.orchestrator?.model; // the session model wish (for `auto`)
   const vanilla = isVanilla(config); // `auto` is honored only in the vanilla state
+  // The tier-alias bindings (config.launch.aliases) decide whether a bare-alias seat wish
+  // bakes as the bare alias (tier bound foreign → routes through ANTHROPIC_DEFAULT_*) or
+  // the concrete native id (tier native → passthrough) — see resolveModelPin.
+  const boundTiers = config.launch?.aliases ?? {};
   const written = {};
   for (const role of SPAWNABLE) {
     const agentId = config.roles?.[role]?.agent;
@@ -180,7 +203,7 @@ export function install(outDir, config) {
     // guess is a fiction, so degrade `auto` → `session` (no line, honest inherit). The
     // gate lives here beside the absent⇒auto default, so resolveModelPin stays pure.
     if (wish === "auto" && !vanilla) wish = "session";
-    const pin = resolveModelPin(wish, sessionWish, policy);
+    const pin = resolveModelPin(wish, sessionWish, policy, boundTiers);
     const modelLine = pin ? `model: ${pin}\n` : "";
     if (!pin && typeof wish === "string" && wish !== "session" && wish !== "auto") {
       console.log(`note: model '${wish}' for ${role} is off the Claude allowlist (${policy.allow.join("/")}) — no model: line baked; the subagent inherits the session model`);

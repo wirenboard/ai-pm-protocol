@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { runScript, ensureLine } from "./install-fs.mjs";
 import { stripBreadcrumbFile } from "./install-breadcrumb.mjs";
+import { loadClaudeModelPolicy, aliasOf } from "./claude/install-agents.mjs";
 
 // A hook group is OURS when any of its commands targets the protocol shim. The
 // marker is the shim's stable path tail — it survives a vendor-location change
@@ -96,6 +97,13 @@ export function wireClaude(target, dogfood) {
   // opencode plugin self-verify. A broken Claude deny path otherwise goes SILENTLY
   // off at the first tool call under a printed success; this FAILS THE INSTALL loudly.
   verifyClaudeWiring(target, settingsPath);
+
+  // Routing self-verify — the twin for the CROSS-ENDPOINT class. A baked seat routed to a
+  // foreign provider that silently baked a concrete native id (or a bound tier whose env
+  // var did not land) runs NATIVE without complaint — the exact silent class papercut 13
+  // fixes. This static config-intent ↔ baked-artifact ↔ settings.env consistency check
+  // catches it at APPLY time, no live proxy needed; FAILS THE INSTALL loudly on a mismatch.
+  verifyRoutingConsistency(target, settingsPath);
 }
 
 // Verify the Claude deny wiring just written actually holds: settings.json parses and
@@ -186,6 +194,143 @@ export function verifyClaudeWiring(target, settingsPath) {
       { cause: e },
     );
   }
+}
+
+// The BAKED seats whose routing this check covers. Session + guard are launch-env concrete
+// ids (never tier-routed), so they carry no silent-native class — only builder/reviewer do.
+const ROUTED_SEATS = ["builder", "reviewer"];
+
+// Pure routing-consistency check: config INTENT ↔ baked ACTUAL ↔ settings.json env — the
+// static apply-time guard against the silent-native cross-endpoint class (docs/decisions/
+// multi-model-setup-ux.md papercut 13), no live proxy needed. Inputs are already parsed:
+//   config          — .ai-dev/config.json
+//   seatModelLines  — { builder, reviewer } → the baked `model:` value, or null for no line
+//   env             — .claude/settings.json `env` (or {})
+//   policy          — loadClaudeModelPolicy()
+// Intent per seat: a bare tier alias whose tier is bound in launch.aliases ⇒ FOREIGN (must
+// bake the BARE alias AND carry ANTHROPIC_DEFAULT_<TIER>_MODEL=<that id>); a bare tier
+// unbound, or a concrete claude-<tier>-* id ⇒ NATIVE (must bake the concrete id); anything
+// else (session/auto/absent) ⇒ inherit (no tier routing to check). Returns { ok, reports,
+// failures }: reports are the success confirmation lines, failures name the seat + intended
+// vs actual. ok === (failures.length === 0). Pure — the file-reading half is
+// verifyRoutingConsistency below.
+export function checkRouting({ config, seatModelLines, env, policy }) {
+  const roles = (config && config.roles) || {};
+  const launch = (config && typeof config.launch === "object" && config.launch) || {};
+  const aliases = (typeof launch.aliases === "object" && launch.aliases) || {};
+  const envObj = env && typeof env === "object" ? env : {};
+  const reports = [];
+  const failures = [];
+  const boundId = (tier) => (typeof aliases[tier] === "string" ? aliases[tier].trim() : "");
+
+  for (const seat of ROUTED_SEATS) {
+    const role = roles[seat];
+    if (!role || !role.agent) continue; // an unstaffed baked seat (rigor profile) — nothing baked
+    const wish = role.model;
+    const actual = seatModelLines[seat] ?? null; // the baked model: value, or null for no line
+    const tier = aliasOf(wish, policy); // a bare tier OR a claude-<tier>-* id → its tier; else null
+    if (!tier) {
+      // session / auto / absent / off-allowlist — an inherit/auto seat, no tier routing intent.
+      reports.push(actual
+        ? `routing: ${seat} → ${actual} (auto / no tier routing)`
+        : `routing: ${seat} → inherits the session model (no pin)`);
+      continue;
+    }
+    const isConcrete = typeof wish === "string" && wish.startsWith("claude-");
+    const foreignId = boundId(tier);
+    if (foreignId && !isConcrete) {
+      // INTENDED FOREIGN — must bake the BARE alias AND carry the tier env var.
+      const envKey = LAUNCH_ALIAS_ENV_KEYS[tier];
+      const bakeOk = actual === tier;
+      const envOk = envObj[envKey] === foreignId;
+      if (!bakeOk) {
+        failures.push(
+          `seat ${seat}: intended FOREIGN (${tier} tier → ${foreignId}) but the assembled agent baked ` +
+            `\`model: ${actual === null ? "<none>" : actual}\` — routing needs the bare \`${tier}\` alias (resolves through ` +
+            `${envKey}); \`${actual === null ? "<none>" : actual}\` runs NATIVE, silently ignoring the binding.`);
+      }
+      if (!envOk) {
+        failures.push(
+          `seat ${seat}: the ${tier} tier is bound to ${foreignId} but settings.json env ${envKey} is ` +
+            `${envObj[envKey] === undefined ? "MISSING" : `\`${envObj[envKey]}\``} — the ${tier} alias would not resolve to the foreign model.`);
+      }
+      if (bakeOk && envOk) reports.push(`routing: ${seat} → ${tier} tier via ${foreignId} (foreign)`);
+    } else {
+      // INTENDED NATIVE — must bake the CONCRETE id (passthrough, immune to any alias env).
+      const expected = isConcrete ? wish : policy.ids[tier];
+      if (actual !== expected) {
+        failures.push(
+          `seat ${seat}: intended NATIVE (${expected}) but the assembled agent baked ` +
+            `\`model: ${actual === null ? "<none>" : actual}\` — a native seat must bake the concrete id.`);
+      } else {
+        reports.push(`routing: ${seat} → ${expected} (native)`);
+      }
+    }
+  }
+
+  // A bound tier whose env var did not land — independent of which seat uses it (the
+  // mergeLaunchEnv contract). De-duped against a per-seat env failure already raised above.
+  for (const [tier, envKey] of Object.entries(LAUNCH_ALIAS_ENV_KEYS)) {
+    const foreignId = boundId(tier);
+    if (foreignId && envObj[envKey] !== foreignId && !failures.some((f) => f.includes(envKey))) {
+      failures.push(
+        `the ${tier} tier is bound to ${foreignId} in launch.aliases but settings.json env ${envKey} is ` +
+          `${envObj[envKey] === undefined ? "MISSING" : `\`${envObj[envKey]}\``} — the binding would not apply.`);
+    }
+  }
+
+  return { ok: failures.length === 0, reports, failures };
+}
+
+// Read the apply artifacts (config, baked agents, settings.json env) and run checkRouting.
+// THROWS (⇒ install exits non-zero) with a per-seat report on any mismatch — the loud twin
+// of verifyClaudeWiring for the ROUTING class. On all-consistent, prints the per-seat
+// confirmation lines (the "seat → model" trace). A malformed config is itself a failure
+// (the routing intent cannot be read, so it cannot be trusted).
+export function verifyRoutingConsistency(target, settingsPath) {
+  const policy = loadClaudeModelPolicy();
+  const configPath = path.join(target, ".ai-dev", "config.json");
+  let config;
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  } catch (e) {
+    throw new Error(
+      `Routing self-verify FAILED: cannot read the config at ${configPath} — ${e && e.message ? e.message : String(e)}`,
+      { cause: e },
+    );
+  }
+  let env = {};
+  try {
+    const s = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    env = s && typeof s.env === "object" && s.env ? s.env : {};
+  } catch {
+    // no settings/env ⇒ keep the {} default; a foreign seat then fails loud on the missing var
+  }
+  const seatModelLines = {};
+  for (const seat of ROUTED_SEATS) {
+    const agentId = config.roles?.[seat]?.agent;
+    seatModelLines[seat] = agentId
+      ? readBakedModelLine(path.join(target, ".claude", "agents", `${agentId}.md`))
+      : null;
+  }
+  const { ok, reports, failures } = checkRouting({ config, seatModelLines, env, policy });
+  if (!ok) {
+    throw new Error(
+      "Routing self-verify FAILED — the config's routing intent does not match the assembled agents / settings.json env:\n" +
+        failures.map((f) => `  • ${f}`).join("\n") +
+        "\n  Fix the config and re-run the installer: a foreign-routed seat must bake the bare tier alias AND carry its ANTHROPIC_DEFAULT_<TIER>_MODEL binding.",
+    );
+  }
+  for (const r of reports) console.log(r);
+}
+
+// Extract the frontmatter `model:` value from an assembled agent file, or null when it
+// carries no `model:` line (an inherit seat) or the file is absent.
+function readBakedModelLine(agentPath) {
+  if (!fs.existsSync(agentPath)) return null;
+  const fm = fs.readFileSync(agentPath, "utf8").split("\n---")[0];
+  const m = fm.match(/^model:\s*(.+)$/m);
+  return m ? m[1].trim() : null;
 }
 
 // Resolve the shim's real on-disk path from the wired hook command. The command is
@@ -322,4 +467,22 @@ function mergeHooks(existing, fragment) {
     merged[event] = [...foreign, ...groups];
   }
   return merged;
+}
+
+// Standalone: `node <this> --verify-routing [target]` runs ONLY the routing self-check
+// against an already-applied tree (the same check wireClaude runs post-apply) — a cheap,
+// re-runnable probe. Exits 0 (consistent, prints the seat→model trace) / 1 (loud failure).
+// Guarded so importing this module (the install path) never triggers it.
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const args = process.argv.slice(2);
+  if (args.includes("--verify-routing")) {
+    const target = args.find((a) => !a.startsWith("--")) || process.cwd();
+    try {
+      verifyRoutingConsistency(target, path.join(target, ".claude", "settings.json"));
+      console.log("routing self-verify: OK");
+    } catch (e) {
+      process.stderr.write((e && e.message ? e.message : String(e)) + "\n");
+      process.exit(1);
+    }
+  }
 }
