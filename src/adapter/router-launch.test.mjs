@@ -18,6 +18,7 @@ import {
   seatModels,
   missingKeyEnvs,
   mergeLocalLaunch,
+  loadConfigWithLocal,
   launchModelEnv,
   buildChildEnv,
   planLaunch,
@@ -25,6 +26,9 @@ import {
   parseModelsResponse,
   DEFAULT_PROXY_PORT,
 } from "./router-launch.mjs";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 let pass = 0;
 const fails = [];
@@ -163,6 +167,34 @@ function main() {
   // shared-only aliases (no local) are preserved untouched.
   const sharedOnlyAlias = mergeLocalLaunch({ launch: { aliases: { opus: "claude-opus-4-8" } } }, { launch: { sessionModel: "s" } });
   check("mergeLocalLaunch: shared-only aliases preserved", sharedOnlyAlias.launch.aliases.opus, "claude-opus-4-8");
+
+  // ── loadConfigWithLocal (the shared read-and-merge the installer + launcher both use) ──
+  // Writes config.json + its gitignored config.local.json sibling to disk and confirms the
+  // helper returns { config: merged, shared, local } — the one home the Claude bake + routing
+  // self-verify read so a PERSONAL tier binding takes effect (docs/decisions/personal-multi-model-setup.md).
+  {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-loadcfg-"));
+    const configPath = path.join(dir, "config.json");
+    fs.writeFileSync(configPath, JSON.stringify({ profile: "solo", roles: { builder: { agent: "b", model: "opus" } }, launch: { sessionModel: "claude-opus-4-8" } }));
+    fs.writeFileSync(path.join(dir, "config.local.json"), JSON.stringify({ launch: { aliases: { opus: "deepseek-v4-pro" } } }));
+    const { config, shared, local } = loadConfigWithLocal(configPath);
+    check("loadConfigWithLocal: personal alias reaches the MERGED config", config.launch.aliases.opus, "deepseek-v4-pro");
+    check("loadConfigWithLocal: shared launch field is kept in the merge", config.launch.sessionModel, "claude-opus-4-8");
+    check("loadConfigWithLocal: roles come through from the shared config", config.roles.builder.model, "opus");
+    check("loadConfigWithLocal: `shared` is the raw config.json (no alias)", shared.launch.aliases, undefined);
+    check("loadConfigWithLocal: `local` is the raw override (personal alias)", local.launch.aliases.opus, "deepseek-v4-pro");
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  {
+    // No config.local sibling ⇒ merged === shared launch, local null (byte-unchanged path).
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-loadcfg-nolocal-"));
+    const configPath = path.join(dir, "config.json");
+    fs.writeFileSync(configPath, JSON.stringify({ launch: { sessionModel: "s" } }));
+    const { config, local } = loadConfigWithLocal(configPath);
+    check("loadConfigWithLocal: no config.local ⇒ shared launch unchanged", config.launch.sessionModel, "s");
+    check("loadConfigWithLocal: no config.local ⇒ local is null", local, null);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 
   // ── buildChildEnv ─────────────────────────────────────────────────────────
   const childEnv = buildChildEnv({ FOO: "1", CLAUDE_CODE_SUBAGENT_MODEL: "haiku" }, "http://127.0.0.1:9999");

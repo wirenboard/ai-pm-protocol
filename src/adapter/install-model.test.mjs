@@ -40,6 +40,8 @@ import { checkRouting, verifyRoutingConsistency } from "./install-claude.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 let pass = 0, fail = 0;
 function check(name, cond) {
@@ -302,6 +304,27 @@ const inheritRes = checkRouting({
 });
 check("routing: inherit/session seats pass (reported, not failed)", inheritRes.ok === true && inheritRes.reports.length === 2);
 
+// ── config.local (PERSONAL) tier binding: the launcher applies the env at startup, so an
+// absent settings.json env var is EXPECTED, not the silent-native failure. The merged config
+// carries the binding (so the bake produced the bare alias); localAliases marks it personal.
+// docs/decisions/personal-multi-model-setup.md — the Part A core.
+const localRouted = {
+  config: { roles: { builder: { agent: "dev-builder", model: "opus" }, reviewer: { agent: "dev-reviewer", model: "sonnet" } }, launch: { aliases: { opus: "deepseek-v4-pro" } } },
+  seatModelLines: { builder: "opus", reviewer: "claude-sonnet-4-6" },
+  env: {}, // committed settings.json does NOT carry the personal alias
+  policy: rpolicy,
+  localAliases: { opus: "deepseek-v4-pro" },
+};
+const localRes = checkRouting(localRouted);
+check("routing: a config.local-bound foreign tier passes with NO committed env (launcher-applied)", localRes.ok === true && localRes.failures.length === 0);
+check("routing: the launcher-applied pass reports 'from config.local'", localRes.reports.some((r) => /builder → opus tier via deepseek-v4-pro \(foreign, applied by the launcher from config\.local\)/.test(r)));
+
+// Control: the SAME merged config WITHOUT the personal marker (i.e. the tier were bound in the
+// SHARED config.json) still FAILS on the missing committed env — a shared binding must land in
+// settings.json. Proves the pass above is earned by the config.local origin, not a weakened check.
+const sharedNoEnv = checkRouting({ ...localRouted, localAliases: {} });
+check("routing: the SAME tier bound SHARED (not config.local) still fails on missing env", sharedNoEnv.ok === false && sharedNoEnv.failures.some((f) => f.includes("ANTHROPIC_DEFAULT_OPUS_MODEL")));
+
 // e2e through verifyRoutingConsistency (the file-reading + THROW half): a real routed apply
 // passes; a tampered baked agent throws loud, naming the seat.
 function applyRoutedTarget() {
@@ -334,6 +357,72 @@ function applyRoutedTarget() {
   let msg = "";
   try { verifyRoutingConsistency(target, settingsPath); } catch (e) { msg = e.message; }
   check("routing e2e: a tampered (concrete) builder bake THROWS, naming the seat", /Routing self-verify FAILED/.test(msg) && msg.includes("seat builder"));
+  fs.rmSync(target, { recursive: true, force: true });
+}
+
+// e2e: a foreign tier bound ONLY in the gitignored config.local.json ⇒ the installer's bake
+// (merging config.local) produces the bare alias AND verifyRoutingConsistency (reading the same
+// merge) passes even though the committed settings.json env deliberately omits the personal
+// binding. This is Part A's headline scenario — the install succeeds, no silent-native, no false
+// red (docs/decisions/personal-multi-model-setup.md).
+{
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-route-local-"));
+  // SHARED config.json: builder rides the opus TIER LANE, reviewer native sonnet — NO alias here.
+  const sharedConfig = {
+    roles: {
+      orchestrator: { agent: "ai-dev" },
+      planner: { agent: "dev-planner" },
+      builder: { agent: "dev-builder", model: "opus" },
+      reviewer: { agent: "dev-reviewer", model: "sonnet" },
+    },
+    launch: { sessionModel: "claude-opus-4-8" },
+  };
+  // PERSONAL config.local.json: the opus tier binding lives here (gitignored, per-machine).
+  const localConfig = { launch: { aliases: { opus: "deepseek-v4-pro" } } };
+  fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(target, ".ai-dev", "config.json"), JSON.stringify(sharedConfig, null, 2));
+  fs.writeFileSync(path.join(target, ".ai-dev", "config.local.json"), JSON.stringify(localConfig, null, 2));
+  // The real installer bakes with the MERGED launch (its subprocess calls loadConfigWithLocal);
+  // simulate that by baking under the merged config so builder gets the bare `model: opus`.
+  const mergedConfig = { ...sharedConfig, launch: { ...sharedConfig.launch, aliases: { opus: "deepseek-v4-pro" } } };
+  installClaude(path.join(target, ".claude", "agents"), mergedConfig);
+  const builderAgent = fs.readFileSync(path.join(target, ".claude", "agents", "dev-builder.md"), "utf8");
+  check("routing local e2e: builder on a config.local-bound opus tier bakes the BARE alias 'model: opus'", /^model: opus$/m.test(builderAgent.split("\n---")[0]));
+  // settings.json carries ONLY the shared session model — NOT the personal opus alias
+  // (mergeLaunchEnv writes only config.json values; the launcher exports the alias at startup).
+  const settingsPath = path.join(target, ".claude", "settings.json");
+  fs.writeFileSync(settingsPath, JSON.stringify({ env: { ANTHROPIC_MODEL: "claude-opus-4-8" } }, null, 2));
+  let threw = false, emsg = "";
+  try { verifyRoutingConsistency(target, settingsPath); } catch (e) { threw = true; emsg = e.message; }
+  if (threw) console.log(`    (unexpected throw: ${emsg})`);
+  check("routing local e2e: verifyRoutingConsistency PASSES with a config.local-only foreign tier (no throw)", threw === false);
+  fs.rmSync(target, { recursive: true, force: true });
+}
+
+// The REAL installer bake entry (install-agents.mjs run as a subprocess, the way wireClaude
+// invokes it) merges config.local's launch before baking — the production path the e2e above
+// simulates. Spawn it against a fixture carrying a config.local opus binding and confirm the
+// builder bakes the BARE alias (not the concrete native id). Guards the main-block glue itself.
+{
+  const AGENTS_SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "claude", "install-agents.mjs");
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-subproc-local-"));
+  fs.mkdirSync(path.join(target, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(target, ".ai-dev", "config.json"), JSON.stringify({
+    roles: {
+      orchestrator: { agent: "ai-dev" },
+      planner: { agent: "dev-planner" },
+      builder: { agent: "dev-builder", model: "opus" },
+      reviewer: { agent: "dev-reviewer", model: "sonnet" },
+    },
+    launch: { sessionModel: "claude-opus-4-8" },
+  }));
+  fs.writeFileSync(path.join(target, ".ai-dev", "config.local.json"), JSON.stringify({ launch: { aliases: { opus: "deepseek-v4-pro" } } }));
+  execFileSync("node", [AGENTS_SCRIPT, path.join(target, "agents")], {
+    env: { ...process.env, AI_DEV_CONFIG: path.join(target, ".ai-dev", "config.json") },
+    stdio: "pipe",
+  });
+  const bakedFm = fs.readFileSync(path.join(target, "agents", "dev-builder.md"), "utf8").split("\n---")[0];
+  check("subprocess bake: the real installer entry merges config.local ⇒ builder bakes BARE 'model: opus'", /^model: opus$/m.test(bakedFm));
   fs.rmSync(target, { recursive: true, force: true });
 }
 

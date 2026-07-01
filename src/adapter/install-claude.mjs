@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { runScript, ensureLine } from "./install-fs.mjs";
 import { stripBreadcrumbFile } from "./install-breadcrumb.mjs";
 import { loadClaudeModelPolicy, aliasOf } from "./claude/install-agents.mjs";
+import { loadConfigWithLocal } from "./router-launch.mjs";
 
 // A hook group is OURS when any of its commands targets the protocol shim. The
 // marker is the shim's stable path tail — it survives a vendor-location change
@@ -214,14 +215,26 @@ const ROUTED_SEATS = ["builder", "reviewer"];
 // failures }: reports are the success confirmation lines, failures name the seat + intended
 // vs actual. ok === (failures.length === 0). Pure — the file-reading half is
 // verifyRoutingConsistency below.
-export function checkRouting({ config, seatModelLines, env, policy }) {
+//
+// `localAliases` — the tier bindings that live in the PERSONAL, gitignored config.local.json
+// (a subset of the merged `config.launch.aliases`). A tier bound there is applied by the
+// LAUNCHER at startup and is DELIBERATELY absent from the committed settings.json env
+// (mergeLaunchEnv writes only shared config.json values), so its missing env var is EXPECTED,
+// not a silent-native failure. A tier bound in the SHARED config.json still MUST land in
+// settings.json env. Absent ⇒ {} ⇒ every bound tier is treated as shared (the pre-config.local
+// behaviour, byte-identical). See docs/decisions/personal-multi-model-setup.md.
+export function checkRouting({ config, seatModelLines, env, policy, localAliases = {} }) {
   const roles = (config && config.roles) || {};
   const launch = (config && typeof config.launch === "object" && config.launch) || {};
   const aliases = (typeof launch.aliases === "object" && launch.aliases) || {};
+  const localAliasObj = localAliases && typeof localAliases === "object" ? localAliases : {};
   const envObj = env && typeof env === "object" ? env : {};
   const reports = [];
   const failures = [];
   const boundId = (tier) => (typeof aliases[tier] === "string" ? aliases[tier].trim() : "");
+  // A tier whose binding lives in config.local ⇒ the launcher exports its env var at startup,
+  // so an absent settings.json env var for it is expected (never committed).
+  const launcherApplied = (tier) => typeof localAliasObj[tier] === "string" && localAliasObj[tier].trim() !== "";
 
   for (const seat of ROUTED_SEATS) {
     const role = roles[seat];
@@ -239,10 +252,13 @@ export function checkRouting({ config, seatModelLines, env, policy }) {
     const isConcrete = typeof wish === "string" && wish.startsWith("claude-");
     const foreignId = boundId(tier);
     if (foreignId && !isConcrete) {
-      // INTENDED FOREIGN — must bake the BARE alias AND carry the tier env var.
+      // INTENDED FOREIGN — must bake the BARE alias AND carry the tier env var, UNLESS the
+      // binding is personal (config.local): then the launcher exports the env var at startup,
+      // so its absence from the committed settings.json is expected (never a failure).
       const envKey = LAUNCH_ALIAS_ENV_KEYS[tier];
+      const personal = launcherApplied(tier);
       const bakeOk = actual === tier;
-      const envOk = envObj[envKey] === foreignId;
+      const envOk = envObj[envKey] === foreignId || personal;
       if (!bakeOk) {
         failures.push(
           `seat ${seat}: intended FOREIGN (${tier} tier → ${foreignId}) but the assembled agent baked ` +
@@ -254,7 +270,11 @@ export function checkRouting({ config, seatModelLines, env, policy }) {
           `seat ${seat}: the ${tier} tier is bound to ${foreignId} but settings.json env ${envKey} is ` +
             `${envObj[envKey] === undefined ? "MISSING" : `\`${envObj[envKey]}\``} — the ${tier} alias would not resolve to the foreign model.`);
       }
-      if (bakeOk && envOk) reports.push(`routing: ${seat} → ${tier} tier via ${foreignId} (foreign)`);
+      if (bakeOk && envOk) {
+        reports.push(personal
+          ? `routing: ${seat} → ${tier} tier via ${foreignId} (foreign, applied by the launcher from config.local)`
+          : `routing: ${seat} → ${tier} tier via ${foreignId} (foreign)`);
+      }
     } else {
       // INTENDED NATIVE — must bake the CONCRETE id (passthrough, immune to any alias env).
       const expected = isConcrete ? wish : policy.ids[tier];
@@ -270,9 +290,11 @@ export function checkRouting({ config, seatModelLines, env, policy }) {
 
   // A bound tier whose env var did not land — independent of which seat uses it (the
   // mergeLaunchEnv contract). De-duped against a per-seat env failure already raised above.
+  // A PERSONAL (config.local) binding is skipped: the launcher exports its env var at
+  // startup, so its absence from the committed settings.json is expected, not a failure.
   for (const [tier, envKey] of Object.entries(LAUNCH_ALIAS_ENV_KEYS)) {
     const foreignId = boundId(tier);
-    if (foreignId && envObj[envKey] !== foreignId && !failures.some((f) => f.includes(envKey))) {
+    if (foreignId && !launcherApplied(tier) && envObj[envKey] !== foreignId && !failures.some((f) => f.includes(envKey))) {
       failures.push(
         `the ${tier} tier is bound to ${foreignId} in launch.aliases but settings.json env ${envKey} is ` +
           `${envObj[envKey] === undefined ? "MISSING" : `\`${envObj[envKey]}\``} — the binding would not apply.`);
@@ -290,15 +312,26 @@ export function checkRouting({ config, seatModelLines, env, policy }) {
 export function verifyRoutingConsistency(target, settingsPath) {
   const policy = loadClaudeModelPolicy();
   const configPath = path.join(target, ".ai-dev", "config.json");
-  let config;
+  // Read the config as the INSTALLER sees it: config.json merged with the gitignored
+  // config.local.json's `launch` (loadConfigWithLocal, the one home shared with the
+  // launcher + the bake). So a foreign tier bound ONLY in config.local is recognised here —
+  // the bake produced the bare alias for it, and this check accepts its settings.json env
+  // absence as launcher-applied (docs/decisions/personal-multi-model-setup.md).
+  let config, shared, local;
   try {
-    config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    ({ config, shared, local } = loadConfigWithLocal(configPath));
   } catch (e) {
     throw new Error(
       `Routing self-verify FAILED: cannot read the config at ${configPath} — ${e && e.message ? e.message : String(e)}`,
       { cause: e },
     );
   }
+  if (!shared || typeof shared !== "object") {
+    throw new Error(`Routing self-verify FAILED: cannot read the config at ${configPath} — file missing or empty`);
+  }
+  const localAliases = local && typeof local.launch === "object" && local.launch && typeof local.launch.aliases === "object"
+    ? local.launch.aliases
+    : {};
   let env = {};
   try {
     const s = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
@@ -313,7 +346,7 @@ export function verifyRoutingConsistency(target, settingsPath) {
       ? readBakedModelLine(path.join(target, ".claude", "agents", `${agentId}.md`))
       : null;
   }
-  const { ok, reports, failures } = checkRouting({ config, seatModelLines, env, policy });
+  const { ok, reports, failures } = checkRouting({ config, seatModelLines, env, policy, localAliases });
   if (!ok) {
     throw new Error(
       "Routing self-verify FAILED — the config's routing intent does not match the assembled agents / settings.json env:\n" +
