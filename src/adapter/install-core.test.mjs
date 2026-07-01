@@ -97,12 +97,14 @@ function testPlatform(platform, assertWiring) {
     check(`[${platform}] config written at .ai-dev/config.json with the resolved platform`, JSON.parse(fs.readFileSync(path.join(target, ".ai-dev", "config.json"), "utf8")).platform === platform);
 
     // 3b. .gitignore excludes the local-only transients (state + raw feedback reports
-    // + the personal launch override config.local.json)
+    // + the personal launch override config.local.json + the personal routes override
+    // model-routes.local.json)
     const gi = fs.existsSync(path.join(target, ".gitignore")) ? fs.readFileSync(path.join(target, ".gitignore"), "utf8") : "";
     check(`[${platform}] .gitignore excludes .ai-dev/state/`, gi.includes(".ai-dev/state/"));
     check(`[${platform}] .gitignore excludes .ai-dev/feedback/`, gi.includes(".ai-dev/feedback/"));
     check(`[${platform}] .gitignore excludes .ai-dev/worktrees/`, gi.includes(".ai-dev/worktrees/"));
     check(`[${platform}] .gitignore excludes the personal .ai-dev/config.local.json`, gi.includes(".ai-dev/config.local.json"));
+    check(`[${platform}] .gitignore excludes the personal .ai-dev/model-routes.local.json`, gi.includes(".ai-dev/model-routes.local.json"));
 
     // 3e. the OPTIONAL project launcher .ai-dev/launch — generated ALWAYS (so enabling
     // routing/configDir later needs no re-install), platform-shaped, and executable.

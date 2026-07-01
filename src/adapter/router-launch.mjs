@@ -29,7 +29,9 @@
 // PERSONAL OVERRIDES: the gitignored .ai-dev/config.local.json carries the per-machine
 //   `launch.*` values (a configDir, a personal launch model) — its `launch` section is
 //   merged OVER the shared config's, so the shared file stays clean and nothing personal
-//   is forced on a teammate.
+//   is forced on a teammate. The same split applies to `.ai-dev/model-routes.json` (shared,
+//   committed routes table) and its personal sibling `.ai-dev/model-routes.local.json`
+//   (gitignored, carries the per-machine `proxyUrl`).
 //
 // FOREGROUND PROXY (--proxy): start the router, print its URL on stdout, and stay up
 //   WITHOUT exec'ing claude — for "don't touch my launch": point your own claude/wrapper
@@ -58,7 +60,9 @@
 //                       proxy, then exit (0 alive / 1 none); never execs claude
 //   AI_DEV_CONFIG       override the config path   (default .ai-dev/config.json;
 //                       its .local.json sibling is the gitignored personal override)
-//   MODEL_ROUTER_ROUTES override the routes path   (default .ai-dev/model-routes.json)
+//   MODEL_ROUTER_ROUTES override the routes path   (default .ai-dev/model-routes.json;
+//                       its .local.json sibling is the gitignored personal routes override
+//                       and the home of the per-machine `proxyUrl`)
 //   The routes config may carry a top-level `proxyUrl` to opt into EXTERNAL mode above.
 
 import fs from "node:fs";
@@ -183,8 +187,47 @@ export function mergeLocalLaunch(config, localConfig) {
 //     committed to settings.json) from a SHARED one (config.json, written to settings.json).
 export function loadConfigWithLocal(configPath) {
   const shared = readJsonIfPresent(configPath);
-  const local = readJsonIfPresent(localConfigPath(configPath));
+  const local = readJsonIfPresent(localSiblingPath(configPath));
   return { config: mergeLocalLaunch(shared, local), shared, local };
+}
+
+// Merge a LOCAL routes-config override over the shared one — the routes-config sibling
+// of mergeLocalLaunch, same shallow-override-plus-one-special-field shape. The gitignored
+// .ai-dev/model-routes.local.json carries the per-machine proxyUrl (and optional personal
+// route entries) so the shared, committed .ai-dev/model-routes.json never carries a
+// machine-specific proxy pointer (docs/decisions/personal-multi-model-setup.md).
+// Every scalar field (proxyUrl, listen, …) is a shallow override: present in local ⇒ local
+// wins. `routes` is the one array field: local routes are concatenated BEFORE the shared
+// ones (pickRoute is first-match-wins — model-router.mjs — so a personal route must sort
+// first to be able to override/narrow a shared glob). No shared routes + no local routes
+// ⇒ no `routes` key at all in the merged result (matches today's absent-routes shape, not
+// an empty array forced in). No local file ⇒ the shared config returned unchanged
+// (byte-equivalent path, mirroring mergeLocalLaunch(config, null)).
+export function mergeLocalRoutes(routesConfig, localRoutesConfig) {
+  const base = routesConfig && typeof routesConfig === "object" ? routesConfig : null;
+  if (!localRoutesConfig || typeof localRoutesConfig !== "object") return base;
+  const sharedRoutes = base && Array.isArray(base.routes) ? base.routes : [];
+  const localRoutes = Array.isArray(localRoutesConfig.routes) ? localRoutesConfig.routes : [];
+  const merged = { ...base, ...localRoutesConfig };
+  // `routes` is the one array field: local routes first (first-match-wins), then shared.
+  if (localRoutes.length > 0 || sharedRoutes.length > 0) {
+    merged.routes = [...localRoutes, ...sharedRoutes];
+  } else {
+    delete merged.routes;
+  }
+  return merged;
+}
+
+// Load the routes config at `routesPath` merged with its gitignored `.ai-dev/model-
+// routes.local.json` sibling — the routes-config sibling of loadConfigWithLocal. Returns
+// { routesConfig, shared, local } (routesConfig = the merged one every planLaunch caller
+// should use; shared/local = the raw files, for a caller that needs to tell them apart —
+// main()'s error/probe messaging does not today, but the shape stays parallel to
+// loadConfigWithLocal on purpose).
+export function loadRoutesWithLocal(routesPath) {
+  const shared = readJsonIfPresent(routesPath);
+  const local = readJsonIfPresent(localSiblingPath(routesPath));
+  return { routesConfig: mergeLocalRoutes(shared, local), shared, local };
 }
 
 // The launch-time env the config `launch` section sources (the RATIFIED option (c)
@@ -224,6 +267,21 @@ export function launchModelEnv(config) {
     if (v) out[envVar] = v;
   }
   return out;
+}
+
+// The tier→model pairs in config.launch.aliases with a non-empty (trimmed) value — the
+// SAME four tiers launchModelEnv exports env for. A bound tier means Claude Code will
+// send that foreign model id via ANTHROPIC_DEFAULT_<TIER>_MODEL regardless of launch
+// mode, so planLaunch's fail-closed check (below) needs to know which tiers are live.
+export function boundAliasTiers(config) {
+  const aliases = config && config.launch && typeof config.launch.aliases === "object" ? config.launch.aliases : {};
+  const tiers = ["fable", "opus", "sonnet", "haiku"];
+  const bound = [];
+  for (const tier of tiers) {
+    const model = typeof aliases[tier] === "string" ? aliases[tier].trim() : "";
+    if (model) bound.push({ tier, model });
+  }
+  return bound;
 }
 
 // The child env for `claude`: layer the config-sourced launch-time models (session +
@@ -293,8 +351,26 @@ export function planLaunch({ config, routesConfig, providers, env }) {
     return { mode: "direct", routes: [], exercisedRoutes: [], endpoints: [], missingKeyEnvs: [], error: err.message };
   }
 
-  // No routes at all ⇒ direct (nothing to route; the byte-unchanged default).
+  // No routes at all ⇒ direct, UNLESS a tier alias is bound to a foreign model. A bound
+  // alias means Claude Code will send that foreign model id regardless of mode; if nothing
+  // is configured to route it (no shared/local routes + no proxyUrl), fail-closed with a
+  // clear error naming the tier/model and the two file-scoped fixes. The byte-unchanged
+  // default (no routes, no aliases) is still direct and error-null.
   if (routes.length === 0) {
+    const bound = boundAliasTiers(config);
+    if (bound.length > 0) {
+      const tiers = bound.map((b) => `${b.tier} → ${b.model}`).join(", ");
+      return {
+        mode: "direct",
+        routes,
+        exercisedRoutes: [],
+        endpoints: [],
+        missingKeyEnvs: [],
+        error: `bound alias(es) unreachable: ${tiers} — nothing configured to route them. ` +
+          "Add routes to .ai-dev/model-routes.json (shared), or set proxyUrl in " +
+          ".ai-dev/model-routes.local.json (personal), or clear the aliases to fall back to native.",
+      };
+    }
     return { mode: "direct", routes, exercisedRoutes: [], endpoints: [], missingKeyEnvs: [], error: null };
   }
 
@@ -455,12 +531,13 @@ function execClaude(env, args) {
   return child;
 }
 
-// The local-override config path that sits beside the shared one. Default
-// .ai-dev/config.local.json (gitignored); follows AI_DEV_CONFIG when that overrides
-// the shared path, so a test/alt config and its local sibling stay paired.
-function localConfigPath(configPath) {
-  const dir = path.dirname(configPath);
-  const base = path.basename(configPath, ".json");
+// The local-override sibling path: <dir>/<base>.json → <dir>/<base>.local.json.
+// Used for both config.local.json (gitignored personal launch overrides) and
+// model-routes.local.json (gitignored personal routes/proxyUrl) — follows the override
+// path when customized, so a test/alt file and its local sibling stay paired.
+function localSiblingPath(siblingPath) {
+  const dir = path.dirname(siblingPath);
+  const base = path.basename(siblingPath, ".json");
   return path.join(dir, `${base}.local.json`);
 }
 
@@ -479,7 +556,7 @@ function main() {
     const routesPath = process.env.MODEL_ROUTER_ROUTES || ".ai-dev/model-routes.json";
     let routesConfig = null;
     try {
-      routesConfig = readJsonIfPresent(routesPath);
+      ({ routesConfig } = loadRoutesWithLocal(routesPath));
     } catch {
       // a malformed routes file never breaks discovery — routesConfig stays null
     }
@@ -505,7 +582,10 @@ function main() {
     // a teammate). The ONE home for that merge is loadConfigWithLocal, shared with the
     // installer so the launcher and the bake/self-verify see the identical merged launch.
     ({ config } = loadConfigWithLocal(configPath));
-    routesConfig = readJsonIfPresent(routesPath);
+    // Merge the gitignored local routes override over the shared routes (proxyUrl + any
+    // personal route entries live there — never committed, never break a teammate's routing
+    // on pull). The ONE home for that merge is loadRoutesWithLocal.
+    ({ routesConfig } = loadRoutesWithLocal(routesPath));
     providers = loadProviders();
   } catch (err) {
     process.stderr.write(`[router-launch] config error: ${err.message}\n`);

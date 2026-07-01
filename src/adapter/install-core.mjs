@@ -194,6 +194,11 @@ export function ensureTransientsGitignore(target) {
   // teammate (docs/decisions/launcher-ux.md). Like the state pointer, it lives in the
   // tree but is git-excluded.
   ensureLine(path.join(target, ".gitignore"), ".ai-dev/config.local.json");
+  // model-routes.local.json is the gitignored personal home for the per-machine
+  // `proxyUrl` and personal route entries — never shared, never landed in the committed
+  // routes table (docs/decisions/personal-multi-model-setup.md). Same split pattern as
+  // config.local.json.
+  ensureLine(path.join(target, ".gitignore"), ".ai-dev/model-routes.local.json");
 }
 
 // 5. Generate the OPTIONAL project-local launcher .ai-dev/launch — a drop-in for

@@ -21,6 +21,9 @@ import {
   loadConfigWithLocal,
   launchModelEnv,
   buildChildEnv,
+  boundAliasTiers,
+  mergeLocalRoutes,
+  loadRoutesWithLocal,
   planLaunch,
   probeCandidates,
   parseModelsResponse,
@@ -196,6 +199,72 @@ function main() {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 
+  // ── boundAliasTiers (bound tier→model pairs from config.launch.aliases) ────
+  check("boundAliasTiers({})", boundAliasTiers({}).length, 0);
+  check("boundAliasTiers({ launch: {} })", boundAliasTiers({ launch: {} }).length, 0);
+  check("boundAliasTiers({ launch: { aliases: {} } })", boundAliasTiers({ launch: { aliases: {} } }).length, 0);
+  const bound1 = boundAliasTiers({ launch: { aliases: { sonnet: "glm-5.1", haiku: "   ", opus: "" } } });
+  check("boundAliasTiers: returns only the non-empty (trimmed) bound aliases", bound1.length, 1);
+  check("boundAliasTiers: exact entry for the bound tier", bound1[0].tier, "sonnet");
+  check("boundAliasTiers: exact model id", bound1[0].model, "glm-5.1");
+  const bound2 = boundAliasTiers({ launch: { aliases: { opus: "o", sonnet: "s", haiku: "h" } } });
+  check("boundAliasTiers: multiple bound tiers", bound2.length, 3);
+
+  // ── mergeLocalRoutes (gitignored model-routes.local.json overrides shared) ──
+  const mrg1 = mergeLocalRoutes(
+    { routes: [{ match: "shared-*", base_url: "shared.test" }] },
+    { proxyUrl: "http://127.0.0.1:8787" },
+  );
+  check("mergeLocalRoutes: local scalar wins", mrg1.proxyUrl, "http://127.0.0.1:8787");
+  check("mergeLocalRoutes: shared routes kept when local has none", mrg1.routes[0].match, "shared-*");
+  const noLocalMrg = mergeLocalRoutes({ routes: [{ match: "x" }] }, null);
+  check("mergeLocalRoutes: null local ⇒ shared routes unchanged", noLocalMrg.routes[0].match, "x");
+  check("mergeLocalRoutes: null + null ⇒ null", mergeLocalRoutes(null, null), null);
+  const mrg2 = mergeLocalRoutes(
+    { routes: [{ match: "shared-*", base_url: "shared" }] },
+    { routes: [{ match: "local-*", base_url: "local" }] },
+  );
+  check("mergeLocalRoutes: routes concatenated (local first)", mrg2.routes.length, 2);
+  check("mergeLocalRoutes: local routes come first (first-match-wins)", mrg2.routes[0].match, "local-*");
+  check("mergeLocalRoutes: shared routes come second", mrg2.routes[1].match, "shared-*");
+  const mrg3 = mergeLocalRoutes(
+    { proxyUrl: "https://shared.example", routes: [{ match: "s" }] },
+    { proxyUrl: "http://127.0.0.1:8787" },
+  );
+  check("mergeLocalRoutes: local proxyUrl overrides shared (shallow-override)", mrg3.proxyUrl, "http://127.0.0.1:8787");
+  check("mergeLocalRoutes: routes preserved when local has none", mrg3.routes.length, 1);
+  const mrg4 = mergeLocalRoutes(null, { proxyUrl: "http://127.0.0.1:8787" });
+  check("mergeLocalRoutes: null shared + local proxyUrl ⇒ local only", mrg4.proxyUrl, "http://127.0.0.1:8787");
+  check("mergeLocalRoutes: no routes key when both absent", "routes" in mrg4, false);
+  const mrg5 = mergeLocalRoutes({}, { routes: [] });
+  check("mergeLocalRoutes: empty local routes ⇒ no routes key", "routes" in mrg5, false);
+
+  // ── loadRoutesWithLocal (the shared read-and-merge for routes, like loadConfigWithLocal) ──
+  // Writes model-routes.json + its gitignored model-routes.local.json sibling to disk and
+  // confirms the helper returns { routesConfig: merged, shared, local }.
+  {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-loadroutes-"));
+    const routesPath = path.join(dir, "model-routes.json");
+    fs.writeFileSync(routesPath, JSON.stringify({ routes: [{ provider: "anthropic" }] }));
+    fs.writeFileSync(path.join(dir, "model-routes.local.json"), JSON.stringify({ proxyUrl: "http://127.0.0.1:8787" }));
+    const { routesConfig, shared, local } = loadRoutesWithLocal(routesPath);
+    check("loadRoutesWithLocal: personal proxyUrl reaches the MERGED config", routesConfig.proxyUrl, "http://127.0.0.1:8787");
+    check("loadRoutesWithLocal: shared routes reach the merged config", routesConfig.routes[0].provider, "anthropic");
+    check("loadRoutesWithLocal: `shared` is the raw model-routes.json (no proxyUrl)", "proxyUrl" in shared, false);
+    check("loadRoutesWithLocal: `local` is the raw override (personal proxyUrl)", local.proxyUrl, "http://127.0.0.1:8787");
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  {
+    // No model-routes.local sibling ⇒ merged === shared, local null (byte-unchanged path).
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-loadroutes-nolocal-"));
+    const routesPath = path.join(dir, "model-routes.json");
+    fs.writeFileSync(routesPath, JSON.stringify({ routes: [{ provider: "anthropic" }] }));
+    const { routesConfig, local } = loadRoutesWithLocal(routesPath);
+    check("loadRoutesWithLocal: no model-routes.local ⇒ shared routes kept", routesConfig.routes[0].provider, "anthropic");
+    check("loadRoutesWithLocal: no model-routes.local ⇒ local is null", local, null);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
   // ── buildChildEnv ─────────────────────────────────────────────────────────
   const childEnv = buildChildEnv({ FOO: "1", CLAUDE_CODE_SUBAGENT_MODEL: "haiku" }, "http://127.0.0.1:9999");
   check("buildChildEnv sets ANTHROPIC_BASE_URL", childEnv.ANTHROPIC_BASE_URL, "http://127.0.0.1:9999");
@@ -279,6 +348,39 @@ function main() {
   // no routes config ⇒ direct (byte-unchanged default).
   const planNoRoutes = planLaunch({ config: {}, routesConfig: null, providers: PROVIDERS, env: {} });
   check("no routes config ⇒ direct", planNoRoutes.mode, "direct");
+
+  // ── fail-closed: bound alias but no routes (the bug repro) ────────────────
+  // A bound tier alias with nothing configured to route it ⇒ error before launch.
+  const planBoundNoRoutes = planLaunch({
+    config: { launch: { aliases: { sonnet: "glm-5.1" } } },
+    routesConfig: null,
+    providers: PROVIDERS, env: {},
+  });
+  check("bound alias + no routes ⇒ error (fail-closed)", typeof planBoundNoRoutes.error === "string" && planBoundNoRoutes.error.includes("glm-5.1"), true);
+  check("bound alias + no routes ⇒ error names the tier", planBoundNoRoutes.error.includes("sonnet"), true);
+  check("bound alias + no routes ⇒ error names both file-scoped fixes", planBoundNoRoutes.error.includes("model-routes.json") && planBoundNoRoutes.error.includes("model-routes.local.json"), true);
+  // Same with present-but-empty routes array.
+  const planBoundEmptyRoutes = planLaunch({
+    config: { launch: { aliases: { sonnet: "glm-5.1" } } },
+    routesConfig: { routes: [] },
+    providers: PROVIDERS, env: {},
+  });
+  check("bound alias + empty routes ⇒ error (fail-closed)", typeof planBoundEmptyRoutes.error === "string", true);
+  // Two bound tiers with no routes ⇒ error names both.
+  const planTwoBound = planLaunch({
+    config: { launch: { aliases: { sonnet: "glm-5.1", haiku: "deepseek-chat" } } },
+    routesConfig: null,
+    providers: PROVIDERS, env: {},
+  });
+  check("two bound aliases + no routes ⇒ error names both pairs", planTwoBound.error.includes("sonnet → glm-5.1") && planTwoBound.error.includes("haiku → deepseek-chat"), true);
+  // Aliases present but ALL blank/whitespace ⇒ still direct, still error-null (the regression guard).
+  const planBlankAliases = planLaunch({
+    config: { launch: { aliases: { sonnet: "   ", haiku: "" } } },
+    routesConfig: null,
+    providers: PROVIDERS, env: {},
+  });
+  check("no routes + all-blank aliases ⇒ still direct + error-null", planBlankAliases.mode, "direct");
+  check("no routes + all-blank aliases ⇒ error is null (no bound tiers)", planBlankAliases.error, null);
 
   // malformed routes (unknown provider) ⇒ error, not a crash.
   const planErr = planLaunch({ config: {}, routesConfig: { routes: [{ provider: "ghost" }] }, providers: PROVIDERS, env: {} });

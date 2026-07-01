@@ -106,3 +106,20 @@ mid-session; if a foreign-routed seat/session made tool calls, start a **fresh**
 (not a `--continue`/compact — compaction carries the bad block forward) before switching the
 session model to a native one. The user-facing scan-point for this error is the README
 `## Troubleshooting` entry, which points here for the rationale; this doc is its one home.
+
+## Addendum (2026-07-02) — the routes config personal/shared split
+
+The same personal/shared distinction extends to `.ai-dev/model-routes.json` (the routing
+config). A **shared routes table** (team-committable, safe because keys live by env-var name
+only, never a value) belongs in `.ai-dev/model-routes.json`. A **per-machine `proxyUrl`**
+(a loopback proxy, personal external proxy, or per-developer choice) belongs in the gitignored
+`.ai-dev/model-routes.local.json` and NEVER in the shared file — a bare `proxyUrl` in the
+shared file is the **personal-value-in-a-shared-file class** this decision already names for
+`launch.*` — a developer's personal pointer that breaks routing for teammates on pull.
+
+The launcher now merges `.ai-dev/model-routes.local.json` over the shared file the same way
+it merges `config.local.json` over `config.json` (`mergeLocalRoutes` / `loadRoutesWithLocal`
+mirroring `mergeLocalLaunch` / `loadConfigWithLocal`). The shape: scalar fields like `proxyUrl`
+are shallow overrides (local wins), and `routes` (the array field) is merged with local entries
+concatenated first (because the router's matching is first-match-wins; a personal route must
+sort first to override a shared glob).

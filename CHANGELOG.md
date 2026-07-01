@@ -12,6 +12,16 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.51.0] — 2026-07-02
+
+### Fixed
+
+- **`router-launch.mjs` now fails closed when a bound tier alias has no route to reach it** — `config.launch.aliases` binding a tier (e.g. `sonnet → glm-5.1`) with no `.ai-dev/model-routes.json`/`proxyUrl` configured used to silently run `claude` direct, sending the foreign model id to whatever ambient backend was configured and surfacing as Claude Code's generic "model may not exist" error. `planLaunch` now refuses to launch and names the unreachable tier(s) + both remediation paths. Root-caused via a live 8D.
+
+### Added
+
+- **`.ai-dev/model-routes.json` personal/shared split** — the shared, committed file now carries only a team routes table; a new gitignored `.ai-dev/model-routes.local.json` carries the personal `proxyUrl` / per-machine overrides, merged over the shared file the way `config.local.json` already merges over `config.json` (`mergeLocalRoutes`/`loadRoutesWithLocal`). `src/adapter/upgrades.md` carries the downstream migration steps.
+
 ## [5.50.0] — 2026-07-01
 
 ### Added
