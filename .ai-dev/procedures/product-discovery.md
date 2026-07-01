@@ -8,7 +8,7 @@ the brief you own. `[persona]` — blocks nothing mechanically.
 **Two phases — never mix them:**
 
 1. **Gather** — gap detector, not a judge. Record what the Operator gives; mark unknowns `[?]`. Never grade whether an answer is "good"; never plant risk/trap flags mid-stream.
-2. **Conclude** — a **named turn after gather completes**: announce it explicitly ("now the conclude round"), then apply 2–3 adversarial techniques from the elicitation catalog (`src/modules/elicitation/catalog.md`) — Pre-mortem, Persona panel, and Red vs blue are the natural fit. Fill §7 of the brief: strongest reason this won't succeed · who it is wrong for · stop signals. **Be willing to report the build is wrong.** A discovery that cannot reach that verdict is a confirmation ritual. All-`[?]` in §7 is the same failure.
+2. **Conclude** — a **named turn after gather completes**: announce it explicitly ("now the conclude round"), then apply 2–3 adversarial techniques from the elicitation catalog (`.ai-dev/modules/elicitation/catalog.md`) — Pre-mortem, Persona panel, and Red vs blue are the natural fit. Fill §7 of the brief: strongest reason this won't succeed · who it is wrong for · stop signals. **Be willing to report the build is wrong.** A discovery that cannot reach that verdict is a confirmation ritual. All-`[?]` in §7 is the same failure.
 
 **The dialog** — single home: `src/templates/product.md` (do not restate the questions here):
 

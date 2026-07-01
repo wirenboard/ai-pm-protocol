@@ -45,7 +45,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SOURCE, PLATFORMS } from "./install-fs.mjs";
 import { resolveSourceVersion, readPriorVersion, stampVersion, isStaleNpxReRun } from "./install-version.mjs";
-import { vendorTooling, layDownCore, deployProcedures, ensureConfig, ensureTransientsGitignore, generateLaunchScript, installPrePushHook } from "./install-core.mjs";
+import { vendorTooling, layDownCore, deployProcedures, deployModules, ensureConfig, ensureTransientsGitignore, generateLaunchScript, installPrePushHook } from "./install-core.mjs";
 import { writeInactiveBreadcrumb } from "./install-breadcrumb.mjs";
 import { wireClaude, verifyClaudeWiring } from "./install-claude.mjs";
 import { wireOpenCode } from "./install-opencode.mjs";
@@ -120,6 +120,7 @@ export function install(targetDir, platformFlag, opts = {}) {
     // that converges to the committed bytes (git status clean).
     fs.mkdirSync(path.join(target, ".ai-dev", "state"), { recursive: true });
     deployProcedures(target); // readable .ai-dev/procedures/ — converges to committed bytes
+    deployModules(target); // readable .ai-dev/modules/ (runtime-read module files) — converges to committed bytes
     ensureConfig(target, platform);
     ensureTransientsGitignore(target);
     generateLaunchScript(target, platform, true); // .ai-dev/launch — converges to committed bytes
@@ -134,6 +135,7 @@ export function install(targetDir, platformFlag, opts = {}) {
   vendorTooling(target, version);
   layDownCore(target);
   deployProcedures(target); // readable .ai-dev/procedures/ (the tooling copy is read-denied)
+  deployModules(target); // readable .ai-dev/modules/ runtime-read module files (the tooling copy is read-denied)
   ensureConfig(target, platform);
   ensureTransientsGitignore(target);
   generateLaunchScript(target, platform, false); // .ai-dev/launch (always — optional, but generated)
