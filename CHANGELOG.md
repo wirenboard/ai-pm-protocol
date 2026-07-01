@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.51.1] — 2026-07-02
+
+### Fixed
+
+- **Re-pinned `roles.{planner,reviewer}.model` to `sonnet` and `roles.builder.model` to `haiku`** in this repo's own dogfood config — an unrelated external config reset had stripped these back to vanilla (no seat riding a tier), leaving the Operator's personal `config.local.json` tier bindings with nothing to route.
+
 ## [5.51.0] — 2026-07-02
 
 ### Fixed
