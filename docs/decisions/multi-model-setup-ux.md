@@ -88,7 +88,7 @@ config pin (roles.{builder,reviewer}.model)  or  launch env (ANTHROPIC_MODEL / _
         │
         ▼  Claude Code alias resolution
    an alias ("sonnet"/"haiku"/"opus")  →  ANTHROPIC_DEFAULT_{SONNET,HAIKU,OPUS}_MODEL  (if set)
-   a concrete id ("deepseek-chat")      →  passthrough, used verbatim
+   a concrete id ("deepseek-v4-pro")    →  passthrough, used verbatim
         │
         ▼  the string lands in the request body's `model` field
         │
@@ -102,8 +102,11 @@ config pin (roles.{builder,reviewer}.model)  or  launch env (ANTHROPIC_MODEL / _
 - modelpipe matches the **exact string that arrives in `body.model`**. It never resolves
   an alias — that is Claude Code's job, upstream, via `ANTHROPIC_DEFAULT_*_MODEL`.
 - So a route's `match` glob must target **what actually arrives**:
-  - If a seat pins a **concrete provider id** (e.g. `deepseek-chat`), that id passes
+  - If a seat pins a **concrete provider id** (e.g. `deepseek-v4-pro`), that id passes
     through verbatim → the route matches `deepseek-*`. **Write the concrete id.**
+    *(Superseded for BAKED seats by papercut 11 + 12: on Claude a concrete foreign id in
+    `roles.{builder,reviewer}.model` is dropped by the installer — tier-bind instead. A
+    concrete id still works for the launch-env session/guard seats.)*
   - If a seat pins a Claude **alias** (`sonnet`), it resolves to whatever
     `ANTHROPIC_DEFAULT_SONNET_MODEL` says (or the default `claude-sonnet-*`) → the route
     matches that. **An alias only works if the proxy has a route for the resolved id.**
@@ -286,13 +289,48 @@ reviewer=sonnet→glm), set by hand in a personal wrapper.
 
 **The probe returns provider GLOBS, not concrete ids** (modelpipe routes by glob): a binding
 needs a concrete id, so Stage 1 is **provider + model name** — pick a provider from the probe,
-enter the concrete id, validated against the glob (`glm-4.6` matches `glm-*`). Proxy-agnostic
+enter the concrete id, validated against the glob (`glm-5.2` matches `glm-*`). Proxy-agnostic
 by response shape: a concrete `id` (no `*`) is a direct pick-list (third-party LiteLLM-class
 proxies work out of the box); a glob means the provider step. **Follow-up (modelpipe):** a
 `/v1/models?expand=1` that queries each backend's catalog and returns concrete ids filtered by
 the glob (only the proxy holds the provider keys) — spec handed to the Operator; upgrades
 Stage 1's glob branch from manual entry to a real filtered pick-list. **Follow-up (probe):** an
 auth header so an authed third-party proxy's `/v1/models` discovers too (today it 401s → manual).
+
+---
+
+### Papercut 12 — the dialog regressed to role-first; corrected to Stage-1-global-first (2026-07-01)
+
+Papercut 11 ratified the two-stage shape but the **implementation** landed role-first: the
+"models per seat" step asked per-seat and buried *"another provider (non-Anthropic)"* as a
+per-role option that opened the sub-flow — which then re-asked the role in Stage 2 (a
+double-ask) and, worse, **hid the global effect** of a tier binding. That framing bricked a
+live downstream session: binding a tier silently re-pointed the running session (opus) and the
+background/guard (haiku), so setting one role re-routed the whole family without warning.
+
+**Corrected** (`src/agents/procedures/setup.md`) to the ratified order:
+
+- **A native per-seat step** (Anthropic tiers only — `default`/opus/sonnet/haiku), then **one
+  top-level GATE** — *"route any Claude tier to a non-Anthropic provider?"* (default no). The
+  all-Anthropic case never leaves this one added question (the gate, ratified over
+  always-two-stage on 2026-07-01: native stays lightweight).
+- **On yes, Stage 1 (global tier binding) runs FIRST**, before any role picks a tier, and
+  **states the global effect up front** — opus also backs the session, haiku also backs the
+  guard — plus a **tier-budget note** (N foreign seats need N free tiers; native session+guard
+  and both routed builder+reviewer collide). This visible warning is the guard that would have
+  prevented the brick.
+- **Stage 2 assigns each role a PURE tier** (opus/sonnet/haiku only — no provider choice at the
+  role level).
+
+**Direct-id claim corrected (defect verified from code, not empirical Claude behaviour).** The
+README + the papercut-11 setup edits still documented "write the concrete provider id" as a valid
+alternative. But on Claude a foreign id in a **baked** seat (`roles.{builder,reviewer}.model`) is
+off the allow-list, so `resolveModelPin` (`src/adapter/claude/install-agents.mjs`) bakes **no**
+`model:` line and the seat silently inherits the session model — it does **not** route. So **tier
+binding is the sole working cross-endpoint path for a baked seat**; a concrete foreign id works
+only for the launch-env session/guard (passthrough, not baked). No spike needed — the installer
+code settles it. Whether Claude *would* forward a raw foreign id if one were baked is moot (the
+installer never bakes it).
 
 ---
 
