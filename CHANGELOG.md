@@ -12,6 +12,23 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.49.0] — 2026-07-01
+
+### Added
+
+- **Personal foreign models via `config.local.json` now take effect** — the installer's bake and routing self-verify read the gitignored `.ai-dev/config.local.json` `launch` (merged over the shared config through the new shared one-home `loadConfigWithLocal`), so a personal tier binding (e.g. `launch.aliases.opus = "deepseek-v4-pro"`) bakes the bare tier alias (routes foreign) instead of a concrete native id. Personal ids are still **never** written to committed files (`settings.json`/agents stay clean — `readLaunchModels`/`mergeLaunchEnv` unchanged). This realises `#322`'s "seat model is personal" at the tier-binding level: the tier **lane** (`roles.*.model`) stays shared and baked; the tier **binding** is personal. `src/adapter/router-launch.mjs`, `src/adapter/claude/install-agents.mjs`, `src/adapter/install-claude.mjs`.
+- **Restructured setup model dialog** (`src/agents/procedures/setup.md`) into a staged funnel: gate ("change models at all?" — vanilla default) → native-or-proxy → proxy + model pool → seat selection last. The personal/shared split (shared tier lane in `config.json`; personal aliases/session/guard/`configDir`/`proxyUrl` in `config.local.json`) is now explicit, with auto-allocation writing each value to its correct home.
+
+### Fixed
+
+- **The silent-native class** — a personal foreign model bound only in `config.local.json` used to bake a concrete native id and run native with no error (the self-verify could not see the binding). The installer now merges `config.local` for validation, so a config.local-only foreign tier verifies GREEN and actually routes foreign.
+
+### Docs
+
+- New decision `docs/decisions/personal-multi-model-setup.md` — the tier-lane/tier-binding personal/shared design, why roles cannot be baked personal (committed files), and the foreign-model tool-id transcript-poisoning hazard (unfixable by this repo, documented). New `README.md` `## Troubleshooting` entry for the `server_tool_use.id` 400 (framed as harness/proxy behaviour, not a protocol bug); `config.json` `_launch`/`_roles` comments corrected to describe the split.
+
+---
+
 ## [5.48.0] — 2026-07-01
 
 ### Added
