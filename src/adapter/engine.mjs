@@ -39,6 +39,7 @@ import {
   projectConfigured,
   productBriefFilled,
   projectProfile,
+  projectHookMode,
   disabledSafeguards,
   safeguardRegistry,
 } from "./engine-config.mjs";
@@ -368,6 +369,10 @@ export function evaluate(input, config) {
   // The skip below is gated on `rule.toggleable === true` too, so a deny/merge-gate
   // rule (no such flag) is never skipped — the mechanical floor holds regardless.
   const disabled = disabledSafeguards(input.root);
+  // hookMode: "strict" (default, fail-safe) = ask-class rules ask the Operator;
+  // "light" = ask-class rules become deny + an informative reason (no interruption).
+  const hookMode = projectHookMode(input.root);
+  const lightMode = hookMode === "light";
   let ask = null;
   let injectId = null; // the FIRST matched inject (registry order) — the leading ruleId
   const injectReasons = [];
@@ -377,7 +382,18 @@ export function evaluate(input, config) {
     const pred = PREDICATES[rule.predicate];
     if (!pred || !pred(input, config)) continue;
     if (rule.class === "deny") return { verdict: "deny", ruleId: rule.id, reason: rule.intent };
-    if (rule.class === "ask" && !ask) ask = { verdict: "ask", ruleId: rule.id, reason: rule.intent };
+    if (rule.class === "ask") {
+      // In light mode, an ask-class match returns deny immediately (same precedence
+      // as deny) with an informative reason naming what's denied + the safe path.
+      if (lightMode) {
+        const alt = rule.lightAlternative || "";
+        const reason = alt
+          ? `[hookMode: light] ${rule.intent} Safe path: ${alt}`
+          : `[hookMode: light] ${rule.intent}`;
+        return { verdict: "deny", ruleId: rule.id, reason };
+      }
+      if (!ask) ask = { verdict: "ask", ruleId: rule.id, reason: rule.intent };
+    }
     if (rule.class === "inject") {
       if (injectId === null) injectId = rule.id; // leading inject keeps its identity
       injectReasons.push(rule.intent);
@@ -390,4 +406,4 @@ export function evaluate(input, config) {
   return ask || { verdict: "allow", ruleId: null, reason: "" };
 }
 
-export const _internals = { bashWriteTargets, bashReadTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, disabledSafeguards, safeguardRegistry, componentRoots, pushExplicitTrunkRef, PREDICATES };
+export const _internals = { bashWriteTargets, bashReadTargets, isOrchestratorAuthorable, resolveMergeTopic, reviewStampSatisfied, stripHeredocBodies, projectProfile, projectHookMode, disabledSafeguards, safeguardRegistry, componentRoots, pushExplicitTrunkRef, PREDICATES };

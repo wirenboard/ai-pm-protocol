@@ -112,7 +112,8 @@
       "class": "ask",
       "act": "bash",
       "predicate": "mergeTopicUnresolvable",
-      "fallback": "persona on a platform with no ask-return"
+      "fallback": "persona on a platform with no ask-return",
+      "lightAlternative": "resolve the branch topic (name it explicitly in the command) so the gate can check the stamp"
     },
     {
       "id": "role-duplicator-or-generic-in-seat",
@@ -139,7 +140,8 @@
       "act": "bash",
       "predicate": "sshMutatingAction",
       "toggleable": true,
-      "fallback": "persona on a platform with no ask-return (e.g. OpenCode)"
+      "fallback": "persona on a platform with no ask-return (e.g. OpenCode)",
+      "lightAlternative": "ask the Operator in chat (not via hook) before executing the remote mutation"
     },
     {
       "id": "force-push",
@@ -149,7 +151,8 @@
       "act": "bash",
       "predicate": "gitForcePush",
       "toggleable": true,
-      "fallback": "persona on a platform with no ask-return"
+      "fallback": "persona on a platform with no ask-return",
+      "lightAlternative": "rebase or recut the branch to avoid the force-push, or have the Operator run it"
     },
     {
       "id": "git-commit-no-verify",
@@ -159,7 +162,8 @@
       "act": "bash",
       "predicate": "gitCommitNoVerify",
       "toggleable": true,
-      "fallback": "persona on a platform with no ask-return"
+      "fallback": "persona on a platform with no ask-return",
+      "lightAlternative": "commit WITH verification; fix the failing hook instead of bypassing it"
     },
     {
       "id": "git-add-all",

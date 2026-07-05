@@ -74,6 +74,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "hook-mode",
+      "checks": "hookMode strict|light — the engine resolves hookMode from .ai-dev/config.json (overridable via config.local.json): strict (default, fail-safe) returns ask for ask-class rules; light returns deny with an informative reason (the model sees what's denied + the safe path); absent/unrecognised/malformed ⇒ strict; deny-class and inject-class rules are unaffected; the config.local personal override wins over shared",
+      "config": null,
+      "run": "node --test src/adapter/hook-mode.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "components",
       "checks": "multi-repo components — the fail-CLOSED manifest loader/validator (engine.mjs componentRoots) collapses to the single session root on absent/malformed/wrong-shape/non-existent/overbroad/partial-honour, canonicalises declared roots through realpath (defeats symlink escapes), and returns the validated multi-root set on a valid manifest. This is the validator unit-tested in isolation; the boundary wiring (the set consulted by the read/find/write project-boundary denies, with the per-root `.ai-dev/tooling/` carve-out) is covered by parity.test.mjs.",
       "config": null,
