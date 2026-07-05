@@ -606,5 +606,75 @@ for (const [name, cmd] of [
   check("trunk-push-quoted-prose-helper", pushExplicitTrunkRef('git commit -m "git push origin main"'), null);
 }
 
+// ── 11. EXPLICIT NO-SLASH HEAD BRANCH — push the branch you're on ─────────────
+// Guards the friction behind hook-mode (#2/#335 family): `git push origin <branch>`
+// for a no-slash branch name, while ON that branch, once mis-fired the
+// merge-topic-unresolvable ASK — topicFromRefToken only slash-parses, so the bare
+// name was "unparseable" and the HEAD fallback was wrongly skipped. The explicit
+// ref EQUALS the HEAD branch now resolves via HEAD: the branch IS the topic. The
+// floor still holds — an UNSTAMPED such push now DENIES (the topic resolves, so the
+// stamp is CHECKED, not asked around), and a cross-checkout push of a DIFFERENT
+// no-slash branch still asks (can't syntactically tell a non-numeric tag from a
+// branch, and the pushed ref outranks HEAD).
+console.log("EXPLICIT NO-SLASH HEAD BRANCH (push the branch you're on):");
+
+// 11a. STAMPED push of the current no-slash branch ⇒ ALLOW (the fix — was ASK).
+{
+  const root = rootOnBranch("hook-mode-strict-light");
+  stamp(root, "hook-mode-strict-light");
+  const v = evaluate({ act: "bash", root, command: "git push origin hook-mode-strict-light" }, config);
+  check("head-branch-stamped:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 11b. UNSTAMPED push of the current no-slash branch ⇒ DENY merge-while-unstamped
+// (the floor HOLDS — was an ASK because the topic was unresolvable; now the topic
+// resolves and the missing stamp denies, the correct strict side, not an ask-around).
+{
+  const root = rootOnBranch("hook-mode-strict-light");
+  const v = evaluate({ act: "bash", root, command: "git push origin hook-mode-strict-light" }, config);
+  check("head-branch-unstamped:denies", v.verdict, "deny");
+  check("head-branch-unstamped:ruleId", v.ruleId, "merge-while-unstamped");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 11c. Cross-checkout: push a DIFFERENT no-slash branch from another checkout ⇒
+// still ASK (the ref outranks HEAD; a non-numeric tag can't be told from a branch,
+// so the safe path is ask — never a silent pass, never a guess).
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git push origin hook-mode-strict-light" }, config);
+  check("head-branch-cross-checkout:asks", v.verdict, "ask");
+  check("head-branch-cross-checkout:ruleId", v.ruleId, "merge-topic-unresolvable");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 11d. Resolver unit: the explicit no-slash current-branch ref resolves to the
+// branch name (prefix-stripped), not null.
+{
+  const root = rootOnBranch("mybranch");
+  check("head-branch-resolver", resolveMergeTopic("git push origin mybranch", root), "mybranch");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 11e. Refspec form `<branch>:<branch>` on the current no-slash branch, stamped ⇒
+// ALLOW (the HEAD-equality check tests EITHER side of the refspec).
+{
+  const root = rootOnBranch("mybranch");
+  stamp(root, "mybranch");
+  const v = evaluate({ act: "bash", root, command: "git push origin mybranch:mybranch" }, config);
+  check("head-branch-refspec:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 11f. Force-marker form resolves at the resolver level (the + is stripped before
+// the HEAD-equality check). The full command ALSO trips the force-push ASK — that
+// is correct and independent of this fix; asserted at the resolver layer only.
+{
+  const root = rootOnBranch("mybranch");
+  check("head-branch-force-resolver", resolveMergeTopic("git push origin +mybranch", root), "mybranch");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
