@@ -36,7 +36,7 @@ import {
   isVanilla,
   loadClaudeModelPolicy,
 } from "./claude/install-agents.mjs";
-import { checkRouting, verifyRoutingConsistency, mergeLaunchEnv } from "./install-claude.mjs";
+import { checkRouting, verifyRoutingConsistency, checkCrossModelIndependence, mergeLaunchEnv } from "./install-claude.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -415,6 +415,94 @@ check("routing: the launcher-applied pass reports 'from config.local'", localRes
 // settings.json. Proves the pass above is earned by the config.local origin, not a weakened check.
 const sharedNoEnv = checkRouting({ ...localRouted, localAliases: {} });
 check("routing: the SAME tier bound SHARED (not config.local) still fails on missing env", sharedNoEnv.ok === false && sharedNoEnv.failures.some((f) => f.includes("ANTHROPIC_DEFAULT_OPUS_MODEL")));
+
+// ───────── 9. cross-model independence check (#334) ─────────
+// Detects when the reviewer's effective model resolves to the same model as the session,
+// meaning the protocol's `auto` cross-model promise is hollow. Non-blocking advisory.
+const cmiPolicy = rpolicy; // reuse the loaded policy
+
+// 9a. WARN path: foreign-bound tier resolves to the same model as the session.
+const cmiWarnForeign = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "deepseek-v4-pro", aliases: { sonnet: "deepseek-v4-pro" } } },
+  seatModelLines: { reviewer: "sonnet" }, // baked bare alias (foreign-bound)
+  policy: cmiPolicy,
+});
+check("cross-model: foreign-bound sonnet == session model → warning", cmiWarnForeign.warnings.length === 1);
+check("cross-model: warning names the colliding model", cmiWarnForeign.warnings[0].includes("deepseek-v4-pro"));
+
+// 9b. WARN path: native tier (unbound) resolves to the same concrete id as session.
+const cmiWarnNative = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "claude-sonnet-4-6" } },
+  seatModelLines: { reviewer: "claude-sonnet-4-6" }, // concrete native id, same as session
+  policy: cmiPolicy,
+});
+check("cross-model: native concrete id == session model → warning", cmiWarnNative.warnings.length === 1);
+check("cross-model: native warning names the colliding model", cmiWarnNative.warnings[0].includes("claude-sonnet-4-6"));
+
+// 9c. WARN path: native tier alias (unbound, baked concrete id via aliasOf) == session model.
+const cmiWarnAlias = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "claude-opus-4-8" } },
+  seatModelLines: { reviewer: "opus" }, // bare alias → native id = claude-opus-4-8 = session
+  policy: cmiPolicy,
+});
+check("cross-model: unbound opus alias native id == session model → warning", cmiWarnAlias.warnings.length === 1);
+check("cross-model: alias warning names the colliding model", cmiWarnAlias.warnings[0].includes("claude-opus-4-8"));
+
+// 9d. NO-WARN path: foreign-bound tier resolves to a DIFFERENT model than session.
+const cmiNoWarnDiff = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "deepseek-v4-pro", aliases: { sonnet: "glm-5.2" } } },
+  seatModelLines: { reviewer: "sonnet" },
+  policy: cmiPolicy,
+});
+check("cross-model: foreign sonnet != session model → no warning", cmiNoWarnDiff.warnings.length === 0);
+
+// 9e. NO-WARN path: no explicit session model (session model unknown → can't detect).
+const cmiNoWarnNoSession = checkCrossModelIndependence({
+  config: { launch: {} },
+  seatModelLines: { reviewer: "sonnet" },
+  policy: cmiPolicy,
+});
+check("cross-model: no explicit session model → no warning", cmiNoWarnNoSession.warnings.length === 0);
+
+// 9f. NO-WARN path: reviewer inherits session (null baked model line) — honest, no false claim.
+const cmiNoWarnInherit = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "deepseek-v4-pro" } },
+  seatModelLines: { reviewer: null }, // no model line → session inherit (honest)
+  policy: cmiPolicy,
+});
+check("cross-model: reviewer inherits session (null) → no warning (honest)", cmiNoWarnInherit.warnings.length === 0);
+
+// 9g. NO-WARN path: empty/whitespace session model → treated as absent → no warning.
+const cmiNoWarnBlankSession = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "   " } },
+  seatModelLines: { reviewer: "sonnet" },
+  policy: cmiPolicy,
+});
+check("cross-model: blank session model → no warning", cmiNoWarnBlankSession.warnings.length === 0);
+
+// 9h. NO-WARN path: reviewer absent (no seat at all) → no warning.
+const cmiNoWarnNoSeat = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "deepseek-v4-pro" } },
+  seatModelLines: {},
+  policy: cmiPolicy,
+});
+check("cross-model: no reviewer seat → no warning", cmiNoWarnNoSeat.warnings.length === 0);
+
+// 9i. WARN path: fable tier bound foreign, same as session (the 4th tier).
+const cmiWarnFable = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "glm-4.6", aliases: { fable: "glm-4.6" } } },
+  seatModelLines: { reviewer: "fable" },
+  policy: cmiPolicy,
+});
+check("cross-model: foreign-bound fable == session model → warning", cmiWarnFable.warnings.length === 1);
+
+// 9j. NO-WARN path: different models on opus and session.
+const cmiNoWarnOpus = checkCrossModelIndependence({
+  config: { launch: { sessionModel: "deepseek-v4-pro", aliases: { opus: "glm-4.6" } } },
+  seatModelLines: { reviewer: "opus" },
+  policy: cmiPolicy,
+});
+check("cross-model: foreign opus != session model → no warning", cmiNoWarnOpus.warnings.length === 0);
 
 // e2e through verifyRoutingConsistency (the file-reading + THROW half): a real routed apply
 // passes; a tampered baked agent throws loud, naming the seat.

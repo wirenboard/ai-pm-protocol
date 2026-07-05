@@ -307,6 +307,50 @@ export function checkRouting({ config, seatModelLines, env, policy, localAliases
   return { ok: failures.length === 0, reports, failures };
 }
 
+// Pure cross-model independence check: detects when the reviewer's effective model resolves
+// to the same model as the session, meaning the protocol's `auto` cross-model promise is
+// hollow — no blind spot exists. Non-blocking (advisory warnings only); the Operator may
+// consciously accept same-model review on a single-provider proxy. Returns { warnings: [...] }.
+// One home: install-claude.mjs — the routing-verify path (docs/decisions/cross-model-honesty.md).
+export function checkCrossModelIndependence({ config, seatModelLines, policy }) {
+  const launch = (config && typeof config.launch === "object" && config.launch) || {};
+  const aliases = (typeof launch.aliases === "object" && launch.aliases) || {};
+  const sessionModel = typeof launch.sessionModel === "string" ? launch.sessionModel.trim() : "";
+  const warnings = [];
+
+  // No explicit session model → the session's effective model is unknown (harness default),
+  // so the collision can't be detected. Skip silently — no false positive.
+  if (!sessionModel) return { warnings };
+
+  // Resolve the reviewer's EFFECTIVE runtime model:
+  //   bare alias (e.g. "sonnet")  → foreign-bound tier id (launch.aliases) or native id
+  //   concrete id (e.g. "claude-sonnet-4-6") → verbatim
+  //   null (no model line, session inherit) → same as session, but HONEST (no false claim)
+  const reviewerBaked = seatModelLines.reviewer ?? null;
+  if (reviewerBaked === null) return { warnings }; // honest inherit — no false claim
+
+  const tier = aliasOf(reviewerBaked, policy);
+  let reviewerEffective;
+  if (tier) {
+    const foreignId = typeof aliases[tier] === "string" ? aliases[tier].trim() : "";
+    reviewerEffective = foreignId || policy.ids[tier];
+  } else {
+    reviewerEffective = reviewerBaked; // concrete id (possibly non-allowlist)
+  }
+
+  if (reviewerEffective && reviewerEffective === sessionModel) {
+    warnings.push(
+      `cross-model independence: reviewer resolves to the same model as the session ` +
+        `(${sessionModel}) — no cross-model blind spot. The reviewer contract says "a ` +
+        `different context than the Builder," but this configuration runs both on the ` +
+        `same brain. To restore independence: pin the reviewer to a different model ` +
+        `or set a different tier alias.`,
+    );
+  }
+
+  return { warnings };
+}
+
 // Read the apply artifacts (config, baked agents, settings.json env) and run checkRouting.
 // THROWS (⇒ install exits non-zero) with a per-seat report on any mismatch — the loud twin
 // of verifyClaudeWiring for the ROUTING class. On all-consistent, prints the per-seat
@@ -358,6 +402,11 @@ export function verifyRoutingConsistency(target, settingsPath) {
     );
   }
   for (const r of reports) console.log(r);
+
+  // Cross-model independence check (non-blocking advisory): warn when the reviewer
+  // resolves to the same model as the session — no blind spot despite the `auto` promise.
+  const { warnings } = checkCrossModelIndependence({ config, seatModelLines, policy });
+  for (const w of warnings) process.stderr.write(`WARNING: ${w}\n`);
 }
 
 // Extract the frontmatter `model:` value from an assembled agent file, or null when it
