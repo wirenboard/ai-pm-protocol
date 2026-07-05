@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.51.5] — 2026-07-05
+
+- Made the docs/contracts/ obligation enforceable via the REVIEWER gate, not a hook (#336). The Contracts-regression dimension now blocks a NEW/CHANGED contracted surface (MCP tool, HTTP route, event, schema, public API) that ships without its docs/contracts/ entry + validating test; beat-5 + the orchestrator ship-step carry a one-line contract-currency cue. Prose-only by design (hooks are friction).
+
+---
+
 ## [5.51.4] — 2026-07-05
 
 - Closed a cross-model honesty gap: with a single-provider proxy, reviewer-on-auto could resolve to the SAME model as the session (no cross-model blind spot, yet auto promised one). checkCrossModelIndependence() in the installer now detects the collision and emits a non-blocking WARNING naming both models and suggesting the fix. (#334)
