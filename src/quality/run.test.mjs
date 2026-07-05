@@ -11,7 +11,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { run } from "./run.mjs";
+import { run, resolveRegistry } from "./run.mjs";
 
 let pass = 0;
 const fails = [];
@@ -86,6 +86,38 @@ const quiet = (fn) => { console.log = () => {}; try { return fn(); } finally { c
 {
   const { root, registryPath } = rootWith({ tools: [{ id: "x", run: "node -e \"process.exit(0)\"", beat: "build" }] });
   check("unknown beat ⇒ non-zero", quiet(() => run("bogus", root, registryPath)) !== 0, true);
+}
+
+// 7. Project-vs-template resolution: when a project tools.json exists at
+// `<root>/src/quality/tools.json`, the runner resolves THAT path (not the
+// co-located one beside run.mjs). Tested via resolveRegistry (no command exec).
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "qrun-resolve-"));
+  const srcQ = path.join(root, "src", "quality");
+  fs.mkdirSync(srcQ, { recursive: true });
+  const projectTools = path.join(srcQ, "tools.json");
+  fs.writeFileSync(projectTools, JSON.stringify({ tools: [] }));
+  const resolved = resolveRegistry(root);
+  check("project tools preferred", resolved, projectTools);
+}
+
+// 8. Template fallback: when no project tools exist, the runner falls back
+// to the co-located file beside this runner.
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "qrun-fb-"));
+  const expected = path.join(path.dirname(new URL(import.meta.url).pathname), "tools.json");
+  check("fallback to co-located", resolveRegistry(root), expected);
+}
+
+// 9. Explicit registryPath overrides both project and co-located resolution.
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "qrun-explicit-"));
+  const srcQ = path.join(root, "src", "quality");
+  fs.mkdirSync(srcQ, { recursive: true });
+  fs.writeFileSync(path.join(srcQ, "tools.json"), JSON.stringify({ tools: [] }));
+  const explicit = path.join(root, "my-custom-tools.json");
+  fs.writeFileSync(explicit, JSON.stringify({ tools: [] }));
+  check("explicit registryPath overrides", resolveRegistry(root, explicit), explicit);
 }
 
 if (fails.length) {

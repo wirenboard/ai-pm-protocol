@@ -46,7 +46,7 @@ unconfigured project, or on `/dev-setup`.
    - **Size / complexity linter** — a **recommended default**: a per-file size/complexity rule at ~800 lines where the stack offers one (eslint `max-lines`/`complexity`, ruff `C901`, a comparable rule), so an oversized file becomes a mechanical finding, not a thing only a human notices. Tuned soft — it surfaces the file to the architect and points at `decompose` (`.ai-dev/procedures/decompose.md`) for remediation, never a hard build block.
    - **UI/E2E automation driver** for a GUI stack — Playwright for web, tauri-driver/WebDriver for native.
 
-   Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `.ai-dev/quality/tools.json`, verify green via `node .ai-dev/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision.
+   Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `src/quality/tools.json` (the project's real tools location — PROTOCOL.md `## Quality tools`), verify green via `node .ai-dev/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision.
 
    **CI wiring** (offered with it, declinable) — a workflow running the registered quality suite on every push/PR, per the project's forge (e.g. GitHub Actions), **via the runner (`node .ai-dev/quality/run.mjs <beat>`, both beats), never a re-listed subset of tool commands**: a hand-copied list drifts the moment a row is added; the registry stays the single home of "what green means". The merge-gate is local, CI is the remote re-check that catches a bypassed local run.
 

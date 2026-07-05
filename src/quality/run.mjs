@@ -25,20 +25,28 @@ import { execSync } from "node:child_process";
 
 const BEATS = ["build", "review", "ship"];
 
+// Resolve the tools.json path: prefer `<root>/src/quality/tools.json` (the
+// project's real tools), fall back to the co-located file beside this runner
+// (the template the installer ships). Exported for the self-test to verify
+// the resolution chain without executing commands.
+export function resolveRegistry(root, registryPath) {
+  if (registryPath) return registryPath;
+  const beside = path.join(path.dirname(fileURLToPath(import.meta.url)), "tools.json");
+  const projectTools = path.join(root, "src", "quality", "tools.json");
+  return fs.existsSync(projectTools) ? projectTools : beside;
+}
+
 // Run every tools.json row whose beat === `beat`, from `root` (the cwd the
 // commands execute in). Returns an exit code (0 = all matched rows passed /
 // none matched / no registry; non-zero = failure or malformed registry).
-// `registryPath` overrides the default location (the self-test points it at a
-// synthetic registry). The default registry resolves NEXT TO this runner — the
-// installer ships run.mjs and tools.json together as a pair (`.ai-dev/quality/`
-// downstream, `src/quality/` here), so "beside me" is correct on every layout.
+// `registryPath` overrides the default resolution (see resolveRegistry).
 export function run(beat, root, registryPath) {
   if (!BEATS.includes(beat)) {
     console.error(`run.mjs: unknown beat "${beat}" — expected one of ${BEATS.join(" | ")}`);
     return 2;
   }
 
-  const file = registryPath || path.join(path.dirname(fileURLToPath(import.meta.url)), "tools.json");
+  const file = resolveRegistry(root, registryPath);
 
   // Absent registry ⇒ no-op success: a downstream may legitimately define no checks.
   if (!fs.existsSync(file)) {
