@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.51.3] — 2026-07-05
+
+- Fixed the quality runner reading the shipped template `tools.json` (one example row) instead of the project's real tools — `resolveRegistry` now prefers `<root>/src/quality/tools.json` (the PROTOCOL.md `## Quality tools` location), falling back to the co-located file (the installed template) for backward compatibility. The setup procedure now points at `src/quality/tools.json` (source + deployed byte-identical). (#333)
+
+---
+
 ## [5.51.2] — 2026-07-02
 
 ### Changed
