@@ -70,6 +70,33 @@ function productBriefFilled(root) {
   catch { return false; } // absent or unreadable ⇒ no brief
   return !BRIEF_TEMPLATE_MARKERS.some((m) => text.includes(m));
 }
+// The project's hook mode (.ai-dev/config.json `hookMode`). Controls how ask-class
+// rules are realised: "strict" (default, fail-safe) = ask the Operator where the
+// platform supports it; "light" = ask-class rules become deny + an informative
+// message (no Operator interruption). Overridable via .ai-dev/config.local.json
+// (the personal/shared split, mirroring launch). Absent / unreadable / malformed /
+// unknown value ⇒ "strict" (fail-safe: the Operator is always asked).
+function projectHookMode(root) {
+  try {
+    // Read shared config.
+    const sharedPath = path.join(path.resolve(root), ".ai-dev", "config.json");
+    const shared = JSON.parse(fs.readFileSync(sharedPath, "utf8"));
+    // Read personal override (gitignored config.local.json).
+    const localPath = path.join(path.resolve(root), ".ai-dev", "config.local.json");
+    let local;
+    try { local = JSON.parse(fs.readFileSync(localPath, "utf8")); }
+    catch { local = null; }
+    // hookMode is a top-level scalar — local wins over shared.
+    const mode = local && typeof local.hookMode === "string" && local.hookMode.trim()
+      ? local.hookMode.trim()
+      : shared && typeof shared.hookMode === "string" && shared.hookMode.trim()
+        ? shared.hookMode.trim()
+        : "";
+    if (mode === "light") return "light";
+    return "strict"; // absent / unrecognised / malformed ⇒ strict
+  } catch { return "strict"; }
+}
+
 // The project's rigor profile (.ai-dev/config.json `profile`). Defaults to "solo"
 // on absent / unreadable / malformed / unknown value — proportionality by default
 // (PROTOCOL.md `## Project config`), a deliberate Operator decision, not fail-strict.
@@ -133,6 +160,7 @@ export {
   projectConfigured,
   productBriefFilled,
   projectProfile,
+  projectHookMode,
   disabledSafeguards,
   safeguardRegistry,
 };
