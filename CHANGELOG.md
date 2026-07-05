@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.52.0] — 2026-07-05
+
+- **MINOR** — New `hookMode` config axis (strict | light, default strict) — the Operator "during development, don not touch me" rule. STRICT = ask-class rules ask the Operator (unchanged). LIGHT = ask-class rules (force-push, git-commit-no-verify, ssh-mutating-action, merge-topic-unresolvable) become deny + an informative message to the model (it sees what is denied + why + the safe path, and adapts without interrupting the Operator). NOT a new hook — a mode for existing ask-class only. `projectHookMode(root)` reads config.json + config.local (local wins; absent/unrecognised ⇒ strict). Set `hookMode: "light"` in the gitignored config.local.json for dev. (#18)
+
+---
+
 ## [5.51.5] — 2026-07-05
 
 - Made the docs/contracts/ obligation enforceable via the REVIEWER gate, not a hook (#336). The Contracts-regression dimension now blocks a NEW/CHANGED contracted surface (MCP tool, HTTP route, event, schema, public API) that ships without its docs/contracts/ entry + validating test; beat-5 + the orchestrator ship-step carry a one-line contract-currency cue. Prose-only by design (hooks are friction).
