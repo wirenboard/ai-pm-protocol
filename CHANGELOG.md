@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.52.1] — 2026-07-05
+
+- **PATCH** — Fixed the merge-gate push friction behind hook-mode: `git push origin <no-slash-branch>` while ON that branch no longer mis-fires the `merge-topic-unresolvable` ASK. `resolveMergeTopic` now resolves the topic from HEAD when the explicit unresolvable ref EQUALS the current HEAD branch (the branch IS the topic) — the HEAD fallback was wrongly skipped for ANY no-slash explicit ref, not only tags/trunk. Safe subset: HEAD is always a branch, so `isTagPush` + `pushExplicitTrunkRef` (upstream) keep tag/trunk pushes exact. The floor holds — an unstamped such push now DENIES (topic resolved ⇒ stamp checked, not asked around), and a cross-checkout push of a DIFFERENT no-slash branch still asks. Unblocks safe `hookMode: light`. (#2 / #335 family)
+
+---
+
 ## [5.52.0] — 2026-07-05
 
 - **MINOR** — New `hookMode` config axis (strict | light, default strict) — the Operator "during development, don not touch me" rule. STRICT = ask-class rules ask the Operator (unchanged). LIGHT = ask-class rules (force-push, git-commit-no-verify, ssh-mutating-action, merge-topic-unresolvable) become deny + an informative message to the model (it sees what is denied + why + the safe path, and adapts without interrupting the Operator). NOT a new hook — a mode for existing ask-class only. `projectHookMode(root)` reads config.json + config.local (local wins; absent/unrecognised ⇒ strict). Set `hookMode: "light"` in the gitignored config.local.json for dev. (#18)

@@ -136,6 +136,47 @@ function pushExplicitTrunkRef(command) {
   }
   return null;
 }
+
+// Read the current HEAD branch name (e.g. "hook-mode-strict-light"), or null when
+// detached/unreadable. One home for the .git/HEAD read inside this module — both
+// the HEAD fallback in resolveMergeTopic and the explicit-ref-equality check reuse
+// it (the prior inline read folds into here). A sibling reader (headBranch in
+// engine-config.mjs) serves the commit-on-main gate; not cross-imported, to keep
+// the modules uncoupled. NOTE: a WORKTREE's .git is a gitdir-file pointer, not a
+// directory — the read throws there and returns null (a pre-existing limit, not a
+// regression; the parallel-work hardening covers it separately).
+function headBranchName(root) {
+  try {
+    const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
+    const hm = head.match(/^ref:\s*refs\/heads\/(.+)$/);
+    return hm ? hm[1].trim() : null;
+  } catch { return null; }
+}
+// True when a `git push` names the CURRENT HEAD branch as an explicit ref token
+// that topicFromRefToken could not slash-parse — the common `git push origin
+// <branch>` for a no-slash branch name (push the branch you're on). There the
+// HEAD fallback is correct and must NOT be skipped: skipping it mis-fires
+// merge-topic-unresolvable on every such push (the friction of pushing a branch
+// like hook-mode-strict-light). Whole-token equality (force marker stripped,
+// either side of a <src>:<dst> refspec); a slashed HEAD branch is already resolved
+// by refTopicFromCommand upstream, so this only ever decides the no-slash case.
+// Parallels pushExplicitTrunkRef / pushHasUnparsedExplicitRef.
+function pushExplicitHeadBranch(command, head) {
+  if (!head || !/\bgit\s+push\b/.test(command || "")) return false;
+  const masked = maskQuotedSpans(command);
+  const inv = /\bgit\s+push\b([^;&|\n]*)/g;
+  let m;
+  while ((m = inv.exec(masked)) !== null) {
+    const args = m[1].split(/\s+/).filter((t) => t && !t.startsWith("-"));
+    for (let token of args.slice(1)) {
+      if (token.startsWith("+")) token = token.slice(1); // refspec force marker
+      for (const side of token.split(":")) { // either side of <src>:<dst>
+        if (side === head) return true;
+      }
+    }
+  }
+  return false;
+}
 // Resolution stays SYNTACTIC — it returns the extracted topic as-is, even an
 // unclean one. Traversal validation lives downstream at the stamp boundary
 // (isCleanTopic in reviewStampSatisfied), NOT here: nulling an unclean
@@ -146,19 +187,29 @@ function resolveMergeTopic(command, root) {
   if (typeof command !== "string" || !command) return null;
   const fromCommand = refTopicFromCommand(command);
   if (fromCommand) return fromCommand;
-  // Skip HEAD fallback when the push names an explicit unresolvable ref
-  // (a tag or a trunk branch): falling back to HEAD here would resolve the
-  // WRONG topic. A bare `git push origin` has no such token and correctly
-  // falls through to HEAD (pushing the current branch implicitly).
-  if (pushHasUnparsedExplicitRef(command)) return null;
-  try {
-    const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
-    const hm = head.match(/^ref:\s*refs\/heads\/(.+)$/);
-    if (hm) {
-      const topic = stripPrefix(hm[1].trim());
+  // Skip HEAD fallback when the push names an explicit ref we can't slash-parse
+  // (a tag, a trunk, or ANOTHER branch): falling back to HEAD would resolve the
+  // WRONG topic. EXCEPT when that explicit ref IS the current HEAD branch — the
+  // common `git push origin <branch>` for a no-slash branch name (push the branch
+  // you're on). There HEAD is correct (the branch IS the topic); skipping the
+  // fallback mis-fires merge-topic-unresolvable on every such push (pushing a
+  // branch like hook-mode-strict-light). HEAD is always a branch, so resolving it
+  // can't confuse a tag/trunk push — isTagPush + pushExplicitTrunkRef handle those
+  // upstream. A bare `git push origin` has no explicit token and falls through to
+  // HEAD unchanged.
+  if (pushHasUnparsedExplicitRef(command)) {
+    const head = headBranchName(root);
+    if (head && pushExplicitHeadBranch(command, head)) {
+      const topic = stripPrefix(head);
       if (topic) return topic;
     }
-  } catch { /* no usable HEAD ⇒ unresolvable */ }
+    return null;
+  }
+  const head = headBranchName(root);
+  if (head) {
+    const topic = stripPrefix(head);
+    if (topic) return topic;
+  }
   return null;
 }
 // A merge-gate topic becomes a path SEGMENT (`<topic>_review.md`), so it must be
@@ -214,6 +265,8 @@ export {
   isTagPush,
   pushHasUnparsedExplicitRef,
   pushExplicitTrunkRef,
+  headBranchName,
+  pushExplicitHeadBranch,
   resolveMergeTopic,
   isCleanTopic,
   reviewStampSatisfied,
