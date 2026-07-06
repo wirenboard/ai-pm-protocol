@@ -19,9 +19,9 @@ A red tool is *not green*: the beat isn't done.
 
 ## Template vs project
 
-In a **fresh downstream** project `tools.json` ships **only the shape** — two `EXAMPLE-*` rows showing the format. (This repo is its own first project, so its rows are already the real suite — the parity and neutral-prose checks — not examples.) A real project:
+In a **fresh downstream** project `tools.json` ships **only the shape** — one `example-lint` row showing the format. (This repo is its own first project, so its rows are already the real suite — the parity and neutral-prose checks — not examples.) A real project:
 
-1. deletes the `EXAMPLE-*` rows,
+1. deletes the `example-lint` row,
 2. adds a row per tool it actually runs,
 3. drops each tool's native config beside `tools.json`.
 
