@@ -1,6 +1,6 @@
 # Decision: Auto-compact for non-Claude (proxied) Claude Code sessions
 
-**Status:** shipped — implemented and available for live-verify
+**Status:** reverted in 5.54.0 (2026-07-06) — the threshold-monitor approach shipped in 5.53.0 was superseded by a redesigned responsibility split. Summarization-by-threshold moves to the **proxy** (modelpipe); the protocol retains ONLY continuous crash-resume checkpoints (file + pointer), not a threshold monitor or a `PreCompact` block. Dogfood (the very session that shipped it) confirmed **LV1**: the proxied non-Claude session strips Anthropic-shaped `usage.*` fields, so the message-count fallback misread ~763–788% and fired every prompt (the threshold de-bounce also failed to suppress repeats). This doc is RETAINED as the path record (threshold → live-bug → redesigned split); the body below is the historical grounding of the abandoned approach, not current design.
 **Date:** 2026-07-06
 
 ## Question
@@ -32,9 +32,9 @@ How can a Claude Code session running a **non-Claude model via a proxy** (`ANTHR
 
 ## Live-verify items (post-build, run on a real GLM-proxied session)
 
-**Status:** open — to be verified in a real modelpipe/GLM session
+**Status:** LV1 CONFIRMED live (2026-07-06, on revert); LV2–LV4 moot under the redesigned split (no transcript-token threshold monitor in the protocol).
 
-1. **LV1 — JSONL `usage` field path:** Run a real proxied session and inspect the transcript JSONL at `payload.transcript_path` to confirm the field path for cumulative token count (`entry.usage?.input_tokens` vs `entry.message?.usage?.input_tokens` vs absent). If absent, confirm message-count fallback fires and is labeled in the injected instruction.
+1. **LV1 — JSONL `usage` field path:** CONFIRMED ABSENT on a proxied modelpipe/GLM session — the transcript carries no Anthropic-shaped `usage.*` fields, so the message-count fallback was the active path and misread ~763–788% (a long tool-heavy session has far more than `messageCountMax` messages, so the ratio blew past 1.0). Lesson: message-count is a bad usage proxy on long sessions; the real signal must live where usage is knowable — the proxy.
 
 2. **LV2 — Token count semantics:** Confirm the last entry's `input_tokens` is cumulative (not just that message's tokens). If not cumulative, the script must sum all entries — update accordingly and document performance bound.
 

@@ -1,5 +1,5 @@
 {
-  "_doc": "Merge into the project's .claude/settings.json. The hooks that wire Claude to the shared engine: every guarded tool call is piped to claude/shim.mjs (deny/inject engine), and every prompt is piped to both shim.mjs AND compact-monitor.mjs (threshold + PreCompact block for non-Claude proxies). Path assumes the adapter ships at .ai-dev/tooling/src/adapter/ — rewrite it if vendored elsewhere. See INSTALL.md.",
+  "_doc": "Merge into the project's .claude/settings.json. The two hooks that wire Claude to the shared engine: every guarded tool call and every prompt is piped to claude/shim.mjs, which self-locates deny-rules.json and prints the verdict JSON. Path assumes the adapter ships at .ai-dev/tooling/src/adapter/ — rewrite it if vendored elsewhere. See INSTALL.md.",
   "hooks": {
     "PreToolUse": [
       {
@@ -13,18 +13,6 @@
       {
         "hooks": [
           { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-dev/tooling/src/adapter/claude/shim.mjs\"" }
-        ]
-      },
-      {
-        "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-dev/tooling/src/adapter/claude/compact-monitor.mjs\"" }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.ai-dev/tooling/src/adapter/claude/compact-monitor.mjs\"" }
         ]
       }
     ]

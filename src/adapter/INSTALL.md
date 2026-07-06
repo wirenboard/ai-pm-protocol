@@ -52,7 +52,7 @@ A downstream upgrades by bumping the protocol source and re-running the same one
 
 ## Claude Code
 
-Merge this into the project's `.claude/settings.json` (the fragment lives at `claude/hooks.json`). Three hook entries: one `PreToolUse` hook and two `UserPromptSubmit` hooks (shim + compact-monitor), plus one `PreCompact` hook. The `PreToolUse` and first `UserPromptSubmit` pipe the harness payload to `node claude/shim.mjs`; the shim self-locates `deny-rules.json` (two dirs up) and prints the verdict JSON. The second `UserPromptSubmit` and `PreCompact` hook run the compact-monitor script, which estimates context usage and blocks model-summarize on proxy sessions (see `compact-monitor.mjs` below).
+Merge this into the project's `.claude/settings.json` (the fragment lives at `claude/hooks.json`). One `PreToolUse` hook and one `UserPromptSubmit` hook, both piping the harness payload to `node claude/shim.mjs`; the shim self-locates `deny-rules.json` (two dirs up) and prints the verdict JSON.
 
 ```json
 {
@@ -67,8 +67,6 @@ Merge this into the project's `.claude/settings.json` (the fragment lives at `cl
   }
 }
 ```
-
-**Compact-monitor note (proxy sessions):** The `PreCompact` hook blocks the harness's model-summarize on proxy sessions to prevent summarization errors with non-Claude models. It is active only when `ANTHROPIC_BASE_URL` points to a non-Anthropic host. To temporarily allow manual compaction or disable the monitor entirely, set `enabled: false` in `.ai-dev/state/auto-compact.json`. See `src/adapter/claude/compact-monitor.mjs` for implementation details.
 
 Every guard reads the one shared engine.
 
