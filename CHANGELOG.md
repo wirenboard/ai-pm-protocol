@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.52.4] — 2026-07-06
+
+- **PATCH** — Merge-gate allows a trunk `--ff-only` sync to its upstream. After a remote squash-merge, `git merge --ff-only origin/main` (the trunk sync / `git pull`) was DENIED (the topic resolved to `main`, no `main_review.md`), forcing the destructive `git reset --hard origin/main`. A trunk `--ff-only` sync is NOT a feature merge, so `isTrunkFastForward` (engine-git.mjs) now carves it out — STRICT 4-guard, bypass-safe for the `[mechanical]` floor: (1) a `git merge` (not push/plumbing); (2) an EXPLICIT `--ff-only` (bare `--ff` can still create a merge commit — NOT carved); (3) the ref is `main`/`master`/`origin/main`/`origin/master` (`feature/main` REJECTED — non-`origin` prefix); (4) the checkout (`headBranch`) is ON that same trunk. All four ⇒ allow; a non-`origin` remote gets no carve-out (byte-identical to today, fail-safe). The carve-out is merge-only — a trunk PUSH is still denied by `pushExplicitTrunkRef`.
+
+---
+
 ## [5.52.3] — 2026-07-06
 
 - **PATCH** — Merge-gate git-invocation normalizer. The parser's adjacency regex required `git` and `push`/`merge` ADJACENT, so a `git -C <path>` global-flag span between them hid the subcommand. Two dimensions: a parallel-work `git -C <worktree> push` carried no resolvable ref, fell through to the session-root HEAD, and false-BLOCKed a legitimately-stamped push (availability); and `pushExplicitTrunkRef`'s guard was blind to `git -C <path> push origin main`, so the `[mechanical]` trunk-deny leaked (security — a floor reached through the wrong door). New `normalizeGitInvocation` strips the value-taking global span (`-C`/`-c`/`--git-dir`/`--work-tree`; space-, `=-`, glue-, and multi-forms) from the quote-masked command before the adjacency match; the five parsing helpers and the two merge-gate rules (`mergeWithUnstampedReview`, `mergeTopicUnresolvable` — whose own detection bailed on the raw command before the helpers ran) normalize first. Pure regex, no shell; a no-op on a non-`-C` command (regression-safe).

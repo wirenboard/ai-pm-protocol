@@ -193,6 +193,37 @@ function pushExplicitHeadBranch(command, head) {
   }
   return false;
 }
+// A trunk fast-forward sync — `git merge --ff-only <trunk-upstream>` while ON that trunk —
+// is NOT a feature merge, so the merge-gate must not require a review stamp for it. It is the
+// post-squash-merge sync the git flow needs (`git checkout main && git pull`); without this
+// carve-out the gate DENIED it (the topic resolves to `main`, no `main_review.md`), forcing
+// the destructive `git reset --hard origin/main` workaround — a worse surface than the ff it
+// blocked. STRICT (all four guards must hold — bypass-safe for the [mechanical] floor):
+//   1. a `git merge` (not push, not `merge-*` plumbing);
+//   2. an EXPLICIT `--ff-only` (guarantees no merge commit — bare `--ff` can still merge);
+//   3. the merged ref is `main`/`master`/`origin/main`/`origin/master` (the trunk or its
+//      conventional remote-tracking ref — `feature/main` is REJECTED; a non-`origin` remote
+//      gets no carve-out, byte-identical to today, fail-safe);
+//   4. the checkout (headBranch) is ON that same trunk (a feature branch is never on a trunk).
+const TRUNK_FF_REF = /^(main|master|origin\/main|origin\/master)$/;
+function isTrunkFastForward(command, root) {
+  const cmd = normalizeGitInvocation(command || "");
+  if (!/\bgit\s+merge(?![-\w])/.test(cmd)) return false;   // guard 1: a `git merge`
+  if (!/\s--ff-only\b/.test(cmd)) return false;            // guard 2: explicit --ff-only only
+  const inv = /\bgit\s+merge(?![-\w])([^;&|\n]*)/g;
+  let m, refTrunk = null;
+  while ((m = inv.exec(cmd)) !== null) {
+    for (let tok of m[1].split(/\s+/).filter((t) => t && !t.startsWith("-"))) {
+      if (tok.startsWith("+")) tok = tok.slice(1);          // refspec force marker
+      tok = tok.split(":")[0];                              // src side of a <src>:<dst> refspec
+      if (TRUNK_FF_REF.test(tok)) { refTrunk = tok.split("/").pop(); break; } // guard 3
+    }
+    if (refTrunk) break;
+  }
+  if (!refTrunk) return false;
+  return headBranch(root) === refTrunk;                     // guard 4: checkout on that same trunk
+}
+
 // Resolution stays SYNTACTIC — it returns the extracted topic as-is, even an
 // unclean one. Traversal validation lives downstream at the stamp boundary
 // (isCleanTopic in reviewStampSatisfied), NOT here: nulling an unclean
@@ -283,6 +314,7 @@ export {
   pushHasUnparsedExplicitRef,
   pushExplicitTrunkRef,
   pushExplicitHeadBranch,
+  isTrunkFastForward,
   resolveMergeTopic,
   isCleanTopic,
   reviewStampSatisfied,

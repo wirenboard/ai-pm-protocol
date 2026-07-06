@@ -31,6 +31,7 @@ import {
   pushExplicitTrunkRef,
   resolveMergeTopic,
   reviewStampSatisfied,
+  isTrunkFastForward,
 } from "./engine-git.mjs";
 import {
   fileNonEmpty,
@@ -194,6 +195,7 @@ const PREDICATES = {
     if (!/git\s+(merge(?![-\w])|push\b)/.test(cmd)) return false;
     if (projectProfile(input.root) === "yolo") return false; // gate explicitly off — Operator's merge word is the only remaining check
     if (isTagPush(input.command)) return false; // tags never need a review stamp
+    if (isTrunkFastForward(input.command, input.root)) return false; // a trunk --ff-only sync to its upstream (the post-squash-merge `git pull`) is not a feature merge — see engine-git
     // F1: an EXPLICIT unstamped trunk push (`git push origin main`/`master`) DENIES on
     // both platforms — the bare `main` ref is unresolvable as a topic, so without this
     // it fell through to the ask rule, which a no-ask-return platform (OpenCode) silently
@@ -220,6 +222,7 @@ const PREDICATES = {
     const cmd = normalizeGitInvocation(input.command || ""); // strip `git -C <path>` global span — see mergeWithUnstampedReview
     if (!/git\s+(merge(?![-\w])|push\b)/.test(cmd)) return false;
     if (isTagPush(input.command)) return false; // tags are fine — no topic, no ask
+    if (isTrunkFastForward(input.command, input.root)) return false; // a trunk --ff-only sync is not a feature merge — no ask
     // An explicit trunk push is handled by the DENY rule (mergeWithUnstampedReview),
     // never routed to ask — deny outranks ask regardless, this keeps the intent clean.
     if (pushExplicitTrunkRef(input.command)) return false;
