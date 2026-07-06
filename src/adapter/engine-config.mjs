@@ -10,14 +10,42 @@ import path from "node:path";
 function fileNonEmpty(p) {
   try { return fs.statSync(p).size > 0; } catch { return false; }
 }
-// The checkout's current branch name (the FULL name, prefix NOT stripped), read from
-// .git/HEAD — null on a detached HEAD or an unreadable/missing HEAD. Used by the
-// commit-to-trunk deny (commitOnUnstampedMain): a `git commit` names no branch, so the
-// branch is the checkout, exactly the signal resolveMergeTopic's HEAD fallback reads —
-// but here we need the WHOLE name (`main`, not a stripped topic) to compare against trunk.
+// Resolve the checkout's REAL git directory — ONE home for "where is this checkout's
+// .git", shared by every HEAD/ref read. In a MAIN checkout `.git` is a directory and it
+// IS the git dir. In a git WORKTREE (parallel-work's per-feature checkout) `.git` is a
+// FILE carrying `gitdir: <path>` — the real git dir (the worktree's private dir under
+// the main repo's `.git/worktrees/<name>/`) is that pointer's target, which git writes
+// ABSOLUTE but may be RELATIVE (resolved against the checkout root). null on no `.git`
+// or an unreadable/malformed pointer. Pure fs reads, no shell — within invariant 2.
+function resolveGitDir(root) {
+  const dotGit = path.join(path.resolve(root), ".git");
+  let st;
+  try { st = fs.statSync(dotGit); } catch { return null; }
+  if (st.isDirectory()) return dotGit;
+  if (st.isFile()) {
+    try {
+      const m = fs.readFileSync(dotGit, "utf8").trim().match(/^gitdir:\s*(.+)$/);
+      if (!m) return null;
+      const target = m[1].trim();
+      return path.isAbsolute(target) ? target : path.resolve(path.resolve(root), target);
+    } catch { return null; }
+  }
+  return null;
+}
+// The checkout's current branch name (the FULL name, prefix NOT stripped), read from the
+// real git dir's HEAD — WORKTREE-aware via resolveGitDir (the 5.52.1 reader returned null
+// in a worktree, so a parallel-work push mis-fired merge-topic-unresolvable — #335). Null
+// on a detached HEAD or an unreadable/missing HEAD. Used by the commit-to-trunk deny
+// (commitOnUnstampedMain): a `git commit` names no branch, so the branch is the checkout,
+// exactly the signal resolveMergeTopic's HEAD fallback reads — but here we need the WHOLE
+// name (`main`, not a stripped topic) to compare against trunk. Also the ONE home
+// engine-git's resolveMergeTopic imports (the 5.52.1 local headBranchName duplicate is
+// retired — invariant 6).
 function headBranch(root) {
+  const gitDir = resolveGitDir(root);
+  if (!gitDir) return null;
   try {
-    const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
+    const head = fs.readFileSync(path.join(gitDir, "HEAD"), "utf8").trim();
     const hm = head.match(/^ref:\s*refs\/heads\/(.+)$/);
     return hm ? hm[1].trim() : null;
   } catch { return null; }
@@ -33,7 +61,8 @@ function headBranch(root) {
 // "no commits" would WIDEN the carve-out (allow a commit that should deny), the wrong
 // direction; so an unreadable .git makes this true (assume history ⇒ no carve-out).
 function repoHasCommits(root) {
-  const git = path.join(path.resolve(root), ".git");
+  const git = resolveGitDir(root); // worktree-aware — a worktree's history markers live in its real git dir, not root/.git (a file)
+  if (!git) return false; // no .git at all ⇒ no history (carve-out applies; headBranch is null too)
   try {
     const branch = headBranch(root);
     if (branch && fs.existsSync(path.join(git, "refs", "heads", branch))) return true;
@@ -154,6 +183,7 @@ function safeguardRegistry(config) {
 
 export {
   fileNonEmpty,
+  resolveGitDir,
   headBranch,
   repoHasCommits,
   TRUNK_BRANCHES,

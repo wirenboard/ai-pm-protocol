@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { maskQuotedSpans } from "./engine-bash.mjs";
+import { headBranch } from "./engine-config.mjs";
 
 // Resolve the merge-gate topic from ANY branch, prefix stripped: the topic is the
 // branch name with its leading work-prefix dropped (feature/foo→foo, fix/bar→bar,
@@ -137,21 +138,6 @@ function pushExplicitTrunkRef(command) {
   return null;
 }
 
-// Read the current HEAD branch name (e.g. "hook-mode-strict-light"), or null when
-// detached/unreadable. One home for the .git/HEAD read inside this module — both
-// the HEAD fallback in resolveMergeTopic and the explicit-ref-equality check reuse
-// it (the prior inline read folds into here). A sibling reader (headBranch in
-// engine-config.mjs) serves the commit-on-main gate; not cross-imported, to keep
-// the modules uncoupled. NOTE: a WORKTREE's .git is a gitdir-file pointer, not a
-// directory — the read throws there and returns null (a pre-existing limit, not a
-// regression; the parallel-work hardening covers it separately).
-function headBranchName(root) {
-  try {
-    const head = fs.readFileSync(path.join(path.resolve(root), ".git", "HEAD"), "utf8").trim();
-    const hm = head.match(/^ref:\s*refs\/heads\/(.+)$/);
-    return hm ? hm[1].trim() : null;
-  } catch { return null; }
-}
 // True when a `git push` names the CURRENT HEAD branch as an explicit ref token
 // that topicFromRefToken could not slash-parse — the common `git push origin
 // <branch>` for a no-slash branch name (push the branch you're on). There the
@@ -198,14 +184,14 @@ function resolveMergeTopic(command, root) {
   // upstream. A bare `git push origin` has no explicit token and falls through to
   // HEAD unchanged.
   if (pushHasUnparsedExplicitRef(command)) {
-    const head = headBranchName(root);
+    const head = headBranch(root);
     if (head && pushExplicitHeadBranch(command, head)) {
       const topic = stripPrefix(head);
       if (topic) return topic;
     }
     return null;
   }
-  const head = headBranchName(root);
+  const head = headBranch(root);
   if (head) {
     const topic = stripPrefix(head);
     if (topic) return topic;
@@ -265,7 +251,6 @@ export {
   isTagPush,
   pushHasUnparsedExplicitRef,
   pushExplicitTrunkRef,
-  headBranchName,
   pushExplicitHeadBranch,
   resolveMergeTopic,
   isCleanTopic,
