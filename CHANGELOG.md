@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.52.2] — 2026-07-06
+
+- **PATCH** — Worktree-aware HEAD resolution in the merge-gate engine. In a git worktree (parallel-work's per-feature checkout) `.git` is a FILE carrying a `gitdir:` pointer, not a directory, so three engine reads that assumed `.git/` is a directory failed open: `headBranch` (and engine-git's `headBranchName`) returned null (a push/merge mis-fired `merge-topic-unresolvable` — the parallel-work Reviewer-stamp friction, #335), `repoHasCommits` returned false (the day-zero carve-out wrongly applied), and a worktree `commit-on-main` was not gated. New `resolveGitDir(root)` follows the pointer (absolute or relative) to the real git dir — the ONE home shared by `headBranch` and `repoHasCommits` (engine-config); engine-git retires its local `headBranchName` duplicate and imports `headBranch` (invariant 6 — the 5.52.1 intentional duplication flagged this for consolidation). The floor holds: an unstamped worktree push now DENIES (topic resolves ⇒ the stamp is checked, not asked around). (#335)
+
+---
+
 ## [5.52.1] — 2026-07-05
 
 - **PATCH** — Fixed the merge-gate push friction behind hook-mode: `git push origin <no-slash-branch>` while ON that branch no longer mis-fires the `merge-topic-unresolvable` ASK. `resolveMergeTopic` now resolves the topic from HEAD when the explicit unresolvable ref EQUALS the current HEAD branch (the branch IS the topic) — the HEAD fallback was wrongly skipped for ANY no-slash explicit ref, not only tags/trunk. Safe subset: HEAD is always a branch, so `isTagPush` + `pushExplicitTrunkRef` (upstream) keep tag/trunk pushes exact. The floor holds — an unstamped such push now DENIES (topic resolved ⇒ stamp checked, not asked around), and a cross-checkout push of a DIFFERENT no-slash branch still asks. Unblocks safe `hookMode: light`. (#2 / #335 family)
