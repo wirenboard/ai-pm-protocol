@@ -125,7 +125,7 @@ A cross-component feature spans a **declared component set** — N sibling repos
 - **Offered** — before a release or downstream rollout; when the project's health is in doubt; or as the "audit on top" of a `solo`/`lite` batch.
 - **Explicit** — the Operator asks.
 
-**Read `.ai-dev/procedures/audit.md` for the one-pass body** — the whole-suite run, the fresh-auditor dimensions (invariants · contracts · docs · honesty labels · security · drift-completeness · verification coverage · version skew · maintainability/module-size · deployment-doc currency · durable-text hygiene), and the finding-dispatch.
+**Read `.ai-dev/procedures/audit.md` for the one-pass body** — the whole-suite run, the fresh-auditor dimensions (invariants · contracts · docs · honesty labels · security · drift-completeness · verification coverage · version skew · maintainability/module-size · deployment-doc currency · durable-text hygiene · workspace hygiene (`#325`, aliased by the `gc` side-tool)), and the finding-dispatch.
 
 ## Backlog
 
