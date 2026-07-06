@@ -15,7 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isInsideRoot, resolveTarget } from "./engine-paths.mjs";
+import { isInsideRoot, isInsideSanctioned, resolveTarget } from "./engine-paths.mjs";
 import {
   findAbsolutePathArg,
   maskQuotedSpans,
@@ -55,7 +55,13 @@ import {
 
 // ── neutral input shape ──────────────────────────────────────────────────────
 // { act:'read'|'write'|'bash'|'spawn'|'prompt', root, path?, command?,
-//   content?, contentEmpty?, spawnTarget?, isOrchestrator?, prompt? }
+//   content?, contentEmpty?, spawnTarget?, isOrchestrator?, prompt?,
+//   sanctionedScratch?, home? }
+// `sanctionedScratch`: adapter-derived canonical roots of the agent's OWN out-of-root
+//   scratch (the tool-result overflow store + per-session temp), consulted by the READ
+//   boundary predicates only — a read-only widening so a fetched/overflow artifact the
+//   harness itself placed is not false-blocked. `home`: $HOME for `~`→path expansion in
+//   bash-read. Both threaded by the platform shim; absent ⇒ today's strict behaviour.
 
 // Compile a config-sourced pattern and test it, returning FALSE on a compile error.
 // SCOPED TO INJECT-CLASS PREDICATES ONLY (promptMatchesChangeVerb / promptNeedsSetup /
@@ -93,14 +99,14 @@ const PREDICATES = {
     const r = resolveTarget(input.root, input.path);
     if (!r) return false;
     if (writesIntoAnyNever(input.root, r, config?.orchestrator_writable)) return true;
-    return !isInsideAnyComponent(input.root, r);
+    return !(isInsideAnyComponent(input.root, r) || isInsideSanctioned(input.sanctionedScratch, r));
   },
   findTargetOutsideRoot(input, config) {
     const p = findAbsolutePathArg(input.command);
     if (!p) return false;
     const r = path.resolve(p);
     if (writesIntoAnyNever(input.root, r, config?.orchestrator_writable)) return true;
-    return !isInsideAnyComponent(input.root, r);
+    return !(isInsideAnyComponent(input.root, r) || isInsideSanctioned(input.sanctionedScratch, r));
   },
   // Bash READ boundary — best-effort, the read twin of findTargetOutsideRoot.
   // For each extracted read target: a leading `~` is treated as outside-root (it
@@ -111,12 +117,16 @@ const PREDICATES = {
   // ⇒ deny (fail-closed); an unparseable command or a statically unresolvable
   // token ($VAR/$(…)/interpreter/unlisted) yields no target ⇒ allow (fail-open).
   bashReadTargetOutsideRoot(input, config) {
-    for (const t of bashReadTargets(input.command)) {
-      if (t.startsWith("~")) return true; // $HOME — near-always outside a project root
+    for (const raw of bashReadTargets(input.command)) {
+      // Expand a leading `~` to $HOME (input.home, threaded by the shim) so a sanctioned
+      // scratch path referenced as `~/…` reaches the sanctioned check. Without a home a
+      // `~`-target is unresolvable ⇒ deny (the original fail-closed behaviour).
+      const t = (raw.startsWith("~") && input.home) ? raw.replace(/^~/, input.home) : raw;
+      if (t.startsWith("~")) return true;
       const r = resolveTarget(input.root, t);
       if (!r) continue;
       if (writesIntoAnyNever(input.root, r, config?.orchestrator_writable)) return true;
-      if (!isInsideAnyComponent(input.root, r)) return true;
+      if (!(isInsideAnyComponent(input.root, r) || isInsideSanctioned(input.sanctionedScratch, r))) return true;
     }
     return false;
   },
