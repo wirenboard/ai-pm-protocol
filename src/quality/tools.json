@@ -18,14 +18,6 @@
       "init": "Node >= 18, no install"
     },
     {
-      "id": "compact-monitor",
-      "checks": "auto-compact checkpoint-restart monitor for proxy sessions — threshold-driven injection (UserPromptSubmit), PreCompact block on proxies, fallback message-count estimation, state-file management, fail-open on error",
-      "config": null,
-      "run": "node src/adapter/claude/compact-monitor.test.mjs",
-      "beat": "build",
-      "init": "Node >= 18, no install"
-    },
-    {
       "id": "install-model",
       "checks": "per-platform install model bake — OpenCode bakes NO model line for any input (runtime ignores subagent model:); Claude bakes the resolved per-seat model into the assembled reviewer frontmatter (auto → the allow-listed model opposite the session else sonnet; a concrete allow-listed pin → that model; session/absent and off-allowlist → no line)",
       "config": null,

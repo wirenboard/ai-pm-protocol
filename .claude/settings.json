@@ -20,24 +20,6 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/src/adapter/claude/shim.mjs\""
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/src/adapter/claude/compact-monitor.mjs\""
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/src/adapter/claude/compact-monitor.mjs\""
-          }
-        ]
       }
     ]
   }
