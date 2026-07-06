@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.52.3] — 2026-07-06
+
+- **PATCH** — Merge-gate git-invocation normalizer. The parser's adjacency regex required `git` and `push`/`merge` ADJACENT, so a `git -C <path>` global-flag span between them hid the subcommand. Two dimensions: a parallel-work `git -C <worktree> push` carried no resolvable ref, fell through to the session-root HEAD, and false-BLOCKed a legitimately-stamped push (availability); and `pushExplicitTrunkRef`'s guard was blind to `git -C <path> push origin main`, so the `[mechanical]` trunk-deny leaked (security — a floor reached through the wrong door). New `normalizeGitInvocation` strips the value-taking global span (`-C`/`-c`/`--git-dir`/`--work-tree`; space-, `=-`, glue-, and multi-forms) from the quote-masked command before the adjacency match; the five parsing helpers and the two merge-gate rules (`mergeWithUnstampedReview`, `mergeTopicUnresolvable` — whose own detection bailed on the raw command before the helpers ran) normalize first. Pure regex, no shell; a no-op on a non-`-C` command (regression-safe).
+
+---
+
 ## [5.52.2] — 2026-07-06
 
 - **PATCH** — Worktree-aware HEAD resolution in the merge-gate engine. In a git worktree (parallel-work's per-feature checkout) `.git` is a FILE carrying a `gitdir:` pointer, not a directory, so three engine reads that assumed `.git/` is a directory failed open: `headBranch` (and engine-git's `headBranchName`) returned null (a push/merge mis-fired `merge-topic-unresolvable` — the parallel-work Reviewer-stamp friction, #335), `repoHasCommits` returned false (the day-zero carve-out wrongly applied), and a worktree `commit-on-main` was not gated. New `resolveGitDir(root)` follows the pointer (absolute or relative) to the real git dir — the ONE home shared by `headBranch` and `repoHasCommits` (engine-config); engine-git retires its local `headBranchName` duplicate and imports `headBranch` (invariant 6 — the 5.52.1 intentional duplication flagged this for consolidation). The floor holds: an unstamped worktree push now DENIES (topic resolves ⇒ the stamp is checked, not asked around). (#335)
