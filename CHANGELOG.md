@@ -12,6 +12,13 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.55.0] — 2026-07-06
+
+- **MINOR** — minimal in-protocol proxy: reversed the modelpipe consume (`docs/decisions/proxy-consume-mechanism.md` Option 3 — superseded). `src/adapter/model-router.mjs` is now a **first-party built-in proxy** (no longer a mirror of `aadegtyarev/modelpipe`); `src/adapter/sync-modelpipe.mjs` and its `modelpipe-sync-drift` quality row are deleted. The launcher keeps its three routing modes (direct / router / external); the built-in router (router mode) retains routing + per-backend auth-swap + streaming + the vision fallback (`forImages`/`forImagesModel`) + the `GET /v1/models` discovery endpoint; the standalone CLI (`main`) is cut — `modelpipe` is the standalone CLI product, untouched, just no longer consumed.
+- **MINOR** — new OPT-IN `launch.autoCompactWindow` (personal `config.local.json`, a positive int of tokens) → exported as `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (runtime-only, never committed). CC resolves the effective window **per-model**, capping each at its real window, so set it ONLY when every foreign model in play supports the chosen window (e.g. a deepseek all-1M lineup); default unset (CC's 200K-for-foreign assumption is the safe default — a 200K model assumed higher overflows before compacting). The `[1m]` model-id suffix is the per-NATIVE-model lever; this is the global one for foreign providers. `setup` step `(g)` offers it with the caveat named. Decision + research grounding (CC 2.1.201 binary + official docs): `docs/decisions/minimal-in-protocol-proxy.md`; `docs/decisions/router-extraction.md` partially superseded.
+
+---
+
 ## [5.54.2] — 2026-07-06
 
 - **PATCH** — glm-lanes: strengthened the dogfood config model lanes — `roles.builder.model haiku→sonnet`, `roles.reviewer.model sonnet→opus` — and re-baked the two committed concrete-id agents (`dev-builder` → `claude-sonnet-4-6`, `dev-reviewer` → `claude-opus-4-8`; planner unchanged at `claude-sonnet-4-6`). The personal/shared split (option 2, decided 2026-07-06): the committed repo carries concrete native ids only; the Operator's glm routing stays a personal `config.local.json` `launch.aliases` override, never committed. install-drift green. Affects only this repo's dogfood instance (downstream projects generate their own agents from their own config); no `src/` change.
