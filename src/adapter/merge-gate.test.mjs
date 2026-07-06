@@ -817,5 +817,75 @@ console.log("GLOBAL-FLAG PREFIX git -C / -c / --git-dir / --work-tree (push|merg
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// ── 14. trunk `--ff-only` sync — `git merge --ff-only origin/main` while ON main is the ──
+// post-squash-merge trunk sync (the git flow's `git pull`), NOT a feature merge. The gate
+// once DENIED it (topic resolved to `main`, no main_review.md), forcing the destructive
+// `git reset --hard origin/main`. isTrunkFastForward carves it out — strict 4-guard.
+console.log("TRUNK --ff-only SYNC CARVE-OUT (git merge --ff-only <trunk-upstream>):");
+
+// 14a. `git merge --ff-only origin/main` on main ⇒ ALLOW (the fix — was DENY).
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git merge --ff-only origin/main" }, config);
+  check("trunk-ff-origin-main:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 14b. `git merge --ff-only main` on main ⇒ ALLOW (bare trunk ref).
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git merge --ff-only main" }, config);
+  check("trunk-ff-main:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 14c. `git merge --ff-only origin/master` on master ⇒ ALLOW (master trunk).
+{
+  const root = rootOnBranch("master");
+  const v = evaluate({ act: "bash", root, command: "git merge --ff-only origin/master" }, config);
+  check("trunk-ff-master:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 14d. REGRESSION: on a FEATURE branch ⇒ DENY (guard 4 — checkout not trunk).
+{
+  const root = rootOnBranch("feature/x");
+  const v = evaluate({ act: "bash", root, command: "git merge --ff-only origin/main" }, config);
+  check("trunk-ff-on-feature:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 14e. REGRESSION: a non-trunk ref ⇒ DENY (guard 3 — `origin/feature-x` not in the trunk set).
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git merge --ff-only origin/feature-x" }, config);
+  check("trunk-ff-non-trunk-ref:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 14f. REGRESSION: `--ff` WITHOUT -only ⇒ DENY (guard 2 — bare --ff can still create a merge commit).
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git merge --ff origin/main" }, config);
+  check("trunk-ff-bare-ff:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 14g. REGRESSION: the `feature/main` collision ⇒ DENY (guard 3 rejects a non-`origin` prefix).
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git merge --ff-only feature/main" }, config);
+  check("trunk-ff-feature-main-collision:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 14h. REGRESSION: a trunk PUSH is unaffected — still DENY (the carve-out is merge-only).
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git push origin main" }, config);
+  check("trunk-push-still-denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
