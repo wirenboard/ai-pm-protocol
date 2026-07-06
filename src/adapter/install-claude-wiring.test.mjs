@@ -466,4 +466,40 @@ check("[launch-env] non-object aliases ⇒ no alias key written", (() => {
   }
 }
 
+// ── SessionStart inject — the crash-resume FIRST-action backstop ──────────────
+// SessionStart is a pure inject (no engine evaluation): the shim short-circuits it and emits
+// the fixed reminder that reading `.ai-dev/state/current.md` is the FIRST action. Fires on
+// every source (startup/resume/clear/compact) — the recovery cases. RED without the shim's
+// SessionStart branch (the event would fall through to decide(), normalise returns null for
+// it, no output). Driven against the REAL shim (SessionStart carries no act, so no fixture is
+// needed — it never reaches config/deny-rules).
+{
+  const shim = path.join(ROOT, "src", "adapter", "claude", "shim.mjs");
+  for (const source of ["startup", "resume", "clear", "compact"]) {
+    const r = spawnSync("node", [shim], {
+      input: JSON.stringify({ hook_event_name: "SessionStart", source, cwd: ROOT }),
+      encoding: "utf8",
+    });
+    let out = null;
+    try { out = JSON.parse(r.stdout); } catch { /* not JSON → leave out null */ }
+    check(`[session-start] ${source}: shim emits a SessionStart inject`, !!out && out.hookSpecificOutput?.hookEventName === "SessionStart");
+    check(`[session-start] ${source}: inject names the pointer path + the FIRST action`,
+      !!out && typeof out.hookSpecificOutput?.additionalContext === "string"
+        && out.hookSpecificOutput.additionalContext.includes(".ai-dev/state/current.md")
+        && /FIRST action/i.test(out.hookSpecificOutput.additionalContext));
+  }
+  // A UserPromptSubmit payload is NOT hijacked by the SessionStart branch (it still reaches
+  // the engine): confirms the short-circuit is scoped to SessionStart only.
+  {
+    const r = spawnSync("node", [shim], {
+      input: JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: "good morning", cwd: ROOT }),
+      encoding: "utf8",
+    });
+    let out = null;
+    try { out = JSON.parse(r.stdout); } catch { /* not JSON → leave out null */ }
+    check("[session-start] a UserPromptSubmit payload is NOT hijacked by the SessionStart branch (event name stays UserPromptSubmit, not SessionStart)",
+      !out || out.hookSpecificOutput?.hookEventName !== "SessionStart");
+  }
+}
+
 report("INSTALL-CLAUDE-WIRING", "PASS — Claude wiring self-verify, ensureConfig, and launch-env all hold");

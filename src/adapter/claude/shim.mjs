@@ -13,6 +13,14 @@ import { resolveSessionRoot, targetsSessionRepo } from "../session-root.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// SessionStart inject — the crash-resume FIRST-action reminder. The pointer's STATUS content
+// (version, branch, queue) lives in `.ai-dev/state/current.md` alone (invariant 6); this text
+// names only the ACTION + the path + the fresh-clone fall-back, never the status values. One
+// home for the wording — the orchestrator's resume line + CLAUDE.md's top line POINT at the
+// same action; this is the mechanical backstop that fires on the recovery events a prose line
+// can miss (startup / resume / clear / compact).
+const SESSION_START_INJECT = `**FIRST action — crash-resume discipline.** You operate with continuous checkpoints (the active plan's progress note) and a resume pointer at \`.ai-dev/state/current.md\`. On startup, resume, clear, and compact — and ANY time context feels degraded, contradictory, or unfamiliar — read \`.ai-dev/state/current.md\` FIRST (exact path; never file-search/glob — dot-dirs hide on some harnesses), reconcile its CURRENT STATE against reality (version vs \`git tag\`, active branch, the queue), THEN act. Absent (fresh clone / first session): fall back to \`git log --oneline -5\` + \`gh pr list\`. Do not build, review, or ship before the pointer is read.`;
+
 // ── normalise: Claude hook payload → neutral input ───────────────────────────
 // Returns the neutral `{ act, root, ... }` shape the engine consumes, or null
 // when this payload carries nothing the engine watches (the shim then allows).
@@ -109,6 +117,17 @@ function main() {
   process.stdin.on("end", () => {
     let payload;
     try { payload = JSON.parse(raw); } catch { process.exit(0); }
+    // SessionStart — a pure inject (the crash-resume FIRST-action reminder above), not an
+    // engine event: it carries no act to evaluate, so it bypasses decide() and emits the
+    // fixed inject directly. Fires on every source (startup/resume/clear/compact) — exactly
+    // the recovery cases where loaded context may be stale or the model disoriented. Fail-open
+    // like the rest (a parse miss already exited above; this branch cannot throw).
+    if (payload && payload.hook_event_name === "SessionStart") {
+      process.stdout.write(JSON.stringify({
+        hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: SESSION_START_INJECT },
+      }));
+      process.exit(0);
+    }
     // Fail-OPEN past this point: a malformed deny-rules.json (loadConfig throws) or any
     // other decide-path error logs to stderr and exits 0 (allow), never crashes the hook.
     // Rationale: the tooling dir is immutable (self-patch deny) and ships a valid registry,
