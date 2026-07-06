@@ -34,6 +34,8 @@ import {
   install as installClaude,
   resolveModelPin as resolveClaudePin,
   isVanilla,
+  autoHonored,
+  runtimeModelEnvSet,
   loadClaudeModelPolicy,
 } from "./claude/install-agents.mjs";
 import { checkRouting, verifyRoutingConsistency, checkCrossModelIndependence, mergeLaunchEnv } from "./install-claude.mjs";
@@ -47,6 +49,30 @@ let pass = 0, fail = 0;
 function check(name, cond) {
   if (cond) { pass++; console.log(`  ok   ${name}`); }
   else { fail++; console.log(`  FAIL ${name}`); }
+}
+
+// The ENV dimension of `auto`-honor (install-agents.mjs runtimeModelEnvSet): a proxy
+// (ANTHROPIC_BASE_URL) or a foreign tier alias (ANTHROPIC_DEFAULT_*_MODEL) in process.env
+// makes auto's opus↔sonnet baked concrete id routeless on a foreign-only proxy (#356) ⇒
+// auto degrades to session. The HOST env (a proxied dev session) may carry these vars, so
+// every auto-honor case runs under an explicit env snapshot — `sets` names the keys to SET;
+// every other model-routing key is DELETED for the call (a controlled baseline), then restored.
+const AUTO_ENV_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_DEFAULT_FABLE_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL"];
+function withEnv(sets, fn) {
+  const saved = {};
+  for (const k of AUTO_ENV_KEYS) saved[k] = process.env[k];
+  try {
+    for (const k of AUTO_ENV_KEYS) {
+      if (sets && Object.prototype.hasOwnProperty.call(sets, k) && sets[k] != null) process.env[k] = sets[k];
+      else delete process.env[k];
+    }
+    return fn();
+  } finally {
+    for (const k of AUTO_ENV_KEYS) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  }
 }
 
 // 1. resolveModelPin — on OpenCode ALWAYS null (the runtime ignores subagent
@@ -168,7 +194,7 @@ function claudeReviewerFrontmatter(reviewerModel, sessionModel, opts = {}) {
 check("claude-bake: 'auto' with an opus orchestrator pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter("auto", "opus")));
 check("claude-bake: 'auto' with a sonnet orchestrator pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter("auto", "sonnet")));
 // VANILLA (no orchestrator pin, no other decision): `auto` still bakes the sonnet default.
-check("claude-bake: 'auto' in a vanilla config bakes the sonnet default", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", undefined)));
+check("claude-bake: 'auto' in a vanilla config (clean env) bakes the sonnet default", withEnv({}, () => /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", undefined))));
 check("claude-bake: a concrete allow-listed pin (sonnet) bakes model: claude-sonnet-4-6", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("sonnet", undefined)));
 check("claude-bake: a concrete claude-* id bakes that line verbatim", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("claude-opus-4-8", undefined)));
 check("claude-bake: 'session' bakes NO model line", !/^model:/m.test(claudeReviewerFrontmatter("session", undefined)));
@@ -177,7 +203,7 @@ check("claude-bake: 'session' bakes NO model line", !/^model:/m.test(claudeRevie
 // (absent ⇒ no line): the reviewer-defaults-to-auto contract clause the 5.34.0 Reviewer
 // flagged. The pure resolver still returns null for absent (asserted above) — the
 // default is applied at the reviewer seat in install(), not in resolveModelPin.
-check("claude-bake: absent reviewer (defaults to auto) in a vanilla config bakes the sonnet default", /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter(undefined, undefined)));
+check("claude-bake: absent reviewer (defaults to auto) in a vanilla config (clean env) bakes the sonnet default", withEnv({}, () => /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter(undefined, undefined))));
 // An orchestrator pin makes the config customized, so the absent⇒auto reviewer degrades to session ⇒ NO line:
 check("claude-bake: absent reviewer WITH a sonnet orchestrator pin (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter(undefined, "sonnet")));
 // haiku is now allow-listed → a reviewer pinned haiku BAKES (flips the old off-allowlist case):
@@ -241,6 +267,38 @@ check("claude-bake: reviewer 'auto' WITH a launch model (customized) bakes NO li
 check("claude-bake: ABSENT reviewer WITH a launch model (customized) bakes NO line", !/^model:/m.test(claudeReviewerFrontmatter(undefined, undefined, { launch: { guardModel: "claude-haiku-4-5" } })));
 // but a CONCRETE reviewer pin in a customized config still bakes (the explicit choice is honored):
 check("claude-bake: a concrete reviewer pin in a customized config still bakes", /^model: claude-opus-4-8$/m.test(claudeReviewerFrontmatter("opus", undefined, { builderModel: "sonnet" })));
+
+// ───────── 6b. the ENV dimension of `auto`-honor (#356) ─────────
+// A proxied-via-env project (config-vanilla, but ANTHROPIC_BASE_URL or an
+// ANTHROPIC_DEFAULT_*_MODEL set in the runtime env) is CUSTOMIZED at the env layer: the
+// opus↔sonnet opposite bakes a CONCRETE id that bypasses the alias env, so on a foreign-only
+// proxy it is routeless ⇒ spawn 400. `auto` must DEGRADE to session (no line) there — the
+// documented "never an error" fallback. isVanilla is the config half; runtimeModelEnvSet the
+// env half; autoHonored the join. Each case runs under a controlled env (the host may be proxied).
+// A proxy URL alone ⇒ degrade (the concrete id's route through it is unverified):
+check("claude-bake: 'auto' in a vanilla config WITH ANTHROPIC_BASE_URL set bakes NO line (#356)", withEnv({ ANTHROPIC_BASE_URL: "http://localhost:1234" }, () => !/^model:/m.test(claudeReviewerFrontmatter("auto", undefined))));
+// A foreign tier alias (the env form of launch.aliases) ⇒ degrade (the tier semantics are customized):
+check("claude-bake: 'auto' in a vanilla config WITH ANTHROPIC_DEFAULT_SONNET_MODEL set bakes NO line (#356)", withEnv({ ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-4.7" }, () => !/^model:/m.test(claudeReviewerFrontmatter("auto", undefined))));
+// An ABSENT reviewer (⇒ auto) under a proxied env ⇒ degrade too (absent⇒auto⇒session):
+check("claude-bake: ABSENT reviewer (⇒ auto) WITH ANTHROPIC_BASE_URL set bakes NO line (#356)", withEnv({ ANTHROPIC_BASE_URL: "http://localhost:1234" }, () => !/^model:/m.test(claudeReviewerFrontmatter(undefined, undefined))));
+// A CONCRETE reviewer pin under a proxied env STILL bakes (the explicit choice is honored, env-independent):
+check("claude-bake: a concrete reviewer pin WITH ANTHROPIC_BASE_URL set still bakes", withEnv({ ANTHROPIC_BASE_URL: "http://localhost:1234" }, () => /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("sonnet", undefined))));
+// The opus↔sonnet opposite is STILL baked when env is clean (regression guard for the fix's other arm):
+check("claude-bake: 'auto' in vanilla WITH env clean bakes the sonnet default (regression)", withEnv({}, () => /^model: claude-sonnet-4-6$/m.test(claudeReviewerFrontmatter("auto", undefined))));
+
+// runtimeModelEnvSet / autoHonored unit tests (the pure predicates; explicit env, no host leak):
+check("runtimeModelEnvSet: clean env → false", runtimeModelEnvSet({}) === false);
+check("runtimeModelEnvSet: ANTHROPIC_BASE_URL set → true", runtimeModelEnvSet({ ANTHROPIC_BASE_URL: "http://x" }) === true);
+check("runtimeModelEnvSet: ANTHROPIC_BASE_URL blank → false", runtimeModelEnvSet({ ANTHROPIC_BASE_URL: "   " }) === false);
+check("runtimeModelEnvSet: ANTHROPIC_DEFAULT_OPUS_MODEL set → true", runtimeModelEnvSet({ ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-5.2" }) === true);
+check("runtimeModelEnvSet: ANTHROPIC_DEFAULT_HAIKU_MODEL set → true", runtimeModelEnvSet({ ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-4.5-air" }) === true);
+check("runtimeModelEnvSet: a non-routing env var ignored → false", runtimeModelEnvSet({ ANTHROPIC_MODEL: "claude-opus-4-8" }) === false);
+const vanillaCfg = { roles: { orchestrator: { agent: "ai-dev" }, builder: { agent: "b" }, reviewer: { agent: "r" } } };
+check("autoHonored: vanilla config + clean env → true", autoHonored(vanillaCfg, {}) === true);
+check("autoHonored: vanilla config + BASE_URL set → false (#356)", autoHonored(vanillaCfg, { ANTHROPIC_BASE_URL: "http://x" }) === false);
+check("autoHonored: vanilla config + DEFAULT_SONNET set → false", autoHonored(vanillaCfg, { ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-4.7" }) === false);
+check("autoHonored: customized config + clean env → false (config half)", autoHonored({ roles: { builder: { agent: "b", model: "sonnet" } } }, {}) === false);
+check("autoHonored: customized config + BASE_URL set → false (both halves)", autoHonored({ roles: { builder: { agent: "b", model: "sonnet" } } }, { ANTHROPIC_BASE_URL: "http://x" }) === false);
 
 // ───────── 7. cross-endpoint bake: bare-alias-for-bound-tier, end-to-end (papercut 13) ─────────
 // The worked example (docs/decisions/multi-model-setup-ux.md papercut 13; the plan): a seat

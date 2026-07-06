@@ -30,10 +30,12 @@
 // not a fixed pair — a haiku (or fable) pin bakes like any other allow-listed alias (its
 // resolveModelPin path is automatic, aliasOf already loops the whole `allow`, so a 4th tier
 // needs no code here). `auto`'s opposite logic itself stays opus↔sonnet (it never picks
-// haiku or fable, non-review-grade / non-default slots for the automatic cross-model guess). `auto` is a VANILLA-ONLY convenience: it cross-models out of the box, but the
+// haiku or fable, non-review-grade / non-default slots for the automatic cross-model guess). `auto` is a vanilla-AND-clean-env convenience: it cross-models out of the box, but the
 // opus↔sonnet guess is a fiction the moment the Operator makes any explicit model
-// decision (a concrete seat pin, or a launch model — the proxy/alias world). So when the
-// config is NOT vanilla (isVanilla below), a reviewer `auto` is degraded to `session` in
+// decision (a concrete seat pin, or a launch model — the proxy/alias world) OR the runtime
+// env carries a proxy / foreign alias (the baked concrete id is routeless on a foreign-only
+// proxy — #356). So when autoHonored is false (isVanilla below + runtimeModelEnvSet), a
+// reviewer `auto` is degraded to `session` in
 // install() — no baked line, an honest inherit, no false cross-model claim. The gate
 // lives at the reviewer seat in install(), beside the absent⇒auto default, so the pure
 // resolveModelPin stays "auto ⇒ opposite".
@@ -99,8 +101,9 @@ export function aliasOf(wish, policy) {
 //   • `auto`                  → the cross-model: the model OPPOSITE the orchestrator/
 //     session wish — opus↔sonnet — when knowable from config, ELSE `sonnet` (the
 //     documented opus-class-session default). `auto` never resolves to haiku; and it is
-//     honored only in the vanilla state — the install() gate degrades it to `session`
-//     in a customized config (it never reaches resolveModelPin as `auto` there).
+//     honored only when BOTH the config is vanilla AND the runtime env is uncustomized —
+//     the install() gate (autoHonored) degrades it to `session` otherwise (it never reaches
+//     resolveModelPin as `auto` there).
 //   • off-allowlist / unknown → null  (never invent a model)
 //
 // BARE ALIAS vs CONCRETE ID — the cross-endpoint mechanic (VERIFIED, docs/decisions/
@@ -139,9 +142,10 @@ export function resolveModelPin(wish, sessionWish, policy = loadClaudeModelPolic
 // Is the config in the VANILLA state — no explicit model decision anywhere? Vanilla =
 // NO concrete pin on builder/reviewer/orchestrator (each `model` absent / `session` /
 // `auto`) AND every `launch` model setting empty/whitespace — `sessionModel`, `guardModel`,
-// AND every `launch.aliases` tier binding. Only in the vanilla state is the reviewer's
-// `auto` honored (the opus↔sonnet cross-model guess
-// is a safe out-of-box default ONLY on stock Claude Code where that pair is guaranteed).
+// AND every `launch.aliases` tier binding. Config-vanilla is NECESSARY for the reviewer's
+// `auto` to be honored but no longer SUFFICIENT — `autoHonored` below adds the runtime-env
+// dimension (the opus↔sonnet guess is safe ONLY on stock Claude Code where the pair is
+// guaranteed to route; a proxy / foreign-alias env makes the baked concrete id routeless — #356).
 // Any explicit decision — a concrete seat pin OR a launch model — moves the config to the
 // CUSTOMIZED state, where `auto` degrades to `session` (install() applies it). A `session`
 // or `auto` wish is NOT a concrete decision (it is the absence of one), so it does not
@@ -169,6 +173,35 @@ export function isVanilla(config) {
   return true;
 }
 
+// The ENV dimension of `auto`-honor — the sibling of isVanilla's CONFIG dimension. A proxy
+// (ANTHROPIC_BASE_URL) or a foreign tier alias (ANTHROPIC_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_
+// MODEL — the env form of config.launch.aliases, which router-launch.mjs exports at startup)
+// means the baked opposite CONCRETE id (e.g. claude-sonnet-4-6) is not known to route: a
+// concrete id bypasses the alias env, so on a foreign-only proxy it is routeless (the #356
+// 400). Present ⇒ the runtime env is customized exactly like a config.launch.aliases binding,
+// so `auto`'s opus↔sonnet guess is no longer honest. Defaults to process.env (the production
+// install runs in the launched session's env); tests pass an explicit env for determinism.
+export function runtimeModelEnvSet(env = process.env) {
+  const base = env && typeof env.ANTHROPIC_BASE_URL === "string" ? env.ANTHROPIC_BASE_URL.trim() : "";
+  if (base !== "") return true;
+  for (const tier of ["FABLE", "OPUS", "SONNET", "HAIKU"]) {
+    const raw = env ? env[`ANTHROPIC_DEFAULT_${tier}_MODEL`] : undefined;
+    const v = typeof raw === "string" ? raw.trim() : "";
+    if (v !== "") return true;
+  }
+  return false;
+}
+
+// `auto` is honored ONLY when BOTH the config (isVanilla) AND the runtime env
+// (runtimeModelEnvSet) are uncustomized — the opus↔sonnet opposite is safe to bake only on
+// stock Claude Code where the pair is guaranteed to route. Any config OR env customization ⇒
+// `auto` degrades to `session` (the documented "never an error" fallback, #356). Single home
+// for the auto-honor predicate; isVanilla stays the config-only predicate (referenced by name
+// in the cross-model-review contract). Defaults env to process.env; tests pass an explicit env.
+export function autoHonored(config, env = process.env) {
+  return isVanilla(config) && !runtimeModelEnvSet(env);
+}
+
 // Assemble the spawnable role agent files into outDir, PLUS the orchestrator's
 // platform-filtered load surface into outDir's parent (`.claude/ai-dev.md`). Returns the
 // agentId→path map written (orchestrator keyed on its configured agent id), so a test can
@@ -178,7 +211,7 @@ export function install(outDir, config) {
   const registry = loadRegistry(ROOT);
   const policy = loadClaudeModelPolicy();
   const sessionWish = config.roles?.orchestrator?.model; // the session model wish (for `auto`)
-  const vanilla = isVanilla(config); // `auto` is honored only in the vanilla state
+  const autoOk = autoHonored(config); // `auto` honored only when config AND env are uncustomized (#356)
   // The tier-alias bindings (config.launch.aliases) decide whether a bare-alias seat wish
   // bakes as the bare alias (tier bound foreign → routes through ANTHROPIC_DEFAULT_*) or
   // the concrete native id (tier native → passthrough) — see resolveModelPin.
@@ -199,11 +232,13 @@ export function install(outDir, config) {
     // resolveModelPin, so the pure resolver stays "absent ⇒ null".
     let wish = config.roles?.[role]?.model;
     if (role === "reviewer" && (wish === undefined || wish === null)) wish = "auto";
-    // `auto` is a VANILLA-ONLY convenience (see header): once the config carries any
-    // explicit model decision (a concrete seat pin or a launch model), the opus↔sonnet
-    // guess is a fiction, so degrade `auto` → `session` (no line, honest inherit). The
-    // gate lives here beside the absent⇒auto default, so resolveModelPin stays pure.
-    if (wish === "auto" && !vanilla) wish = "session";
+    // `auto` is a vanilla-AND-clean-env convenience (see autoHonored): once the config
+    // carries any explicit model decision (a concrete seat pin, a launch model) OR the
+    // runtime env carries a proxy / foreign tier alias, the opus↔sonnet guess is a fiction
+    // (or the baked concrete id is routeless — #356), so degrade `auto` → `session` (no
+    // line, honest inherit). The gate lives here beside the absent⇒auto default, so
+    // resolveModelPin stays pure.
+    if (wish === "auto" && !autoOk) wish = "session";
     const pin = resolveModelPin(wish, sessionWish, policy, boundTiers);
     const modelLine = pin ? `model: ${pin}\n` : "";
     if (!pin && typeof wish === "string" && wish !== "session" && wish !== "auto") {

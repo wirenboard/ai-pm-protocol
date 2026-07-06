@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.55.1] — 2026-07-06
+
+- **PATCH** — `auto` degrades to `session` when the runtime env is customized (#356). A proxied-via-env project (config-vanilla, but `ANTHROPIC_BASE_URL` or an `ANTHROPIC_DEFAULT_*_MODEL` set in the shell env) mis-classified as vanilla, so the reviewer's `auto` baked a routeless concrete id (`claude-sonnet-4-6` — a concrete id bypasses the alias env) and the Reviewer spawn 400'd on a foreign-only proxy, leaving the invariant-3 fresh-reviewer floor unreachable. `src/adapter/claude/install-agents.mjs` gains `runtimeModelEnvSet()` + `autoHonored()` (`= isVanilla(config) && !runtimeModelEnvSet(env)`) and gates the reviewer `auto` on `autoHonored` instead of `isVanilla` alone — `auto` now degrades to `session` (no baked line, the documented "never an error" fallback) whenever the config OR the runtime env is customized. Real cross-model in a proxied env still comes from an explicit reviewer pin (bare alias → foreign), unchanged. Contract `docs/contracts/cross-model-review.md` gains the runtime-env dimension; `tool-map.json` `models.claude.auto` + `quality/tools.json` `install-model.checks` updated; `install-model.test.mjs` carries the env-dimension cases (RED without the fix, verified). The residual spawn-cache caveat (a mid-session re-bake not hot-reloading) is a harness behavior, out of scope — this fix makes the *baked file* safe.
+
+---
+
 ## [5.55.0] — 2026-07-06
 
 - **MINOR** — minimal in-protocol proxy: reversed the modelpipe consume (`docs/decisions/proxy-consume-mechanism.md` Option 3 — superseded). `src/adapter/model-router.mjs` is now a **first-party built-in proxy** (no longer a mirror of `aadegtyarev/modelpipe`); `src/adapter/sync-modelpipe.mjs` and its `modelpipe-sync-drift` quality row are deleted. The launcher keeps its three routing modes (direct / router / external); the built-in router (router mode) retains routing + per-backend auth-swap + streaming + the vision fallback (`forImages`/`forImagesModel`) + the `GET /v1/models` discovery endpoint; the standalone CLI (`main`) is cut — `modelpipe` is the standalone CLI product, untouched, just no longer consumed.
