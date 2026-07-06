@@ -676,5 +676,80 @@ console.log("EXPLICIT NO-SLASH HEAD BRANCH (push the branch you're on):");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// ── 12. WORKTREE CHECKOUT — `.git` is a gitdir-file, HEAD lives elsewhere ─────
+// Guards #335 (parallel-work's per-feature checkout): in a git worktree `.git` is a
+// FILE carrying `gitdir: <path>`, not a directory. The engine once read `root/.git/HEAD`
+// literally, threw, and returned null ⇒ a push/merge from a worktree mis-fired
+// merge-topic-unresolvable (the parallel-work Reviewer-stamp friction). resolveGitDir
+// follows the pointer; headBranch reads HEAD from the real git dir.
+console.log("WORKTREE CHECKOUT (.git is a gitdir-file — #335):");
+
+// A checkout whose `root/.git` is a FILE pointing at a real (private) git dir holding HEAD.
+function rootOnWorktree(branch) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-wt-root-"));
+  const gitDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-wt-git-"));
+  fs.writeFileSync(path.join(gitDir, "HEAD"), `ref: refs/heads/${branch}\n`);
+  fs.writeFileSync(path.join(root, ".git"), `gitdir: ${gitDir}\n`); // absolute pointer (what git writes)
+  return root;
+}
+
+// 12a. STAMPED push from a worktree, no-slash branch ⇒ ALLOW (the fix — was ASK:
+// HEAD returned null and the topic was unresolvable).
+{
+  const root = rootOnWorktree("parallel-feature");
+  stamp(root, "parallel-feature");
+  const v = evaluate({ act: "bash", root, command: "git push origin parallel-feature" }, config);
+  check("worktree-stamped:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 12b. UNSTAMPED push from a worktree ⇒ DENY merge-while-unstamped (the floor HOLDS —
+// the worktree's HEAD now resolves, so the stamp is checked, not asked around).
+{
+  const root = rootOnWorktree("parallel-feature");
+  const v = evaluate({ act: "bash", root, command: "git push origin parallel-feature" }, config);
+  check("worktree-unstamped:denies", v.verdict, "deny");
+  check("worktree-unstamped:ruleId", v.ruleId, "merge-while-unstamped");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 12c. Resolver unit: the topic resolves from the worktree's HEAD via the gitdir pointer.
+{
+  const root = rootOnWorktree("my-wt-branch");
+  check("worktree-resolver", resolveMergeTopic("git push origin my-wt-branch", root), "my-wt-branch");
+  check("worktree-bare-push-resolver", resolveMergeTopic("git push", root), "my-wt-branch");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 12d. A RELATIVE `gitdir:` pointer resolves too (target resolved against the checkout
+// root — git writes absolute, but the resolver handles both).
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-wt-rel-"));
+  fs.mkdirSync(path.join(root, "wt-private")); // the private git dir, RELATIVE to root
+  fs.writeFileSync(path.join(root, "wt-private", "HEAD"), "ref: refs/heads/rel-wt\n");
+  fs.writeFileSync(path.join(root, ".git"), "gitdir: wt-private\n"); // relative pointer
+  check("worktree-relative-gitdir", resolveMergeTopic("git push", root), "rel-wt");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 12e. commit-on-main in a worktree: headBranch now resolves the worktree's HEAD, so the
+// gate fires (was a false-PASS — headBranch returned null and commitOnUnstampedMain
+// short-circuited to false). Configured + a has-history marker set so the carve-outs
+// don't apply; no main stamp ⇒ DENY.
+{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-wt-main-"));
+  const gitDir = path.join(root, "wt-git");
+  fs.mkdirSync(path.join(gitDir, "logs"), { recursive: true });
+  fs.writeFileSync(path.join(gitDir, "HEAD"), "ref: refs/heads/main\n");
+  fs.writeFileSync(path.join(gitDir, "logs", "HEAD"), "0000 commit\n"); // has-history marker
+  fs.writeFileSync(path.join(root, ".git"), `gitdir: ${gitDir}\n`);
+  fs.mkdirSync(path.join(root, ".ai-dev"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".ai-dev", "config.json"), '{ "profile": "solo" }');
+  const v = evaluate({ act: "bash", root, command: "git commit -m x" }, config);
+  check("worktree-commit-on-main:denies", v.verdict, "deny");
+  check("worktree-commit-on-main:ruleId", v.ruleId, "commit-on-unstamped-main");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
