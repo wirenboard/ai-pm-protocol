@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.54.2] — 2026-07-06
+
+- **PATCH** — glm-lanes: strengthened the dogfood config model lanes — `roles.builder.model haiku→sonnet`, `roles.reviewer.model sonnet→opus` — and re-baked the two committed concrete-id agents (`dev-builder` → `claude-sonnet-4-6`, `dev-reviewer` → `claude-opus-4-8`; planner unchanged at `claude-sonnet-4-6`). The personal/shared split (option 2, decided 2026-07-06): the committed repo carries concrete native ids only; the Operator's glm routing stays a personal `config.local.json` `launch.aliases` override, never committed. install-drift green. Affects only this repo's dogfood instance (downstream projects generate their own agents from their own config); no `src/` change.
+
+---
+
 ## [5.54.1] — 2026-07-06
 
 - **PATCH** — Continuous crash-resume checkpoint discipline. The orchestrator's state discipline gained a continuous cadence between ship beats and session resets: after each **significant step** (a spawned-role handoff, a recorded decision, a finding, a beat boundary — not every tool call) refresh the **active plan's progress note** (goal · current progress · next step · open findings, superseded not appended) and reconcile **CURRENT STATE** if it could have drifted — so a mid-feature break (crash, disconnect, context overflow, a proxied summarize) loses at most the last significant step, not the whole feature. The redesign split (2026-07-06, `docs/decisions/auto-compact-non-claude.md`): summarization → the proxy; the protocol keeps only continuous crash-resume checkpoints (the threshold-monitor shipped in 5.53.0 was reverted in 5.54.0). Reuses the existing one-home structure (the resume pointer + the active plan's progress note) — no new file, no new hook; composes into both platforms (`src/agents/orchestrator.md` → `.claude/ai-dev.md` + `.opencode/agents/ai-dev.md`). `[persona]` discipline; no new deny.
