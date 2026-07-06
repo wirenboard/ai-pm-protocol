@@ -10,6 +10,7 @@
 
 import { evaluate, loadConfig } from "../engine.mjs";
 import { resolveSessionRoot, targetsSessionRepo } from "../session-root.mjs";
+import { deriveSanctionedScratch } from "./sanctioned-scratch.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -102,6 +103,13 @@ export function decide(payload, root, config, opts = {}) {
   const input = normalise(payload, root);
   if (!input) return { verdict: "allow", ruleId: null, reason: "" };
   if (opts.targetsSessionRepo !== undefined) input.targetsSessionRepo = opts.targetsSessionRepo;
+  // The agent's OWN out-of-root scratch (tool-result overflow + per-session temp), derived
+  // fail-closed from the Claude env — the read-family predicates carve these out so a
+  // fetched/overflow artifact the harness placed is not false-blocked (read-only; writes
+  // outside the root stay denied). `home` lets a bash `~/…` reference reach that carve-out.
+  const env = opts.env || process.env;
+  input.sanctionedScratch = deriveSanctionedScratch(env, root);
+  input.home = env.HOME;
   return evaluate(input, config);
 }
 

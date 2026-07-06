@@ -54,6 +54,9 @@ console.log("MALFORMED REGISTRY (shim fails open — exit 0, allow, no crash):")
     fs.copyFileSync(path.join(HERE, f), path.join(adapter, f));
   }
   fs.copyFileSync(SHIM, path.join(adapter, "claude", "shim.mjs"));
+  // The shim imports the sanctioned-scratch derivation (the agent's own out-of-root scratch
+  // allow-set) — vendor it too or the import chain breaks before the fail-open path is reached.
+  fs.copyFileSync(path.join(HERE, "claude", "sanctioned-scratch.mjs"), path.join(adapter, "claude", "sanctioned-scratch.mjs"));
   fs.writeFileSync(path.join(adapter, "deny-rules.json"), "{ this is : not valid json ][");
   const brokenShim = path.join(adapter, "claude", "shim.mjs");
 

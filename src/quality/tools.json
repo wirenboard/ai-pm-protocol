@@ -82,6 +82,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "sanctioned-scratch",
+      "checks": "the agent's OWN out-of-root scratch read-allow — deriveSanctionedScratch (claude/sanctioned-scratch.mjs) derives the tool-result overflow store (<CLAUDE_CONFIG_DIR>/projects/<slug>/tool-results/) + the per-session harness temp root (<TMPDIR|/tmp>/claude-<uid>/<slug>/<CLAUDE_CODE_SESSION_ID>/) from the Claude env, fail-CLOSED (mirrors componentRoots: absent/blank env, a non-existent dir, a file-not-dir, or an overbroad/ancestor path ⇒ that entry dropped; the two paths derive independently); the temp root is session-id-narrow (a sibling session's <slug>/<other-sid>/ transcripts stay denied); the read-family boundary predicates (pathOutsideRoot / findTargetOutsideRoot / bashReadTargetOutsideRoot) consult input.sanctionedScratch ALONGSIDE the component set — a sanctioned read is allowed, a non-sanctioned out-of-root read still denies, a bash `~/…` read reaches the carve-out via input.home, and a WRITE to a sanctioned path still denies (read-only widening; writeTargetOutsideRoot unchanged). The claude adapter derives; the engine stays platform-neutral.",
+      "config": null,
+      "run": "node src/adapter/claude/sanctioned-scratch.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "multirepo-e2e",
       "checks": "multi-repo boundary END-TO-END through the REAL entry — a real `node shim.mjs` subprocess resolves the session root from a real on-disk git-init'd multi-repo fixture (the resolveRoot seam parity.test.mjs bypasses) and enforces the widened boundary: declared-sibling allow, non-declared deny, the D6 seam-contract-as-transport allow, the per-root `.ai-dev/tooling/` carve-out deny, and the no-manifest single-root regression tripwire. Validates the MECHANISM the orchestrator's `[persona]` coordination relies on, not the coordination itself. OpenCode asymmetry recorded honestly (no subprocess entry; plugin-entry not source-loadable) — its real decide() driven against the same fixture.",
       "config": null,
