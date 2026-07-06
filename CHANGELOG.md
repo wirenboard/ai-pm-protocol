@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.54.1] — 2026-07-06
+
+- **PATCH** — Continuous crash-resume checkpoint discipline. The orchestrator's state discipline gained a continuous cadence between ship beats and session resets: after each **significant step** (a spawned-role handoff, a recorded decision, a finding, a beat boundary — not every tool call) refresh the **active plan's progress note** (goal · current progress · next step · open findings, superseded not appended) and reconcile **CURRENT STATE** if it could have drifted — so a mid-feature break (crash, disconnect, context overflow, a proxied summarize) loses at most the last significant step, not the whole feature. The redesign split (2026-07-06, `docs/decisions/auto-compact-non-claude.md`): summarization → the proxy; the protocol keeps only continuous crash-resume checkpoints (the threshold-monitor shipped in 5.53.0 was reverted in 5.54.0). Reuses the existing one-home structure (the resume pointer + the active plan's progress note) — no new file, no new hook; composes into both platforms (`src/agents/orchestrator.md` → `.claude/ai-dev.md` + `.opencode/agents/ai-dev.md`). `[persona]` discipline; no new deny.
+
+---
+
 ## [5.54.0] — 2026-07-06
 
 - **MINOR** — Revert 5.53.0 auto-compact checkpoint-restart (#352). The threshold-driven `compact-monitor.mjs` shipped in 5.53.0 was misaligned with the redesigned responsibility split (2026-07-06): summarization-by-threshold moves to the proxy (modelpipe) where context usage is actually knowable; the protocol retains only continuous crash-resume checkpoints (file + pointer), not a threshold monitor or a `PreCompact` block. Dogfood (the same session) also confirmed two live bugs that on their own would have forced this: LV1 — the proxied non-Claude session strips Anthropic-shaped `usage.*` fields, so the message-count fallback misread ~763–788% and fired on every prompt; and the threshold de-bounce failed to suppress repeat fires. The revert restores the Claude adapter, installer (`install-claude.mjs` HOOK_MARKERS), `hooks.json`, `tools.json`, `.claude/settings.json`, `INSTALL.md`, and `README.md` to their 5.52.7 state and deletes `compact-monitor.{mjs,test.mjs}`. The decision doc `docs/decisions/auto-compact-non-claude.md` is RETAINED (status → reverted, LV1 confirmed) as the path record; the `[5.53.0]` CHANGELOG entry below is kept for history. Net installed surface returns to 5.52.7. Continuous crash-resume checkpoint design is a separate follow-up.
