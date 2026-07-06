@@ -887,5 +887,101 @@ console.log("TRUNK --ff-only SYNC CARVE-OUT (git merge --ff-only <trunk-upstream
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// ── 15. FORCE-PUSH SCOPE — lease+non-trunk allowed, bare force asks ─────────────
+// Guards the parallel-work rebase-before-merge friction: `git push --force-with-lease
+// origin feature/x` to a non-trunk branch IS safe (the lease protects) and no longer
+// asks. Bare --force/-f (no lease) still asks. Trunk is fully protected by the
+// merge-gate deny rule and still asks.
+console.log("FORCE-PUSH SCOPE (lease+non-trunk allowed, bare force asks):");
+
+// 15a. --force-with-lease to a non-trunk feature branch ⇒ ALLOW (the fix — was ASK).
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git push --force-with-lease origin feature/x" }, config);
+  check("fwl-feature-branch:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15b. --force-with-lease to trunk ⇒ ASK (trunk is fully protected).
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git push --force-with-lease origin main" }, config);
+  check("fwl-trunk:asks", v.verdict, "ask");
+  check("fwl-trunk:ruleId", v.ruleId, "force-push");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15c. Bare --force to a feature branch ⇒ ASK (no lease protection).
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git push --force origin feature/x" }, config);
+  check("bare-force-feature:asks", v.verdict, "ask");
+  check("bare-force-feature:ruleId", v.ruleId, "force-push");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15d. Bare -f to a feature branch ⇒ ASK (no lease protection).
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git push -f origin feature/x" }, config);
+  check("short-f-feature:asks", v.verdict, "ask");
+  check("short-f-feature:ruleId", v.ruleId, "force-push");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15e. Bare --force to trunk ⇒ ASK (trunk + bare force is the worst case).
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git push --force origin main" }, config);
+  check("bare-force-trunk:asks", v.verdict, "ask");
+  check("bare-force-trunk:ruleId", v.ruleId, "force-push");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15f. REGRESSION: --force-with-lease to master trunk ⇒ ASK (not just main).
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git push --force-with-lease origin master" }, config);
+  check("fwl-master-trunk:asks", v.verdict, "ask");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15g. REGRESSION: non-force push still allows (no behavior change).
+{
+  const root = rootOnBranch("feature/foo");
+  stamp(root, "foo");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/foo" }, config);
+  check("normal-push:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15h. REGRESSION: --force-with-lease with -C global flag (worktree push) ⇒ ALLOW.
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git -C .ai-dev/worktrees/x push --force-with-lease origin feature/x" }, config);
+  check("fwl-worktree:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15i. Compound command: multiple pushes, first one is --force-with-lease to non-trunk ⇒ ALLOW
+// (the predicate reads the FIRST push invocation's flag).
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git push --force-with-lease origin feature/x && git push origin main" }, config);
+  check("compound-first-fwl:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 15j. Unit: pushExplicitTrunkRef sees main/master through -C prefix (re-verify).
+check("fwl-trunk-ref-unit-C", pushExplicitTrunkRef("git -C /tmp/wt push --force-with-lease origin main"), "main");
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
