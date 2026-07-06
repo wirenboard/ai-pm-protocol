@@ -11,10 +11,20 @@ import { stripBreadcrumbFile } from "./install-breadcrumb.mjs";
 import { loadClaudeModelPolicy, aliasOf } from "./claude/install-agents.mjs";
 import { loadConfigWithLocal } from "./router-launch.mjs";
 
-// A hook group is OURS when any of its commands targets the protocol shim. The
-// marker is the shim's stable path tail — it survives a vendor-location change
+// A hook group is OURS when any of its commands targets the protocol shim or compact-monitor.
+// The markers are stable path tails — they survive a vendor-location change
 // (.ai-pm/tooling/ → .ai-dev/tooling/) where an exact-command compare would not.
-const HOOK_MARKER = "adapter/claude/shim.mjs";
+const HOOK_MARKERS = [
+  "adapter/claude/shim.mjs",
+  "adapter/claude/compact-monitor.mjs",
+];
+
+// Predicate to identify our hook groups (shim or compact-monitor).
+function isOurHookGroup(group) {
+  return (group.hooks || []).some(
+    (h) => typeof h.command === "string" && HOOK_MARKERS.some((m) => h.command.includes(m)),
+  );
+}
 
 // The tools the mechanical floor RIDES — the PreToolUse matcher MUST route them to the
 // shim or that part of the deny layer goes silently off. verifyClaudeWiring step 1b
@@ -48,17 +58,20 @@ export function wireClaude(target, dogfood) {
   const hooksFragment = JSON.parse(
     fs.readFileSync(path.join(scriptBase, "adapter", "claude", "hooks.json"), "utf8"),
   );
-  // The hooks.json fragment carries the DOWNSTREAM shim path
-  // (.ai-dev/tooling/src/adapter/claude/shim.mjs). In dogfood mode the active shim
-  // is the source copy — retarget the command to src/adapter/claude/shim.mjs so the
-  // wired settings.json matches the committed self-host form. The HOOK_MARKER (the
-  // path tail) is unchanged, so the merge still prunes a prior group correctly.
+  // The hooks.json fragment carries the DOWNSTREAM paths
+  // (.ai-dev/tooling/src/adapter/claude/{shim,compact-monitor}.mjs). In dogfood mode
+  // the active copies are the source versions — retarget the commands to
+  // src/adapter/claude/{shim,compact-monitor}.mjs so the wired settings.json matches
+  // the committed self-host form. The HOOK_MARKERS (the path tails) are unchanged, so
+  // the merge still prunes prior groups correctly.
   if (dogfood) {
     for (const groups of Object.values(hooksFragment.hooks)) {
       for (const g of groups) {
         for (const h of g.hooks || []) {
           if (typeof h.command === "string") {
-            h.command = h.command.split(".ai-dev/tooling/src/adapter/claude/shim.mjs").join("src/adapter/claude/shim.mjs");
+            h.command = h.command
+              .split(".ai-dev/tooling/src/adapter/claude/shim.mjs").join("src/adapter/claude/shim.mjs")
+              .split(".ai-dev/tooling/src/adapter/claude/compact-monitor.mjs").join("src/adapter/claude/compact-monitor.mjs");
           }
         }
       }
@@ -130,11 +143,11 @@ export function verifyClaudeWiring(target, settingsPath) {
   const preGroups = (settings.hooks && settings.hooks.PreToolUse) || [];
   const shimCommand = preGroups
     .flatMap((g) => (g.hooks || []).map((h) => (typeof h.command === "string" ? h.command : "")))
-    .find((c) => c.includes(HOOK_MARKER));
+    .find((c) => c.includes(HOOK_MARKERS[0])); // the shim (floor's mechanical deny)
   if (!shimCommand) {
     throw new Error(
       `Claude wiring self-verify FAILED: ${settingsPath} carries no PreToolUse hook ` +
-        `referencing the deny shim (${HOOK_MARKER}) — the deny path would be silently ` +
+        `referencing the deny shim (${HOOK_MARKERS[0]}) — the deny path would be silently ` +
         "off at the first tool call.",
     );
   }
@@ -153,7 +166,7 @@ export function verifyClaudeWiring(target, settingsPath) {
   // install) plus fail-closed defense-in-depth. Persona sibling: the audit
   // verification-coverage sweep (src/agents/orchestrator.md `## Audit`).
   const shimMatchers = preGroups
-    .filter((g) => (g.hooks || []).some((h) => typeof h.command === "string" && h.command.includes(HOOK_MARKER)))
+    .filter((g) => (g.hooks || []).some((h) => typeof h.command === "string" && h.command.includes(HOOK_MARKERS[0])))
     .map((g) => g.matcher);
   for (const tool of FLOOR_TOOLS) {
     if (!shimMatchers.some((m) => matcherCoversTool(m, tool))) {
@@ -423,13 +436,14 @@ function readBakedModelLine(agentPath) {
 // (dogfood, retargeted). Pull the token ending in the marker, strip the
 // $CLAUDE_PROJECT_DIR prefix to the real target root, and resolve.
 function resolveShimPath(target, command) {
-  // The marker (HOOK_MARKER) is the path tail; the wired path is everything from the
+  // The marker (HOOK_MARKERS[0] = shim) is the path tail; the wired path is everything from the
   // start of the quoted/space-delimited shim token up to and including the marker.
+  const shimMarker = HOOK_MARKERS[0];
   const tokens = command.match(/\S+/g) || [];
   const raw = tokens
     .map((t) => t.replace(/^["']|["']$/g, ""))
-    .find((t) => t.includes(HOOK_MARKER));
-  if (!raw) return path.join(target, ".ai-dev", "tooling", "src", HOOK_MARKER);
+    .find((t) => t.includes(shimMarker));
+  if (!raw) return path.join(target, ".ai-dev", "tooling", "src", shimMarker);
   const rel = raw
     .replace(/^["']/, "")
     .replace(/^\$CLAUDE_PROJECT_DIR\//, "")
@@ -543,7 +557,7 @@ export function mergeLaunchEnv(existingEnv, launch) {
 }
 
 // Merge a hooks fragment into an existing hooks object: foreign groups are kept
-// untouched; every group recognised as ours (HOOK_MARKER) is REPLACED by the
+// untouched; every group recognised as ours (HOOK_MARKERS) is REPLACED by the
 // fragment's current group. Replace-not-append is both the idempotence guarantee
 // (a re-run converges to the same bytes) and the prune: a stale ai-dev group whose
 // command changed no longer accumulates beside the new one.
@@ -551,7 +565,7 @@ function mergeHooks(existing, fragment) {
   const merged = { ...existing };
   for (const [event, groups] of Object.entries(fragment)) {
     const foreign = (Array.isArray(merged[event]) ? merged[event] : []).filter(
-      (g) => !(g.hooks || []).some((h) => typeof h.command === "string" && h.command.includes(HOOK_MARKER)),
+      (g) => !isOurHookGroup(g),
     );
     merged[event] = [...foreign, ...groups];
   }
