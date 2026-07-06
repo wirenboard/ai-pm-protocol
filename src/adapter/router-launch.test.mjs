@@ -123,6 +123,18 @@ function main() {
   check("launchModelEnv: absent configDir ⇒ no CLAUDE_CONFIG_DIR", "CLAUDE_CONFIG_DIR" in launchModelEnv({ launch: { sessionModel: "x" } }), false);
   check("launchModelEnv: blank configDir ⇒ no CLAUDE_CONFIG_DIR", "CLAUDE_CONFIG_DIR" in launchModelEnv({ launch: { configDir: "   " } }), false);
 
+  // ── launchModelEnv: autoCompactWindow → CLAUDE_CODE_AUTO_COMPACT_WINDOW (opt-in, personal) ──
+  check("launchModelEnv: autoCompactWindow (number) → CLAUDE_CODE_AUTO_COMPACT_WINDOW string",
+    launchModelEnv({ launch: { autoCompactWindow: 1000000 } }).CLAUDE_CODE_AUTO_COMPACT_WINDOW, "1000000");
+  check("launchModelEnv: absent autoCompactWindow ⇒ unset",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW" in launchModelEnv({ launch: { sessionModel: "x" } }), false);
+  check("launchModelEnv: non-number autoCompactWindow ⇒ unset",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW" in launchModelEnv({ launch: { autoCompactWindow: "1000000" } }), false);
+  check("launchModelEnv: zero/negative autoCompactWindow ⇒ unset",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW" in launchModelEnv({ launch: { autoCompactWindow: -5 } }), false);
+  check("launchModelEnv: fractional autoCompactWindow ⇒ floored",
+    launchModelEnv({ launch: { autoCompactWindow: 1000000.9 } }).CLAUDE_CODE_AUTO_COMPACT_WINDOW, "1000000");
+
   // ── launchModelEnv: tier-alias bindings → ANTHROPIC_DEFAULT_*_MODEL ─────────
   const al = launchModelEnv({ launch: { aliases: { opus: "claude-opus-4-8", sonnet: "glm-4.6", haiku: "deepseek-chat" } } });
   check("aliases: opus → ANTHROPIC_DEFAULT_OPUS_MODEL", al.ANTHROPIC_DEFAULT_OPUS_MODEL, "claude-opus-4-8");

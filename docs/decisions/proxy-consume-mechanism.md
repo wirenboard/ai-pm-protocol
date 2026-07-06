@@ -1,5 +1,7 @@
 # How the protocol consumes `modelpipe` (retiring the in-repo router copy)
 
+**⚠ SUPERSEDED 2026-07-06** by `docs/decisions/minimal-in-protocol-proxy.md` — the Option 3 sync-vendor mirror is DROPPED. `src/adapter/model-router.mjs` is now a first-party built-in proxy (no longer a mirror of anything), `sync-modelpipe.mjs` and its drift row are deleted, and `modelpipe` is no longer consumed. The body below is the historical grounding of the abandoned mirror mechanism, not the current design.
+
 **Status: RATIFIED by the Operator (2026-06-30) — Option 3 (synced, drift-guarded
 vendor-copy).** This is the phase-2 packaging call the extraction decision
 (`docs/decisions/router-extraction.md`) deferred to the Operator. The concrete build it
