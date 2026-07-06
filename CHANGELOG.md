@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.52.7] — 2026-07-06
+
+- **PATCH** — Resume pointer head/body drift fixed (#317). The pointer's leading status summary drifted stale (named an older version, or "no active branch" while a branch was active) while the detailed sections below stayed current — a fresh session read the stale head FIRST and trusted it, defeating lossless resume. Root cause: volatile status had two homes (a summary paragraph + the detailed sections) with no rule to reconcile them — the pointer already had an anti-journal rule (invariant 6) but no single-status-home discipline. Fix: a bounded `## CURRENT STATE` section is now the ONE home for volatile status (version · active branch · last audit · features-since count), and the orchestrator's state-pointer update discipline gained a reconciliation rule — reconcile the CURRENT STATE block FIRST on every pointer update (version against the latest git tag, active branch against the real checkout, audit cadence against tag/CHANGELOG history). Persona-held discipline (structural + procedural), not a new deny; the same discipline line propagates to both assembled copies (`.claude/ai-dev.md`, `.opencode/agents/ai-dev.md`).
+
+---
+
 ## [5.52.6] — 2026-07-06
 
 - **PATCH** — `force-push` ask scoped to risk (#338). The ask-class force-push guard confirmed every `git push --force`/`-f`/`--force-with-lease`; in the parallel-work wave flow the routine rebase-before-merge re-push (`--force-with-lease`) asked the Operator every time. `gitForcePush` now scopes the ask: `--force-with-lease` to a NON-trunk branch no longer asks (the lease IS the protection — it fails closed if the remote moved, so a teammate's push to the branch is refused, not clobbered); bare `--force`/`-f` (no lease) and any trunk target still ask. Trunk is additionally protected by the merge-gate's `pushExplicitTrunkRef` deny. Compound commands isolate the first push invocation. Doc note in `parallel-work`: rebase-before-merge implies a `--force-with-lease` (expected, not a surprise).
