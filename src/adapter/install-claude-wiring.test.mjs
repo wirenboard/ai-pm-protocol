@@ -47,6 +47,14 @@ registerStragglerSweep();
     let threw = false;
     try { verifyClaudeWiring(good, path.join(good, ".claude", "settings.json")); } catch { threw = true; }
     check("[claudeverify] verify on an intact tree does NOT throw", !threw);
+    // and the GOOD install includes the PreCompact hook entry (new for auto-compact)
+    const settingsPath = path.join(good, ".claude", "settings.json");
+    const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    const hasPreCompact = settings.hooks && Array.isArray(settings.hooks.PreCompact) && settings.hooks.PreCompact.length > 0;
+    check("[claudeverify] GOOD install includes PreCompact hook entry", hasPreCompact);
+    // and UserPromptSubmit has two entries (shim + compact-monitor)
+    const userPromptEntries = settings.hooks && Array.isArray(settings.hooks.UserPromptSubmit) ? settings.hooks.UserPromptSubmit : [];
+    check("[claudeverify] GOOD install UserPromptSubmit has two entries", userPromptEntries.length === 2);
   } finally {
     fs.rmSync(good, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }

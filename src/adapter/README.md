@@ -5,12 +5,13 @@ The protocol is one neutral core (`../../PROTOCOL.md`, `../agents/`) plus one th
 ## How it's shaped
 
 ```text
-deny-rules.json   the registry — every guard, as data (intent + class + predicate + params)
-tool-map.json     neutral noun → per-platform concrete tool; which return-classes a platform supports
-engine.mjs        the shared check engine — holds the PREDICATES; one copy, every platform
-claude/shim.mjs   Claude shim: stdin hook payload → engine → verdict JSON on stdout
-opencode/         OpenCode shim: normalise.mjs (pure normalise + decide) + plugin.mjs (the
-                  single-export entry — async actor lookup, throw-to-deny)
+deny-rules.json           the registry — every guard, as data (intent + class + predicate + params)
+tool-map.json             neutral noun → per-platform concrete tool; which return-classes a platform supports
+engine.mjs                the shared check engine — holds the PREDICATES; one copy, every platform
+claude/shim.mjs           Claude shim: stdin hook payload → engine → verdict JSON on stdout
+claude/compact-monitor.mjs  Claude proxy-session monitor: context-usage threshold + PreCompact block (standalone, no engine logic)
+opencode/                 OpenCode shim: normalise.mjs (pure normalise + decide) + plugin.mjs (the
+                          single-export entry — async actor lookup, throw-to-deny)
 ```
 
 The split that makes this work: **rules are data, the check is code.** A deny rule's *intent, class, and parameters* (the role-deny list, the change-verb pattern, the orchestrator-writable prefixes) live in `deny-rules.json`. The *predicate* that decides — "does this path resolve outside the root", "is this an empty write over a non-empty file" — is a function in `engine.mjs`, shared by every platform. So there is exactly one copy of each rule and one copy of each check.
