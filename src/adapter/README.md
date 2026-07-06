@@ -135,10 +135,11 @@ stdout, exiting `0` (alive) / `1` (none). Lets the dialog **skip asking for a UR
 proxy is up. Never throws — a refused/timed-out candidate is simply "not alive". Note: a
 launcher-**spawned** proxy needs no probe (the launcher holds the routes config and uses a
 random free port) — the probe is for an **external** proxy the Operator already runs (a
-standalone modelpipe, or a LiteLLM-class proxy that exposes `/v1/models`). The vendored
-modelpipe is a pure passthrough proxy; it answers `/v1/models` only once the upstream gains
-that endpoint, so against an older modelpipe the probe finds nothing and the dialog falls
-through to the spawn fork — honest, no false promise. The candidate-list + response parse are
+standalone modelpipe, or a LiteLLM-class proxy that exposes `/v1/models`). The built-in
+router (`model-router.mjs`) is a pure passthrough proxy; it answers `/v1/models` only once
+the upstream gains that endpoint, so against an older upstream the probe finds nothing and
+the dialog falls through to the spawn fork — honest, no false promise. The candidate-list +
+response parse are
 pure (`probeCandidates` / `parseModelsResponse`, unit-tested); the live HTTP is the one
 untestable rung.
 
@@ -204,14 +205,14 @@ config pin (roles.{builder,reviewer}.model)  or  launch env (ANTHROPIC_MODEL / A
         │
         ▼  the string lands in the request body's `model` field
         │
-        ▼  modelpipe routing (model-router.mjs pickRoute)
-   matched against each route's `match` glob, LITERAL FIRST-MATCH — modelpipe does NOT
+        ▼  the built-in router (model-router.mjs pickRoute)
+   matched against each route's `match` glob, LITERAL FIRST-MATCH — the router does NOT
    alias and does NOT translate; it routes by body.model ALONE and forwards.
 ```
 
 So there are two ways to point a seat at a foreign model, and the chain shows why **tier binding is the recommended one**:
 
-- **Tier binding (recommended — and, for a baked seat on Claude, the ONLY path that routes).** A role carries a **tier** (`sonnet`), and `launch.aliases.sonnet` sets `ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5.2`. Claude Code resolves the tier → `glm-5.2` → modelpipe routes `glm-*`. This is the one lever that also moves **subagents and the background model** (they pick tiers), and it is what `## Setup` Phase 1/2 drives. One binding, every tier-user follows.
+- **Tier binding (recommended — and, for a baked seat on Claude, the ONLY path that routes).** A role carries a **tier** (`sonnet`), and `launch.aliases.sonnet` sets `ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5.2`. Claude Code resolves the tier → `glm-5.2` → the router routes `glm-*`. This is the one lever that also moves **subagents and the background model** (they pick tiers), and it is what `## Setup` Phase 1/2 drives. One binding, every tier-user follows.
 - **Concrete id — launch-env ONLY, never a baked seat on Claude.** A concrete foreign id works for the **launch-env** seats — the session (`ANTHROPIC_MODEL`) and guard (`ANTHROPIC_SMALL_FAST_MODEL`): those are not baked subagent lines, so the id passes through verbatim (route matches `deepseek-*`). But a concrete foreign id written straight into a **baked** seat (`roles.{builder,reviewer}.model`) does **NOT** route on Claude: it is off the Claude allow-list, so the installer bakes **no** `model:` line and the seat silently inherits the session model (`resolveModelPin` in `claude/install-agents.mjs`). So for a cross-endpoint builder/reviewer, use tier binding — never a raw foreign id in the seat.
 
-Either way modelpipe matches the exact string in `body.model` — alias resolution is Claude Code's job, upstream, never the proxy's.
+Either way the router matches the exact string in `body.model` — alias resolution is Claude Code's job, upstream, never the proxy's.

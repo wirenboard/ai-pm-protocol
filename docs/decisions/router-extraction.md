@@ -1,5 +1,7 @@
 # Extracting the model-router into `modelpipe` (a standalone repo)
 
+**⚠ PARTIALLY SUPERSEDED 2026-07-06** by `docs/decisions/minimal-in-protocol-proxy.md` — the transport router is RE-ABSORBED into the protocol as a first-party built-in proxy. `modelpipe` remains the standalone product (free to evolve independently); the protocol no longer consumes it. The transport/policy boundary framing below is historical; the consume side is decided in `proxy-consume-mechanism.md` (itself superseded).
+
 **Question (2026-06-30).** The protocol grew a model-router (5.32–5.36: passthrough
 reverse-proxy + provider catalog + launcher + vision fallback). It is **useful on its own**,
 beyond this protocol. Should it become its own repo, and where is the boundary?

@@ -1,4 +1,4 @@
-// modelpipe — a passthrough Anthropic-format model router (first-party localhost
+// model-router — the ai-dev-protocol's built-in passthrough Anthropic-format model router (a first-party localhost
 // reverse-proxy).
 //
 // WHAT IT IS: a reverse-proxy with model-based routing + a per-backend auth swap.
@@ -32,17 +32,17 @@
 //     `model -> hostname` line to stderr — built from safe pieces only.
 //   • Binds to localhost by default (config.listen.host).
 //
-// Run as a process:   node src/router.mjs <config.json>   (or the modelpipe CLI:
-//   modelpipe <config.json> [--port N] — see bin/modelpipe.mjs)
-//   (config shape + worked example: routes.example.json; provider catalog: providers.json)
-// Importable:         createRouter / pickRoute / resolveAuthHeader / loadConfig …
-//   are exported for the self-test (test/router.test.mjs).
+// No standalone CLI — the launcher (router-launch.mjs) imports createRouter and starts
+//   it programmatically when ≥2 distinct backend endpoints are in play. Exports:
+//   createRouter / pickRoute / resolveAuthHeader / loadConfig / listModels …
+//   (config shape + worked example: model-router.example.json; provider catalog:
+//   model-providers.json; tests: model-router.test.mjs)
+// modelpipe (aadegtyarev/modelpipe) is the standalone product; this module is the
+//   protocol's first-party built-in router (docs/decisions/minimal-in-protocol-proxy.md).
 
 import http from "node:http";
 import https from "node:https";
 import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 const DEFAULT_MAX_BODY_BYTES = 25 * 1024 * 1024; // 25 MB — bound the per-request buffer
 
@@ -241,10 +241,10 @@ export function loadConfig(configPath) {
   return validateConfig(config);
 }
 
-// Build a SAFE JSON summary of the route table for discovery (the `--list` CLI mode,
-// so a client setup dialog can read what a modelpipe is configured for instead of
-// re-asking). PURE: reads only the parsed config object, NEVER process.env and NEVER a
-// backend — no secret value is ever in scope.
+// Build a SAFE JSON summary of the route table for discovery — the base of the
+// GET /v1/models endpoint (via listModels), so a client can read what the router is
+// configured for instead of re-asking. PURE: reads only the parsed config object, NEVER
+// process.env and NEVER a backend — no secret value is ever in scope.
 //
 // SAFE-SURFACE (whitelist, fail-closed by construction): each field is copied in by
 // name, so an unexpected future config field cannot leak through. Per route we expose
@@ -591,21 +591,5 @@ export function createRouter(config, options = {}) {
   });
 }
 
-// CLI entry: node src/router.mjs <config.json>  (or MODEL_ROUTER_CONFIG=<path>).
-// The packaged `modelpipe` bin (bin/modelpipe.mjs) is the supported entry point and
-// adds a --port override; this remains for a direct `node src/router.mjs` run.
-function main() {
-  const configPath = process.argv[2] || process.env.MODEL_ROUTER_CONFIG;
-  if (!configPath) {
-    process.stderr.write("usage: node src/router.mjs <config.json>  (or set MODEL_ROUTER_CONFIG)\n");
-    process.exit(2);
-  }
-  const config = loadConfig(configPath);
-  const host = (config.listen && config.listen.host) || "127.0.0.1";
-  const port = (config.listen && config.listen.port) || 8787;
-  createRouter(config).listen(port, host, () => {
-    process.stderr.write(`[model-router] listening on http://${host}:${port} (${config.routes.length} routes)\n`);
-  });
-}
-
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) main();
+// (No standalone CLI entry — the launcher imports createRouter programmatically;
+//  modelpipe is the standalone product. This module is the protocol's first-party router.)

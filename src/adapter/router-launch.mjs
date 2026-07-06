@@ -16,7 +16,8 @@
 //       router. A project that never opts into cross-endpoint routing is unchanged.
 //   In EVERY mode it also layers the config's launch-time env onto the child
 //   (config.launch.sessionModel → ANTHROPIC_MODEL, guardModel → ANTHROPIC_SMALL_FAST_MODEL,
-//   configDir → CLAUDE_CONFIG_DIR) BEFORE exec'ing `claude` — the RATIFIED source-of-truth:
+//   configDir → CLAUDE_CONFIG_DIR, autoCompactWindow → CLAUDE_CODE_AUTO_COMPACT_WINDOW) BEFORE
+//   exec'ing `claude` — the RATIFIED source-of-truth:
 //   the config is the one home, the launch path consumes it (docs/decisions/multi-model-setup-ux.md
 //   `## The fork`; configDir: docs/decisions/launcher-ux.md). Absent/empty values export
 //   nothing (a non-routing project stays byte-unchanged).
@@ -253,6 +254,19 @@ export function launchModelEnv(config) {
   if (session) out.ANTHROPIC_MODEL = session;
   if (guard) out.ANTHROPIC_SMALL_FAST_MODEL = guard;
   if (configDir) out.CLAUDE_CONFIG_DIR = configDir;
+  // autoCompactWindow — OPTIONAL, opt-in: a positive integer (tokens) → CLAUDE_CODE_AUTO_COMPACT_WINDOW.
+  //   CC resolves the effective window PER-MODEL, capping each at its REAL window, so this is a
+  //   CEILING/target, not a force. Set it ONLY when EVERY seat's model actually supports the chosen
+  //   window (e.g. a provider whose every model is 1M-capable, like deepseek) — otherwise a 200K model
+  //   assumed at a higher window overflows before compacting. Personal (config.local launch), like the
+  //   aliases; absent/invalid ⇒ unset (CC's default 200K-for-foreign assumption stands — the safe
+  //   default). Runtime-exported only, never written to committed settings.json. The `[1m]` model-id
+  //   suffix is the per-model native lever; this is the global one for foreign providers.
+  //   docs/decisions/minimal-in-protocol-proxy.md.
+  const acw = launch.autoCompactWindow;
+  if (typeof acw === "number" && Number.isFinite(acw) && acw > 0) {
+    out.CLAUDE_CODE_AUTO_COMPACT_WINDOW = String(Math.floor(acw));
+  }
   // Tier-alias bindings — config.launch.aliases.{fable,opus,sonnet,haiku} → the
   // ANTHROPIC_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL vars Claude Code resolves a tier through
   // (the FOUR remappable aliases, strongest→weakest). This is the cross-endpoint lever: bind a
