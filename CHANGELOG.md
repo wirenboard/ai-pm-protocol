@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.52.6] — 2026-07-06
+
+- **PATCH** — `force-push` ask scoped to risk (#338). The ask-class force-push guard confirmed every `git push --force`/`-f`/`--force-with-lease`; in the parallel-work wave flow the routine rebase-before-merge re-push (`--force-with-lease`) asked the Operator every time. `gitForcePush` now scopes the ask: `--force-with-lease` to a NON-trunk branch no longer asks (the lease IS the protection — it fails closed if the remote moved, so a teammate's push to the branch is refused, not clobbered); bare `--force`/`-f` (no lease) and any trunk target still ask. Trunk is additionally protected by the merge-gate's `pushExplicitTrunkRef` deny. Compound commands isolate the first push invocation. Doc note in `parallel-work`: rebase-before-merge implies a `--force-with-lease` (expected, not a surprise).
+
+---
+
 ## [5.52.5] — 2026-07-06
 
 - **PATCH** (test hygiene) — `install-core.test.mjs` no longer dirties the working tree: the dogfood-against-ROOT test now snapshots + restores `.claude/agents/<seat>.md` (walked, future-proof), not just the tracked surfaces. The dogfood re-bake writes a BARE tier alias there (the committed bake is the CONCRETE native id); leaving it unrestored turned `install-drift` red on every subsequent build — a chronic friction across several features, now killed. The `allSame` second-run assertion stays on the original surfaces (agents are expected to change under dogfood — restored, not asserted-unchanged).

@@ -196,6 +196,11 @@ const PREDICATES = {
     if (projectProfile(input.root) === "yolo") return false; // gate explicitly off — Operator's merge word is the only remaining check
     if (isTagPush(input.command)) return false; // tags never need a review stamp
     if (isTrunkFastForward(input.command, input.root)) return false; // a trunk --ff-only sync to its upstream (the post-squash-merge `git pull`) is not a feature merge — see engine-git
+    // Force-push operations are handled by the force-push guard, not the merge-gate.
+    // This allows the force-push guard to apply its scoped logic (lease+non-trunk allowed,
+    // bare force asks) without the merge-gate denying first.
+    const flagMatch = /git\s+push(?:\s+[^\s]+)*\s+(--force-with-lease|--force|-f)(?:[ =]|$)/.exec(cmd);
+    if (flagMatch) return false; // force-push guard handles it
     // F1: an EXPLICIT unstamped trunk push (`git push origin main`/`master`) DENIES on
     // both platforms — the bare `main` ref is unresolvable as a topic, so without this
     // it fell through to the ask rule, which a no-ask-return platform (OpenCode) silently
@@ -223,6 +228,9 @@ const PREDICATES = {
     if (!/git\s+(merge(?![-\w])|push\b)/.test(cmd)) return false;
     if (isTagPush(input.command)) return false; // tags are fine — no topic, no ask
     if (isTrunkFastForward(input.command, input.root)) return false; // a trunk --ff-only sync is not a feature merge — no ask
+    // Force-push operations are handled by the force-push guard, not the merge-gate.
+    const flagMatch = /git\s+push(?:\s+[^\s]+)*\s+(--force-with-lease|--force|-f)(?:[ =]|$)/.exec(cmd);
+    if (flagMatch) return false; // force-push guard handles it
     // An explicit trunk push is handled by the DENY rule (mergeWithUnstampedReview),
     // never routed to ask — deny outranks ask regardless, this keeps the intent clean.
     if (pushExplicitTrunkRef(input.command)) return false;
@@ -259,7 +267,25 @@ const PREDICATES = {
       /([\s"'`]systemctl[\s"'`]+(restart|reload|stop|start|enable|disable)|[\s"'`]docker[\s"'`]+(exec|compose[\s"'`]+(up|down|run|restart|exec))|[\s"'`]apt(-get)?[\s"'`]+(install|upgrade|remove|purge|autoremove)|[\s"'`]npm[\s"'`]+(install|update|uninstall)|[\s"'`]kubectl[\s"'`]+(edit|apply|patch|delete|create|replace)|[\s"'`]rm[\s"'`]|[\s"'`]cp[\s"'`]|[\s"'`]mv[\s"'`]|[\s"'`]mkdir[\s"'`]|[\s"'`]touch[\s"'`])/.test(c);
   },
   gitForcePush(input) {
-    return /git\s+push(\s+[^\s]+)*\s+(--force|--force-with-lease|-f)([ =]|$)/.test(input.command || "");
+    const cmd = input.command || "";
+    // Extract the force flag from the FIRST push invocation (compound commands: multiple pushes possible)
+    // Use the same pattern as pushExplicitTrunkRef: match up to the next shell separator
+    const pushInvMatch = /\bgit\s+push\b([^;&|\n]*)/.exec(cmd);
+    if (!pushInvMatch) return false;
+
+    const firstPushCmd = "git push " + pushInvMatch[1];
+    // Extract the force flag from the first push invocation
+    const flagMatch = /git\s+push(?:\s+[^\s]+)*\s+(--force-with-lease|--force|-f)(?:[ =]|$)/.exec(firstPushCmd);
+    const flag = flagMatch ? flagMatch[1] : null;
+
+    if (flag === "--force-with-lease") {
+      // Lease protection is active — check if target is trunk
+      const trunk = pushExplicitTrunkRef(firstPushCmd);
+      return !!trunk; // Ask only for trunk; allow non-trunk lease pushes
+    }
+
+    // Bare --force/-f has no protection — always ask
+    return flag === "--force" || flag === "-f";
   },
   gitCommitNoVerify(input) {
     return /git\s+commit(\s+[^\s]+)*\s+(--no-verify|--no-gpg-sign)([ =]|$)/.test(input.command || "");

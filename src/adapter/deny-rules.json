@@ -145,7 +145,7 @@
     },
     {
       "id": "force-push",
-      "intent": "Confirm a git push --force / -f / --force-with-lease — it rewrites remote history; never force-push main.",
+      "intent": "Confirm a git push --force / -f (no lease protection) or any force-push to trunk (main/master). A --force-with-lease to a non-trunk branch is allowed — the lease itself protects against overwriting a teammate's work.",
       "label": "Confirm a force-push (rewrites remote history)",
       "class": "ask",
       "act": "bash",

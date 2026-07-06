@@ -36,14 +36,18 @@ line lives in `orchestrator.md` `## Your seat`). Design rationale:
 
 1. **The ship beat is serial** — `package.json` + CHANGELOG are a shared
    surface every ship touches, so the disjointness rule itself forces it: one
-   unmerged shipped PR at a time. Bump version + CHANGELOG as the LAST commits
-   before push. If `main` advanced since this branch was cut (a sibling
-   merged), recut before shipping: fresh branch + worktree from current
-   `main` (remove the stale worktree and branch FIRST, `git worktree remove`
-   then `git branch -D` — `worktree add -b` fails on an existing branch name),
-   cherry-pick the feature's commits (clean by disjointness — only the
-   not-yet-written bump could conflict), bump there, ship. This is the
-   stale-branch rule's cheap realization, not an exception to it.
+   unmerged shipped PR at a time. If `main` advanced since this branch was cut
+   (a sibling merged), rebasing the branch onto latest main before ship is
+   REQUIRED (stale-branch rule). The re-push after rebase MUST use
+   `--force-with-lease` — this safe force-push form no longer asks for
+   confirmation (the lease itself protects against overwriting a teammate's
+   work). Bump version + CHANGELOG as the LAST commits before push. If the
+   branch is truly stale (rebase conflicts), recut instead: fresh branch +
+   worktree from current `main` (remove the stale worktree and branch FIRST,
+   `git worktree remove` then `git branch -D` — `worktree add -b` fails on an
+   existing branch name), cherry-pick the feature's commits (clean by
+   disjointness — only the not-yet-written bump could conflict), bump there,
+   ship.
 2. After merge confirmed: `git worktree remove .ai-dev/worktrees/<topic>`,
    delete the branch, drop the feature's row from the state table.
 3. A worktree whose feature is abandoned is removed the same way — never left
