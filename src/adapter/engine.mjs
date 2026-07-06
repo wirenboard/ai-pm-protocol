@@ -27,6 +27,7 @@ import {
 } from "./engine-bash.mjs";
 import {
   isTagPush,
+  normalizeGitInvocation,
   pushExplicitTrunkRef,
   resolveMergeTopic,
   reviewStampSatisfied,
@@ -186,7 +187,11 @@ const PREDICATES = {
     // `merge(?![-\w])` lets read-only `git merge-base`/`merge-tree`/`merge-file`/`mergetool`
     // fall through (a hyphen/word-char after `merge` is plumbing, not a merge) while a real
     // `git merge <topic>` (whitespace/EOL after `merge`) still matches. `push\b` unchanged.
-    if (!/git\s+(merge(?![-\w])|push\b)/.test(input.command || "")) return false;
+    // Normalize first so a `git -C <path> (push|merge)` global-flag span doesn't hide the
+    // subcommand from this adjacency test — the helpers (resolveMergeTopic etc.) normalize
+    // idempotently on their own, but they never run if this guard bails on the raw command.
+    const cmd = normalizeGitInvocation(input.command || "");
+    if (!/git\s+(merge(?![-\w])|push\b)/.test(cmd)) return false;
     if (projectProfile(input.root) === "yolo") return false; // gate explicitly off — Operator's merge word is the only remaining check
     if (isTagPush(input.command)) return false; // tags never need a review stamp
     // F1: an EXPLICIT unstamped trunk push (`git push origin main`/`master`) DENIES on
@@ -212,7 +217,8 @@ const PREDICATES = {
     if (input.targetsSessionRepo === false) return false;
     // Same `merge(?![-\w])` tightening as mergeWithUnstampedReview — a `merge-*` plumbing
     // command must not be routed to the unresolvable-topic ask either.
-    if (!/git\s+(merge(?![-\w])|push\b)/.test(input.command || "")) return false;
+    const cmd = normalizeGitInvocation(input.command || ""); // strip `git -C <path>` global span — see mergeWithUnstampedReview
+    if (!/git\s+(merge(?![-\w])|push\b)/.test(cmd)) return false;
     if (isTagPush(input.command)) return false; // tags are fine — no topic, no ask
     // An explicit trunk push is handled by the DENY rule (mergeWithUnstampedReview),
     // never routed to ask — deny outranks ask regardless, this keeps the intent clean.

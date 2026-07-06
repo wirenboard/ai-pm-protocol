@@ -9,6 +9,35 @@ import path from "node:path";
 import { maskQuotedSpans } from "./engine-bash.mjs";
 import { headBranch } from "./engine-config.mjs";
 
+// Preprocess a git command so the adjacency regex (\bgit\s+push|merge) matches even
+// when a GLOBAL flag sits between `git` and the subcommand. The standard
+// `git -C <path> push …` (and `-c <k=v>`, `--git-dir`, `--work-tree`) breaks the
+// adjacency every parser predicate keys on: the command then carries no resolvable
+// ref ⇒ a parallel-work `git -C <worktree> push` falls through to the session-root
+// HEAD and false-BLOCKs a legitimately-stamped push (availability), AND
+// `pushExplicitTrunkRef`'s first-line guard is blind to `git -C <path> push origin
+// main` ⇒ the unconditional trunk deny leaks (security — a [mechanical] floor
+// reached through the wrong door). Strip the global-flag span (each flag WITH its
+// value) from the QUOTE-MASKED command: `git -C path push origin feature/x` ⇒
+// `git push origin feature/x`, and the existing adjacency regex + refspec semantics
+// run UNCHANGED on the remainder. Value-taking globals only (the four the live
+// report names); boolean globals never intervene before a push/merge subcommand.
+// Pure regex on the masked string — no shell, no interpolation.
+function normalizeGitInvocation(command) {
+  const masked = maskQuotedSpans(command);
+  // One global flag WITH its value: `-C <v>` | `-C<v>` | `-c <v>` | `-c<v>`
+  // | `--git-dir <v>` | `--git-dir=<v>` | `--work-tree <v>` | `--work-tree=<v>`.
+  // A quoted value is already masked to underscores by maskQuotedSpans, so it stays
+  // a single `\S+` token. Long flags first (defensive — `-c`/`-C` can't prefix-match
+  // `--git-dir`/`--work-tree`, the 2nd char differs — but it reads cleanest).
+  const flag = "(?:--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)|-C(?:\\S+|\\s+\\S+)|-c(?:\\S+|\\s+\\S+))";
+  // `git` + whitespace + first flag + (whitespace + flag)* + the whitespace before
+  // the subcommand. A non-`-C` command has no flag span ⇒ no match ⇒ returned
+  // unchanged (regression-safe). Replace with `git ` so the subcommand is adjacent.
+  const span = new RegExp("\\bgit\\s+" + flag + "(?:\\s+" + flag + ")*\\s+", "g");
+  return masked.replace(span, "git ");
+}
+
 // Resolve the merge-gate topic from ANY branch, prefix stripped: the topic is the
 // branch name with its leading work-prefix dropped (feature/foo→foo, fix/bar→bar,
 // hotfix/x→x, a bare `topic`→topic). The ref named in the push/merge command
@@ -46,7 +75,7 @@ function topicFromRefToken(token) {
 // resolves. push's first non-flag argument is the <remote> (possibly a slashed
 // URL — never a topic) and is skipped; merge's arguments are all candidates.
 function refTopicFromCommand(command) {
-  const masked = maskQuotedSpans(command);
+  const masked = normalizeGitInvocation(command);
   // `merge(?![-\w])` rejects `merge-base`/`merge-tree`/`merge-file`/`mergetool` — the
   // hyphen/word-char after `merge` marks a plumbing subcommand, not a real merge whose
   // ref we'd parse. `push\b` keeps its boundary (no `push-*` plumbing to confuse). A
@@ -69,7 +98,7 @@ function refTopicFromCommand(command) {
 // v1.0`) is NOT treated as a tag push — only when ALL push invocations in
 // the command are tag pushes does this return true.
 function isTagPush(command) {
-  const masked = maskQuotedSpans(command || "");
+  const masked = normalizeGitInvocation(command || "");
   const inv = /\bgit\s+push\b([^;&|\n]*)/g;
   let hasPush = false;
   let m;
@@ -89,8 +118,8 @@ function isTagPush(command) {
 // a topic from it. A bare `git push origin` has no such token (only the remote)
 // and correctly falls through to HEAD.
 function pushHasUnparsedExplicitRef(command) {
-  if (!/\bgit\s+push\b/.test(command)) return false;
-  const masked = maskQuotedSpans(command);
+  const masked = normalizeGitInvocation(command);
+  if (!/\bgit\s+push\b/.test(masked)) return false;
   const inv = /\bgit\s+push\b([^;&|\n]*)/g;
   let m;
   while ((m = inv.exec(masked)) !== null) {
@@ -119,8 +148,8 @@ function pushHasUnparsedExplicitRef(command) {
 // branched/named `main` would carry `main_review.md`, so a *stamped* trunk push still
 // passes; only the unstamped one denies (symmetry with the bare-push path).
 function pushExplicitTrunkRef(command) {
-  if (!/\bgit\s+push\b/.test(command || "")) return null;
-  const masked = maskQuotedSpans(command);
+  const masked = normalizeGitInvocation(command || "");
+  if (!/\bgit\s+push\b/.test(masked)) return null;
   const inv = /\bgit\s+push\b([^;&|\n]*)/g;
   const trunkOf = (side) => (side === "main" || side === "master" ? side : null);
   let m;
@@ -148,8 +177,9 @@ function pushExplicitTrunkRef(command) {
 // by refTopicFromCommand upstream, so this only ever decides the no-slash case.
 // Parallels pushExplicitTrunkRef / pushHasUnparsedExplicitRef.
 function pushExplicitHeadBranch(command, head) {
-  if (!head || !/\bgit\s+push\b/.test(command || "")) return false;
-  const masked = maskQuotedSpans(command);
+  if (!head) return false;
+  const masked = normalizeGitInvocation(command || "");
+  if (!/\bgit\s+push\b/.test(masked)) return false;
   const inv = /\bgit\s+push\b([^;&|\n]*)/g;
   let m;
   while ((m = inv.exec(masked)) !== null) {
@@ -247,6 +277,7 @@ function reviewStampSatisfied(root, topic) {
 export {
   stripPrefix,
   topicFromRefToken,
+  normalizeGitInvocation,
   refTopicFromCommand,
   isTagPush,
   pushHasUnparsedExplicitRef,

@@ -751,5 +751,71 @@ function rootOnWorktree(branch) {
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// ── 13. `git -C <path> (push|merge)` — a GLOBAL flag between `git` and the subcommand ─
+// once broke the adjacency regex every parser keyed on. `git -C <worktree> push`
+// carried no resolvable ref ⇒ a parallel-work push fell through to the session-root
+// HEAD and false-BLOCKed (availability); and `git -C <path> push origin main` was
+// INVISIBLE to the trunk-ref guard ⇒ the [mechanical] trunk deny leaked (security).
+// normalizeGitInvocation strips the global-flag span before the adjacency match.
+console.log("GLOBAL-FLAG PREFIX git -C / -c / --git-dir / --work-tree (push|merge):");
+
+// 13a. STAMPED `git -C <path> push origin feature/x` ⇒ ALLOW (the fix — was BLOCK:
+// the command resolved no ref, fell through to HEAD, checked the wrong stamp).
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  const v = evaluate({ act: "bash", root, command: "git -C /tmp/ai-dev-wt push origin feature/x" }, config);
+  check("git-C-stamped:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 13b. UNSTAMPED `git -C <path> push` ⇒ DENY merge-while-unstamped (the floor HOLDS —
+// the topic now resolves ⇒ the stamp is checked, not bypassed).
+{
+  const root = rootOnBranch("feature/x");
+  const v = evaluate({ act: "bash", root, command: "git -C /tmp/ai-dev-wt push origin feature/x" }, config);
+  check("git-C-unstamped:denies", v.verdict, "deny");
+  check("git-C-unstamped:ruleId", v.ruleId, "merge-while-unstamped");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 13c. SECURITY: `git -C <path> push origin main` ⇒ DENY (the trunk-ref guard was
+// BLIND to the -C form ⇒ the [mechanical] trunk deny leaked; it now fires). Unit:
+// pushExplicitTrunkRef now sees the trunk ref THROUGH the -C prefix.
+{
+  const root = rootOnBranch("main");
+  const v = evaluate({ act: "bash", root, command: "git -C /tmp/ai-dev-wt push origin main" }, config);
+  check("git-C-trunk-push:denies", v.verdict, "deny");
+  check("git-C-trunk-push:ruleId", v.ruleId, "merge-while-unstamped");
+  check("git-C-trunk-ref-unit", pushExplicitTrunkRef("git -C /tmp/ai-dev-wt push origin main"), "main");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 13d. Resolver unit: the global-flag span is stripped, then the ref resolves (push
+// and merge); the other value-taking globals (-c, --git-dir, --work-tree; space-,
+// =-, glue-, and multi-forms) resolve too.
+{
+  const root = rootOnBranch("feature/x");
+  check("git-C-push-resolver", resolveMergeTopic("git -C /tmp/wt push origin feature/x", root), "x");
+  check("git-C-merge-resolver", resolveMergeTopic("git -C /tmp/wt merge --ff-only feature/x", root), "x");
+  check("git-c-resolver", resolveMergeTopic("git -c core.bare=false push origin feature/x", root), "x");
+  check("git-gitdir-eq-resolver", resolveMergeTopic("git --git-dir=/tmp/g push origin feature/x", root), "x");
+  check("git-worktree-space-resolver", resolveMergeTopic("git --work-tree /tmp/w push origin feature/x", root), "x");
+  check("git-multi-global-resolver", resolveMergeTopic("git -C /tmp/a -c k=v push origin feature/x", root), "x");
+  check("git-C-glued-resolver", resolveMergeTopic("git -C/tmp/wt push origin feature/x", root), "x");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 13e. REGRESSION: a non-`-C` command is unchanged through the normalizer (no flag
+// span ⇒ no match ⇒ returned as-is); the trunk-ref guard returns null for a feature.
+{
+  const root = rootOnBranch("feature/x");
+  stamp(root, "x");
+  check("no-global-resolver", resolveMergeTopic("git push origin feature/x", root), "x");
+  check("no-global-stamped-allows", evaluate({ act: "bash", root, command: "git push origin feature/x" }, config).verdict, "allow");
+  check("no-global-trunk-null", pushExplicitTrunkRef("git push origin feature/x"), null);
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
