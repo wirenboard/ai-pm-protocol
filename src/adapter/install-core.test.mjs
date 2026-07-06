@@ -465,8 +465,17 @@ testPlatform("opencode", (target) => {
   // the opencode stub form over the committed claude form, so it MUST be restored (the
   // finally block restores every SURFACE byte-for-byte regardless of outcome).
   const SURFACES = ["CLAUDE.md", "AGENTS.md", ".claude/settings.json", ".opencode/opencode.json", ".ai-dev/launch"];
+  // A dogfood re-bake writes the BARE tier alias into .claude/agents/<seat>.md (the committed
+  // bake is the CONCRETE native id) — snapshot + restore them too, or the test dirties the
+  // working tree every run (the recurring drift that turns install-drift red on the next
+  // build). Walk the dir so a seat added later is covered too (install-drift is the backstop).
+  // NOTE: agents are EXCLUDED from the allSame "unchanged" assertion below — they DO change
+  // under dogfood by design; we only snapshot+restore them (undo the change), not assert it.
+  const agentDir = path.join(ROOT, ".claude", "agents");
+  const agentFiles = fs.existsSync(agentDir) ? fs.readdirSync(agentDir).map((f) => path.join(".claude", "agents", f)) : [];
+  const surfaces = [...SURFACES, ...agentFiles];
   const before = {};
-  for (const s of SURFACES) before[s] = fs.readFileSync(path.join(ROOT, s), "utf8");
+  for (const s of surfaces) before[s] = fs.readFileSync(path.join(ROOT, s), "utf8");
   const toolingExisted = fs.existsSync(path.join(ROOT, ".ai-dev", "tooling"));
   const versionExisted = fs.existsSync(path.join(ROOT, ".ai-dev", "VERSION"));
   try {
@@ -502,7 +511,7 @@ testPlatform("opencode", (target) => {
     check("[dogfood] a second dogfood run leaves every tracked surface byte-identical", allSame);
   } finally {
     // restore the committed bytes regardless of outcome (the test must never dirty the repo)
-    for (const s of SURFACES) fs.writeFileSync(path.join(ROOT, s), before[s]);
+    for (const s of surfaces) fs.writeFileSync(path.join(ROOT, s), before[s]);
     if (!toolingExisted) fs.rmSync(path.join(ROOT, ".ai-dev", "tooling"), { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     if (!versionExisted) {
       fs.rmSync(path.join(ROOT, ".ai-dev", "VERSION"), { force: true });

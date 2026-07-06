@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.52.5] — 2026-07-06
+
+- **PATCH** (test hygiene) — `install-core.test.mjs` no longer dirties the working tree: the dogfood-against-ROOT test now snapshots + restores `.claude/agents/<seat>.md` (walked, future-proof), not just the tracked surfaces. The dogfood re-bake writes a BARE tier alias there (the committed bake is the CONCRETE native id); leaving it unrestored turned `install-drift` red on every subsequent build — a chronic friction across several features, now killed. The `allSame` second-run assertion stays on the original surfaces (agents are expected to change under dogfood — restored, not asserted-unchanged).
+
+---
+
 ## [5.52.4] — 2026-07-06
 
 - **PATCH** — Merge-gate allows a trunk `--ff-only` sync to its upstream. After a remote squash-merge, `git merge --ff-only origin/main` (the trunk sync / `git pull`) was DENIED (the topic resolved to `main`, no `main_review.md`), forcing the destructive `git reset --hard origin/main`. A trunk `--ff-only` sync is NOT a feature merge, so `isTrunkFastForward` (engine-git.mjs) now carves it out — STRICT 4-guard, bypass-safe for the `[mechanical]` floor: (1) a `git merge` (not push/plumbing); (2) an EXPLICIT `--ff-only` (bare `--ff` can still create a merge commit — NOT carved); (3) the ref is `main`/`master`/`origin/main`/`origin/master` (`feature/main` REJECTED — non-`origin` prefix); (4) the checkout (`headBranch`) is ON that same trunk. All four ⇒ allow; a non-`origin` remote gets no carve-out (byte-identical to today, fail-safe). The carve-out is merge-only — a trunk PUSH is still denied by `pushExplicitTrunkRef`.
