@@ -2,7 +2,7 @@
 
 **Every change on a guarantee profile (`full`, `lite`, `solo`) is carried through the fixed plan → build → review → ship loop, and nothing reaches a release without a review stamp.**
 
-The `yolo` profile is explicitly outside this contract — it names no Reviewer and turns the merge-gate off by design, under the Operator's informed consent; see `PROTOCOL.md ## Project config`.
+The `yolo` profile is explicitly outside this contract — it names no Reviewer and turns the merge-gate off by design, under the Operator's informed consent; see `protocol-reference.md ## Project config`.
 
 Every change follows one predictable path — plan → build → independent review → ship — so nothing ships by the Operator forgetting to ask for a review.
 

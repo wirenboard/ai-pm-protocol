@@ -11,8 +11,12 @@ architecturally impossible; the procedure achieves identical `team:false`-inert
 conditionality with no new assembler axis. **Lever 2 is closed** (a phantom — capability
 modules already compose only into builder/reviewer, never the orchestrator router; no
 saving was ever available). **Lever 3 (constitution density pass) is DESCOPED to the
-backlog** — higher risk against `PROTOCOL.md`, marginal gain over levers 1+4; revisit only
-if more window budget is needed (the research's own "only if" condition). The autonomous
+backlog, then REVERSED by #369 (2026-07-07)** — shipped as a structural split: the three
+reference-only sections (`## Enforcement`, `## Project config`, `## Core and adapter`) moved
+verbatim into `protocol-reference.md` (sibling of `PROTOCOL.md`), reducing the resident
+surface by ~14.8k chars (~3.7k tokens). Lever-3 descope reversed; the "only if" condition
+was met by the continued window pressure and a pure-move approach that removed the density
+risk. The autonomous
 call: the recommendation is derivable from this evidence-based research, the built part is
 low-risk and reversible, and the risky part (lever 3) is the one deferred — escalation
 unnecessary.

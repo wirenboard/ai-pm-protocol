@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The unified installer — the one realisation of the adapter's "install into a
-// project" contract point (PROTOCOL.md `## Core and adapter`,
+// project" contract point (protocol-reference.md `## Core and adapter`,
 // docs/contracts/one-command-install.md). It automates exactly the manual
 // procedure src/adapter/INSTALL.md documents: vendor the shared adapter, lay down
 // the core, and wire the active platform — idempotently.

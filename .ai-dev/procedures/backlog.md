@@ -6,7 +6,7 @@ lives and how I record/read it* — every backlog reference elsewhere (`## Your 
 author only", `## Audit` finding-dispatch, `.ai-dev/procedures/8d.md` D7,
 `.ai-dev/procedures/downstream-feedback.md` dedup/intake) routes here, never restates the
 logic. The neutral act is *record / read a backlog item*; the realisation is the
-`collaboration.backlog` adapter point (`PROTOCOL.md` `## Project config`; the why:
+`collaboration.backlog` adapter point (`protocol-reference.md ## Project config`; the why:
 `docs/decisions/multi-user-mode.md` §2). `[persona]`.
 
 - **Resolve once.** `collaboration.backlog` (absent/unrecognised ⇒ `file`):

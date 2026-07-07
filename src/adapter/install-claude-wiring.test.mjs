@@ -66,6 +66,7 @@ registerStragglerSweep();
     // the minimal source surface the installer reads (vendor + lay-down + claude wire)
     fs.mkdirSync(path.join(srcCopy, "src"), { recursive: true });
     copyMin("PROTOCOL.md");
+    copyMin("protocol-reference.md");
     copyMin("package.json");
     for (const d of ["adapter", "agents", "modules", "quality", "templates"]) copyMin(path.join("src", d));
     // corrupt the shim the installer will vendor + wire

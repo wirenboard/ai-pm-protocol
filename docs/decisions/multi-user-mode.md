@@ -115,7 +115,7 @@ protocol has TWO distinct review surfaces, and they are not the same thing:
 
 - the **AI Reviewer** produces a **local, transient stamp** (`.ai-dev/reviews/`),
   read by the local merge-gate deny and **deleted at ship** (`PROTOCOL.md`
-  beat 5; the gate "checks the stamp's presence", `PROTOCOL.md ## Enforcement`).
+  beat 5; the gate "checks the stamp's presence", `protocol-reference.md ## Enforcement`).
   It is **not** a remote forge check.
 - the **remote required-status-check** is the **`quality`** suite (linters, tests),
   set in branch protection — and it is deliberately **model-independent**, "the

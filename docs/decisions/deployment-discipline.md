@@ -67,12 +67,12 @@ non-deploy purposes). So the deny layer cannot catch "deployed without reading t
 in-flight, exactly as it cannot catch a skipped Reviewer in-flight (the persona-floor
 class — `docs/decisions/persona-floor-external-substitute.md`). The compensating controls
 are the **audit dimension** (catches a missing/stale/scattered doc on the cadence) and the
-existing **remote-mutation ask-class** (`PROTOCOL.md` `## Enforcement`), which already asks
+existing **remote-mutation ask-class** (`protocol-reference.md ## Enforcement`), which already asks
 before a remote mutation — adjacent to a deploy, but not a doc-currency check.
 
 ## Cross-links (not restated)
 
-- The **remote-mutation ask-class** (`PROTOCOL.md` `## Enforcement`) confirms a remote
+- The **remote-mutation ask-class** (`protocol-reference.md ## Enforcement`) confirms a remote
   mutation before it runs — the closest mechanical neighbour, but it gates *the act*, not
   *deploy-per-doc*.
 - **Invariant 4** keeps repo-owned files under git; runtime, deploys, and remote state are

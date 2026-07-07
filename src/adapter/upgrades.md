@@ -4,6 +4,24 @@ The one home of "what to do after the protocol version bumps". The installer lay
 
 **Downgrades are unsupported.** A version-pinned re-run (`npx github:wirenboard/ai-pm-protocol#v<tag> <target>`) converges the vendored files back, but no downgrade notes exist — a MAJOR downgrade is the Operator's own risk.
 
+## MINOR 5.60.0 — protocol-reference.md companion doc
+
+Nothing manual beyond the installer re-run. This version moves three reference-only
+sections (`## Enforcement`, `## Project config`, `## Core and adapter`) from
+`PROTOCOL.md` into a new companion doc `protocol-reference.md`, deployed to
+`.ai-dev/protocol-reference.md` (sibling of `.ai-dev/PROTOCOL.md`). The installer
+re-run creates the companion; PROTOCOL.md's resident summaries point to it.
+
+A downstream project installed before this version has no `.ai-dev/protocol-reference.md`
+— the pointer in `.ai-dev/PROTOCOL.md` will not resolve. Re-run the installer once
+to receive the companion:
+
+```sh
+node .ai-dev/tooling/src/adapter/install.mjs .
+```
+
+No manual config or rename steps required.
+
 ## MINOR 5.51.0 — model-routes.json split (shared routes / personal proxyUrl)
 
 After the re-run, if your `.ai-dev/model-routes.json` carries a `proxyUrl` (a personal,

@@ -42,7 +42,7 @@ executes them):
 **Honesty map.** Stamp write, prior-version detect, marker write, restart print, notes
 lay-down — `[mechanical]` (installer code, deterministic, testable). The session noticing
 the marker, offering, executing, deleting — `[persona]`: no deny can force a positive act
-(PROTOCOL.md `## Enforcement`). The inject rule, if added, only *reinforces* the persona
+(`protocol-reference.md ## Enforcement`). The inject rule, if added, only *reinforces* the persona
 offer.
 
 ## Evidence
@@ -53,7 +53,7 @@ offer.
 - **Re-run semantics today** — overwrite-idempotent for tooling/PROTOCOL/runner
   (`install.mjs:94-116`); only-if-absent for config and `tools.json` (`install.mjs:62-66,
   123-138`), so a new config key reaches an old install never — compat rests entirely on
-  the absent⇒default rule (PROTOCOL.md `## Project config`), which holds for every current
+  the absent⇒default rule (`protocol-reference.md ## Project config`), which holds for every current
   key. Claude hooks merge de-dups by exact command string and never prunes
   (`install.mjs:183-199`) — a *changed* hook command accumulates the stale group.
 - **f4 migration test** (`src/adapter/install.test.mjs:139-156`) proves install-over-old

@@ -6,7 +6,7 @@
 //
 // Honesty: this makes "run the whole set" reliable; it does NOT make "the agent
 // invoked it" mechanical. That invocation stays a persona act — a runner cannot
-// force a positive act (PROTOCOL.md `## Enforcement`).
+// force a positive act (protocol-reference.md `## Enforcement`).
 //
 // Usage: node src/quality/run.mjs <build|review|ship>
 //

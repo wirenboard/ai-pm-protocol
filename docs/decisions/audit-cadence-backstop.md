@@ -215,7 +215,7 @@ audit *is*.
 - Internal: `docs/decisions/persona-floor-external-substitute.md` (F5-1 posture: audit is
   a quality sweep, safety floor is merge-gate + branch protection; F5-2 Claude-only inject
   parked); `orchestrator.md` `## Audit` (5.23.0 derivable + fail-safe-to-offer cadence) and
-  `## Your seat` (pointer marker as a recoverable cache); `PROTOCOL.md` `## Enforcement`
+  `## Your seat` (pointer marker as a recoverable cache); `protocol-reference.md ## Enforcement`
   (the inject-class: nudges, never blocks) and `## Role contracts` (over-claim = blocking
   honesty failure); `.gitignore` (`.ai-dev/state/` local-only since 5.5.0);
   `.github/workflows/checks.yml` (the `quality` job an advisory step would ride);

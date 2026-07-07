@@ -128,7 +128,7 @@ function projectHookMode(root) {
 
 // The project's rigor profile (.ai-dev/config.json `profile`). Defaults to "solo"
 // on absent / unreadable / malformed / unknown value — proportionality by default
-// (PROTOCOL.md `## Project config`), a deliberate Operator decision, not fail-strict.
+// (protocol-reference.md `## Project config`), a deliberate Operator decision, not fail-strict.
 // Predicates that read the profile:
 //   - orchestrator-content deny: relaxed on lite/solo/yolo (the original gate).
 //   - merge-gate: short-circuits (returns false) on yolo — the explicit gate-off.

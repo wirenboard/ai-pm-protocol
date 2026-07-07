@@ -106,7 +106,7 @@ model**.
 The running session is **already on the strong launch model** (`launch.sessionModel`),
 **already inside the plan beat** (it shows the plan to the Operator and holds the
 approval), and — decisively — **already permitted by the enforcement layer to write a
-feature plan** (`PROTOCOL.md ## Enforcement`: the orchestrator-content-write deny excepts
+feature plan** (`protocol-reference.md ## Enforcement`: the orchestrator-content-write deny excepts
 "its own state and a feature plan"). So B is **mechanically already legal** — no deny rule
 changes. The Builder seat becomes a pure build seat; its model may be pinned cheap without
 touching plan quality.
@@ -266,7 +266,7 @@ new model mechanism — this is C's cleanest aspect.**
 - "The Orchestrator only routes" **eroded to fiction** — with the session planning *and*
   building-on-solo, reviewers began seeing session-authored plans indistinguishable from
   role work, and on Claude the deny layer already can't tell an orchestrator-authored write
-  from a sub-agent's (`PROTOCOL.md ## Enforcement`, the actor-resolution caveat), so the
+  from a sub-agent's (`protocol-reference.md ## Enforcement`, the actor-resolution caveat), so the
   last conceptual guardrail thinned.
 
 ### Inversion — how does each option fail **worst**?
