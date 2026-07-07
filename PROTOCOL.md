@@ -1,6 +1,6 @@
 # The AI-Dev Protocol
 
-This file is the platform-neutral constitution: the rules every role follows on every turn. It names *what* must happen ("spawn a reviewer", "deny a write outside the project") and never which tool on which platform does it — each platform is an adapter (`## Core and adapter`). Read it whole before acting. One home per fact: detail not here lives in `docs/architecture.md` (mental model), the adapter data (platform specifics), or git history (past decisions).
+This file is the platform-neutral constitution: the rules every role follows on every turn. It names *what* must happen ("spawn a reviewer", "deny a write outside the project") and never which tool on which platform does it — each platform is an adapter (`## Core and adapter`). The **Orchestrator** reads it whole; a spawned role carries the invariants that bind it (composed into its agent) and reads the rest on demand. One home per fact: detail not here lives in `docs/architecture.md` (mental model), the adapter data (platform specifics), or git history (past decisions).
 
 The Operator decides *what* and *why*, talks in their own language, approves plans, and merges — and never reads code.
 

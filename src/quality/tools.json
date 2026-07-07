@@ -50,6 +50,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "invariants-parity",
+      "checks": "invariants-composition one-home guard — each committed assembled Claude role agent (.claude/agents/dev-{builder,planner,reviewer}.md) contains the PROTOCOL.md §Invariants block verbatim; a PROTOCOL.md edit without re-baking fails here, preventing the composed block from drifting from its single source",
+      "config": null,
+      "run": "node src/adapter/invariants-parity.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "rigor-profile",
       "checks": "configurable rigor — the engine resolves the profile to solo by default (absent/unknown/malformed/unconfigured) and relaxes the orchestrator-content deny under lite/solo, denying only under an explicit full; the floor (tooling, boundary, truncation, merge-gate, stamp-write) never relaxes under any profile",
       "config": null,
