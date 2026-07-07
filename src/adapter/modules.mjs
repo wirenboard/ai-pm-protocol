@@ -164,6 +164,28 @@ export function filterPlatform(text, platform) {
 
 // ── compose ─────────────────────────────────────────────────────────────────
 export const MARKER = "<!-- ai-dev:modules -->";
+export const INVARIANTS_MARKER = "<!-- ai-dev:invariants -->";
+
+// Extract the ## Invariants section from PROTOCOL.md — the single source of truth
+// for the invariants that bind every spawned role. Returns the heading + body up to
+// (not including) the next ## heading, with trailing blank lines and the ---
+// section-separator trimmed, so the composed block is self-contained in each agent.
+export function extractInvariantsSection(root) {
+  const protocol = fs.readFileSync(path.join(path.resolve(root), "PROTOCOL.md"), "utf8");
+  const lines = protocol.split("\n");
+  let start = -1, end = lines.length;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i] === "## Invariants") { start = i; continue; }
+    if (start >= 0 && /^## /.test(lines[i])) { end = i; break; }
+  }
+  if (start === -1) throw new Error("PROTOCOL.md: ## Invariants section not found");
+  // Trim trailing blank lines then the --- section-separator then trailing blank lines.
+  let trimEnd = end;
+  while (trimEnd > start && !lines[trimEnd - 1].trim()) trimEnd--;
+  if (trimEnd > start && lines[trimEnd - 1] === "---") trimEnd--;
+  while (trimEnd > start && !lines[trimEnd - 1].trim()) trimEnd--;
+  return lines.slice(start, trimEnd).join("\n");
+}
 
 // Apply the resolved DEPTH to a fragment's tagged checklist. A fragment marks each
 // item with a leading code-span tag — `[light]` (the core subset every depth keeps)
@@ -209,27 +231,36 @@ function fragmentFor(root, mod, role, config) {
 
 // Compose a role's FLOOR body with the enabled modules' fragments for that role,
 // then strip any block tagged for a DIFFERENT platform than `platform` (filterPlatform).
-// Replaces the single MARKER with the fragments (registry order, blank-line
-// separated). A floor body WITHOUT the marker takes no fragments — a role a
-// module does not target simply omits the marker. `platform` is the ASSEMBLING
-// adapter's name, passed by each install-agents shim; missing/unknown ⇒ no platform
-// filtering (fail-safe keep-all — filterPlatform).
+// Two markers are replaced in order:
+//   1. INVARIANTS_MARKER — the PROTOCOL.md §Invariants block (verbatim, same for every role).
+//   2. MARKER             — the enabled capability-module fragments (registry order).
+// A floor body WITHOUT a marker simply omits it — a role a module does not target
+// omits MARKER; a role that does not compose invariants omits INVARIANTS_MARKER.
+// `platform` is the ASSEMBLING adapter's name; missing/unknown ⇒ no platform filtering
+// (fail-safe keep-all — filterPlatform).
 export function composeBody(root, floorBody, role, registry, config, platform) {
+  // 1. Replace the invariants marker with the PROTOCOL.md §Invariants block.
+  //    The extraction reads PROTOCOL.md once per call, lazily — most bodies carry no marker.
+  let body = floorBody;
+  if (body.includes(INVARIANTS_MARKER)) {
+    const invariants = extractInvariantsSection(root);
+    const invRe = new RegExp(INVARIANTS_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\n?");
+    body = body.replace(invRe, invariants + "\n\n");
+  }
+  // 2. Replace the modules marker with the enabled capability-module fragments.
+  //    Replace the marker AND its trailing newline. A non-empty block lands as its own
+  //    section followed by a blank line; an empty block (no enabled module targets this
+  //    role) collapses the marker to nothing, leaving the floor's own spacing intact.
   const fragments = [];
   for (const { mod } of enabledModules(registry, config)) {
     const text = fragmentFor(root, mod, role, config);
     if (text) fragments.push(text);
   }
-  let body = floorBody;
-  if (floorBody.includes(MARKER)) {
+  if (body.includes(MARKER)) {
     const block = fragments.join("\n\n");
-    // Replace the marker AND its trailing newline. A non-empty block lands as its own
-    // section followed by a blank line, so the next floor heading does not collide with
-    // the fragment's last line; an empty block (no enabled module targets this role)
-    // collapses the marker to nothing, leaving the floor's own spacing intact.
     const markerRe = new RegExp(MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\n?");
-    body = floorBody.replace(markerRe, block ? block + "\n\n" : "");
+    body = body.replace(markerRe, block ? block + "\n\n" : "");
   }
-  // Strip inactive-platform blocks last, so it covers both floor and composed fragments.
+  // Strip inactive-platform blocks last, so it covers both floor and composed content.
   return filterPlatform(body, platform);
 }
