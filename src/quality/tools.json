@@ -122,10 +122,26 @@
       "init": "Node >= 18 + git, no install"
     },
     {
-      "id": "merge-gate",
-      "checks": "the unstamped-review merge-gate parses commands correctly — the pushed/merged ref outranks .git/HEAD (cross-branch push reads the right stamp), any branch prefix strips (feature/, fix/, bare), non-shell heredoc bodies are data (no verb false positives; shell-heredoc and malformed bodies stay matched), the accepted stamp labels are exactly the documented two, and an UNRESOLVABLE topic asks, never passes",
+      "id": "merge-gate-stamp-resolution",
+      "checks": "merge-gate topic resolution + stamp forms — any branch prefix strips (feature/, fix/, bare), split-line/heading-level stamp variants accepted, unresolvable topic asks (never passes), stamp labels exactly Code review/Doc review (Validation dropped)",
       "config": null,
-      "run": "node src/adapter/merge-gate.test.mjs",
+      "run": "node src/adapter/merge-gate-stamp-resolution.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "merge-gate-ref-parsing",
+      "checks": "merge-gate reference parsing — pushed ref outranks HEAD (cross-branch push reads the right stamp), non-shell heredoc bodies are data (shell/malformed kept), path-traversal topic validation keeps stamp path inside reviews/, merge-* plumbing subcommands not treated as merges",
+      "config": null,
+      "run": "node src/adapter/merge-gate-ref-parsing.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
+      "id": "merge-gate-trunk-and-worktree",
+      "checks": "merge-gate trunk push, worktree checkouts, and git global flags — explicit trunk push denies not asks (F1), no-slash HEAD branch resolves via HEAD, worktree .git-file pointer followed, git -C/-c/--git-dir global flags normalised, trunk --ff-only sync carve-out, force-push-with-lease to non-trunk allowed",
+      "config": null,
+      "run": "node src/adapter/merge-gate-trunk-and-worktree.test.mjs",
       "beat": "build",
       "init": "Node >= 18, no install"
     },
