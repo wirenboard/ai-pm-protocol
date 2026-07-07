@@ -502,4 +502,48 @@ check("[launch-env] non-object aliases ⇒ no alias key written", (() => {
   }
 }
 
+// ── Workflow tool deny by default (#368) ──────────────────────────────────────
+// The Claude install writes permissions.deny:["Workflow"] so CC drops the built-in
+// Workflow tool's ~5k-token schema from the resident prompt (the protocol orchestrates
+// via Agent, never Workflow). The merge is idempotent and preserves a user's own denies.
+{
+  const cli = path.join(ROOT, "src", "adapter", "install.mjs");
+  const readDeny = (t) => {
+    const s = JSON.parse(fs.readFileSync(path.join(t, ".claude", "settings.json"), "utf8"));
+    return (s.permissions && Array.isArray(s.permissions.deny)) ? s.permissions.deny : [];
+  };
+
+  // Fresh install ⇒ Workflow denied by default.
+  const fresh = freshTarget("workflow-deny-fresh");
+  spawnSync("node", [cli, fresh, "--platform", "claude"], { encoding: "utf8" });
+  check("[workflow-deny] fresh install denies Workflow by default", readDeny(fresh).includes("Workflow"));
+  check("[workflow-deny] does NOT deny Agent/Task or the dev tools",
+    !readDeny(fresh).some((d) => ["Agent", "Task", "Read", "Edit", "Write", "Bash", "Grep", "Glob"].includes(d)));
+
+  // A pre-existing user deny is PRESERVED and Workflow appended; a second install is
+  // idempotent (no duplicate Workflow entry, user deny still there).
+  const preseed = freshTarget("workflow-deny-preseed");
+  fs.mkdirSync(path.join(preseed, ".claude"), { recursive: true });
+  fs.writeFileSync(path.join(preseed, ".claude", "settings.json"),
+    JSON.stringify({ permissions: { allow: ["Bash(ls *)"], deny: ["SomeUserTool"] } }, null, 2) + "\n");
+  spawnSync("node", [cli, preseed, "--platform", "claude"], { encoding: "utf8" });
+  const preseedSettings = JSON.parse(fs.readFileSync(path.join(preseed, ".claude", "settings.json"), "utf8"));
+  check("[workflow-deny] pre-existing user deny preserved", readDeny(preseed).includes("SomeUserTool"));
+  check("[workflow-deny] pre-existing permissions.allow preserved (whole object not clobbered)",
+    Array.isArray(preseedSettings.permissions.allow) && preseedSettings.permissions.allow.includes("Bash(ls *)"));
+  check("[workflow-deny] Workflow appended alongside the user deny", readDeny(preseed).includes("Workflow"));
+  spawnSync("node", [cli, preseed, "--platform", "claude"], { encoding: "utf8" });
+  const twice = readDeny(preseed);
+  check("[workflow-deny] idempotent — single Workflow entry after a second install",
+    twice.filter((d) => d === "Workflow").length === 1 && twice.includes("SomeUserTool"));
+
+  // Coherence guard: no assembled agent's `tools:` frontmatter lists Workflow — the
+  // deny must never contradict a tool the protocol actually grants a role.
+  const agentsDir = path.join(fresh, ".claude", "agents");
+  const usesWorkflow = fs.existsSync(agentsDir) && fs.readdirSync(agentsDir)
+    .filter((f) => f.endsWith(".md"))
+    .some((f) => /^tools:.*\bWorkflow\b/m.test(fs.readFileSync(path.join(agentsDir, f), "utf8")));
+  check("[workflow-deny] no assembled agent grants the Workflow tool (deny is coherent)", !usesWorkflow);
+}
+
 report("INSTALL-CLAUDE-WIRING", "PASS — Claude wiring self-verify, ensureConfig, and launch-env all hold");

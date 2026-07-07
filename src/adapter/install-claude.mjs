@@ -67,6 +67,17 @@ export function wireClaude(target, dogfood) {
   const settingsPath = path.join(target, ".claude", "settings.json");
   const settings = fs.existsSync(settingsPath) ? JSON.parse(fs.readFileSync(settingsPath, "utf8")) : {};
   settings.hooks = mergeHooks(settings.hooks || {}, hooksFragment.hooks);
+  // Deny the built-in Workflow tool by default (#368). CC ships Workflow's full JSON
+  // schema resident in the system prompt (~5k tokens) whether it is used or not; the
+  // protocol orchestrates through the Agent tool and NEVER uses Workflow, so a BARE
+  // tool deny drops the schema from context entirely (not just blocks invocation) —
+  // ~5k reclaimed for every downstream Claude project, re-paid per compaction on a
+  // small-window model. Merge idempotently: never clobber a user's own permissions or
+  // deny entries, never duplicate Workflow on a re-run. NOT Agent/Task or the dev tools.
+  settings.permissions = settings.permissions || {};
+  const deny = Array.isArray(settings.permissions.deny) ? settings.permissions.deny : [];
+  if (!deny.includes("Workflow")) deny.push("Workflow");
+  settings.permissions.deny = deny;
   // The wrapper-less auto-apply of the launch-time models: write the config `launch`
   // section into settings.json `env`, which Claude Code reads AT STARTUP — so a routed
   // project needs no personal export wrapper for the env (the proxy PROCESS is still
