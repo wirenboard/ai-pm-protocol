@@ -58,7 +58,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadRegistry, composeBody } from "../modules.mjs";
+import { loadRegistry, composeBody, composeFloorOnly } from "../modules.mjs";
 import { loadConfigWithLocal } from "../router-launch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -249,6 +249,32 @@ export function install(outDir, config) {
     fs.writeFileSync(outPath, out);
     written[agentId] = outPath;
     console.log(`wrote ${path.relative(ROOT, outPath)}  (role ${role} -> ${agentId}${pin ? `, model ${pin}` : ""})`);
+  }
+  // Emit the fixup Reviewer variant (floor-only body, same model pin) for fixup-grade
+  // spawns. The fixup agent id is derived as `{reviewerAgentId}-fixup` (naming convention
+  // — the single derivation home: orchestrator.md `## Your seat`). The frontmatter is
+  // `reviewer-fixup.fm` (description signals floor-only to the harness); the body uses
+  // composeFloorOnly (§Invariants in, modules marker resolves to empty). The model pin is
+  // the SAME as the full reviewer — the fixup variant runs on the same tier (same cross-model
+  // independence benefit).
+  const reviewerAgentId = config.roles?.reviewer?.agent;
+  if (reviewerAgentId) {
+    const fixupFm = fs.readFileSync(path.join(ROOT, "src", "adapter", "claude", "agents", "reviewer-fixup.fm"), "utf8").trim();
+    const fixupFloor = fs.readFileSync(path.join(ROOT, "src", "agents", "reviewer.md"), "utf8").trimStart();
+    const fixupBody = composeFloorOnly(ROOT, fixupFloor, "reviewer", registry, "claude");
+    // Resolve the model pin identically to the full reviewer (re-apply the same wish
+    // logic — absent ⇒ auto, degrade auto if !autoOk).
+    let fixupWish = config.roles?.reviewer?.model;
+    if (fixupWish === undefined || fixupWish === null) fixupWish = "auto";
+    if (fixupWish === "auto" && !autoOk) fixupWish = "session";
+    const fixupPin = resolveModelPin(fixupWish, sessionWish, policy, boundTiers);
+    const fixupModelLine = fixupPin ? `model: ${fixupPin}\n` : "";
+    const fixupAgentId = `${reviewerAgentId}-fixup`;
+    const fixupOut = `---\nname: ${fixupAgentId}\n${fixupFm}\n${fixupModelLine}---\n\n${fixupBody}`;
+    const fixupOutPath = path.join(outDir, `${fixupAgentId}.md`);
+    fs.writeFileSync(fixupOutPath, fixupOut);
+    written[fixupAgentId] = fixupOutPath;
+    console.log(`wrote ${path.relative(ROOT, fixupOutPath)}  (reviewer-fixup -> ${fixupAgentId}${fixupPin ? `, model ${fixupPin}` : ""})`);
   }
   writeOrchestrator(outDir, config, registry, written);
   return written;

@@ -229,6 +229,19 @@ function fragmentFor(root, mod, role, config) {
   return applyDepth(raw, effectiveToggle(mod, config).depth);
 }
 
+// Compose a role's FLOOR body with ALL modules disabled — the floor-only variant used
+// for fixup-grade baked agents (e.g. dev-reviewer-fixup). The §Invariants block is
+// composed in verbatim (identical to the full body); the <!-- ai-dev:modules --> marker
+// resolves to empty (no module fragment). A floor body without a modules marker is
+// unchanged. The `allOff` config is built from the registry's own module ID list (our
+// data, trusted), never from untrusted input.
+export function composeFloorOnly(root, floorBody, role, registry, platform) {
+  const allOff = {
+    modules: Object.fromEntries((registry.modules || []).map((m) => [m.id, false])),
+  };
+  return composeBody(root, floorBody, role, registry, allOff, platform);
+}
+
 // Compose a role's FLOOR body with the enabled modules' fragments for that role,
 // then strip any block tagged for a DIFFERENT platform than `platform` (filterPlatform).
 // Two markers are replaced in order:
