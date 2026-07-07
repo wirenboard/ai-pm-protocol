@@ -40,7 +40,7 @@ const TOOLING = path.join(ROOT, ".ai-dev", "tooling", "engine.mjs"); // never-wr
 const STAMP = path.join(ROOT, ".ai-dev", "reviews", "x_review.md");  // the Reviewer's deliverable
 
 // A second root with an EXPLICIT `full` profile, for the orchestrator-content case
-// only: the profile default is `solo` (PROTOCOL.md `## Project config`), so on the
+// only: the profile default is `solo` (protocol-reference.md `## Project config`), so on the
 // unconfigured ROOT that deny relaxes — only an explicit `full` keeps it. The
 // default-resolution itself is pinned in rigor-profile.test.mjs.
 const FULL = fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-parity-full-"));

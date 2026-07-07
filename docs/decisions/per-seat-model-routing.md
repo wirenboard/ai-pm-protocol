@@ -97,7 +97,7 @@ mechanism**, NOT on whether a proxy exists:
 - **Separate headless process** (`claude -p … --resume <id>`) → continuity is explicit
   and robust (option A, or B/C if the Builder is spawned as its own process).
 - **In-session subagent** → continuity is the platform's *optional* subagent-continue
-  (the `## Core and adapter` "continue a sub-agent" point); absent ⇒ fresh spawn, only a
+  (the `protocol-reference.md ## Core and adapter` "continue a sub-agent" point); absent ⇒ fresh spawn, only a
   re-read token cost.
 
 A proxy is a **stateless forwarder** — it holds no conversation state, and DeepSeek's

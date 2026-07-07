@@ -1,6 +1,6 @@
 # The adapter layer
 
-The protocol is one neutral core (`../../PROTOCOL.md`, `../agents/`) plus one thin adapter per platform. This directory is where a platform plugs in. The contract is fixed and small (`PROTOCOL.md` `## Core and adapter`); an adapter realises it and nothing more.
+The protocol is one neutral core (`../../PROTOCOL.md`, `../agents/`) plus one thin adapter per platform. This directory is where a platform plugs in. The contract is fixed and small (`protocol-reference.md ## Core and adapter`); an adapter realises it and nothing more.
 
 ## How it's shaped
 

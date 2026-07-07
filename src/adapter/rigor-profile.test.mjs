@@ -3,7 +3,7 @@
 // The ONE mechanical change the profile makes: it relaxes the
 // orchestrator-content deny (the orchestrator may author source/doc paths), and
 // ONLY that predicate. The default is `solo` — proportionality by default
-// (PROTOCOL.md `## Project config`) — so the relaxation also holds on absent /
+// (protocol-reference.md `## Project config`) — so the relaxation also holds on absent /
 // unknown / malformed / unconfigured; only an explicit `full` keeps the deny.
 // This test proves:
 //   1. orchestrator source WRITE is ALLOWED under lite / solo / absent / unknown /

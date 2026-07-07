@@ -1,5 +1,5 @@
 // ssh-content-edit — the remote-edit DENY floor distinguishes a remote WRITE from a
-// remote READ that merely uses a redirect (invariant 4 / PROTOCOL.md `## Enforcement`).
+// remote READ that merely uses a redirect (invariant 4 / protocol-reference.md `## Enforcement`).
 //
 // The defect this pins: the `>` redirect branch of the `sshContentEdit` predicate used
 // to fire on ANY redirect target, so a read-only diagnostic (`ssh host 'cmd 2>/dev/null'`,

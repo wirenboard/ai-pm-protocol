@@ -26,6 +26,7 @@ export function vendorTooling(target, version) {
   copyTree(path.join(SOURCE, "src", "quality"), path.join(tooling, "quality"));
   copyTree(path.join(SOURCE, "src", "templates"), path.join(tooling, "templates"));
   copyFile(path.join(SOURCE, "PROTOCOL.md"), path.join(toolingRoot, "PROTOCOL.md"));
+  copyFile(path.join(SOURCE, "protocol-reference.md"), path.join(toolingRoot, "protocol-reference.md"));
   fs.writeFileSync(path.join(toolingRoot, "VERSION"), version + "\n");
 }
 
@@ -37,6 +38,8 @@ export function vendorTooling(target, version) {
 export function layDownCore(target) {
   // The constitution lives inside .ai-dev/ — not at the project root.
   copyFile(path.join(SOURCE, "PROTOCOL.md"), path.join(target, ".ai-dev", "PROTOCOL.md"));
+  // The reference companion mirrors the constitution's deploy — sibling of PROTOCOL.md.
+  copyFile(path.join(SOURCE, "protocol-reference.md"), path.join(target, ".ai-dev", "protocol-reference.md"));
 
   // The quality layer: ship the SHAPE (the registry format + the runner),
   // NOT this repo's own tool rows. tools.json is laid down only where absent

@@ -78,7 +78,7 @@ shipped is unsafe; pruning stays the audit/Operator's act).
 This makes orphaned-transient detection **mechanically SURFACED, never mechanically
 ENFORCED.** The ship-beat delete stays a `[persona]` *decision to act*; only its
 *follow-up visibility* becomes mechanical. The check never reds a build, never gates
-a merge — it is an **inject-class nudge** (`PROTOCOL.md` `## Enforcement`: nudges,
+a merge — it is an **inject-class nudge** (`protocol-reference.md ## Enforcement`: nudges,
 never blocks). Selling it as "transient cleanup is now enforced" would be a
 review-blocking honesty over-claim (`PROTOCOL.md` `## Role contracts`). It narrows
 one already-persona window; it adds nothing to the safety floor (broken or unreviewed
@@ -94,7 +94,7 @@ advisory could be built directly rather than parked.
 
 ## Sources
 
-- Internal: `PROTOCOL.md` beat 5 (the ship-beat transient delete) and `## Enforcement`
+- Internal: `PROTOCOL.md` beat 5 (the ship-beat transient delete) and `protocol-reference.md ## Enforcement`
   (the inject-class — nudges, never blocks) + `## Role contracts` (over-claim = a
   blocking honesty failure); `orchestrator.md` `## Your seat` (the persona delete
   step) and `## Audit` (the `durable-text hygiene` dimension this extends);

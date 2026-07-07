@@ -56,7 +56,7 @@ The shim is the only platform-specific code; the engine and the rules are shared
 
 The load-bearing distinction: what the deny layer actually **stops at the tool-call layer** versus what only the prose asks for. The layer can block an action (and, where the platform supports it, ask first). But it **cannot** force a positive act (cannot make the Orchestrator spawn a Reviewer), and it **cannot** read the Orchestrator's reasoning.
 
-So every protection is either *mechanical* (a rule in the engine) or *persona* (prose only). `PROTOCOL.md` `## Enforcement` labels each honestly and lists the persona-only ones; this section is the code map.
+So every protection is either *mechanical* (a rule in the engine) or *persona* (prose only). `protocol-reference.md ## Enforcement` labels each honestly and lists the persona-only ones; this section is the code map.
 
 The rules are **data**. Each row in `deny-rules.json` carries an intent, a class, which neutral act it watches, and the name of a **predicate** — a function in `engine.mjs` that decides. Classes: `deny` (block) · `ask` (confirm) · `inject` (add context, don't block).
 
@@ -79,7 +79,7 @@ Two wrinkles are the only non-obvious part, and both are **platform-capability**
  src/quality/         the project's checks                   + map verdict) + glue
 ```
 
-Adding a platform = write **only** its shim (input-normaliser + verdict-mapper + install glue) and add its column to `tool-map.json`; **zero edits** to the engine, the rules, or the core. If a new platform forces an edit to any of those, the boundary leaked (`PROTOCOL.md` `## Core and adapter`).
+Adding a platform = write **only** its shim (input-normaliser + verdict-mapper + install glue) and add its column to `tool-map.json`; **zero edits** to the engine, the rules, or the core. If a new platform forces an edit to any of those, the boundary leaked (`protocol-reference.md ## Core and adapter`).
 
 **OpenCode shim note:** the plugin entry defines its hook functions inline — a hook imported from another module and re-exported is not registered by the loader. Only the rule logic is imported; the engine stays outside the scanned plugin directory. Detail: `src/adapter/INSTALL.md`.
 
