@@ -50,8 +50,16 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "install-fixup-agents",
+      "checks": "fixup-agent assembly — dev-reviewer-fixup.md (floor-only body for fixup-grade review) is produced alongside dev-reviewer.md on both platforms (Claude + OpenCode); the fixup body contains §Invariants verbatim + full floor prose; it contains NO module fragment markers ('module is on'); the raw <!-- ai-dev:modules --> and <!-- ai-dev:invariants --> markers are consumed (not left in body); the fixup body is strictly smaller than the full by >10,000 chars; the naming convention is {reviewerAgentId}-fixup; and the Claude model pin in the fixup frontmatter matches the full reviewer",
+      "config": null,
+      "run": "node src/adapter/install-fixup-agents.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "invariants-parity",
-      "checks": "invariants-composition one-home guard — each committed assembled Claude role agent (.claude/agents/dev-{builder,planner,reviewer}.md) contains the PROTOCOL.md §Invariants block verbatim; a PROTOCOL.md edit without re-baking fails here, preventing the composed block from drifting from its single source",
+      "checks": "invariants-composition one-home guard — each committed assembled Claude role agent (.claude/agents/dev-{builder,planner,reviewer,reviewer-fixup}.md) contains the PROTOCOL.md §Invariants block verbatim; a PROTOCOL.md edit without re-baking fails here, preventing the composed block from drifting from its single source",
       "config": null,
       "run": "node src/adapter/invariants-parity.test.mjs",
       "beat": "build",

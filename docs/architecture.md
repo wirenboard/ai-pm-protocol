@@ -131,6 +131,8 @@ So a bad config can only ever turn MORE rigor on, never silently disable it — 
 
 The registry, the config doc, and the fragments all label it so; over-claiming a module as mechanical enforcement is a Reviewer honesty-gate find.
 
+**Floor-only variant.** The installer also produces `{agentId}-fixup.md` for roles that carry the modules marker (currently: `reviewer`) — a floor-only body for fixup-grade review, keeping every floor gate and dropping only module depth. The fixup body is assembled by `composeFloorOnly` — identical to `composeBody` except every module ID is forced off, so the `<!-- ai-dev:modules -->` marker resolves to empty. The §Invariants block is still composed in verbatim. The naming convention (`{agentId}-fixup`) and the derivation rule live in `orchestrator.md` `## Your seat`; the assembler helper is the single home in `src/adapter/modules.mjs`. The fixup variant is used by the orchestrator for fixup-grade Reviewer spawns: economy (no module depth) without weakening the floor (§Invariants + the full security / correctness / honesty checklist remain). The `install-drift` guard covers the fixup file automatically (it iterates all files the generator writes).
+
 The catalog of shipped modules — each module's purpose, toggle shape, per-kind defaults — is the registry, its single home (count them there, not here). A module's FLOOR stays in the role floor bodies (e.g. threat-model's "a security-relevant change has its threats named", product-advocate's `product-readiness-gate` contract); the fragment is purely the deepening, self-gated to the changes it applies to.
 
 ## Extension points

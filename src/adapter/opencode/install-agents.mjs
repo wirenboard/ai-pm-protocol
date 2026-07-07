@@ -18,7 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadRegistry, composeBody } from "../modules.mjs";
+import { loadRegistry, composeBody, composeFloorOnly } from "../modules.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const ROLES = ["orchestrator", "planner", "builder", "reviewer"];
@@ -65,6 +65,22 @@ export function install(outDir, config) {
     fs.writeFileSync(outPath, out);
     written[agentId] = outPath;
     console.log(`wrote ${path.relative(ROOT, outPath)}  (role ${role} -> ${agentId}${modelPin ? `, model ${modelPin}` : ""})`);
+  }
+  // Emit the fixup Reviewer variant (floor-only body) for fixup-grade spawns. The fixup
+  // agent id is derived as `{reviewerAgentId}-fixup` (naming convention — the single
+  // derivation home: orchestrator.md `## Your seat`). No model pin — OpenCode never
+  // bakes a model line (see resolveModelPin above).
+  const reviewerAgentId = config.roles?.reviewer?.agent;
+  if (reviewerAgentId) {
+    const fixupFm = fs.readFileSync(path.join(ROOT, "src", "adapter", "opencode", "agents", "reviewer-fixup.fm"), "utf8").trim();
+    const fixupFloor = fs.readFileSync(path.join(ROOT, "src", "agents", "reviewer.md"), "utf8").trimStart();
+    const fixupBody = composeFloorOnly(ROOT, fixupFloor, "reviewer", registry, "opencode");
+    const fixupAgentId = `${reviewerAgentId}-fixup`;
+    const fixupOut = `---\n${fixupFm}\n---\n\n${fixupBody}`;
+    const fixupOutPath = path.join(outDir, `${fixupAgentId}.md`);
+    fs.writeFileSync(fixupOutPath, fixupOut);
+    written[fixupAgentId] = fixupOutPath;
+    console.log(`wrote ${path.relative(ROOT, fixupOutPath)}  (reviewer-fixup -> ${fixupAgentId})`);
   }
   return written;
 }

@@ -31,6 +31,7 @@ const AGENTS = [
   { rel: path.join(".claude", "agents", "dev-builder.md"), role: "builder" },
   { rel: path.join(".claude", "agents", "dev-planner.md"), role: "planner" },
   { rel: path.join(".claude", "agents", "dev-reviewer.md"), role: "reviewer" },
+  { rel: path.join(".claude", "agents", "dev-reviewer-fixup.md"), role: "reviewer-fixup" },
 ];
 
 console.log("INVARIANTS-PARITY (each assembled agent contains PROTOCOL.md §Invariants verbatim):");
