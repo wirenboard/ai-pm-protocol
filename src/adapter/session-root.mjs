@@ -10,10 +10,16 @@
 // legitimate separate-repo bootstrap. The session is anchored instead to the nearest
 // `.ai-dev/config.json` marker (the protocol/downstream root carries it; a nested repo
 // does not), and the git-targeting denies are scoped to the SESSION repo's git db.
+//
+// Also: `extractGitEffectiveCwd` (#383 Feature A) resolves the directory a `git -C <path>`
+// command runs in, so the gate checks the CORRECT target repo instead of the shell cwd
+// (which `git -C` does not change). Lives here (not in engine-bash.mjs) because it needs
+// `fs.realpathSync` — the engine must stay pure, no fs calls.
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { maskQuotedSpans } from "./engine-bash.mjs";
 
 // Walk up from `cwd` to the nearest ancestor dir carrying `.ai-dev/config.json` (the
 // session marker). Returns that dir, or null when none is found (an unconfigured
@@ -71,4 +77,51 @@ export function targetsSessionRepo(cwd, sessionRoot) {
   const sessionTop = gitToplevel(sessionRoot);
   if (sessionTop === null) return true; // session repo unresolvable ⇒ fail-closed
   return path.resolve(cwdTop) === path.resolve(sessionTop);
+}
+
+// Extract the effective git working-directory from a command string's `-C <path>`
+// global flag. Called by the shim's main() before computing targetsSessionRepo, so a
+// `git -C /other-repo commit|push origin main` targeting a provably-different repo is
+// no longer falsely blocked by the SESSION repo's HEAD state (#383 Feature A).
+//
+// Returns the resolved canonical path when EXACTLY ONE `-C` flag is present and its
+// target exists on disk; returns `cwd` unchanged in EVERY other case (FAIL-CLOSED).
+//
+// Security contract:
+//   • No `-C` flag → `cwd` (fast path, unchanged behavior — common case)
+//   • Exactly one `-C <path>` → path.resolve(cwd, rawPath) then realpathSync it
+//   • Multiple `-C` flags (chained `git -C a -C b`) → `cwd` (fail-closed)
+//   • realpathSync throws (non-existent or inaccessible path) → `cwd` (fail-closed)
+//   • `-c` lowercase is `git -c key=val` (config option) — NOT a cwd flag; this
+//     function is CASE-SENSITIVE and only extracts uppercase `-C`
+//   • Quoted spans masked first: a `-C /path` inside a commit message is data, not a flag
+//   • A realpath that resolves back to the session repo: targetsSessionRepo returns true
+//     → deny still fires (symlink safety; the check lives upstream, not here)
+//   • Error path: any exception returns `cwd` → targetsSessionRepo computes as before
+//     → the function CANNOT produce a false ALLOW through error
+export function extractGitEffectiveCwd(command, cwd) {
+  if (typeof command !== "string" || !command) return cwd;
+  // Mask quoted spans: a `-C /path` inside `git commit -m "use -C /other"` is
+  // data in the message, not a flag. maskQuotedSpans replaces "…" and '…' with blanks.
+  const masked = maskQuotedSpans(command);
+  // Collect all `-C <value>` occurrences, case-sensitive (uppercase -C only).
+  // `-C` must be preceded by start, whitespace, or a shell separator — never the
+  // interior of a long option like `--no-color` (which has 'o' before the 'C').
+  // Two accepted forms:
+  //   • `-C value`  (space-separated, captured in group 1)
+  //   • `-Cvalue`   (glued, no space, rare but git-valid, captured in group 2)
+  const re = /(?:^|[\s;&|(])-C(?:\s+(\S+)|(\S+))/g;
+  let m;
+  const hits = [];
+  while ((m = re.exec(masked)) !== null) {
+    hits.push(m[1] ?? m[2]);
+  }
+  if (hits.length !== 1) return cwd; // zero or multiple flags → fail-closed
+  const rawPath = hits[0];
+  try {
+    const resolved = path.resolve(cwd, rawPath);
+    return fs.realpathSync(resolved); // throws when path does not exist
+  } catch {
+    return cwd; // non-existent path or any fs error → fail-closed
+  }
 }
