@@ -30,7 +30,7 @@ import { fileURLToPath } from "node:url";
 import { evaluate, loadConfig } from "./engine.mjs";
 import { decide as claudeDecide } from "./claude/shim.mjs";
 import { decide as ocDecide } from "./opencode/normalise.mjs";
-import { findSessionMarkerRoot, resolveSessionRoot, targetsSessionRepo, gitToplevel } from "./session-root.mjs";
+import { findSessionMarkerRoot, resolveSessionRoot, targetsSessionRepo, gitToplevel, extractGitEffectiveCwd } from "./session-root.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SHIM = path.join(HERE, "claude", "shim.mjs");
@@ -217,6 +217,129 @@ try {
   //     boundary is the session root, not the nested repo).
   check("e2e:nested-cwd-write-outside-denies",
     shimVerdict({ tool_name: "Write", tool_input: { file_path: path.join(fx.parent, "escape.txt"), content: "x" }, cwd: fx.nested }),
+    "deny");
+
+  // ── 6. `-C` FLAG SCOPE — extractGitEffectiveCwd (#383 Feature A) ──────────────
+  // The shim's main() calls extractGitEffectiveCwd(bashCmd, cwd) before computing
+  // targetsSessionRepo, so `git -C /other-repo commit|push origin main` targeting a
+  // provably-different repo is no longer falsely denied by the session repo's HEAD state.
+  //
+  // SECURITY FLOOR: bare commands (no -C) still DENY — the regression tests below prove it.
+  // OpenCode gap (documented): undefined signal → fail-closed → deny applies for ALL -C
+  // commands on OpenCode (no platform change needed; this section covers Claude only).
+  console.log("§6 EXTRACT-GIT-EFFECTIVE-CWD (-C flag scope, Feature A #383):");
+
+  // Build fixtures: otherRepo (a real separate git repo outside fx.session, for allow tests)
+  // and mainSession (session on main with config + history, for commitOnUnstampedMain tests).
+  const otherRepo = (() => {
+    const p = path.join(fx.parent, "other-fa");
+    fs.mkdirSync(p, { recursive: true });
+    gitInit(p);
+    return p;
+  })();
+
+  const mainSession = (() => {
+    const p = path.join(fx.parent, "main-session");
+    fs.mkdirSync(p, { recursive: true });
+    gitInit(p);
+    // HEAD → main branch
+    execFileSync("git", ["symbolic-ref", "HEAD", "refs/heads/main"], { cwd: p, stdio: "ignore" });
+    // Loose ref so repoHasCommits returns true (the commitOnUnstampedMain carve-out requires history)
+    fs.mkdirSync(path.join(p, ".git", "refs", "heads"), { recursive: true });
+    fs.writeFileSync(path.join(p, ".git", "refs", "heads", "main"), "abc1234\n");
+    // projectConfigured marker
+    fs.mkdirSync(path.join(p, ".ai-dev"), { recursive: true });
+    fs.writeFileSync(path.join(p, ".ai-dev", "config.json"), "{}");
+    return p;
+  })();
+
+  // ── 6a. Unit tests — extractGitEffectiveCwd directly ──────────────────────────
+  {
+    const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-ecwd-")));
+    const proj = path.join(base, "proj");
+    const sub = path.join(base, "sub");
+    const lnk = path.join(base, "lnk");
+    fs.mkdirSync(proj);
+    fs.mkdirSync(sub);
+    fs.symlinkSync(proj, lnk); // symlink → proj (for FU-6)
+    try {
+      // FU-1: no -C flag → cwd unchanged (fast path)
+      check("FU-1:no-C", extractGitEffectiveCwd("git commit -m msg", base), base);
+      // FU-2: single absolute -C /abs/path → realpathSync(/abs/path)
+      check("FU-2:abs-C", extractGitEffectiveCwd(`git -C ${proj} commit`, base), proj);
+      // FU-3: single relative -C relpath → resolve(cwd, relpath) then realpath
+      check("FU-3:rel-C", extractGitEffectiveCwd("git -C sub commit", base), sub);
+      // FU-4: multiple -C flags → fail-closed (returns cwd)
+      check("FU-4:multi-C", extractGitEffectiveCwd(`git -C ${proj} -C ${sub} commit`, base), base);
+      // FU-5: -C with non-existent path → realpathSync throws → fail-closed
+      check("FU-5:nonexistent-C", extractGitEffectiveCwd("git -C /nonexistent-ai-dev-xyzabc commit", base), base);
+      // FU-6: -C symlink → returns realpath (the symlink's target, not the symlink itself)
+      check("FU-6:symlink-C", extractGitEffectiveCwd(`git -C ${lnk} commit`, base), proj);
+      // FU-7: -c (lowercase) is `git -c key=val` config option, never a cwd flag
+      check("FU-7:lowercase-c", extractGitEffectiveCwd("git -c core.editor=vim commit", base), base);
+      // FU-8: compound command — -C is found across a shell separator (&&)
+      check("FU-8:compound", extractGitEffectiveCwd(`cd /other && git -C ${proj} commit`, base), proj);
+      // Adversary case: -C inside a quoted commit message → masked → ignored (cwd unchanged)
+      check("FU-9:quoted-msg", extractGitEffectiveCwd(`git commit -m "use -C ${proj}"`, base), base);
+    } finally {
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  }
+
+  // ── 6b. Integration: commit-on-main via real shim subprocess ──────────────────
+  // FA-1: git -C /other-repo commit while session is on main → ALLOW (the fix)
+  check("FA-1:C-other-commit:allows",
+    shimVerdict({ tool_name: "Bash", tool_input: { command: `git -C ${otherRepo} commit -m init` }, cwd: mainSession }),
+    "allow");
+  // FA-2: git commit (no -C) while session is on main → DENY (floor intact — regression)
+  check("FA-2:bare-commit-main:denies",
+    shimVerdict({ tool_name: "Bash", tool_input: { command: "git commit -m x" }, cwd: mainSession }),
+    "deny");
+  // FA-3: git -C /session-itself push origin main → DENY (same-repo, no exemption).
+  //       extractGitEffectiveCwd resolves -C path to the session repo itself →
+  //       targetsSessionRepo = true → deny fires. Push form for the same reason as
+  //       the fail-closed block below (commitOnUnstampedMain lacks normalizeGitInvocation).
+  check("FA-3:C-session-push:denies",
+    shimVerdict({ tool_name: "Bash", tool_input: { command: `git -C ${mainSession} push origin main` }, cwd: mainSession }),
+    "deny");
+
+  // ── 6c. Integration: push-origin-main via real shim subprocess ────────────────
+  // FA-4: git -C /other-repo push origin main while session unstamped → ALLOW (the fix)
+  check("FA-4:C-other-push-main:allows",
+    shimVerdict({ tool_name: "Bash", tool_input: { command: `git -C ${otherRepo} push origin main` }, cwd: fx.session }),
+    "allow");
+  // FA-5: git push origin main (no -C) while session unstamped → DENY (floor intact — regression)
+  check("FA-5:bare-push-main:denies",
+    shimVerdict({ tool_name: "Bash", tool_input: { command: "git push origin main" }, cwd: fx.session }),
+    "deny");
+
+  // ── 6d. Fail-closed cases (all DENY) ──────────────────────────────────────────
+  // NOTE: tested via `push origin main` rather than `git commit -m x` because
+  // commitOnUnstampedMain uses `/\bgit\s+commit\b/` (no normalizeGitInvocation),
+  // so `git -C <path> commit` does not match — a pre-existing engine limitation,
+  // out of scope for Feature A. mergeWithUnstampedReview calls normalizeGitInvocation
+  // first and correctly handles global flags. The security property (fail-closed) is
+  // identical: any ambiguity resolves to cwd = mainSession (session repo) → deny fires.
+  // FA-6: -C non-existent path → realpathSync throws → cwd used → session deny fires
+  check("FA-6:nonexistent-C:denies",
+    shimVerdict({ tool_name: "Bash", tool_input: { command: "git -C /nonexistent-ai-dev-xyzabc push origin main" }, cwd: mainSession }),
+    "deny");
+  // FA-7: multiple -C flags → fail-closed → cwd used → session deny fires
+  check("FA-7:multi-C:denies",
+    shimVerdict({ tool_name: "Bash", tool_input: { command: `git -C ${otherRepo} -C ${mainSession} push origin main` }, cwd: mainSession }),
+    "deny");
+  // FA-8: -C symlink pointing to session repo → realpath resolves to session → deny fires
+  {
+    const lnkSession = path.join(fx.parent, "lnk-main-session");
+    fs.symlinkSync(mainSession, lnkSession);
+    check("FA-8:C-symlink-session:denies",
+      shimVerdict({ tool_name: "Bash", tool_input: { command: `git -C ${lnkSession} push origin main` }, cwd: mainSession }),
+      "deny");
+    fs.unlinkSync(lnkSession);
+  }
+  // FA-9: git -c core.editor=vim (lowercase c) → -c ≠ -C → cwd used → session deny fires
+  check("FA-9:lowercase-c-regression:denies",
+    shimVerdict({ tool_name: "Bash", tool_input: { command: "git -c core.editor=vim push origin main" }, cwd: mainSession }),
     "deny");
 } finally {
   fs.rmSync(fx.parent, { recursive: true, force: true });

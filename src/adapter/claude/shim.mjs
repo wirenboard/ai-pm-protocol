@@ -9,7 +9,7 @@
 // drop-in for the inline shell+jq guards. Install wiring: adapter README.
 
 import { evaluate, loadConfig } from "../engine.mjs";
-import { resolveSessionRoot, targetsSessionRepo } from "../session-root.mjs";
+import { resolveSessionRoot, targetsSessionRepo, extractGitEffectiveCwd } from "../session-root.mjs";
 import { deriveSanctionedScratch } from "./sanctioned-scratch.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -150,7 +150,14 @@ function main() {
       // Scope the git-targeting denies to the session repo (fail-CLOSED — see
       // session-root.mjs): a command in a separate nested repo is exempt, the session
       // repo's floor is untouched, any doubt denies.
-      const result = decide(payload, root, config, { targetsSessionRepo: targetsSessionRepo(cwd, root) });
+      // Extract the effective cwd from a `git -C <path>` flag (#383 Feature A): a command
+      // targeting a provably-different repo via `-C` is no longer falsely blocked by the
+      // session repo's HEAD state. Fail-closed: any doubt → cwd → unchanged strict behaviour.
+      const bashCmd = (payload && typeof payload.tool_input === "object")
+        ? (payload.tool_input.command ?? null) : null;
+      const effectiveCwd = (typeof bashCmd === "string")
+        ? extractGitEffectiveCwd(bashCmd, cwd) : cwd;
+      const result = decide(payload, root, config, { targetsSessionRepo: targetsSessionRepo(effectiveCwd, root) });
       const out = mapVerdict(result, payload.hook_event_name);
       if (out) process.stdout.write(JSON.stringify(out));
     } catch (e) {
