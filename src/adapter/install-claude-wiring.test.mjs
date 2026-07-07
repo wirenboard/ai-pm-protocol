@@ -525,9 +525,12 @@ check("[launch-env] non-object aliases ⇒ no alias key written", (() => {
   const preseed = freshTarget("workflow-deny-preseed");
   fs.mkdirSync(path.join(preseed, ".claude"), { recursive: true });
   fs.writeFileSync(path.join(preseed, ".claude", "settings.json"),
-    JSON.stringify({ permissions: { deny: ["SomeUserTool"] } }, null, 2) + "\n");
+    JSON.stringify({ permissions: { allow: ["Bash(ls *)"], deny: ["SomeUserTool"] } }, null, 2) + "\n");
   spawnSync("node", [cli, preseed, "--platform", "claude"], { encoding: "utf8" });
+  const preseedSettings = JSON.parse(fs.readFileSync(path.join(preseed, ".claude", "settings.json"), "utf8"));
   check("[workflow-deny] pre-existing user deny preserved", readDeny(preseed).includes("SomeUserTool"));
+  check("[workflow-deny] pre-existing permissions.allow preserved (whole object not clobbered)",
+    Array.isArray(preseedSettings.permissions.allow) && preseedSettings.permissions.allow.includes("Bash(ls *)"));
   check("[workflow-deny] Workflow appended alongside the user deny", readDeny(preseed).includes("Workflow"));
   spawnSync("node", [cli, preseed, "--platform", "claude"], { encoding: "utf8" });
   const twice = readDeny(preseed);
