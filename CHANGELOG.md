@@ -12,6 +12,10 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.60.3] — 2026-07-08
+
+- **PATCH** — retire the file backlog; migrate it to forge epics (#379). The project moved to `collaboration.backlog: forge` (5.58.0), but the 314-line `.ai-dev/backlog.md` still held the old file backlog. Migrated: the 26 live items → epics **#382–#390** (E1 multi-model/personal-config · E2 enforcement gaps · E3 forge/team lifecycle · E4 OpenCode parity · E5 distribution · E6 process/audit discipline · E7 token economy/estimation · E8 grounding/verification · E9 parking-lot), each listing its members to split into tickets when taken up; shipped/resolved and vague/wrong-repo entries dropped (git history keeps them). `.ai-dev/backlog.md` becomes a redirect stub — the backlog adapter no longer reads it. Migration completeness independently reviewed (no live item lost). Internal repo housekeeping, not published downstream (`.ai-dev/backlog.md` is not in `files`).
+
 ## [5.60.2] — 2026-07-08
 
 - **PATCH** — behaviour-preserving decompose of the oversized `src/adapter/merge-gate.test.mjs` (#378). The file had grown to 987 lines, over the 800-line eslint `max-lines` threshold (a standing build warning). Split by scenario cohesion into three sibling files — `merge-gate-stamp-resolution.test.mjs` (topic/stamp resolution), `merge-gate-ref-parsing.test.mjs` (pushed-ref/heredoc/path-traversal), `merge-gate-trunk-and-worktree.test.mjs` (trunk push, worktree gitdir, `--ff-only` carve-out, force-with-lease) — plus a shared `merge-gate-helpers.mjs`; the single `tools.json` registry row is replaced by three (no orphaned test file). **Behaviour-preserving:** the original 141 checks are exactly preserved (32 + 37 + 72 = 141), every assertion identical — independently verified by the Reviewer (all 125 literal + 6 loop check-sites diff-identical old↔new). No merge-gate source change (`engine.mjs`/`deny-rules.json` untouched). The eslint warning is gone with no new one. PATCH — internal test refactor, no contract change.
