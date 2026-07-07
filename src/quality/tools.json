@@ -58,6 +58,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "pack-completeness",
+      "checks": "publish-completeness guard — every ROOT-level file the installer copies from SOURCE (PROTOCOL.md, protocol-reference.md) is in the package.json `files` whitelist, i.e. present in `npm pack --dry-run`; catches the 5.60.0 class where install-drift's dogfood mode (SOURCE===target) passed but the packed npm/git tarball omitted the file and downstream install ENOENT'd",
+      "config": null,
+      "run": "node src/adapter/pack-completeness.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "rigor-profile",
       "checks": "configurable rigor — the engine resolves the profile to solo by default (absent/unknown/malformed/unconfigured) and relaxes the orchestrator-content deny under lite/solo, denying only under an explicit full; the floor (tooling, boundary, truncation, merge-gate, stamp-write) never relaxes under any profile",
       "config": null,
