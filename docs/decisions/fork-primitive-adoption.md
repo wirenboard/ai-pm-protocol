@@ -1,5 +1,7 @@
 # Fork primitive adoption for orchestrator direct-work (solo/lite)
 
+**Status: adopted (2026-07-08) — recommendation "adopt with guards"; implemented as `tool-map.json` `fork-for-direct-work` entry + orchestrator prose (`## Your seat` profile ladder).**
+
 **Question (2026-07-08, issue #376).** Should the protocol adopt the Claude Code `fork`
 agent primitive for the Orchestrator's own direct work in `solo`/`lite` profiles, where
 the Orchestrator plans or builds in-session and every tool call (file reads, searches,
@@ -157,6 +159,7 @@ significant step, refresh the active plan's progress note. A fork inherits this 
 obligation.
 
 **The checkpoint protocol:**
+
 1. The fork writes to the plan progress note (`.ai-dev/plans/<topic>.md`) at each
    significant step — same "goal · current progress · next step · open findings" format,
    superseding not appending (invariant 6). This is not a new discipline: the fork inherits
@@ -198,10 +201,14 @@ with a documented fallback and a `null` on platforms that lack it):
 - No new entry in `deny-rules.json` — "fork" is not a role duplicator or generic builtin;
   the existing `spawnTargetInDenySet` predicate correctly allows it (the deny set in
   `deny-rules.json` `role_deny_set` does not list "fork").
-- Zero edit to `PROTOCOL.md`, `src/agents/*.md`, `src/adapter/engine.mjs`, or
-  `deny-rules.json`. The adapter-shape test ("a new platform is supported by writing only
-  its adapter, with zero edits to the core" — `docs/architecture.md ## Extension points`)
-  passes: this is a `tool-map.json` row only.
+- Zero edit to `PROTOCOL.md`, `src/adapter/engine.mjs`, `claude/shim.mjs`, or
+  `deny-rules.json` (the deny floor and the constitution are untouched). The only prose
+  change is a one-bullet `[persona]` guard in `src/agents/orchestrator.md` (`## Your seat`):
+  when the Orchestrator may fork its own direct work + the hard Reviewer/full-Planner
+  prohibition. That is the orchestrator agent (the role adapter), not the neutral core;
+  the adapter-shape guarantee ("a new platform is supported by writing only its adapter,
+  zero core edit" — `docs/architecture.md ## Extension points`) holds. A `parity.test.mjs`
+  case pins that a `fork` spawn is not in the deny set.
 - Orchestrators on platforms that choose not to implement fork simply use in-session-direct.
   No capability degrades.
 
@@ -213,8 +220,10 @@ with a documented fallback and a `null` on platforms that lack it):
 mechanism is clean (optional tool-map entry, fail-safe fallback), and the risk is bounded
 and named. The four conditions that must hold before any broader adoption:
 
-1. **Tool-map only, no core edit.** The fork capability is an adapter-layer entry in
-   `tool-map.json`. No change to `PROTOCOL.md`, no new deny rule, no new protocol seat.
+1. **Adapter + orchestrator-prose only, no neutral-core edit.** The fork capability is an
+   adapter-layer entry in `tool-map.json` plus a one-bullet `[persona]` guard in the
+   orchestrator agent (`src/agents/orchestrator.md`). No change to `PROTOCOL.md`, no new
+   deny rule, no new protocol seat, no engine/shim change.
 
 2. **Reviewer prohibition explicit.** The tool-map entry's `_doc` names the prohibition
    clearly. The rationale (invariant 3: fresh-context independence) is stated. Any
@@ -232,6 +241,7 @@ and named. The four conditions that must hold before any broader adoption:
    entry stays `null`.
 
 **What this does NOT change:**
+
 - The Reviewer seat: always a cold `Task` spawn, never a fork. Invariant 3 is untouched.
 - The full-profile Planner seat: same.
 - Any existing deny rule.
