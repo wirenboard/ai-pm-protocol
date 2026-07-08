@@ -255,6 +255,15 @@ const FIXTURE = [
     claude: { tool_name: "Task", tool_input: { subagent_type: "dev-planner" } },
     opencode: { tool: "task", args: { subagent_type: "dev-planner" } } },
 
+  // fork subagent_type is NOT in the deny set (role_deny_set generic_builtins / role_duplicators)
+  // — the Orchestrator MAY use it for its own direct plan/build work (tool-map fork-for-direct-work).
+  // This case pins that it is never denied by the engine, so the prose-only guard (never fork for
+  // the Reviewer or full-profile Planner) is the only thing that holds — confirming the decision
+  // doc's analysis (docs/decisions/fork-primitive-adoption.md ## 2).
+  { name: "allow-spawn-fork", expect: "allow",
+    claude: { tool_name: "Task", tool_input: { subagent_type: "fork" } },
+    opencode: { tool: "task", args: { subagent_type: "fork" } } },
+
   // yolo profile turns the merge-gate OFF — an unstamped push on a yolo project allows.
   // Uses a dedicated yolo root so only this case sees that profile.
   { name: "yolo-merge-gate-off", expect: "allow", root: YOLO,
