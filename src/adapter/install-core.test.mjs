@@ -656,4 +656,71 @@ testPlatform("opencode", (target) => {
   check("[banner] heuristic: a fresh install (no prior) ⇒ no caveat", isStaleNpxReRun(path.join("/home/u/.npm/_npx/abc/src"), null, v) === false);
 }
 
+// ── RATCHET (#400 quality-runner-path split): assembled agent path === deployed path ──
+// Root cause of #400: the assembled downstream Builder/Reviewer named `src/quality/run.mjs`
+// (the SOURCE path, absent downstream) while the installer deployed the runner to
+// `.ai-dev/quality/run.mjs`. The mismatch was dogfood-blind (source repo has src/quality/).
+//
+// This test pins the contract: the runner path the assembled downstream Builder agent names
+// must be the path the installer ACTUALLY deploys the runner to in a real downstream install.
+// RED before the fix (agents named src/quality/run.mjs, deployed path was .ai-dev/quality/run.mjs).
+// GREEN after (both say .ai-dev/quality/run.mjs).
+//
+// Implementation: do a real non-dogfood install into a temp dir (inside the root —
+// the boundary allows .tmp-install* under root; .gitignore excludes them). Then:
+//   1. Read the assembled Builder body and extract the `node … run.mjs build` invocation.
+//   2. Parse the path from that invocation.
+//   3. Assert that path exists inside the installed target.
+//   4. Confirm the assembled Reviewer names the same path for the review beat.
+{
+  const target = freshTarget("runner-path");
+  try {
+    install(target, "claude");
+
+    // 1. Read the assembled downstream Builder
+    const builderBody = fs.readFileSync(path.join(target, ".claude", "agents", "dev-builder.md"), "utf8");
+    // Extract the `node <path> build` invocation — the literal the Builder follows
+    const buildMatch = builderBody.match(/`node ([^\s`]+) build`/);
+    check("[runner-path] assembled Builder names a run.mjs invocation", buildMatch !== null);
+    const builderRunnerPath = buildMatch ? buildMatch[1] : null;
+
+    // 2. Assert the path the agent names resolves to a REAL file in the install target
+    if (builderRunnerPath) {
+      const resolvedRunner = path.join(target, builderRunnerPath);
+      check(
+        "[runner-path] the runner path the Builder names exists in the installed target",
+        fs.existsSync(resolvedRunner),
+      );
+      check(
+        "[runner-path] the deployed runner is at .ai-dev/quality/run.mjs (the canonical runtime path)",
+        builderRunnerPath === ".ai-dev/quality/run.mjs",
+      );
+    }
+
+    // 3. Assembled Reviewer names the same path for the review beat
+    const reviewerBody = fs.readFileSync(path.join(target, ".claude", "agents", "dev-reviewer.md"), "utf8");
+    const reviewMatch = reviewerBody.match(/`node ([^\s`]+) review`/);
+    check("[runner-path] assembled Reviewer names a run.mjs invocation", reviewMatch !== null);
+    if (reviewMatch) {
+      check(
+        "[runner-path] Reviewer's run.mjs path matches Builder's (one canonical path)",
+        reviewMatch[1] === builderRunnerPath,
+      );
+    }
+
+    // 4. Same contract holds for the fixup reviewer (also assembled downstream)
+    const fixupBody = fs.readFileSync(path.join(target, ".claude", "agents", "dev-reviewer-fixup.md"), "utf8");
+    const fixupMatch = fixupBody.match(/`node ([^\s`]+) review`/);
+    check("[runner-path] assembled fixup Reviewer names a run.mjs invocation", fixupMatch !== null);
+    if (fixupMatch) {
+      check(
+        "[runner-path] fixup Reviewer's path matches the canonical runtime path",
+        fixupMatch[1] === builderRunnerPath,
+      );
+    }
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
+}
+
 report("INSTALL-CORE", "PASS — installer vendors the adapter, wires both platforms, and is idempotent");

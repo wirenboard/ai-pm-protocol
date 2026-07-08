@@ -43,7 +43,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { SOURCE, PLATFORMS } from "./install-fs.mjs";
+import { SOURCE, PLATFORMS, copyFile } from "./install-fs.mjs";
 import { resolveSourceVersion, readPriorVersion, stampVersion, isStaleNpxReRun } from "./install-version.mjs";
 import { vendorTooling, layDownCore, deployProcedures, deployModules, ensureConfig, ensureTransientsGitignore, generateLaunchScript, installPrePushHook } from "./install-core.mjs";
 import { writeInactiveBreadcrumb } from "./install-breadcrumb.mjs";
@@ -118,7 +118,17 @@ export function install(targetDir, platformFlag, opts = {}) {
     // present, so ensureConfig / ensureTransientsGitignore are no-ops; only the
     // gitignored session-state dir is created for write-readiness. This is the path
     // that converges to the committed bytes (git status clean).
+    //
+    // Exception: deploy the quality runner to .ai-dev/quality/run.mjs so the dogfood
+    // repo finds it at the same canonical path assembled agents name. The runner is
+    // gitignored (.ai-dev/quality/ is in .gitignore), so this is a build artifact, not
+    // a committed duplicate of src/quality/run.mjs.
     fs.mkdirSync(path.join(target, ".ai-dev", "state"), { recursive: true });
+    fs.mkdirSync(path.join(target, ".ai-dev", "quality"), { recursive: true });
+    copyFile(
+      path.join(SOURCE, "src", "quality", "run.mjs"),
+      path.join(target, ".ai-dev", "quality", "run.mjs"),
+    );
     deployProcedures(target); // readable .ai-dev/procedures/ — converges to committed bytes
     deployModules(target); // readable .ai-dev/modules/ (runtime-read module files) — converges to committed bytes
     ensureConfig(target, platform);
