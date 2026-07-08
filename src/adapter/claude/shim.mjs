@@ -22,6 +22,14 @@ import { fileURLToPath } from "node:url";
 // can miss (startup / resume / clear / compact).
 const SESSION_START_INJECT = `**FIRST action — crash-resume discipline.** You operate with continuous checkpoints (the active plan's progress note) and a resume pointer at \`.ai-dev/state/current.md\`. On startup, resume, clear, and compact — and ANY time context feels degraded, contradictory, or unfamiliar — read \`.ai-dev/state/current.md\` FIRST (exact path; never file-search/glob — dot-dirs hide on some harnesses), reconcile its CURRENT STATE against reality (version vs \`git tag\`, active branch, the queue), THEN act. Absent (fresh clone / first session): fall back to \`git log --oneline -5\` + \`gh pr list\`. Do not build, review, or ship before the pointer is read.`;
 
+// PostToolUse / Task checkpoint nudge — fires after a spawned-role handoff (the canonical
+// "significant step" the continuous crash-resume checkpoint rule names). Pure inject:
+// no engine evaluation (PostToolUse carries no permission act, only the task result).
+// Claude-only mechanical; OpenCode is persona-only (inject-class is persona on OpenCode —
+// the chat.message hook was dropped, M18). One home for the wording — the orchestrator's
+// checkpoint rule POINTS at this as the mechanical backstop; the wording lives here.
+const CHECKPOINT_NUDGE = `A spawned role just handed back (a significant step). If a feature is in flight, refresh its active plan progress note (goal · progress · next · open findings) — supersede, don't append — and reconcile the resume pointer if it drifted. Keep the pointer thin.`;
+
 // ── normalise: Claude hook payload → neutral input ───────────────────────────
 // Returns the neutral `{ act, root, ... }` shape the engine consumes, or null
 // when this payload carries nothing the engine watches (the shim then allows).
@@ -134,6 +142,20 @@ function main() {
       process.stdout.write(JSON.stringify({
         hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: SESSION_START_INJECT },
       }));
+      process.exit(0);
+    }
+    // PostToolUse — a pure inject (the checkpoint nudge above) when the tool is Task (a
+    // spawned-role handoff = the canonical significant step). Bypasses decide(): PostToolUse
+    // carries no permission act and must never hit the engine deny (a Task spawn-deny would
+    // incorrectly fire after the fact). The matcher already scopes this hook to Task, but
+    // we guard defensively on the tool name. Non-Task tools: no output (a silent no-op exit).
+    // OpenCode asymmetry: inject-class is persona-only on OpenCode (no hook entry there).
+    if (payload && payload.hook_event_name === "PostToolUse") {
+      if (payload.tool_name === "Task") {
+        process.stdout.write(JSON.stringify({
+          hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: CHECKPOINT_NUDGE },
+        }));
+      }
       process.exit(0);
     }
     // Fail-OPEN past this point: a malformed deny-rules.json (loadConfig throws) or any

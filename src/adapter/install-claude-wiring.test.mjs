@@ -503,6 +503,94 @@ check("[launch-env] non-object aliases ⇒ no alias key written", (() => {
   }
 }
 
+// ── PostToolUse / Task checkpoint inject ─────────────────────────────────────
+// PostToolUse is a pure inject (no engine evaluation): the shim emits the checkpoint
+// nudge after a Task-tool return (a spawned-role handoff = the canonical significant
+// step the crash-resume checkpoint rule names). Scoped to Task only (matcher + defensive
+// tool-name guard). Claude-only mechanical; OpenCode is persona-only (inject-class was
+// dropped — M18). Sibling of the SessionStart inject family.
+{
+  const shim = path.join(ROOT, "src", "adapter", "claude", "shim.mjs");
+
+  // PostToolUse + Task → emits a PostToolUse checkpoint inject
+  {
+    const r = spawnSync("node", [shim], {
+      input: JSON.stringify({
+        hook_event_name: "PostToolUse",
+        tool_name: "Task",
+        tool_input: { subagent_type: "dev-builder" },
+        tool_response: { output: "done" },
+        cwd: ROOT,
+      }),
+      encoding: "utf8",
+    });
+    let out = null;
+    try { out = JSON.parse(r.stdout); } catch { /* not JSON → leave out null */ }
+    check("[checkpoint-inject] PostToolUse+Task: shim emits a PostToolUse inject",
+      !!out && out.hookSpecificOutput?.hookEventName === "PostToolUse");
+    check("[checkpoint-inject] PostToolUse+Task: inject additionalContext mentions plan progress note",
+      !!out && typeof out.hookSpecificOutput?.additionalContext === "string"
+        && /progress note/i.test(out.hookSpecificOutput.additionalContext));
+  }
+
+  // PostToolUse + non-Task (e.g., Bash) → no output (silent no-op)
+  {
+    const r = spawnSync("node", [shim], {
+      input: JSON.stringify({
+        hook_event_name: "PostToolUse",
+        tool_name: "Bash",
+        tool_input: { command: "ls" },
+        tool_response: { output: "file.txt" },
+        cwd: ROOT,
+      }),
+      encoding: "utf8",
+    });
+    check("[checkpoint-inject] PostToolUse+non-Task (Bash): no output (no nudge)",
+      r.stdout.trim() === "");
+  }
+
+  // PreToolUse / UserPromptSubmit / SessionStart payloads are NOT hijacked by the
+  // PostToolUse branch — the branch is scoped to hook_event_name === "PostToolUse" only.
+  for (const [label, payload] of [
+    ["PreToolUse+Task", { hook_event_name: "PreToolUse", tool_name: "Task", tool_input: { subagent_type: "dev-builder" }, cwd: ROOT }],
+    ["UserPromptSubmit", { hook_event_name: "UserPromptSubmit", prompt: "good morning", cwd: ROOT }],
+    ["SessionStart", { hook_event_name: "SessionStart", source: "startup", cwd: ROOT }],
+  ]) {
+    const r = spawnSync("node", [shim], { input: JSON.stringify(payload), encoding: "utf8" });
+    let out = null;
+    try { out = JSON.parse(r.stdout); } catch { /* ... */ }
+    check(`[checkpoint-inject] ${label} payload is NOT treated as a PostToolUse inject`,
+      !out || out.hookSpecificOutput?.hookEventName !== "PostToolUse");
+  }
+}
+
+// ── PostToolUse hook wired into settings.json after install ───────────────────
+// After a Claude install, .claude/settings.json carries the PostToolUse Task hook
+// referencing the shim — the checkpoint nudge's mechanical wiring.
+{
+  const cli = path.join(ROOT, "src", "adapter", "install.mjs");
+  const target = freshTarget("post-tool-use-hook");
+  try {
+    const r = spawnSync("node", [cli, target, "--platform", "claude"], { encoding: "utf8" });
+    check("[post-tool-use-wiring] install exits 0", r.status === 0);
+    const settings = JSON.parse(fs.readFileSync(path.join(target, ".claude", "settings.json"), "utf8"));
+    const postGroups = (settings.hooks && settings.hooks.PostToolUse) || [];
+    const shimCommand = postGroups
+      .flatMap((g) => (g.hooks || []).map((h) => (typeof h.command === "string" ? h.command : "")))
+      .find((c) => c.includes("shim.mjs"));
+    check("[post-tool-use-wiring] settings.json carries a PostToolUse hook referencing the shim",
+      !!shimCommand);
+    // The shim-routing group's matcher covers Task
+    const taskMatcher = postGroups
+      .filter((g) => (g.hooks || []).some((h) => typeof h.command === "string" && h.command.includes("shim.mjs")))
+      .map((g) => g.matcher)
+      .find((m) => typeof m === "string" && /\bTask\b/.test(m));
+    check("[post-tool-use-wiring] PostToolUse hook matcher covers Task", !!taskMatcher);
+  } finally {
+    fs.rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
+}
+
 // ── Workflow tool deny by default (#368) ──────────────────────────────────────
 // The Claude install writes permissions.deny:["Workflow"] so CC drops the built-in
 // Workflow tool's ~5k-token schema from the resident prompt (the protocol orchestrates
