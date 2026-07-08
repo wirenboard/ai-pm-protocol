@@ -2,7 +2,7 @@
 name: dev-reviewer-fixup
 description: Floor-only body for fixup-grade review — keeps every floor gate, drops only module depth. §Invariants + the full security / correctness / honesty checklist. Finds, does not fix; its only write is its verdict file.
 tools: Read, Grep, Glob, Bash, Write
-model: claude-opus-4-8
+model: claude-sonnet-4-6
 ---
 
 # Reviewer

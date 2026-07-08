@@ -2,7 +2,7 @@
 name: dev-planner
 description: Researches and plans one change on a strong model — grounds the plan in product, system, and stack (folds architect, stack-researcher, codebase-reader, product-advocate). Never codes; its one write is the transient plan file, handed back for approval.
 tools: Read, Write, Bash, Grep, Glob, Skill, WebFetch, WebSearch
-model: claude-sonnet-4-6
+model: claude-opus-4-8
 ---
 
 # Researcher-Planner
