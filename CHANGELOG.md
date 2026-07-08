@@ -12,6 +12,10 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.62.1] — 2026-07-08
+
+- **PATCH** — repoint two contracts at the decomposed merge-gate tests (whole-tree audit drift finding). 5.60.2 (#378) decomposed `src/adapter/merge-gate.test.mjs` into `merge-gate-{stamp-resolution,ref-parsing,trunk-and-worktree}.test.mjs` + `merge-gate-helpers.mjs` and updated `tools.json`, but left two contracts pointing at the deleted file (stating false current truth): `docs/contracts/disciplined-pipeline.md` → now `merge-gate-stamp-resolution.test.mjs` (where the stamp forms are pinned); `docs/contracts/cross-session-enforcement.md` → the `merge-gate-*.test.mjs` family (stamp forms + edge cases). No other stale reference remains (grep-confirmed; CHANGELOG history correctly left). Docs-only.
+
 ## [5.62.0] — 2026-07-08
 
 - **MINOR** — an in-project home for durable cross-session memory + thin-pointer enforcement (#316). Durable project knowledge (learned gotchas, "why we do X here", working context that outlives a session) had no in-project home, so it leaked into the resume pointer (the journal anti-pattern — invariant 6; `.ai-dev/state/current.md` bloated across this campaign) or into the external per-profile harness memory (unshared, invisible to the boundary). This gives it a home and makes the thin pointer mechanical:
