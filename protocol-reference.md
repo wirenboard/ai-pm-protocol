@@ -37,6 +37,7 @@ An ask/inject guard marked `toggleable` may be individually disabled via `.ai-de
 - On a work request to an **unconfigured** project: a reminder to run `setup` first.
 - On a feature request to a configured project with **no product brief**: a short, declinable offer to run product discovery first.
 - On **every** submitted prompt: a reminder to reply in the Operator's conversation language (invariant 5) — the turn's English artifacts must not pull the reply into English. Several injects on one turn aggregate into one note; this always-on reminder never suppresses a conditional one.
+- After a **spawned-role handoff** (Task-tool return) — `[mechanical]` on Claude, `[persona]` on OpenCode (inject-class is persona-only there; the chat.message hook was dropped — M18): a short reminder to refresh the active plan's progress note and reconcile the resume pointer. Reinforces the Orchestrator's `[persona]` continuous crash-resume checkpoint rule. The act stays the Orchestrator's; this nudges, never blocks.
 
 **Persona-only** (no deny is possible — these are reasoning acts):
 
