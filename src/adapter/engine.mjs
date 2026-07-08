@@ -56,12 +56,14 @@ import {
 // ── neutral input shape ──────────────────────────────────────────────────────
 // { act:'read'|'write'|'bash'|'spawn'|'prompt', root, path?, command?,
 //   content?, contentEmpty?, spawnTarget?, isOrchestrator?, prompt?,
-//   sanctionedScratch?, home? }
+//   sanctionedScratch?, sanctionedScratchWritable?, home? }
 // `sanctionedScratch`: adapter-derived canonical roots of the agent's OWN out-of-root
 //   scratch (the tool-result overflow store + per-session temp), consulted by the READ
-//   boundary predicates only — a read-only widening so a fetched/overflow artifact the
-//   harness itself placed is not false-blocked. `home`: $HOME for `~`→path expansion in
-//   bash-read. Both threaded by the platform shim; absent ⇒ today's strict behaviour.
+//   boundary predicates — a widening so a fetched/overflow artifact the harness itself
+//   placed is not false-blocked. `sanctionedScratchWritable`: the narrower subset (the
+//   per-session temp root only — never the overflow store), consulted by the WRITE
+//   boundary predicate. `home`: $HOME for `~`→path expansion in bash-read. All threaded
+//   by the platform shim; absent ⇒ today's strict behaviour.
 
 // Compile a config-sourced pattern and test it, returning FALSE on a compile error.
 // SCOPED TO INJECT-CLASS PREDICATES ONLY (promptMatchesChangeVerb / promptNeedsSetup /
@@ -134,10 +136,14 @@ const PREDICATES = {
   // per-root), which reports `self-patch-enforcer` — so this boundary predicate stays a
   // pure in-set membership test; a sibling's tooling write falls through here (sibling IS
   // in the set) and is caught by writesIntoTooling with the meaningful ruleId.
+  // The sole write-side carve-out: input.sanctionedScratchWritable (the agent's OWN
+  // per-session temp root ONLY — never the tool-result overflow store, which stays
+  // write-denied via this same predicate). Fail-closed: absent/empty ⇒ this check never
+  // admits anything ⇒ byte-identical to before the carve-out.
   writeTargetOutsideRoot(input) {
     return writeTargetsOf(input).some((t) => {
       const r = resolveTarget(input.root, t);
-      return !!r && !isInsideAnyComponent(input.root, r);
+      return !!r && !isInsideAnyComponent(input.root, r) && !isInsideSanctioned(input.sanctionedScratchWritable, r);
     });
   },
   emptyWriteOverNonEmpty(input) {

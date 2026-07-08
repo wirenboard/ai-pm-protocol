@@ -1,21 +1,33 @@
-// The agent's OWN out-of-root scratch allow-set — derivation (fail-closed) + the read-family
-// boundary carve-out. Two units under test:
+// The agent's OWN out-of-root scratch allow-set — derivation (fail-closed) + the boundary
+// carve-out, READ and WRITE. Units under test:
 //   (1) deriveSanctionedScratch(env, root) — derives the tool-result overflow store +
 //       the per-session harness temp root from the Claude env, fail-CLOSED (mirrors the
 //       componentRoots discipline: bad/absent/non-existent/overbroad ⇒ empty set).
+//   (1b) deriveSanctionedScratchWritable(env, root) — the WRITABLE subset of the same
+//       tagged derivation: ONLY the per-session temp root, never the overflow store
+//       (`#401`). Same fail-closed discipline as (1) — no logic duplicated between them.
 //   (2) the engine read predicates consult input.sanctionedScratch ALONGSIDE the component
-//       set — a sanctioned read is allowed, a non-sanctioned out-of-root read still denies,
-//       and a WRITE to a sanctioned path still denies (read-only widening).
+//       set — a sanctioned read is allowed, a non-sanctioned out-of-root read still denies.
+//   (2b) the engine write predicate consults input.sanctionedScratchWritable — a write to
+//       the per-session temp root allows, a write to the overflow store or any other
+//       out-of-root/sibling-session path still denies.
+//   (3) END-TO-END through the real `node shim.mjs` subprocess — the same real-write
+//       carve-out and the same guards, driven through the actual hook entry.
 //
 // This is the validator-level unit test for the security-core widening. Run:
 //   node src/adapter/claude/sanctioned-scratch.test.mjs
 
-import { deriveSanctionedScratch, _internals as scratchInternals } from "./sanctioned-scratch.mjs";
+import { deriveSanctionedScratch, deriveSanctionedScratchWritable, _internals as scratchInternals } from "./sanctioned-scratch.mjs";
 import { isInsideSanctioned } from "../engine-paths.mjs";
 import { _internals } from "../engine.mjs";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const SHIM = path.join(HERE, "shim.mjs");
 
 const { PREDICATES } = _internals;
 const UID = typeof process.getuid === "function" ? process.getuid() : null;
@@ -133,6 +145,75 @@ function setup(opts = {}) {
   has("symlinked configDir resolves to realpath", out, fs.realpathSync(path.join(real, "projects", slug, "tool-results")));
 }
 
+// ── (1b) deriveSanctionedScratchWritable — the WRITE-only subset (`#401`) ─────
+// Same fail-closed derivation, exposed narrower: ONLY the per-session temp root, never
+// the tool-result overflow store — the security invariant the whole write carve-out rests
+// on.
+
+// happy path: exactly the temp root, never the overflow store.
+{
+  const { root, slug, sid, tmpBase, env } = setup();
+  const out = deriveSanctionedScratchWritable(env, root);
+  check("writable: exactly 1 root", out.length, 1);
+  has("writable: per-session temp root present", out, fs.realpathSync(path.join(tmpBase, `claude-${UID}`, slug, sid)));
+  lacks("writable: overflow store NEVER present", out, "tool-results");
+}
+
+// missing CLAUDE_CODE_SESSION_ID ⇒ writable set is EMPTY (the overflow store never
+// substitutes — there is nothing writable when the temp root cannot derive).
+{
+  const { root, env } = setup({ omitSid: true });
+  check("writable: no sid ⇒ empty", deriveSanctionedScratchWritable(env, root).length, 0);
+}
+
+// missing CLAUDE_CONFIG_DIR (overflow store cannot derive) ⇒ writable set UNAFFECTED —
+// the temp root still derives independently.
+{
+  const { root, slug, sid, tmpBase, env } = setup({ omitConfig: true });
+  const out = deriveSanctionedScratchWritable(env, root);
+  check("writable: no configDir ⇒ temp root still writable", out.length, 1);
+  has("writable: no configDir ⇒ temp root present", out, fs.realpathSync(path.join(tmpBase, `claude-${UID}`, slug, sid)));
+}
+
+// empty/blank env ⇒ empty writable set (fail-closed, byte-identical to today's DENY for
+// ANY out-of-root write).
+{
+  const { root } = setup();
+  check("writable: empty env ⇒ []", deriveSanctionedScratchWritable({}, root).length, 0);
+  check("writable: null-ish env ⇒ []", deriveSanctionedScratchWritable({ CLAUDE_CONFIG_DIR: "  ", CLAUDE_CODE_SESSION_ID: "" }, root).length, 0);
+}
+
+// session-id-narrow: a SIBLING session's temp dir (same slug, different sid) is NOT in
+// the writable set derived for THIS session's sid — the derivation only ever builds ITS
+// OWN sid's path, so a sibling path never appears regardless of what exists on disk.
+{
+  const { root, slug, tmpBase, env } = setup({ sid: "aaaa-1111" });
+  const siblingSid = "bbbb-2222";
+  fs.mkdirSync(path.join(tmpBase, `claude-${UID}`, slug, siblingSid), { recursive: true });
+  const out = deriveSanctionedScratchWritable(env, root);
+  check("writable: exactly this session's temp root", out.length, 1);
+  lacks("writable: sibling sid NOT admitted", out, siblingSid);
+  has("writable: this session's own sid admitted", out, fs.realpathSync(path.join(tmpBase, `claude-${UID}`, slug, "aaaa-1111")));
+}
+
+// derived temp dir does NOT exist ⇒ writable set empty (fail-closed — mirrors the read
+// derivation's own missing-dir case).
+{
+  const { root } = setup({ makeTemp: false });
+  check("writable: missing temp dir ⇒ []", deriveSanctionedScratchWritable({ CLAUDE_CODE_SESSION_ID: "sid-x", TMPDIR: ws(), HOME: "/h" }, root).length, 0);
+}
+
+// the overbroad guard applies identically to the writable derivation (shares `admissible`
+// with the read derivation via the one internal deriveTagged — no separate, weaker guard).
+{
+  const { admissible } = scratchInternals;
+  const root = fs.realpathSync(ws());
+  const boundary = fs.realpathSync(ws());
+  const sanctioned = path.join(boundary, "child");
+  checkTrue("writable derivation shares the SAME admissible guard (happy path)", admissible(sanctioned, root, boundary));
+  checkFalse("writable derivation shares the SAME admissible guard (ancestor rejected)", admissible(path.dirname(root), root, boundary));
+}
+
 // ── (2) isInsideSanctioned (pure) ────────────────────────────────────────────
 {
   const S = ["/tmp/scratch"];
@@ -197,9 +278,23 @@ function setup(opts = {}) {
   checkTrue("read sanctioned but no set ⇒ denied (strict)", PREDICATES.pathOutsideRoot(
     { root, path: sanFile }, null));
 
-  // WRITE to a sanctioned path ⇒ TRUE (denied — write does NOT consult sanctioned).
-  checkTrue("write to sanctioned ⇒ denied (write unchanged)", PREDICATES.writeTargetOutsideRoot(
+  // WRITE to a read-sanctioned path with NO sanctionedScratchWritable ⇒ TRUE (denied) —
+  // the pre-`#401` regression case: a path admitted for READ only (e.g. the overflow
+  // store) never gets a write allow just because it is in the READ set.
+  checkTrue("write to read-sanctioned (no writable set) ⇒ denied — overflow-store shape", PREDICATES.writeTargetOutsideRoot(
     { act: "write", root, path: sanFile, sanctionedScratch: [san] }));
+  // WRITE to that SAME path when it is explicitly NOT in sanctionedScratchWritable (the
+  // real overflow-store shape: readable, never writable) ⇒ TRUE (denied).
+  checkTrue("write to overflow-store-shaped path (readable, not writable) ⇒ denied", PREDICATES.writeTargetOutsideRoot(
+    { act: "write", root, path: sanFile, sanctionedScratch: [san], sanctionedScratchWritable: [] }));
+  // WRITE to a path that IS in sanctionedScratchWritable (the temp-root shape) ⇒ FALSE
+  // (allowed) — the `#401` carve-out itself.
+  checkFalse("write to sanctionedScratchWritable path ⇒ allowed — temp-root shape (#401)", PREDICATES.writeTargetOutsideRoot(
+    { act: "write", root, path: sanFile, sanctionedScratchWritable: [san] }));
+  // WRITE to a DIFFERENT out-of-root path while sanctionedScratchWritable is set to
+  // something else entirely ⇒ TRUE (denied) — the writable set does not blanket-allow.
+  checkTrue("write to foreign path while an unrelated writable set exists ⇒ denied", PREDICATES.writeTargetOutsideRoot(
+    { act: "write", root, path: foreign, sanctionedScratchWritable: [san] }));
 
   // FIND a sanctioned path ⇒ outside-root FALSE (allowed).
   checkFalse("find sanctioned ⇒ allowed", PREDICATES.findTargetOutsideRoot(
@@ -220,6 +315,105 @@ function setup(opts = {}) {
   // BASH-READ a non-sanctioned absolute path ⇒ TRUE (denied).
   checkTrue("bash cat foreign ⇒ denied", PREDICATES.bashReadTargetOutsideRoot(
     { root, command: `cat ${foreign}`, sanctionedScratch: [san] }, null));
+}
+
+// ── (4) END-TO-END through the REAL `node shim.mjs` subprocess ───────────────
+// Mirrors multirepo-e2e.test.mjs's discipline: drive the REAL hook entry (stdin payload,
+// stdout verdict), not the pure decide() function, over a REAL on-disk fixture that
+// reproduces the harness's own env-derived layout — the overflow store, this session's
+// temp root, and a SIBLING session's temp root (same slug, different sid). Proves the
+// carve-out (and every guard) through the exact path a live Claude PreToolUse hook runs.
+console.log("\nEND-TO-END (real node shim.mjs subprocess):");
+{
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-scratch-e2e-")));
+  fs.mkdirSync(path.join(root, ".ai-dev"), { recursive: true });
+  const slug = path.resolve(root).replace(/\//g, "-");
+  const sid = "e2e-1111-2222-3333";
+  const siblingSid = "e2e-9999-8888-7777";
+  const configDir = ws();
+  // Deliberately NOT overriding TMPDIR in the child env: some Node builds/sandboxes
+  // strip a caller-supplied TMPDIR from a spawned `node` subprocess's own process.env
+  // (observed in this dev environment), which would silently break a fixture built
+  // under a custom TMPDIR. The derivation's own fallback is `env.TMPDIR || os.tmpdir()`
+  // (sanctioned-scratch.mjs) — so building the fixture under THIS process's real
+  // `os.tmpdir()` (whatever it resolves to) matches what the child will independently
+  // resolve too, with no env-var round-trip to depend on.
+  const tmpBase = os.tmpdir();
+
+  const tempRoot = path.join(tmpBase, `claude-${UID}`, slug, sid);
+  const siblingTempRoot = path.join(tmpBase, `claude-${UID}`, slug, siblingSid);
+  const overflowRoot = path.join(configDir, "projects", slug, "tool-results");
+  fs.mkdirSync(tempRoot, { recursive: true });
+  fs.mkdirSync(siblingTempRoot, { recursive: true });
+  fs.mkdirSync(overflowRoot, { recursive: true });
+  const foreign = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ai-dev-e2e-foreign-")));
+
+  const env = {
+    ...process.env,
+    CLAUDE_CONFIG_DIR: configDir,
+    CLAUDE_CODE_SESSION_ID: sid,
+    HOME: typeof process.env.HOME === "string" ? process.env.HOME : "/root",
+  };
+
+  // shimVerdict: run the REAL shim subprocess with the fixture env, exactly the shape a
+  // live PreToolUse hook payload carries. allow ⇒ empty stdout; deny/ask ⇒ JSON verdict.
+  function shimVerdict(payload) {
+    const out = execFileSync("node", [SHIM], {
+      input: JSON.stringify(payload),
+      encoding: "utf8",
+      env,
+    });
+    const trimmed = out.trim();
+    if (trimmed === "") return "allow";
+    try { return JSON.parse(trimmed).hookSpecificOutput.permissionDecision; }
+    catch { return `non-json:${trimmed.slice(0, 60)}`; }
+  }
+  function writePayload(filePath) {
+    return { tool_name: "Write", tool_input: { file_path: filePath, content: "x" }, cwd: root };
+  }
+  function readPayload(filePath) {
+    return { tool_name: "Read", tool_input: { file_path: filePath }, cwd: root };
+  }
+
+  // RED→GREEN evidence lives in the git history of this change (the engine carve-out
+  // commit) — these assertions are the GREEN state, proven against the real subprocess:
+
+  // 1. A real WRITE to the derived temp root ⇒ ALLOWS — the carve-out itself (`#401`).
+  check("e2e: write to own temp root ⇒ allow",
+    shimVerdict(writePayload(path.join(tempRoot, "scratch.txt"))), "allow");
+
+  // 2. A WRITE to the tool-result overflow store ⇒ DENIES — the overflow-read-only guard.
+  check("e2e: write to overflow store ⇒ deny",
+    shimVerdict(writePayload(path.join(overflowRoot, "spilled.txt"))), "deny");
+
+  // 3. A WRITE to an arbitrary out-of-root path (no relation to either sanctioned root)
+  //    ⇒ DENIES — the boundary floor is otherwise untouched.
+  check("e2e: write to arbitrary out-of-root path ⇒ deny",
+    shimVerdict(writePayload(path.join(foreign, "x.txt"))), "deny");
+
+  // 4. A WRITE to a SIBLING session's temp root (same slug, different sid) ⇒ DENIES —
+  //    the session-id-narrow guard, proven end-to-end.
+  check("e2e: write to sibling-session temp root ⇒ deny",
+    shimVerdict(writePayload(path.join(siblingTempRoot, "x.txt"))), "deny");
+
+  // 5. READS to both sanctioned roots still ALLOW — the read widening is unchanged by
+  //    this feature (regression, through the real subprocess).
+  check("e2e: read own temp root ⇒ allow (regression)",
+    shimVerdict(readPayload(path.join(tempRoot, "scratch.txt"))), "allow");
+  check("e2e: read overflow store ⇒ allow (regression)",
+    shimVerdict(readPayload(path.join(overflowRoot, "spilled.txt"))), "allow");
+
+  // 6. A READ to the sibling session's temp root still DENIES (read-side session-id-narrow
+  //    guard, unaffected by the write carve-out — regression).
+  check("e2e: read sibling-session temp root ⇒ deny (regression)",
+    shimVerdict(readPayload(path.join(siblingTempRoot, "x.txt"))), "deny");
+
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(configDir, { recursive: true, force: true });
+  // tmpBase is the SHARED os.tmpdir(), not a dedicated fixture dir — remove only the
+  // subtree this fixture created under it (`claude-<uid>/<slug>/`), never the shared root.
+  fs.rmSync(path.join(tmpBase, `claude-${UID}`, slug), { recursive: true, force: true });
+  fs.rmSync(foreign, { recursive: true, force: true });
 }
 
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — sanctioned-scratch: ${pass} passed${fail ? `, ${fail} FAILED` : ""}`);

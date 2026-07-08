@@ -4,8 +4,8 @@
 // also false-blocks the agent's OWN workspaces the harness itself hands it — the tool-result
 // overflow store (a fetched doc/image body that exceeded the inline cap) and the per-session
 // temp root (the scratchpad, staged pasted files, the tasks/ dir). This module derives those
-// two roots from the Claude Code env so the read-family boundary predicates can carve them
-// out. CC env conventions live HERE (the adapter), never in the neutral engine.
+// two roots from the Claude Code env so the boundary predicates can carve them out. CC env
+// conventions live HERE (the adapter), never in the neutral engine.
 //
 // Fail-closed throughout: a path is admitted ONLY if it is built from present env, realpath-
 // resolves to an existing directory, and passes the overbroad/ancestor guard (mirrors
@@ -13,9 +13,13 @@
 // empty set ⇒ byte-identical to today's strict behaviour. The two paths are derived
 // INDEPENDENTLY — one failing its check does not poison the other.
 //
-// Read-only widening: this set is consulted by the READ boundary predicates only; writes
-// outside the root stay denied (the reported symptom is reading fetched/overflow content
-// back, not writing to scratch). See docs/decisions/out-of-root-scratch-allow.md.
+// Read vs write scope: BOTH roots are read-allowed (consulted by the read-family boundary
+// predicates). Only the per-session temp root is WRITE-allowed — the tool-result overflow
+// store stays write-denied forever (it is the harness's own artifact, never the agent's to
+// mutate). `deriveSanctionedScratch` returns all roots (reads); `deriveSanctionedScratchWritable`
+// returns only the writable subset (the temp root) for the write boundary predicate. Both
+// delegate to one internal tagged derivation — no logic duplicated. See
+// docs/decisions/out-of-root-scratch-allow.md.
 
 import path from "node:path";
 import fs from "node:fs";
@@ -57,15 +61,18 @@ function admissible(sanctionedReal, rootReal, boundaryReal) {
   return true;
 }
 
-// Derive the sanctioned-scratch roots for THIS session from env. Returns canonical
-// (realpath'd) absolute paths — possibly empty. `env` defaults to process.env so the shim
-// can call it with no args; tests pass a mock env + a real tmp tree.
-export function deriveSanctionedScratch(env = process.env, root = process.cwd()) {
+// Derive the TAGGED sanctioned-scratch roots for THIS session from env — the one internal
+// computation both public derivations delegate to (invariant 1: no logic duplicated).
+// Returns `{ path, writable }[]` — canonical (realpath'd) absolute paths, possibly empty.
+// `env` defaults to process.env so the shim can call it with no args; tests pass a mock
+// env + a real tmp tree.
+function deriveTagged(env = process.env, root = process.cwd()) {
   const out = [];
   const rootReal = (() => { try { return fs.realpathSync(path.resolve(root)); } catch { return path.resolve(root); } })();
   const slug = projectSlug(root);
 
   // (1) tool-result overflow store: <CLAUDE_CONFIG_DIR>/projects/<slug>/tool-results/
+  // The harness's own artifact — read-only forever, never writable by the agent.
   const configDir = typeof env.CLAUDE_CONFIG_DIR === "string" && env.CLAUDE_CONFIG_DIR.trim()
     ? env.CLAUDE_CONFIG_DIR
     : null;
@@ -73,11 +80,13 @@ export function deriveSanctionedScratch(env = process.env, root = process.cwd())
     const boundaryReal = realDir(configDir);
     if (boundaryReal) {
       const p = realDir(path.join(configDir, "projects", slug, "tool-results"));
-      if (admissible(p, rootReal, boundaryReal)) out.push(p);
+      if (admissible(p, rootReal, boundaryReal)) out.push({ path: p, writable: false });
     }
   }
 
   // (2) per-session harness temp root: <TMPDIR|/tmp>/claude-<uid>/<slug>/<CLAUDE_CODE_SESSION_ID>/
+  // The agent's OWN workspace (the scratchpad the harness system prompt directs it to write
+  // temp files to) — writable.
   const sid = typeof env.CLAUDE_CODE_SESSION_ID === "string" && env.CLAUDE_CODE_SESSION_ID.trim()
     ? env.CLAUDE_CODE_SESSION_ID
     : null;
@@ -89,14 +98,26 @@ export function deriveSanctionedScratch(env = process.env, root = process.cwd())
     const boundaryReal = realDir(base);
     if (boundaryReal) {
       const p = realDir(path.join(...segs));
-      if (admissible(p, rootReal, boundaryReal)) out.push(p);
+      if (admissible(p, rootReal, boundaryReal)) out.push({ path: p, writable: true });
     }
   }
 
   return out;
 }
 
+// All sanctioned roots (reads) — signature + output byte-identical to before the write
+// carve-out. Consulted by the read-family boundary predicates.
+export function deriveSanctionedScratch(env = process.env, root = process.cwd()) {
+  return deriveTagged(env, root).map((e) => e.path);
+}
+
+// Only the WRITABLE sanctioned roots (the per-session temp root) — consulted by the write
+// boundary predicate. The tool-result overflow store never appears here.
+export function deriveSanctionedScratchWritable(env = process.env, root = process.cwd()) {
+  return deriveTagged(env, root).filter((e) => e.writable).map((e) => e.path);
+}
+
 // Exported for the unit test (mirrors engine.mjs's `_internals` pattern) so the overbroad
 // guard is exercised directly with controlled paths, not only through the env-derived
 // black box (which cannot plausibly produce an overbroad path from real harness env).
-export const _internals = { admissible, projectSlug, realDir };
+export const _internals = { admissible, projectSlug, realDir, deriveTagged };
