@@ -85,8 +85,27 @@ precedent this repo already ships and tests.
 - **An arbitrary Operator file** (e.g. `~/Downloads/img.png`, not harness scratch) is **not**
   covered — that is a DIFFERENT widening (declared additional read paths, à la components),
   out of scope here. Workaround today: `cp` into the root.
-- **Write to the scratchpad** (the agent's own notes outside root) is a separate, riskier
-  step not asked for in v1; noted for a later decision.
+- **Durable notes home** — the "write to the scratchpad" use-case from v1 is superseded.
+  Durable cross-session project knowledge belongs in **`.ai-dev/notes/`** (committed, in-project,
+  team-shared). The scratchpad is for ephemeral tool-result overflow only, never a notes store.
+  See orchestrator `## Your seat` knowledge taxonomy and `#316` feature notes.
+- **Auto-memory divert (P2c #316)** — `autoMemoryDirectory` has no CC env var form; it is a
+  `settings.json`-only key. An absolute in-project path in committed settings.json would be
+  machine-specific, so the installer sets **`autoMemoryEnabled: false`** instead (same decision
+  as this dogfood repo made manually). Downstream installs get `autoMemoryEnabled: false` in
+  their `.claude/settings.json` — the wrapper-less `claude` path also gets protection via the
+  committed settings.json (does not require the launcher).
+- **Operator-pasted image-cache (#365 — deferred)** — empirical data point: an Operator-pasted
+  image landed at `~/.claude/image-cache/<session-id>/1.png` under the DEFAULT `~/.claude/`
+  (not under the active `CLAUDE_CONFIG_DIR` pointing to a non-default profile dir). This path is
+  NOT currently covered by `deriveSanctionedScratch` (which uses `CLAUDE_CONFIG_DIR`, not the
+  default dir). Derivation would require `os.homedir() + "/.claude/"` — not env-var-derived when
+  a custom `CLAUDE_CONFIG_DIR` is in use. **Deferred**: (a) it is unclear whether a Read-tool
+  call to the image-cache path is actually needed (pasted images arrive as binary in context,
+  not requiring a Read); (b) hardcoding `~/.claude/` in the derivation violates the fail-closed
+  env-derivation discipline; (c) a future investigation with a confirmed read-block symptom
+  should add a third `deriveSanctionedScratch` entry, env-derived, session-id-narrow, with
+  its own `admissible()` pass — same discipline as the two existing entries.
 - **opencode parity** — its temp conventions differ; the same channel is ready, the
   derivation is the follow-up.
 

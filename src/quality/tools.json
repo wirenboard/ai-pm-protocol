@@ -274,6 +274,14 @@
       "init": "Node >= 18, no install"
     },
     {
+      "id": "pointer-size",
+      "checks": "resume pointer thin-pointer cap — .ai-dev/state/current.md stays under 120 lines and 8192 chars. The pointer is a thin checkpoint (queue + cadence + conventions); durable project knowledge belongs in .ai-dev/notes/ (committed). Fires RED when the pointer bloats beyond the cap; an ABSENT pointer (fresh clone) is skipped, not a failure. Pairs with the notes home: the cap forces durable content to .ai-dev/notes/ before the audit catches it (#316 P2d)",
+      "config": null,
+      "run": "node src/adapter/pointer-size.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install"
+    },
+    {
       "id": "agent-size",
       "checks": "assembled orchestrator load-surface size guard (audit H1) — each per-platform memory file (.claude/ai-dev.md, .opencode/agents/ai-dev.md) stays under 39000 chars, a 1000-char margin below Claude Code's ~40000 memory-file cap past which the file's tail silently fails to load. FAILS the build on an over-limit surface (the remedy is decompose — move a heavy section body to .ai-dev/procedures/ behind a trigger→pointer stub); an absent surface is skipped, never a failure",
       "config": null,

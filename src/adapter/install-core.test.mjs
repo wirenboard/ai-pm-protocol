@@ -120,6 +120,18 @@ function testPlatform(platform, assertWiring) {
     const stateDir = path.join(target, ".ai-dev", "state");
     check(`[${platform}] .ai-dev/state/ created`, fs.existsSync(stateDir) && fs.statSync(stateDir).isDirectory());
 
+    // 3e. .ai-dev/notes/ is created and seeded with a README — the committed durable-
+    // notes home (#316). Notes are NOT gitignored (they are team-shared knowledge);
+    // the README seed is written only where absent (a re-run never clobbers it).
+    const notesDir = path.join(target, ".ai-dev", "notes");
+    check(`[${platform}] .ai-dev/notes/ created`, fs.existsSync(notesDir) && fs.statSync(notesDir).isDirectory());
+    const notesReadme = path.join(notesDir, "README.md");
+    check(`[${platform}] .ai-dev/notes/README.md seeded`, fs.existsSync(notesReadme));
+    if (fs.existsSync(notesReadme)) {
+      const readme = fs.readFileSync(notesReadme, "utf8");
+      check(`[${platform}] notes README explains the taxonomy`, readme.includes("checkpoint") && readme.includes("durable notes"));
+    }
+
     // 3d. DOWNSTREAM-LAYOUT regression guard (8D quality-gate-silent-bypass): the
     // laid-down runner must LOCATE the laid-down registry beside it. The temp
     // target has no src/quality/ — exactly the layout where the old root-relative

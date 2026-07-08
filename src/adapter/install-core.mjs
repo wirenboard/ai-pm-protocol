@@ -57,6 +57,52 @@ export function layDownCore(target) {
   // here so a fresh install is write-ready. Only state/; feedback/ and worktrees/
   // are created on demand by their own use.
   fs.mkdirSync(path.join(target, ".ai-dev", "state"), { recursive: true });
+
+  // The durable-notes home: .ai-dev/notes/ is COMMITTED (team-shared; changes via PR).
+  // The orchestrator reads it on the understand beat for cross-session project knowledge.
+  // Seed a README only where absent — a project's own notes are never clobbered on
+  // re-install. Content is generated inline (the npm package does not ship .ai-dev/).
+  const notesDir = path.join(target, ".ai-dev", "notes");
+  fs.mkdirSync(notesDir, { recursive: true });
+  const notesReadme = path.join(notesDir, "README.md");
+  if (!fs.existsSync(notesReadme)) {
+    fs.writeFileSync(notesReadme, notesReadmeBody());
+  }
+}
+
+// The seed README for .ai-dev/notes/ — the taxonomy reference every session reads.
+// Generated inline so it stays in the npm package without a separate .ai-dev/ entry
+// in package.json `files`. The content mirrors docs/decisions/out-of-root-scratch-allow.md.
+function notesReadmeBody() {
+  return (
+    "# .ai-dev/notes/ — durable project knowledge\n\n" +
+    "**Committed, team-shared.** Each change rides a PR (invariant 4). Read by the\n" +
+    "orchestrator on the understand beat alongside `docs/architecture.md`.\n\n" +
+    "## What belongs here\n\n" +
+    "- Known project quirks the next session should know (\"why we do X here\")\n" +
+    "- Architectural context not yet formalized into `docs/architecture.md`\n" +
+    "- Open decisions pending a `docs/decisions/` record\n" +
+    "- Agent conventions specific to this project that have not earned a canonical home yet\n\n" +
+    "## What does NOT belong here\n\n" +
+    "| Content | Correct home |\n" +
+    "|---|---|\n" +
+    "| Formal decisions | `docs/decisions/<topic>.md` |\n" +
+    "| Contracts (API surface, schema, routes) | `docs/contracts/` |\n" +
+    "| Product brief | `docs/product.md` |\n" +
+    "| Architecture | `docs/architecture.md` |\n" +
+    "| Session state (active branch, PR, cadence) | `.ai-dev/state/current.md` (gitignored) |\n" +
+    "| Temp / ephemeral context | External scratch (outside the project) |\n" +
+    "| Harness `#`/host memory | Never for project knowledge — unshared |\n\n" +
+    "## Taxonomy\n\n" +
+    "```\n" +
+    "checkpoint    (.ai-dev/state/current.md)  volatile, gitignored, superseded on each update\n" +
+    "durable notes (.ai-dev/notes/)            committed, team-shared, changes via PR\n" +
+    "formal decisions (docs/decisions/)        committed, titled, sourced\n" +
+    "external scratch                          outside project root, ephemeral\n" +
+    "```\n\n" +
+    "The harness `#`/host memory (external, per-profile, unshared with the team) is\n" +
+    "**never** a project knowledge home. Write `.ai-dev/notes/<topic>.md` instead.\n"
+  );
 }
 
 // 2b. Deploy the on-demand procedure bodies (src/agents/procedures/) to a READABLE,

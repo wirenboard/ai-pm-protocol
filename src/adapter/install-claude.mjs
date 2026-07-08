@@ -78,6 +78,13 @@ export function wireClaude(target, dogfood) {
   const deny = Array.isArray(settings.permissions.deny) ? settings.permissions.deny : [];
   if (!deny.includes("Workflow")) deny.push("Workflow");
   settings.permissions.deny = deny;
+  // Disable auto-memory — protocol state lives in project artifacts (.ai-dev/notes/
+  // for durable knowledge, .ai-dev/state/current.md for volatile session state), not in
+  // the external per-profile store. Set unconditionally: `autoMemoryDirectory` has no CC
+  // env var form (settings.json-only) and an absolute in-project path in a committed
+  // settings.json would be machine-specific, so disabling is cleaner than diverting
+  // (#316 P2c decision — docs/decisions/out-of-root-scratch-allow.md Residual).
+  settings.autoMemoryEnabled = false;
   // The wrapper-less auto-apply of the launch-time models: write the config `launch`
   // section into settings.json `env`, which Claude Code reads AT STARTUP — so a routed
   // project needs no personal export wrapper for the env (the proxy PROCESS is still
