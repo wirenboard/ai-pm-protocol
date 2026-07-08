@@ -15,6 +15,11 @@ scratchpad/
 # Session state — local-only pointer, never committed
 .ai-dev/state/
 
+# Dogfood-deployed quality runner — a build artifact, never a committed duplicate of
+# src/quality/run.mjs. The downstream installer deploys to .ai-dev/quality/run.mjs;
+# the dogfood reinstall now mirrors that path so both worlds use the same string.
+.ai-dev/quality/
+
 # Self-report transients — raw pre-sweep failure context, never committed
 .ai-dev/feedback/
 .ai-dev/worktrees/
