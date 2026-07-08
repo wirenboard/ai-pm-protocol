@@ -10,7 +10,7 @@
 
 import { evaluate, loadConfig } from "../engine.mjs";
 import { resolveSessionRoot, targetsSessionRepo, extractGitEffectiveCwd } from "../session-root.mjs";
-import { deriveSanctionedScratch } from "./sanctioned-scratch.mjs";
+import { deriveSanctionedScratch, deriveSanctionedScratchWritable } from "./sanctioned-scratch.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -113,10 +113,14 @@ export function decide(payload, root, config, opts = {}) {
   if (opts.targetsSessionRepo !== undefined) input.targetsSessionRepo = opts.targetsSessionRepo;
   // The agent's OWN out-of-root scratch (tool-result overflow + per-session temp), derived
   // fail-closed from the Claude env — the read-family predicates carve these out so a
-  // fetched/overflow artifact the harness placed is not false-blocked (read-only; writes
-  // outside the root stay denied). `home` lets a bash `~/…` reference reach that carve-out.
+  // fetched/overflow artifact the harness placed is not false-blocked. `sanctionedScratchWritable`
+  // is the narrower WRITE allow-set — only the per-session temp root (the harness's own
+  // system prompt directs the agent to write temp files there); the tool-result overflow
+  // store never appears in it, so it stays write-denied. `home` lets a bash `~/…` reference
+  // reach either carve-out.
   const env = opts.env || process.env;
   input.sanctionedScratch = deriveSanctionedScratch(env, root);
+  input.sanctionedScratchWritable = deriveSanctionedScratchWritable(env, root);
   input.home = env.HOME;
   return evaluate(input, config);
 }

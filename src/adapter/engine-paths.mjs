@@ -8,13 +8,15 @@ export function isInsideRoot(root, resolved) {
   const r = path.resolve(root);
   return resolved === r || resolved.startsWith(r + path.sep);
 }
-// A resolved path is inside the agent's OWN sanctioned out-of-root scratch set (the
+// A resolved path is inside a sanctioned out-of-root scratch set (the agent's OWN
 // harness-assigned scratchpad / tool-result overflow store — derived fail-closed by the
 // adapter, see claude/sanctioned-scratch.mjs). `paths` is an array of canonical absolute
-// roots (possibly empty/undefined); the read-family boundary predicates consult this ALONGSIDE
-// isInsideAnyComponent so a legit agent-owned scratch read is not false-blocked. Pure lexical
-// match (mirrors isInsideRoot) — the derivation canonicalises via realpath, the caller passes
-// the same-shape resolved target. Read-only widening: writes never consult this.
+// roots (possibly empty/undefined). Pure lexical match (mirrors isInsideRoot) — the
+// derivation canonicalises via realpath, the caller passes the same-shape resolved target.
+// One predicate, two call sites with DIFFERENT sets: the read-family boundary predicates
+// consult it with the full set (input.sanctionedScratch) ALONGSIDE isInsideAnyComponent;
+// the write boundary predicate consults it with the narrower writable-only subset
+// (input.sanctionedScratchWritable — the per-session temp root, never the overflow store).
 export function isInsideSanctioned(paths, resolved) {
   if (!Array.isArray(paths) || paths.length === 0) return false;
   return paths.some((p) => resolved === p || resolved.startsWith(p + path.sep));
