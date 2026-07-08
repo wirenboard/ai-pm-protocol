@@ -28,7 +28,9 @@ line lives in `orchestrator.md` `## Your seat`). Design rationale:
   push runs — the merge-gate reads it there).
 - **Commits run in the worktree** (`git -C .ai-dev/worktrees/<topic> ...`);
   **pushes run from the main checkout** (a branch pushes from anywhere; the
-  stamps live here).
+  stamps live here). Use `git -C` and never leave the shell `cd`'d into a
+  worktree between tool calls — see the cwd-re-anchoring hazard in
+  `orchestrator.md` `## Your seat` ("Git ops on a nested or sibling repo").
 - All loop rules apply per feature unchanged: fresh Reviewer each, Operator
   approves each plan, each merge needs its own explicit word.
 
