@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.64.6] — 2026-07-09
+
+- **PATCH** — audit-finding fix (whole-tree audit 2026-07-09, F-1): repoint `docs/contracts/automated-quality-tooling.md` at the canonical runtime runner path. The contract still named `node src/quality/run.mjs <beat>` — the **source-repo** path a downstream install never lays down — while 5.64.1 (#400) canonicalised `.ai-dev/quality/run.mjs` across `builder.md`, `reviewer.md`, and `src/templates/tools.json`. The contract was the missed fourth surface (the same dogfood-blind source-vs-installed-path class as 5.64.1 and 5.62.1): a contract stating a path the installer doesn't deploy. Intent of the guarantee intact (runner runs all registered tools); the path string was stale. One-line fix. Docs-only, no code/agent/enforcer change; audit verdict HEALTHY (this was the lone finding).
+
+---
+
 ## [5.64.5] — 2026-07-09
 
 - **PATCH** — chore: drop the review stamp accidentally committed in #408 (procedural deviation — stamps are disk-transient for the F3 merge-gate, not git artifacts; the gate reads `.ai-dev/reviews/<topic>_review.md` from disk at push time, and the orchestrator deletes it at ship, strictly last). The discipline is now encoded in `.ai-dev/state/current.md` (Conventions) so a future resume doesn't repeat the error. No code/contract/enforcer change.
