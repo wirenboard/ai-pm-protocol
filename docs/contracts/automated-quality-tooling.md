@@ -7,7 +7,7 @@ Every project gets a real automated quality toolkit — linters, type-checkers, 
 ## Must work
 
 - At setup the project's stack is discovered, a stack-appropriate toolkit is proposed (linter · formatter · type-checker · doc linter · a security/SAST scanner), and — on the Operator's go — each tool is installed, configured, registered in the quality registry (`src/quality/tools.json`), and verified green.
-- The registered tools run on every loop through the runner (`node src/quality/run.mjs <beat>`); a red tool is not green.
+- The registered tools run on every loop through the runner (`node .ai-dev/quality/run.mjs <beat>`); a red tool is not green.
 - The toolkit is tuned to the project: standard rulesets by default, with any relaxation recorded as a deliberate Operator decision in the tool's own config.
 
 ## Must not break
