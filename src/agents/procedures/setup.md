@@ -55,7 +55,7 @@ unconfigured project, or on `/dev-setup`.
 
    This is the one home for "the common set for stack X"; a project's existing tooling (an `.eslintrc`, a `pyproject.toml [tool.ruff]`) is honoured, not overwritten — the catalog is a starting point, reasoning still applies.
 
-   Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `src/quality/tools.json` (the project's real tools location — PROTOCOL.md `## Quality tools`), verify green via `node .ai-dev/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision.
+   Offer it (declinable). For each chosen tool: install, drop standard config, register a row in `src/quality/tools.json` (the project's real tools location — PROTOCOL.md `## Quality tools`), verify green via `node .ai-dev/quality/run.mjs <beat>`. Tune to the standard — a config relaxation is the Operator's recorded decision. **Mark heavy tests with `covers` for fast touched-subset iteration (`--touched` mode) — the guidance: `docs/architecture.md` `## Quality layer`.**
 
    **CI wiring** (offered with it, declinable) — a workflow running the registered quality suite on every push/PR, per the project's forge (e.g. GitHub Actions), **via the runner (`node .ai-dev/quality/run.mjs <beat>`, both beats), never a re-listed subset of tool commands**: a hand-copied list drifts the moment a row is added; the registry stays the single home of "what green means". The merge-gate is local, CI is the remote re-check that catches a bypassed local run.
 

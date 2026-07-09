@@ -135,6 +135,57 @@ The registry, the config doc, and the fragments all label it so; over-claiming a
 
 The catalog of shipped modules — each module's purpose, toggle shape, per-kind defaults — is the registry, its single home (count them there, not here). A module's FLOOR stays in the role floor bodies (e.g. threat-model's "a security-relevant change has its threats named", product-advocate's `product-readiness-gate` contract); the fragment is purely the deepening, self-gated to the changes it applies to.
 
+## Quality layer
+
+The quality layer is what "green" means in this project. It has three pieces:
+
+- **Runner** (`node src/quality/run.mjs <build|review|ship>`) -- a single command that runs every tool for a beat. The runner carries no tool names itself; it reads `src/quality/tools.json`, the one home of the project's checks.
+- **Registry** (`src/quality/tools.json`) -- a JSON array of tool rows, each declaring: what it checks, the beat it runs in (`build` / `review` / `ship`), the shell command to run it, and an optional `covers` array of path globs.
+- **Configs** -- each tool's native config (`.eslintrc`, `ruff.toml`, `semgrep.yml` etc.) lives beside the registry.
+
+### How scope filtering works
+
+The runner supports `--touched` mode: `node src/quality/run.mjs build --touched`. Instead of running every registered tool, it computes the set of files changed on the current branch (via `git diff` against a base), then runs only the tools whose `covers` field matches at least one changed file. A tool **without** a `covers` field (or with an empty one) **always runs** -- the fail-safe direction: an undeclared-scope tool is never silently dropped.
+
+The `covers` field is an array of project-root-relative glob patterns. The runner converts each pattern to a regex and tests every changed file against it. Supported glob syntax: `*` (any characters within a path segment), `**` (any depth), `?` (single character).
+
+At ship time (`node src/quality/run.mjs ship`), the runner skips `--touched` -- the full suite runs once, the merge gate.
+
+### Which tests to mark narrowly vs broadly
+
+The decision tree, with concrete examples from this repo:
+
+**Mark narrowly** (`covers` points at the specific source files the test validates) when the test is a unit test for a single module. Example from our tools.json:
+
+- `"covers": ["src/adapter/install-model.mjs", "src/adapter/install-model.test.mjs"]` -- the install-model test validates one file (`install-model.mjs`) plus its own source; if neither is touched on this branch, the test cannot fail, so it is safe to skip.
+
+**Mark broadly** (a directory glob like `src/adapter/**`) when the test's scope is architectural -- it validates a cross-cutting contract that any file in the directory can break. Example:
+
+- `"covers": ["src/adapter/**"]` -- the parity test validates that both platform shims reach identical verdicts; a change to any adapter file (a new rule, a modified predicate, a shim edit) could break it, so it must run whenever `src/adapter/` is touched.
+
+**Leave `covers` absent** (no `covers` field at all) when the test is truly cross-cutting -- it inspects invariants that span the whole project, or it reads from files outside any narrow scope. Examples from our tools.json:
+
+- `registry-coverage` -- checks that every `src/**/*.test.mjs` file is referenced by a `tools.json` row. Its scope is the entire `src/` tree; a narrow `covers` would miss new test files added elsewhere.
+- `version-skew` -- checks the installed VERSION stamp against the vendored tooling. Its scope is the whole install surface, not a single module.
+- `eslint` / `markdownlint` -- global linters that run over the entire tree. A `covers` on these would drop linting for untracked file extensions, creating a blind spot.
+- `semgrep` -- security SAST. Security scanners must never be scope-filtered; a changed file could introduce a vulnerability in an unchanged module through an import chain.
+
+**The safety floor:** a tool without `covers` always runs. This means cross-cutting tools (security scanners, parity tests, global lints) stay exactly as they are -- add a `covers` field only when you are confident the test's failure surface is truly local.
+
+### Why this matters
+
+In a project with 1000+ tests, running every test on every build-beat invocation burns minutes the Builder and Reviewer spend waiting. The touched subset keeps the edit-test loop fast: change a module, its tests run in seconds, the rest are skipped. The ship gate still runs the full suite once -- nothing escapes.
+
+The mechanism is additive: adding `covers` to a row never changes its behaviour at ship time, and never changes its behaviour when the row IS touched. It only skips the row when it is **not** touched -- a pure speedup, no safety trade-off.
+
+### Trade-offs
+
+**Granularity vs maintenance burden.** A very precise `covers` list (individual source files) skips more tests and is faster, but must be updated whenever a new source file joins the module. A directory glob (`src/foo/**`) is lower-maintenance but may run tests that were not actually affected by the change. Start broad and tighten as the module stabilizes -- the cost of an over-broad glob is running a few extra tests, which is far cheaper than a missing `covers` entry that silently skips a relevant test.
+
+**Test-adjacent changes.** A test file itself may import helpers or fixtures from outside its `covers` scope. When those helpers change, the test should run, but the narrow `covers` entry won't match. Two mitigation patterns: (a) include shared helper paths in the `covers` list (e.g., `"covers": ["src/adapter/install-model.mjs", "src/adapter/install-shared.mjs", "src/adapter/install-model.test.mjs"]`); (b) keep the `covers` broad enough to catch the transitive closure. When in doubt, leave `covers` absent -- a false skip is worse than a false run.
+
+**Document the decision.** When you add a `covers` field, the `checks` line in the row should say *why* the scope is what it is -- a one-line explanation in `checks` is the single home; don't repeat it in a comment.
+
 ## Extension points
 
 - **Add a platform.** `src/adapter/<platform>/` — the input-normaliser, the verdict-mapper, the install glue — plus a `tool-map.json` column and a parity-fixture pair. Nothing else.
