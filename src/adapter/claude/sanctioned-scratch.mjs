@@ -2,21 +2,22 @@
 // the harness environment, fail-CLOSED. The boundary deny (invariant 2) is anchored to
 // the session root (+ declared components) to keep an agent out of OTHER projects. But it
 // also false-blocks the agent's OWN workspaces the harness itself hands it — the tool-result
-// overflow store (a fetched doc/image body that exceeded the inline cap) and the per-session
-// temp root (the scratchpad, staged pasted files, the tasks/ dir). This module derives those
-// two roots from the Claude Code env so the boundary predicates can carve them out. CC env
+// overflow store (a fetched doc/image body that exceeded the inline cap), the per-session
+// temp root (the scratchpad, staged pasted files, the tasks/ dir), and the claude-proxy
+// image-cache (screenshots cached by the proxy, read-only). This module derives those
+// three roots from the Claude Code env so the boundary predicates can carve them out. CC env
 // conventions live HERE (the adapter), never in the neutral engine.
 //
 // Fail-closed throughout: a path is admitted ONLY if it is built from present env, realpath-
 // resolves to an existing directory, and passes the overbroad/ancestor guard (mirrors
 // componentRoots in engine-components.mjs — the riskiest widening logic). Bad/absent env ⇒
-// empty set ⇒ byte-identical to today's strict behaviour. The two paths are derived
-// INDEPENDENTLY — one failing its check does not poison the other.
+// empty set ⇒ byte-identical to today's strict behaviour. The three paths are derived
+// INDEPENDENTLY — one failing its check does not poison the others.
 //
-// Read vs write scope: BOTH roots are read-allowed (consulted by the read-family boundary
+// Read vs write scope: all three roots are read-allowed (consulted by the read-family boundary
 // predicates). Only the per-session temp root is WRITE-allowed — the tool-result overflow
-// store stays write-denied forever (it is the harness's own artifact, never the agent's to
-// mutate). `deriveSanctionedScratch` returns all roots (reads); `deriveSanctionedScratchWritable`
+// store and the proxy image-cache stay write-denied forever (they are the harness/proxy's own
+// artifacts, never the agent's to mutate). `deriveSanctionedScratch` returns all roots (reads); `deriveSanctionedScratchWritable`
 // returns only the writable subset (the temp root) for the write boundary predicate. Both
 // delegate to one internal tagged derivation — no logic duplicated. See
 // docs/decisions/out-of-root-scratch-allow.md.
@@ -81,6 +82,17 @@ function deriveTagged(env = process.env, root = process.cwd()) {
     if (boundaryReal) {
       const p = realDir(path.join(configDir, "projects", slug, "tool-results"));
       if (admissible(p, rootReal, boundaryReal)) out.push({ path: p, writable: false });
+    }
+
+    // (3) claude-proxy image cache: <CLAUDE_CONFIG_DIR>-proxy/image-cache/
+    // The proxy's cached screenshot store — read-only (the proxy owns it, the agent only reads).
+    // Boundary is configParent so the admissible check ensures the path stays within
+    // the same parent directory as the config dir.
+    const configParent = path.dirname(configDir);
+    const proxyBoundaryReal = realDir(configParent);
+    if (proxyBoundaryReal) {
+      const proxyPath = realDir(path.join(configDir + "-proxy", "image-cache"));
+      if (admissible(proxyPath, rootReal, proxyBoundaryReal)) out.push({ path: proxyPath, writable: false });
     }
   }
 
