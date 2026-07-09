@@ -4,20 +4,22 @@
 // EXPLICITLY: the runner's default now resolves beside run.mjs itself (the real
 // co-located tools.json), so leaning on the default would read — and recurse on
 // — the real registry. Covers the four contract paths: all-pass ⇒ 0, a failing
-// row ⇒ 1, zero matching rows ⇒ 0, malformed ⇒ 1.
+// row ⇒ 1, zero matching rows ⇒ 0, malformed ⇒ 1. Also covers scope-mode
+// (covers matching / non-matching / no-covers / malformed) and the
+// fileMatchesCovers and filterByScope functions in isolation.
 //
 // Run: node src/quality/run.test.mjs
 
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { run, resolveRegistry } from "./run.mjs";
+import { run, resolveRegistry, coversToRegex, fileMatchesCovers, filterByScope } from "./run.mjs";
 
 let pass = 0;
 const fails = [];
 function check(name, got, want) {
   if (got === want) { pass++; return; }
-  fails.push(`  ✗ ${name}: got exit ${got}, want ${want}`);
+  fails.push(`  ✗ ${name}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
 }
 
 // A temp dir holding a synthetic tools.json with the given content (a JS object
@@ -118,6 +120,162 @@ const quiet = (fn) => { console.log = () => {}; try { return fn(); } finally { c
   const explicit = path.join(root, "my-custom-tools.json");
   fs.writeFileSync(explicit, JSON.stringify({ tools: [] }));
   check("explicit registryPath overrides", resolveRegistry(root, explicit), explicit);
+}
+
+// --- Scope-mode tests ---
+
+// 10. coversToRegex: basic patterns.
+{
+  const re = coversToRegex("src/adapter/install-core.mjs");
+  check("coversToRegex exact match", re.test("src/adapter/install-core.mjs"), true);
+  check("coversToRegex exact no-match", re.test("src/adapter/other.mjs"), false);
+}
+
+// 11. coversToRegex: ** glob.
+{
+  const re = coversToRegex("src/adapter/**");
+  check("coversToRegex ** deep match", re.test("src/adapter/sub/deep/file.mjs"), true);
+  check("coversToRegex ** shallow match", re.test("src/adapter/foo.mjs"), true);
+  check("coversToRegex ** no-match", re.test("src/quality/foo.mjs"), false);
+}
+
+// 12. coversToRegex: * glob (single segment).
+{
+  const re = coversToRegex("src/adapter/*.test.mjs");
+  check("coversToRegex * match", re.test("src/adapter/foo.test.mjs"), true);
+  check("coversToRegex * no-match deep", re.test("src/adapter/sub/foo.test.mjs"), false);
+  check("coversToRegex * no-match ext", re.test("src/adapter/foo.mjs"), false);
+}
+
+// 13. coversToRegex: special characters are escaped — never throws, never null.
+// A bracket, paren, etc. are literal-matched after escaping; there is no
+// "malformed" glob that breaks the converter (fail-safe by construction).
+{
+  const re = coversToRegex("[unclosed");
+  check("coversToRegex special chars escaped", re instanceof RegExp, true);
+  check("coversToRegex literal bracket match", re.test("[unclosed"), true);
+}
+
+// 14. fileMatchesCovers: one glob matches.
+{
+  const ok = fileMatchesCovers("src/adapter/install-core.mjs", ["src/adapter/install-core.mjs"]);
+  check("fileMatchesCovers single exact", ok, true);
+}
+
+// 15. fileMatchesCovers: none match.
+{
+  const ok = fileMatchesCovers("src/quality/run.mjs", ["src/adapter/**", "docs/**"]);
+  check("fileMatchesCovers none match", ok, false);
+}
+
+// 16. fileMatchesCovers: one of several matches.
+{
+  const ok = fileMatchesCovers("src/adapter/install-core.mjs", [
+    "src/quality/**",
+    "src/adapter/install-core.mjs",
+  ]);
+  check("fileMatchesCovers one of many", ok, true);
+}
+
+// 17. fileMatchesCovers: empty covers → false (no pattern to match).
+{
+  const ok = fileMatchesCovers("src/foo.mjs", []);
+  check("fileMatchesCovers empty covers", ok, false);
+}
+
+// 17b. fileMatchesCovers: array of files — matches if any file matches any pattern.
+{
+  const ok = fileMatchesCovers(["docs/foo.md", "src/adapter/install-core.mjs"], ["src/adapter/**"]);
+  check("fileMatchesCovers array of files", ok, true);
+}
+
+// 18. filterByScope: row with covers matching a touched file → kept.
+{
+  const rows = [
+    { id: "a", beat: "build", run: "node -e 0", covers: ["src/adapter/**"] },
+  ];
+  const filtered = filterByScope(rows, ["src/adapter/install-core.mjs"]);
+  check("filterByScope matching covers → kept", filtered.length, 1);
+}
+
+// 19. filterByScope: row with covers NOT matching any touched file → dropped.
+{
+  const rows = [
+    { id: "a", beat: "build", run: "node -e 0", covers: ["docs/**"] },
+  ];
+  const filtered = filterByScope(rows, ["src/adapter/install-core.mjs"]);
+  check("filterByScope non-matching covers → dropped", filtered.length, 0);
+}
+
+// 20. filterByScope: row WITHOUT covers → always kept (fail-safe).
+{
+  const rows = [
+    { id: "a", beat: "build", run: "node -e 0" },
+  ];
+  const filtered = filterByScope(rows, ["docs/readme.md"]);
+  check("filterByScope no covers → kept", filtered.length, 1);
+}
+
+// 21. filterByScope: row with empty covers array → always kept (fail-safe).
+{
+  const rows = [
+    { id: "a", beat: "build", run: "node -e 0", covers: [] },
+  ];
+  const filtered = filterByScope(rows, ["docs/readme.md"]);
+  check("filterByScope empty covers → kept", filtered.length, 1);
+}
+
+// 22. filterByScope: null/undefined touchedFiles → all rows kept (full run).
+{
+  const rows = [
+    { id: "a", beat: "build", run: "node -e 0", covers: ["src/adapter/**"] },
+  ];
+  check("filterByScope null touched → all kept", filterByScope(rows, null).length, 1);
+  check("filterByScope empty touched → all kept", filterByScope(rows, []).length, 1);
+}
+
+// 23. E2E scope mode: touched file matches row's covers → row runs (exit 0).
+{
+  const { root, registryPath } = rootWith({ tools: [
+    { id: "in-scope", run: "node -e \"process.exit(0)\"", beat: "build", covers: ["src/adapter/**"] },
+  ] });
+  check("scope e2e matching row runs", quiet(() => run("build", root, registryPath, ["src/adapter/foo.mjs"])), 0);
+}
+
+// 24. E2E scope mode: touched file does NOT match row's covers → row skipped, exit 0.
+{
+  const { root, registryPath } = rootWith({ tools: [
+    { id: "out-of-scope", run: "node -e \"process.exit(1)\"", beat: "build", covers: ["src/adapter/**"] },
+  ] });
+  check("scope e2e non-matching row skipped", quiet(() => run("build", root, registryPath, ["docs/readme.md"])), 0);
+}
+
+// 25. E2E scope mode: no-covers row always runs even when touched set is unrelated.
+{
+  const { root, registryPath } = rootWith({ tools: [
+    { id: "always", run: "node -e \"process.exit(0)\"", beat: "build" },
+  ] });
+  check("scope e2e no-covers always runs", quiet(() => run("build", root, registryPath, ["docs/readme.md"])), 0);
+}
+
+// 26. E2E scope mode: malformed covers → fails safe to always-run (row runs, not skipped).
+{
+  const { root, registryPath } = rootWith({ tools: [
+    { id: "malformed-covers", run: "node -e \"process.exit(0)\"", beat: "build", covers: ["[bad" ] },
+  ] });
+  check("scope e2e malformed covers → runs", quiet(() => run("build", root, registryPath, ["unrelated/file.md"])), 0);
+}
+
+// 27. E2E scope mode: mix of scoped and unscoped rows — only matching scoped runs.
+{
+  const { root, registryPath } = rootWith({ tools: [
+    { id: "always-a", run: "node -e \"process.exit(0)\"", beat: "build" },
+    { id: "in-scope", run: "node -e \"process.exit(0)\"", beat: "build", covers: ["src/adapter/**"] },
+    { id: "out-of-scope", run: "node -e \"process.exit(1)\"", beat: "build", covers: ["docs/**"] },
+    { id: "always-b", run: "node -e \"process.exit(0)\"", beat: "build" },
+  ] });
+  // touched is src/adapter/* → in-scope runs, out-of-scope skipped, always-a/b run.
+  check("scope e2e mixed set", quiet(() => run("build", root, registryPath, ["src/adapter/foo.mjs"])), 0);
 }
 
 if (fails.length) {

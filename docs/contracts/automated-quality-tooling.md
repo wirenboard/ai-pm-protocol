@@ -6,8 +6,8 @@ Every project gets a real automated quality toolkit — linters, type-checkers, 
 
 ## Must work
 
-- At setup the project's stack is discovered, a stack-appropriate toolkit is proposed (linter · formatter · type-checker · doc linter · a security/SAST scanner), and — on the Operator's go — each tool is installed, configured, registered in the quality registry (`src/quality/tools.json`), and verified green.
-- The registered tools run on every loop through the runner (`node .ai-dev/quality/run.mjs <beat>`); a red tool is not green.
+- At setup the project's stack is discovered, a stack-appropriate toolkit is proposed (linter · formatter · type-checker · doc linter · a security/SAST scanner), and — on the Operator's go — each tool is installed, configured, registered in the quality registry (`.ai-dev/quality/tools.json`), and verified green.
+- During coding (build and review beats), the runner runs only the touched subset — rows whose `covers` globs match the current diff plus all rows without a `covers` field (`node .ai-dev/quality/run.mjs <beat> --touched`). Before the PR (the ship beat), the orchestrator runs the **full** set as the merge gate — no `--touched` (`node .ai-dev/quality/run.mjs build` + `node .ai-dev/quality/run.mjs review`). A red tool is not green.
 - The toolkit is tuned to the project: standard rulesets by default, with any relaxation recorded as a deliberate Operator decision in the tool's own config.
 
 ## Must not break

@@ -679,8 +679,9 @@ testPlatform("opencode", (target) => {
 
     // 1. Read the assembled downstream Builder
     const builderBody = fs.readFileSync(path.join(target, ".claude", "agents", "dev-builder.md"), "utf8");
-    // Extract the `node <path> build` invocation — the literal the Builder follows
-    const buildMatch = builderBody.match(/`node ([^\s`]+) build`/);
+    // Extract the `node <path> build` invocation — the literal the Builder follows.
+    // Accept `build --touched` (scope mode) as well as plain `build` (full mode).
+    const buildMatch = builderBody.match(/`node ([^\s`]+) build(?: --touched)?`/);
     check("[runner-path] assembled Builder names a run.mjs invocation", buildMatch !== null);
     const builderRunnerPath = buildMatch ? buildMatch[1] : null;
 
@@ -699,7 +700,7 @@ testPlatform("opencode", (target) => {
 
     // 3. Assembled Reviewer names the same path for the review beat
     const reviewerBody = fs.readFileSync(path.join(target, ".claude", "agents", "dev-reviewer.md"), "utf8");
-    const reviewMatch = reviewerBody.match(/`node ([^\s`]+) review`/);
+    const reviewMatch = reviewerBody.match(/`node ([^\s`]+) review(?: --touched)?`/);
     check("[runner-path] assembled Reviewer names a run.mjs invocation", reviewMatch !== null);
     if (reviewMatch) {
       check(
@@ -710,7 +711,7 @@ testPlatform("opencode", (target) => {
 
     // 4. Same contract holds for the fixup reviewer (also assembled downstream)
     const fixupBody = fs.readFileSync(path.join(target, ".claude", "agents", "dev-reviewer-fixup.md"), "utf8");
-    const fixupMatch = fixupBody.match(/`node ([^\s`]+) review`/);
+    const fixupMatch = fixupBody.match(/`node ([^\s`]+) review(?: --touched)?`/);
     check("[runner-path] assembled fixup Reviewer names a run.mjs invocation", fixupMatch !== null);
     if (fixupMatch) {
       check(

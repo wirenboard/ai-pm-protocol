@@ -6,7 +6,8 @@
     "config": "path to its native config beside this file, or null if none",
     "run": "the command to run it (from the project root)",
     "beat": "build | review | ship — which loop beat it runs in",
-    "init": "one line: how to install/enable it (the minimal init instruction)"
+    "init": "one line: how to install/enable it (the minimal init instruction)",
+    "covers": "optional array of project-root-relative path globs this tool validates. In scope mode (--touched) the row runs only if a touched file matches at least one glob; absent or empty ⇒ always runs (fail-safe to MORE rigor). Backward-compatible — no-covers rows are the current full-run behaviour."
   },
   "tools": [
     {
@@ -15,7 +16,8 @@
       "config": null,
       "run": "node src/adapter/parity.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/**"]
     },
     {
       "id": "install-model",
@@ -23,7 +25,8 @@
       "config": null,
       "run": "node src/adapter/install-model.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/install-model.mjs", "src/adapter/install-model.test.mjs"]
     },
     {
       "id": "install-plugin",
@@ -31,7 +34,8 @@
       "config": null,
       "run": "node src/adapter/install-plugin.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/install-plugin.mjs", "src/adapter/install-plugin.test.mjs"]
     },
     {
       "id": "install-drift",
@@ -39,7 +43,8 @@
       "config": null,
       "run": "node src/adapter/install-drift.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/install-drift.mjs", "src/adapter/install-drift.test.mjs", "src/agents/**", ".ai-dev/config.json"]
     },
     {
       "id": "install-modules",
@@ -47,7 +52,8 @@
       "config": null,
       "run": "node src/adapter/install-modules.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/install-modules.mjs", "src/adapter/install-modules.test.mjs"]
     },
     {
       "id": "install-fixup-agents",
@@ -55,7 +61,8 @@
       "config": null,
       "run": "node src/adapter/install-fixup-agents.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/install-fixup-agents.mjs", "src/adapter/install-fixup-agents.test.mjs"]
     },
     {
       "id": "invariants-parity",
@@ -63,7 +70,8 @@
       "config": null,
       "run": "node src/adapter/invariants-parity.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/invariants-parity.test.mjs", "PROTOCOL.md", "src/adapter/install-modules.mjs"]
     },
     {
       "id": "pack-completeness",
@@ -71,7 +79,8 @@
       "config": null,
       "run": "node src/adapter/pack-completeness.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/pack-completeness.test.mjs", "package.json"]
     },
     {
       "id": "rigor-profile",
@@ -79,7 +88,8 @@
       "config": null,
       "run": "node src/adapter/rigor-profile.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/rigor-profile.test.mjs"]
     },
     {
       "id": "safeguards",
@@ -87,7 +97,8 @@
       "config": null,
       "run": "node --test src/adapter/safeguards.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/safeguards.test.mjs"]
     },
     {
       "id": "hook-mode",
@@ -95,7 +106,8 @@
       "config": null,
       "run": "node --test src/adapter/hook-mode.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/hook-mode.test.mjs"]
     },
     {
       "id": "components",
@@ -103,7 +115,8 @@
       "config": null,
       "run": "node src/adapter/components.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/components.test.mjs", "src/adapter/components.mjs", "src/adapter/engine.mjs"]
     },
     {
       "id": "sanctioned-scratch",
@@ -111,7 +124,8 @@
       "config": null,
       "run": "node src/adapter/claude/sanctioned-scratch.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/claude/sanctioned-scratch.mjs", "src/adapter/claude/sanctioned-scratch.test.mjs", "src/adapter/engine.mjs"]
     },
     {
       "id": "multirepo-e2e",
@@ -119,7 +133,8 @@
       "config": null,
       "run": "node src/adapter/multirepo-e2e.test.mjs",
       "beat": "build",
-      "init": "Node >= 18 + git, no install"
+      "init": "Node >= 18 + git, no install",
+      "covers": ["src/adapter/multirepo-e2e.test.mjs", "src/adapter/engine.mjs", "src/adapter/claude/shim.mjs"]
     },
     {
       "id": "nested-repo-scope",
@@ -127,7 +142,8 @@
       "config": null,
       "run": "node src/adapter/nested-repo-scope.test.mjs",
       "beat": "build",
-      "init": "Node >= 18 + git, no install"
+      "init": "Node >= 18 + git, no install",
+      "covers": ["src/adapter/nested-repo-scope.test.mjs", "src/adapter/engine.mjs", "src/adapter/claude/shim.mjs"]
     },
     {
       "id": "merge-gate-stamp-resolution",
@@ -135,7 +151,8 @@
       "config": null,
       "run": "node src/adapter/merge-gate-stamp-resolution.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/merge-gate-stamp-resolution.test.mjs", "src/adapter/merge-gate-helpers.mjs"]
     },
     {
       "id": "merge-gate-ref-parsing",
@@ -143,7 +160,8 @@
       "config": null,
       "run": "node src/adapter/merge-gate-ref-parsing.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/merge-gate-ref-parsing.test.mjs", "src/adapter/merge-gate-helpers.mjs"]
     },
     {
       "id": "merge-gate-trunk-and-worktree",
@@ -151,7 +169,8 @@
       "config": null,
       "run": "node src/adapter/merge-gate-trunk-and-worktree.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/merge-gate-trunk-and-worktree.test.mjs", "src/adapter/merge-gate-helpers.mjs"]
     },
     {
       "id": "f4-floor",
@@ -159,7 +178,8 @@
       "config": null,
       "run": "node src/adapter/f4-floor.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/f4-floor.test.mjs", "src/adapter/engine.mjs", "src/adapter/deny-rules.json"]
     },
     {
       "id": "forge-map",
@@ -167,7 +187,8 @@
       "config": null,
       "run": "node src/adapter/forge-map.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/forge-map.test.mjs", "src/adapter/forge-map.json"]
     },
     {
       "id": "ssh-content-edit",
@@ -175,7 +196,8 @@
       "config": null,
       "run": "node src/adapter/ssh-content-edit.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/ssh-content-edit.test.mjs", "src/adapter/deny-rules.json"]
     },
     {
       "id": "error-handling",
@@ -183,7 +205,8 @@
       "config": null,
       "run": "node src/adapter/error-handling.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/error-handling.test.mjs", "src/adapter/engine.mjs", "src/adapter/claude/shim.mjs"]
     },
     {
       "id": "install-commands",
@@ -191,7 +214,8 @@
       "config": null,
       "run": "node src/adapter/install-commands.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/install-commands.mjs", "src/adapter/install-commands.test.mjs"]
     },
     {
       "id": "opencode-inject",
@@ -199,15 +223,8 @@
       "config": null,
       "run": "node src/adapter/opencode-inject.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
-    },
-    {
-      "id": "registry-coverage",
-      "checks": "inverse orphan-guard — every committed src/**/*.test.mjs is referenced by a tools.json row, so a test file cannot be added then silently never run (the gap the 2026-06-20 audit found)",
-      "config": null,
-      "run": "node src/quality/registry-coverage.test.mjs",
-      "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/opencode-inject.test.mjs", "src/adapter/install-plugin.mjs"]
     },
     {
       "id": "install-core",
@@ -215,7 +232,8 @@
       "config": null,
       "run": "node src/adapter/install-core.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/install-core.mjs", "src/adapter/install-core.test.mjs", "src/adapter/install-shared.mjs"]
     },
     {
       "id": "install-claude-wiring",
@@ -223,7 +241,8 @@
       "config": null,
       "run": "node src/adapter/install-claude-wiring.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/install-claude-wiring.mjs", "src/adapter/install-claude-wiring.test.mjs"]
     },
     {
       "id": "model-router-test",
@@ -231,13 +250,23 @@
       "config": null,
       "run": "node src/adapter/model-router.test.mjs",
       "beat": "build",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/model-router.mjs", "src/adapter/model-router.test.mjs"]
     },
     {
       "id": "router-launch-test",
       "checks": "the model-router launcher's PURE decision functions (src/adapter/router-launch.mjs), no network / no `claude` exec: a routes config's { provider: <id> } entry resolves base_url + auth from the built-in catalog (src/adapter/model-providers.json) with inline match/base_url/auth overrides and provider-pattern fan-out; an unknown provider and an unsupported passthrough both throw; distinct-endpoint counting drives the launch mode — all-Anthropic seats run claude DIRECT (proxy off by default), cross-endpoint seats start the router; the key-env presence check fails closed (an unset backend key for a route in play is surfaced BEFORE launch, passthrough routes skipped); seatModels keeps concrete role pins and drops auto/session; buildChildEnv sets ANTHROPIC_BASE_URL and UNSETS CLAUDE_CODE_SUBAGENT_MODEL; and the REAL shipped catalog pins the four verified providers (anthropic passthrough + x-api-key, deepseek x-api-key, glm z.ai Coding-Plan Bearer + GLM-*, openrouter Bearer)",
       "config": null,
       "run": "node src/adapter/router-launch.test.mjs",
+      "beat": "build",
+      "init": "Node >= 18, no install",
+      "covers": ["src/adapter/router-launch.mjs", "src/adapter/router-launch.test.mjs", "src/adapter/model-providers.json"]
+    },
+    {
+      "id": "registry-coverage",
+      "checks": "inverse orphan-guard — every committed src/**/*.test.mjs is referenced by a tools.json row, so a test file cannot be added then silently never run (the gap the 2026-06-20 audit found)",
+      "config": null,
+      "run": "node src/quality/registry-coverage.test.mjs",
       "beat": "build",
       "init": "Node >= 18, no install"
     },
@@ -303,7 +332,8 @@
       "config": null,
       "run": "node src/quality/neutral-prose.test.mjs",
       "beat": "review",
-      "init": "Node >= 18, no install"
+      "init": "Node >= 18, no install",
+      "covers": ["PROTOCOL.md", "protocol-reference.md", "src/agents/**", "docs/architecture.md"]
     },
     {
       "id": "eslint",

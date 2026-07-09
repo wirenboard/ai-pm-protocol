@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.65.0] — 2026-07-09
+
+- **MINOR** — scope-based build/review quality beats: the runner (`run.mjs`) now supports a `--touched [<base>]` flag that computes the git diff against `origin/main` (or the given base) and runs only the tools whose `covers` glob matches a touched file; tools without a `covers` field always run (fail-safe). The Builder and Reviewer now invoke quality checks scoped to the change (`--touched`); the orchestrator runs the **full** suite (no `--touched`) once before opening the PR as the merge gate — a red tool blocks ship. The `tools.json` `_row_shape` gains an optional `covers` field (array of project-root-relative path globs), and the heavy rows in this repo's own registry carry `covers` matching their validated source area. The `automated-quality-tooling` contract is updated to state the new scope-gate shape; the stale `src/quality/` registry path in that contract (the F-1 sister advisory) is also corrected to `.ai-dev/quality/`. Backward-compatible — absent `covers` ⇒ always-run; no `--touched` flag ⇒ full run unchanged. Operator-directed friction/token-cost fix.
+
+---
+
 ## [5.64.6] — 2026-07-09
 
 - **PATCH** — audit-finding fix (whole-tree audit 2026-07-09, F-1): repoint `docs/contracts/automated-quality-tooling.md` at the canonical runtime runner path. The contract still named `node src/quality/run.mjs <beat>` — the **source-repo** path a downstream install never lays down — while 5.64.1 (#400) canonicalised `.ai-dev/quality/run.mjs` across `builder.md`, `reviewer.md`, and `src/templates/tools.json`. The contract was the missed fourth surface (the same dogfood-blind source-vs-installed-path class as 5.64.1 and 5.62.1): a contract stating a path the installer doesn't deploy. Intent of the guarantee intact (runner runs all registered tools); the path string was stale. One-line fix. Docs-only, no code/agent/enforcer change; audit verdict HEALTHY (this was the lone finding).
