@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.66.0] — 2026-07-09
+
+- **MINOR** — downstream `covers` guidance: a new "## Quality layer" section in `docs/architecture.md` explains how the `covers` field works, which tests to mark narrowly vs broadly (with concrete examples from this repo's `tools.json`), and the granularity-vs-maintenance trade-offs. Downstream projects with large test suites (1000+ tests) can now iterate fast by running only the touched subset during coding/review while keeping the full suite gated once at ship. A one-line pointer added to `setup.md` step 5 links to the new section. Closes #412.
+
+---
+
 ## [5.65.0] — 2026-07-09
 
 - **MINOR** — scope-based build/review quality beats: the runner (`run.mjs`) now supports a `--touched [<base>]` flag that computes the git diff against `origin/main` (or the given base) and runs only the tools whose `covers` glob matches a touched file; tools without a `covers` field always run (fail-safe). The Builder and Reviewer now invoke quality checks scoped to the change (`--touched`); the orchestrator runs the **full** suite (no `--touched`) once before opening the PR as the merge gate — a red tool blocks ship. The `tools.json` `_row_shape` gains an optional `covers` field (array of project-root-relative path globs), and the heavy rows in this repo's own registry carry `covers` matching their validated source area. The `automated-quality-tooling` contract is updated to state the new scope-gate shape; the stale `src/quality/` registry path in that contract (the F-1 sister advisory) is also corrected to `.ai-dev/quality/`. Backward-compatible — absent `covers` ⇒ always-run; no `--touched` flag ⇒ full run unchanged. Operator-directed friction/token-cost fix.
