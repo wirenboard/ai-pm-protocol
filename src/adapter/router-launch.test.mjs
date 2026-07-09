@@ -22,6 +22,7 @@ import {
   launchModelEnv,
   buildChildEnv,
   boundAliasTiers,
+  mislaunchedProxyWarning,
   mergeLocalRoutes,
   loadRoutesWithLocal,
   planLaunch,
@@ -122,6 +123,29 @@ function main() {
   // absent/empty/whitespace configDir ⇒ CLAUDE_CONFIG_DIR is NOT set (unset, byte-unchanged).
   check("launchModelEnv: absent configDir ⇒ no CLAUDE_CONFIG_DIR", "CLAUDE_CONFIG_DIR" in launchModelEnv({ launch: { sessionModel: "x" } }), false);
   check("launchModelEnv: blank configDir ⇒ no CLAUDE_CONFIG_DIR", "CLAUDE_CONFIG_DIR" in launchModelEnv({ launch: { configDir: "   " } }), false);
+
+  // ── mislaunchedProxyWarning (config.launch.proxyUrl is a silent no-op today) ──
+  // setup.md historically listed `proxyUrl` under the personal config.local launch
+  // inventory; the launcher reads it from .ai-dev/model-routes.local.json instead. The
+  // warning is the fail-loud backstop so a misplaced value is no longer silent.
+  check("mislaunchedProxyWarning: absent launch ⇒ null", mislaunchedProxyWarning({}), null);
+  check("mislaunchedProxyWarning: launch without proxyUrl ⇒ null",
+    mislaunchedProxyWarning({ launch: { sessionModel: "x" } }), null);
+  check("mislaunchedProxyWarning: empty/whitespace proxyUrl ⇒ null",
+    mislaunchedProxyWarning({ launch: { proxyUrl: "   " } }), null);
+  check("mislaunchedProxyWarning: non-string proxyUrl ⇒ null",
+    mislaunchedProxyWarning({ launch: { proxyUrl: 1234 } }), null);
+  check("mislaunchedProxyWarning: non-object config ⇒ null", mislaunchedProxyWarning(null), null);
+  const mpw = mislaunchedProxyWarning({ launch: { proxyUrl: "http://127.0.0.1:8787" } });
+  check("mislaunchedProxyWarning: present proxyUrl ⇒ warning string", typeof mpw, "string");
+  check("mislaunchedProxyWarning: warning names the correct home (model-routes.local.json)",
+    mpw && mpw.includes("model-routes.local.json"), true);
+  check("mislaunchedProxyWarning: warning names the field's source (config.launch.proxyUrl)",
+    mpw && mpw.includes("config.launch.proxyUrl"), true);
+  check("mislaunchedProxyWarning: warning echoes the misplaced value",
+    mpw && mpw.includes("http://127.0.0.1:8787"), true);
+  check("mislaunchedProxyWarning: warning is non-blocking (returns a string, not throws)",
+    typeof mpw, "string");
 
   // ── launchModelEnv: autoCompactWindow → CLAUDE_CODE_AUTO_COMPACT_WINDOW (opt-in, personal) ──
   check("launchModelEnv: autoCompactWindow (number) → CLAUDE_CODE_AUTO_COMPACT_WINDOW string",

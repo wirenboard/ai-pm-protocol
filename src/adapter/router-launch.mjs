@@ -298,6 +298,20 @@ export function boundAliasTiers(config) {
   return bound;
 }
 
+// Detect a `proxyUrl` placed under `config.launch` — a field the launcher does
+// NOT read (it reads `proxyUrl` from the routes config, .ai-dev/model-routes.local.json).
+// setup.md historically listed it under the personal launch inventory, and a misplaced
+// value was silently ignored. Returns a one-line warning (non-blocking) pointing at the
+// correct home, or null when the field is absent/empty/whitespace. Pure: takes a config
+// object, no side effects.
+export function mislaunchedProxyWarning(config) {
+  const launch = config && typeof config === "object" && config.launch && typeof config.launch === "object" ? config.launch : null;
+  if (!launch) return null;
+  const v = typeof launch.proxyUrl === "string" ? launch.proxyUrl.trim() : "";
+  if (!v) return null;
+  return `[router-launch] WARNING: config.launch.proxyUrl=${JSON.stringify(v)} is not read — \`proxyUrl\` belongs in .ai-dev/model-routes.local.json (top-level). Move it there.`;
+}
+
 // The child env for `claude`: layer the config-sourced launch-time models (session +
 // guard + configDir, when set) onto the base env, point it at the router when one is
 // given, and guarantee CLAUDE_CODE_SUBAGENT_MODEL is UNSET (it overrides per-seat
@@ -596,6 +610,9 @@ function main() {
     // a teammate). The ONE home for that merge is loadConfigWithLocal, shared with the
     // installer so the launcher and the bake/self-verify see the identical merged launch.
     ({ config } = loadConfigWithLocal(configPath));
+    // Fail-loud on a `proxyUrl` placed under `launch` — the launcher reads it from the routes config, not here.
+    const misplacedProxy = mislaunchedProxyWarning(config);
+    if (misplacedProxy) process.stderr.write(`${misplacedProxy}\n`);
     // Merge the gitignored local routes override over the shared routes (proxyUrl + any
     // personal route entries live there — never committed, never break a teammate's routing
     // on pull). The ONE home for that merge is loadRoutesWithLocal.
