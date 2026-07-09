@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.64.5] — 2026-07-09
+
+- **PATCH** — chore: drop the review stamp accidentally committed in #408 (procedural deviation — stamps are disk-transient for the F3 merge-gate, not git artifacts; the gate reads `.ai-dev/reviews/<topic>_review.md` from disk at push time, and the orchestrator deletes it at ship, strictly last). The discipline is now encoded in `.ai-dev/state/current.md` (Conventions) so a future resume doesn't repeat the error. No code/contract/enforcer change.
+
+---
+
 ## [5.64.4] — 2026-07-09
 
 - **PATCH** — fail-loud on a misplaced `config.launch.proxyUrl` + correct the `setup.md` mis-homing. `proxyUrl` is read ONLY from the routes config (`.ai-dev/model-routes.local.json`, top-level), never from `config.launch`; `setup.md` historically listed it under the personal `config.local` launch inventory, contradicting every other canon source, and a misplaced value was silently ignored — the probe's prior "alive" was the `127.0.0.1:8787` default-port fallback, not the config field being read, so nothing signalled the setting was inert (the silent no-op a downstream session reported). Fix: (1) `setup.md` now states the one correct home for `proxyUrl` (`.ai-dev/model-routes.local.json`, top-level), with the routing apply-steps below confirming; (2) the launcher emits a loud stderr warning when it detects a non-empty `config.launch.proxyUrl`, pointing at the correct home — pure `mislaunchedProxyWarning` function, unit-tested (10 new cases). The report's «honour the field under `launch`» option was rejected to preserve invariant 6 (one home per fact — no second source for `proxyUrl`). PATCH — doc + non-blocking warning, no agent/command/module/contract change.
