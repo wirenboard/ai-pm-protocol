@@ -3,10 +3,10 @@
 // the session root (+ declared components) to keep an agent out of OTHER projects. But it
 // also false-blocks the agent's OWN workspaces the harness itself hands it — the tool-result
 // overflow store (a fetched doc/image body that exceeded the inline cap), the per-session
-// temp root (the scratchpad, staged pasted files, the tasks/ dir), and the claude-proxy
-// image-cache (screenshots cached by the proxy, read-only). This module derives those
-// three roots from the Claude Code env so the boundary predicates can carve them out. CC env
-// conventions live HERE (the adapter), never in the neutral engine.
+// temp root (the scratchpad, staged pasted files, the tasks/ dir), and the image-cache
+// (screenshots cached in sibling directories of CLAUDE_CONFIG_DIR, read-only). This module
+// derives those roots from the Claude Code env so the boundary predicates can carve them out.
+// CC env conventions live HERE (the adapter), never in the neutral engine.
 //
 // Fail-closed throughout: a path is admitted ONLY if it is built from present env, realpath-
 // resolves to an existing directory, and passes the overbroad/ancestor guard (mirrors
@@ -84,15 +84,26 @@ function deriveTagged(env = process.env, root = process.cwd()) {
       if (admissible(p, rootReal, boundaryReal)) out.push({ path: p, writable: false });
     }
 
-    // (3) claude-proxy image cache: <CLAUDE_CONFIG_DIR>-proxy/image-cache/
-    // The proxy's cached screenshot store — read-only (the proxy owns it, the agent only reads).
-    // Boundary is configParent so the admissible check ensures the path stays within
-    // the same parent directory as the config dir.
+    // (3) universal image-cache carve-out: scan siblings of CLAUDE_CONFIG_DIR for any
+    // directory containing an image-cache/ subdirectory. Works regardless of sibling
+    // name (not just .claude-proxy). Fail-closed: no matching sibling ⇒ nothing added;
+    // a sibling's image-cache/ is read-only (the proxy owns it, the agent only reads).
     const configParent = path.dirname(configDir);
-    const proxyBoundaryReal = realDir(configParent);
-    if (proxyBoundaryReal) {
-      const proxyPath = realDir(path.join(configDir + "-proxy", "image-cache"));
-      if (admissible(proxyPath, rootReal, proxyBoundaryReal)) out.push({ path: proxyPath, writable: false });
+    const configParentReal = realDir(configParent);
+    if (configParentReal) {
+      try {
+        const siblings = fs.readdirSync(configParent, { withFileTypes: true });
+        for (const entry of siblings) {
+          if (!entry.isDirectory()) continue;
+          if (entry.name === path.basename(configDir)) continue; // skip self
+          const cachePath = realDir(path.join(configParent, entry.name, "image-cache"));
+          if (cachePath && admissible(cachePath, rootReal, configParentReal)) {
+            out.push({ path: cachePath, writable: false });
+          }
+        }
+      } catch {
+        // readdirSync failed ⇒ fail-closed, nothing added
+      }
     }
   }
 

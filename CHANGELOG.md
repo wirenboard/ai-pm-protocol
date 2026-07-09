@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.67.1] — 2026-07-09
+
+- **PATCH** — universal image-cache carve-out: replaced the hardcoded `configDir + "-proxy"` assumption (the `.claude-proxy` name was just a user-chosen profile folder, not a proxy program) with a universal sibling scan. `deriveTagged` now scans the parent of `CLAUDE_CONFIG_DIR` for **any** sibling directory containing an `image-cache/` subdirectory and admits all matching ones read-only. Works regardless of sibling name (`.claude-proxy`, `.my-custom-profile`, etc.) — only requires the `image-cache/` subdir pattern. Fail-closed throughout: `readdirSync` failure → nothing added; no matching sibling → nothing added; all admitted paths read-only (`writable: false`); overbroad guard still applies. Unit tests updated to cover the universal scan.
+
+---
+
 ## [5.67.0] — 2026-07-09
 
 - **MINOR** — claude-proxy image-cache carve-out: a third read-only carve-out in `src/adapter/claude/sanctioned-scratch.mjs` for `~/.claude-proxy/image-cache/` (screenshots cached by the proxy). The Read tool can now access images uploaded via the proxy, which were previously blocked by the deny layer. Follows the same fail-closed discipline as the existing two carve-outs (tool-results, temp root): derives the path from `CLAUDE_CONFIG_DIR`, uses `realDir()` + `admissible()` with boundary = configParent, read-only (`writable: false`), missing env/dir fail-closed. Unit tests added for happy path, missing dir, missing env, and writable exclusion. Addresses downstream feedback where Orchestrator could not read user-provided screenshots.
