@@ -1,8 +1,9 @@
 // The agent's OWN out-of-root scratch allow-set — derivation (fail-closed) + the boundary
 // carve-out, READ and WRITE. Units under test:
-//   (1) deriveSanctionedScratch(env, root) — derives the tool-result overflow store +
-//       the per-session harness temp root from the Claude env, fail-CLOSED (mirrors the
-//       componentRoots discipline: bad/absent/non-existent/overbroad ⇒ empty set).
+//   (1) deriveSanctionedScratch(env, root) — derives the tool-result overflow store,
+//       the claude-proxy image-cache, and the per-session harness temp root from the
+//       Claude env, fail-CLOSED (mirrors the componentRoots discipline:
+//       bad/absent/non-existent/overbroad ⇒ empty set).
 //   (1b) deriveSanctionedScratchWritable(env, root) — the WRITABLE subset of the same
 //       tagged derivation: ONLY the per-session temp root, never the overflow store
 //       (`#401`). Same fail-closed discipline as (1) — no logic duplicated between them.
@@ -143,6 +144,56 @@ function setup(opts = {}) {
   fs.symlinkSync(real, link);
   const out = deriveSanctionedScratch({ CLAUDE_CONFIG_DIR: link, HOME: "/h" }, root);
   has("symlinked configDir resolves to realpath", out, fs.realpathSync(path.join(real, "projects", slug, "tool-results")));
+}
+
+// ── (1c) claude-proxy image-cache carve-out — read-only, derived from configDir ──
+
+// happy path: configDir = <parent>/.claude, proxy cache exists at <parent>/.claude-proxy/image-cache/
+{
+  const parentDir = ws();
+  const configDir = path.join(parentDir, ".claude");
+  fs.mkdirSync(configDir, { recursive: true });
+  const proxyCacheDir = path.join(configDir + "-proxy", "image-cache");
+  fs.mkdirSync(proxyCacheDir, { recursive: true });
+
+  const { root } = setup({ configDir, makeToolResults: false, makeTemp: false });
+  const env = { CLAUDE_CONFIG_DIR: configDir, HOME: "/home/fake-op" };
+  const out = deriveSanctionedScratch(env, root);
+  has("proxy image-cache derived", out, fs.realpathSync(proxyCacheDir));
+}
+
+// proxy image-cache dir does NOT exist ⇒ not derived (fail-closed).
+{
+  const parentDir = ws();
+  const configDir = path.join(parentDir, ".claude");
+  fs.mkdirSync(configDir, { recursive: true });
+  // Deliberately do NOT create proxyCacheDir — fail-closed skip.
+
+  const { root } = setup({ configDir, makeToolResults: false, makeTemp: false });
+  const env = { CLAUDE_CONFIG_DIR: configDir, HOME: "/home/fake-op" };
+  const out = deriveSanctionedScratch(env, root);
+  lacks("missing proxy image-cache ⇒ not derived", out, "image-cache");
+}
+
+// missing CLAUDE_CONFIG_DIR ⇒ no proxy entry (fail-closed, mirrors tool-results).
+{
+  const { root, env } = setup({ omitConfig: true });
+  const out = deriveSanctionedScratch(env, root);
+  lacks("no configDir ⇒ no proxy cache", out, "image-cache");
+}
+
+// proxy image-cache is NEVER writable — it must not appear in deriveSanctionedScratchWritable.
+{
+  const parentDir = ws();
+  const configDir = path.join(parentDir, ".claude");
+  fs.mkdirSync(configDir, { recursive: true });
+  const proxyCacheDir = path.join(configDir + "-proxy", "image-cache");
+  fs.mkdirSync(proxyCacheDir, { recursive: true });
+
+  const { root } = setup({ configDir, makeToolResults: false, makeTemp: false });
+  const env = { CLAUDE_CONFIG_DIR: configDir, HOME: "/home/fake-op" };
+  const writable = deriveSanctionedScratchWritable(env, root);
+  lacks("proxy image-cache NOT writable", writable, "image-cache");
 }
 
 // ── (1b) deriveSanctionedScratchWritable — the WRITE-only subset (`#401`) ─────

@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.67.0] — 2026-07-09
+
+- **MINOR** — claude-proxy image-cache carve-out: a third read-only carve-out in `src/adapter/claude/sanctioned-scratch.mjs` for `~/.claude-proxy/image-cache/` (screenshots cached by the proxy). The Read tool can now access images uploaded via the proxy, which were previously blocked by the deny layer. Follows the same fail-closed discipline as the existing two carve-outs (tool-results, temp root): derives the path from `CLAUDE_CONFIG_DIR`, uses `realDir()` + `admissible()` with boundary = configParent, read-only (`writable: false`), missing env/dir fail-closed. Unit tests added for happy path, missing dir, missing env, and writable exclusion. Addresses downstream feedback where Orchestrator could not read user-provided screenshots.
+
+---
+
 ## [5.66.0] — 2026-07-09
 
 - **MINOR** — downstream `covers` guidance: a new "## Quality layer" section in `docs/architecture.md` explains how the `covers` field works, which tests to mark narrowly vs broadly (with concrete examples from this repo's `tools.json`), and the granularity-vs-maintenance trade-offs. Downstream projects with large test suites (1000+ tests) can now iterate fast by running only the touched subset during coding/review while keeping the full suite gated once at ship. A one-line pointer added to `setup.md` step 5 links to the new section. Closes #412.
