@@ -169,6 +169,7 @@ The decision tree, with concrete examples from this repo:
 - `version-skew` -- checks the installed VERSION stamp against the vendored tooling. Its scope is the whole install surface, not a single module.
 - `eslint` / `markdownlint` -- global linters that run over the entire tree. A `covers` on these would drop linting for untracked file extensions, creating a blind spot.
 - `semgrep` -- security SAST. Security scanners must never be scope-filtered; a changed file could introduce a vulnerability in an unchanged module through an import chain.
+- **A contract's validating test** (`docs/contracts/*` -- the test proving the entry's stated guarantee holds). This is the sharpest case: the test's failure surface is the invariant itself, not the file that first introduced it -- a later, unrelated change anywhere else in the codebase can break the same guarantee (a new code path silently violating a contract's MUST, no `docs/contracts/` file touched at all, no reviewer ever pointed at the contract). A `covers` scoped to the contract's origin file re-runs only when that one file changes and stays silent forever after -- quietly defeating the contract's whole purpose. Leave `covers` absent, or set it as broad as the invariant's true blast radius, never narrower.
 
 **The safety floor:** a tool without `covers` always runs. This means cross-cutting tools (security scanners, parity tests, global lints) stay exactly as they are -- add a `covers` field only when you are confident the test's failure surface is truly local.
 
