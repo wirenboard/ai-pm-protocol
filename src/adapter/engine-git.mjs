@@ -282,27 +282,43 @@ function reviewStampSatisfied(root, topic) {
   const file = path.join(path.resolve(root), ".ai-dev", "reviews", topic + "_review.md");
   let text;
   try { text = fs.readFileSync(file, "utf8"); } catch { return false; }
-  const stampOK = (label) => {
-    // Heading level is incidental — the gate reads the verdict's PRESENCE, not
+  // Shared line-value reader for any `<label>:` heading in the stamp — the
+  // verdict and the Contracts anchor below are both "a labelled heading, value
+  // inline or on the next non-blank line", so the extraction lives once here.
+  const stampLineValue = (label) => {
+    // Heading level is incidental — the gate reads the value's PRESENCE, not
     // the markdown level. Accept any level (#…######): a reviewer authoring a
     // fresh file naturally opens with an H1 title, and pinning ## only cost a
     // blocked push + a wasted re-review (8D reviewer-stamp-heading-level).
     const m = text.match(new RegExp("^#{1,6}[ \\t]+" + label + ":[ \\t]*(.*)$", "m"));
-    if (!m) return false;
+    if (!m) return null;
     let content = m[1].trim();
-    // Also accept the verdict on the very next non-blank line after the heading
+    // Also accept the value on the very next non-blank line after the heading
     // (resilient to reviewers that split "## Code review:" and "APPROVED").
     if (!content) {
       const after = text.slice(text.indexOf(m[0]) + m[0].length);
       const next = after.match(/^\r?\n([^\r\n#][^\r\n]*)/);
       if (next) content = next[1].trim();
     }
+    return content;
+  };
+  const stampOK = (label) => {
+    const content = stampLineValue(label);
     if (!content || /^NOT YET RUN$/i.test(content)) return false;
     return true;
   };
   // The accepted heading labels are exactly the Reviewer's documented stamp
   // forms (src/agents/reviewer.md, Verdict).
-  return stampOK("Code review") || stampOK("Doc review");
+  const verdictOK = stampOK("Code review") || stampOK("Doc review");
+  // Contracts anchor (8D contracts-ignored-autonomous, fix B): the verdict
+  // alone proves a review RAN, never that the Contracts checklist item was
+  // ENGAGED — a reviewer could write APPROVED having never opened
+  // docs/contracts/. Require a non-empty `Contracts:` line too; "none — no
+  // contract touched" is a valid value (this does not verify TRUTH, only that
+  // the claim was made, not silently omitted — src/agents/reviewer.md
+  // `## Verdict`).
+  const contractsAnchored = !!stampLineValue("Contracts");
+  return verdictOK && contractsAnchored;
 }
 
 export {

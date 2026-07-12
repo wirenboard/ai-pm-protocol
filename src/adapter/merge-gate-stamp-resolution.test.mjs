@@ -100,7 +100,7 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
   const root = rootOnBranch("feature/split");
   const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "split_review.md"), "## Code review:\nAPPROVED\n\nFull review body follows.\n");
+  fs.writeFileSync(path.join(dir, "split_review.md"), "## Code review:\nAPPROVED\n\n## Contracts: none\n\nFull review body follows.\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/split" }, config);
   check("split-line-stamp:allows", v.verdict, "allow");
   fs.rmSync(root, { recursive: true, force: true });
@@ -159,7 +159,7 @@ console.log("SPLIT-LINE STAMP (next-line verdict accepted):");
     const root = rootOnBranch(`feature/level-${lvl}`);
     const dir = path.join(root, ".ai-dev", "reviews");
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, `level-${lvl}_review.md`), `${hashes} Code review: APPROVED\n`);
+    fs.writeFileSync(path.join(dir, `level-${lvl}_review.md`), `${hashes} Code review: APPROVED\n${hashes} Contracts: none\n`);
     const v = evaluate({ act: "bash", root, command: `git push origin feature/level-${lvl}` }, config);
     check(`heading-${lvl}:allows`, v.verdict, "allow");
     fs.rmSync(root, { recursive: true, force: true });
@@ -253,9 +253,72 @@ console.log("STAMP LABELS (Code review / Doc review accepted; Validation dropped
   const root = rootOnBranch("feature/docs");
   const dir = path.join(root, ".ai-dev", "reviews");
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "docs_review.md"), "## Doc review: APPROVED\n");
+  fs.writeFileSync(path.join(dir, "docs_review.md"), "## Doc review: APPROVED\n## Contracts: none\n");
   const v = evaluate({ act: "bash", root, command: "git push origin feature/docs" }, config);
   check("doc-review-label:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// ── 8. CONTRACTS ANCHOR — the verdict alone no longer satisfies the gate ──────
+// 8D contracts-ignored-autonomous, fix B: a stamp missing the `Contracts:`
+// line fails closed even with an APPROVED verdict — the anchor forces a
+// recorded claim (any non-empty value, including "none"), never silent
+// omission.
+console.log("CONTRACTS ANCHOR (verdict alone is no longer enough):");
+
+// 8a. APPROVED verdict, no Contracts line at all ⇒ DENY.
+{
+  const root = rootOnBranch("feature/nocontracts");
+  const dir = path.join(root, ".ai-dev", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "nocontracts_review.md"), "## Code review: APPROVED\n");
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/nocontracts" }, config);
+  check("no-contracts-line:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 8b. APPROVED verdict, an empty `Contracts:` heading (no inline or next-line
+// value) ⇒ DENY — same empty-stamp discipline as the verdict line.
+{
+  const root = rootOnBranch("feature/emptycontracts");
+  const dir = path.join(root, ".ai-dev", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "emptycontracts_review.md"),
+    "## Code review: APPROVED\n## Contracts:\n\n\n"
+  );
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/emptycontracts" }, config);
+  check("empty-contracts-line:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 8c. APPROVED verdict + `Contracts: none` ⇒ ALLOW — "none" is a valid,
+// recorded claim, not a silent gap.
+{
+  const root = rootOnBranch("feature/nonecontracts");
+  const dir = path.join(root, ".ai-dev", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "nonecontracts_review.md"),
+    "## Code review: APPROVED\n## Contracts: none\n"
+  );
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/nonecontracts" }, config);
+  check("none-contracts-line:allows", v.verdict, "allow");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+// 8d. APPROVED verdict + a filled Contracts value on the next line (split
+// form) ⇒ ALLOW — mirrors the verdict's own split-line fallback.
+{
+  const root = rootOnBranch("feature/splitcontracts");
+  const dir = path.join(root, ".ai-dev", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "splitcontracts_review.md"),
+    "## Code review: APPROVED\n## Contracts:\nmessengers.md — satisfied, unchanged\n"
+  );
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/splitcontracts" }, config);
+  check("split-contracts-line:allows", v.verdict, "allow");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
