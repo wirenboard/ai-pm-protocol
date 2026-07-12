@@ -12,6 +12,12 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.68.1] — 2026-07-12
+
+- **PATCH** — whole-project audit (2026-07-09 → 2026-07-12, HEALTHY): pruned an orphaned transient plan (`image-cache-carveout.md`, left behind by #416's ship) and documented finding ADV-1 — `cross-session-enforcement.md` now names `parity`'s broad `covers` as the backstop for the three merge-gate test files, which scope only to `engine-git.mjs` and would not `--touched`-trigger on a break in the shared `engine.mjs` `evaluate()` wiring.
+
+---
+
 ## [5.68.0] — 2026-07-12
 
 - **MINOR** — contract-enforcement anchors, closing #420 (8D `contracts-ignored-autonomous`): a downstream contract was silently broken by a later, unrelated change, invisible to a diff-scoped Reviewer and uncaught by the audit's arbitrary cadence. Four fixes: (1) `docs/architecture.md` now names a contract-validating test as the sharpest case for a broad/absent `covers` — a narrow scope silently stops re-running once an unrelated file breaks the guarantee; (2) the audit's "contracts still hold" dimension now runs a concrete check — cross-reference every `docs/contracts/*.md` entry against its `tools.json` validating-test row and that row's `covers` scope; (3) `PROTOCOL.md` invariant 7 adds "establishes or changes a behavioral guarantee with no existing recorded contract" as an explicitly non-derivable fork — `autonomous` mode escalates instead of inventing product behavior silently; (4) the merge-gate (`reviewStampSatisfied`) now also requires a non-empty `Contracts:` line in the review stamp — "none" is valid, silent omission is not, converting "did the reviewer engage the Contracts checklist item" into a recorded, auditable claim. New merge-gate tests cover the anchor's absent/empty/`NOT YET RUN`/filled/split-line cases.
