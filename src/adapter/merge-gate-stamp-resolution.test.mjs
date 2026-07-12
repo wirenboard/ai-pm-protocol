@@ -322,5 +322,22 @@ console.log("CONTRACTS ANCHOR (verdict alone is no longer enough):");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
+// 8e. APPROVED verdict + `Contracts: NOT YET RUN` ⇒ DENY — the anchor rejects
+// the same not-yet-engaged placeholder the verdict line rejects (mirrors 3c);
+// a reviewer that stamped APPROVED but left Contracts unaddressed must not
+// satisfy the gate just because the line exists.
+{
+  const root = rootOnBranch("feature/nyrcontracts");
+  const dir = path.join(root, ".ai-dev", "reviews");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "nyrcontracts_review.md"),
+    "## Code review: APPROVED\n## Contracts: NOT YET RUN\n"
+  );
+  const v = evaluate({ act: "bash", root, command: "git push origin feature/nyrcontracts" }, config);
+  check("not-yet-run-contracts-line:denies", v.verdict, "deny");
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

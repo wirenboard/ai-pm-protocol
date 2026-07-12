@@ -317,7 +317,7 @@ function reviewStampSatisfied(root, topic) {
   // contract touched" is a valid value (this does not verify TRUTH, only that
   // the claim was made, not silently omitted — src/agents/reviewer.md
   // `## Verdict`).
-  const contractsAnchored = !!stampLineValue("Contracts");
+  const contractsAnchored = stampOK("Contracts");
   return verdictOK && contractsAnchored;
 }
 
