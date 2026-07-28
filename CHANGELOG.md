@@ -12,6 +12,17 @@ Format: [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); versioni
 
 ---
 
+## [5.69.0] — 2026-07-28
+
+- **MINOR** — merge-gate stamp transparency, from a downstream report: a Reviewer writes a malformed review stamp, the gate denies the Orchestrator's push, and the Orchestrator cannot tell why — the loop stalls. Four fixes at the root.
+  - **Diagnostic deny reason.** `engine.mjs` gains a `DIAGNOSTICS` map keyed by predicate name (predicate signatures unchanged); a deny or ask hit appends a generated diagnostic to `rule.intent`. The merge-gate's names the resolved topic, the expected stamp path, which anchor failed and why, the sibling stamps actually present in `.ai-dev/reviews/` when the file is absent (surfacing a branch-topic-vs-stamp-name mismatch, previously invisible), and the remediation — **re-spawn the Reviewer**, never author the stamp (an Orchestrator taught the format must not trip the fabrication guard). Reaches the model in full on both platforms (`permissionDecisionReason` / thrown `Error`). New: `reviewStampDiagnosis` in `engine-git.mjs`, with `reviewStampSatisfied` a thin wrapper so the grammar keeps one home.
+  - **Bounded parser tolerance.** The stamp separator may be `:` (canonical), an em-dash, an en-dash or a hyphen, or absent when the value opens with ≥2 uppercase chars or the literal `none` — so a punctuation slip no longer costs a blocked push and a re-review. A prose heading (`## Code review checklist`) still fails. The captured value is normalised **before** the `NOT YET RUN` test, so `## Code review — NOT YET RUN` cannot bypass the anchor.
+  - **Closed a next-line fallback hole** (found during this work, unreported): the fallback accepted any non-heading line, so `## Code review:` with an empty value followed by the mandated `Runtime verification:` line passed the gate with that line read as the verdict. Two rules in the same reviewer checklist were mutually reachable. The fallback now skips labelled stamp lines.
+  - **Prevention at the source.** `src/agents/reviewer.md` gains a literal copy-paste stamp skeleton, and its format prose now states what the gate actually enforces (label + non-empty, non-`NOT YET RUN` value) rather than claiming a missing colon fails it — the old wording was falsified by the tolerance in the same change.
+  - `STAMP_SEPARATORS` + `STAMP_LABELS` are exported from `engine-git.mjs` and both the parser and the diagnostic read them, so the deny's "required form" cannot drift from what the parser accepts; three guard tests assert every separator and label appears in the diagnostic text.
+
+---
+
 ## [5.68.1] — 2026-07-12
 
 - **PATCH** — whole-project audit (2026-07-09 → 2026-07-12, HEALTHY): pruned an orphaned transient plan (`image-cache-carveout.md`, left behind by #416's ship) and documented finding ADV-1 — `cross-session-enforcement.md` now names `parity`'s broad `covers` as the backstop for the three merge-gate test files, which scope only to `engine-git.mjs` and would not `--touched`-trigger on a break in the shared `engine.mjs` `evaluate()` wiring.
