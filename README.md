@@ -1,3 +1,5 @@
+**The idea turned out to be a dead end, but if it helped you, look at a project similar in spirit, but better in implementation https://github.com/aadegtyarev/ldo-ai**
+
 # ai-dev-protocol
 
 A protocol for building software and documentation with AI. You are the operator: you say *what* to build and *why*, approve the plan, and decide what ships — in plain product language, no code reading required. A small set of AI roles plans the change, builds it, reviews it independently, and ships it.
